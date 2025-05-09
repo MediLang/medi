@@ -1,0 +1,107 @@
+site_name: Medi Documentation
+site_url: https://medi-lang.org/docs/
+site_description: Documentation for the Medi healthcare programming language
+site_author: The Medi Team
+repo_url: https://github.com/MediLang/medi
+repo_name: MediLang/medi
+edit_uri: edit/main/docs/
+
+# Configure directories
+docs_dir: content
+site_dir: site
+
+theme:
+  name: material
+  logo: assets/images/medi-logo-placeholder.png
+  favicon: assets/images/favicon-placeholder.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Basic Syntax: getting-started/basic-syntax.md
+    - Your First Program: getting-started/your-first-program.md
+  - Key Features:
+    - Feature 1: key-features/feature1.md
+    - Feature 2: key-features/feature2.md
+  - Examples: examples/index.md
+  - Reference: reference/index.md
+  - Contributing: contributing/index.md
+  - Community: community/index.md
+  - Roadmap: roadmap/index.md
+  - Technical Documentation: technical/index.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - footnotes
+  - meta
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Overview: getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Basic Syntax: getting-started/basic-syntax.md
+    - First Medi Program: getting-started/first-program.md
+  - Key Features:
+    - Overview: key-features/index.md
+    - Medical Data Science & AI: key-features/medical-data-science.md
+  - Examples:
+    - Overview: examples/index.md
+  - Technical Documentation:
+    - Architecture: technical/architecture.md
+  - Reference:
+    - Standard Library: reference/index.md
+  - Roadmap: roadmap/index.md
+  - Contributing: contributing/index.md
+  - Community: community/index.md
+
+plugins:
+  - search
+  - mkdocstrings
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/MediLang
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/MediLangHQ
+  version:
+    provider: mike
+
+copyright: Copyright &copy; 2025 The Medi Team
