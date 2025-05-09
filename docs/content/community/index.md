@@ -21,7 +21,7 @@ There are many ways to contribute to Medi:
 - **Feedback**: Share your ideas and suggestions for new features
 - **Outreach**: Help spread the word about Medi in the healthcare community
 
-See our [Contributing guide](../contributing/) for more details on how to get started.
+See our [Contributing guide](../contributing/index.md) for more details on how to get started.
 
 ## Community Guidelines
 
