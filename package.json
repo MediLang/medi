@@ -1,0 +1,33 @@
+{
+  "name": "medi-lang",
+  "version": "0.1.0",
+  "description": "A programming language purpose-built for healthcare",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node src/compiler/tests/lexer.test.ts",
+    "start": "ts-node src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MediLang/medi.git"
+  },
+  "keywords": [
+    "healthcare",
+    "programming-language",
+    "compiler",
+    "fhir",
+    "medical-data"
+  ],
+  "author": "MediLang Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MediLang/medi/issues"
+  },
+  "homepage": "https://github.com/MediLang/medi#readme",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

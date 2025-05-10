@@ -1,6 +1,6 @@
 # Task ID: 1
 # Title: Core Language Syntax and Parser Implementation
-# Status: pending
+# Status: in-progress
 # Dependencies: None
 # Priority: high
 # Description: Develop the lexer and parser for Medi syntax with healthcare-specific constructs and type system fundamentals

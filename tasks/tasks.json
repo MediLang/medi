@@ -8,7 +8,7 @@
       "testStrategy": "1. Create unit tests for lexer token recognition with healthcare-specific tokens\n2. Develop parser tests with valid and invalid Medi syntax examples\n3. Test AST generation with complex healthcare queries\n4. Verify type checking for healthcare data types\n5. Create integration tests that parse complete Medi programs\n6. Benchmark parser performance with large healthcare code samples\n7. Validate error reporting and recovery mechanisms",
       "priority": "high",
       "dependencies": [],
-      "status": "pending",
+      "status": "in-progress",
       "subtasks": [
         {
           "id": 1,
