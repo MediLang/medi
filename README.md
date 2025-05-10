@@ -185,11 +185,10 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 *   Test with synthetic data (FHIR, VCF, IoT streams).
 *   Target RISC-V (RV32) for IoT prototype.
 
-### Phase 2: Pilot and Grants (12-18 Months)
+### Phase 2: Pilot (12-18 Months)
 
 *   Pilot with universities/hospitals on trials, IoT, or AI use cases.
 *   Expand library (`medi.iot`, `medi.viz`, `medi.privacy`) and RISC-V support (RV64, vector extensions).
-*   Apply for grants (NIH, EU Horizon Europe, RISC-V Foundation).
 *   Share on X/GitHub for feedback.
 
 ### Phase 3: Production Release (18-36 Months)
@@ -199,17 +198,7 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 *   Launch training programs and certifications.
 *   Integrate with Epic, Cerner, and cloud platforms.
 
-## Grant Justification
 
-Medi’s impact justifies funding:
-
-*   **Patient Outcomes:** Real-time AI and genomic analytics improve care (e.g., early tachycardia detection, personalized treatments).
-*   **Cost Savings:** Compliance automation and scalable analytics reduce trial/hospital costs.
-*   **Privacy:** Federated learning and RISC-V encryption ensure trust.
-*   **Accessibility:** Clinician-friendly design democratizes data science and AI.
-*   **Market:** Aligns with the $50B+ healthcare analytics market by 2028.
-
-**Target Grants:** NIH Biomedical Informatics, EU Horizon Europe, RISC-V Foundation.
 
 ## Technical Architecture
 
