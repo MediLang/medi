@@ -49,7 +49,13 @@ impl<'a> TypeChecker<'a> {
                 let callee_type = self.check_expr(&call.callee);
                 if let MediType::Function { params, return_type } = callee_type {
                     if params.len() == call.arguments.len() {
-                        // TODO: Check argument types
+                        // Check argument types
+                        for (arg, param_type) in call.arguments.iter().zip(params.iter()) {
+                            let arg_type = self.check_expr(arg);
+                            if arg_type != *param_type {
+                                return MediType::Unknown;
+                            }
+                        }
                         *return_type
                     } else {
                         MediType::Unknown
@@ -59,12 +65,31 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             ExpressionNode::Member(mem) => {
-                // TODO: Implement member access type rules
-                MediType::Unknown
+                // Implement member access type rules
+                let object_type = self.check_expr(&mem.object);
+                match object_type {
+                    MediType::Struct(ref fields) => {
+                        fields.get(&mem.property).cloned().unwrap_or(MediType::Unknown)
+                    }
+                    _ => MediType::Unknown, // Member access is only valid on structs
+                }
             }
-            ExpressionNode::HealthcareQuery(_) => {
-                // TODO: Implement healthcare query type rules
-                MediType::Unknown
+            ExpressionNode::HealthcareQuery(query) => {
+                // Implement healthcare query type rules
+                match query.query_type.as_str() {
+                    "PatientData" => MediType::Record(vec![
+                        ("id".to_string(), MediType::Int),
+                        ("name".to_string(), MediType::String),
+                        ("age".to_string(), MediType::Int),
+                        ("conditions".to_string(), MediType::List(Box::new(MediType::String))),
+                    ]),
+                    "AppointmentData" => MediType::List(Box::new(MediType::Record(vec![
+                        ("appointment_id".to_string(), MediType::Int),
+                        ("date".to_string(), MediType::String),
+                        ("doctor".to_string(), MediType::String),
+                    ]))),
+                    _ => MediType::Unknown, // Fallback for unsupported query types
+                }
             }
         }
     }
