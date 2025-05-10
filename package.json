@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "ts-node src/compiler/tests/lexer.test.ts",
+    "test": "ts-node src/compiler/tests/lexer.test.ts && ts-node src/compiler/tests/parser.test.ts",
     "start": "ts-node src/index.ts"
   },
   "repository": {
@@ -26,7 +26,10 @@
   },
   "homepage": "https://github.com/MediLang/medi#readme",
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }

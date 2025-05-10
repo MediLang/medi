@@ -38,13 +38,13 @@ result = patients |> filter(has_condition("J44")) |> group_by(gender) |> count()
 7. Validate error reporting and recovery mechanisms
 
 # Subtasks:
-## 1. Implement Lexical Analyzer (Lexer) [pending]
+## 1. Implement Lexical Analyzer (Lexer) [done]
 ### Dependencies: None
 ### Description: Develop a lexical analyzer to tokenize input code into meaningful tokens for the healthcare DSL.
 ### Details:
 Create a lexer that recognizes healthcare-specific keywords, identifiers, literals, and operators. Implement token classification for medical terminology, patient data references, and clinical workflow constructs. Define regular expressions for token patterns and implement the state machine for token recognition.
 
-## 2. Develop Recursive Descent Parser [pending]
+## 2. Develop Recursive Descent Parser [done]
 ### Dependencies: 1.1
 ### Description: Implement a parser that processes tokens from the lexer and validates syntactic structure according to the language grammar.
 ### Details:
