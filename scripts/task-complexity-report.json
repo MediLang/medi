@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "generatedAt": "2025-05-10T08:37:03.931Z",
+    "tasksAnalyzed": 10,
+    "thresholdScore": 5,
+    "projectName": "Taskmaster",
+    "usedResearch": true
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 1,
+      "taskTitle": "Core Language Syntax and Parser Implementation",
+      "complexityScore": 8,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Break down the Core Language Syntax and Parser Implementation task into subtasks covering lexer implementation, parser development, AST generation, type system fundamentals, healthcare-specific syntax support, error handling, and testing framework.",
+      "reasoning": "This task involves creating a complete language parser with healthcare-specific constructs. The high complexity score (8) is based on the need to implement lexical analysis, parsing rules, AST generation, and a type system with domain-specific features. The cyclomatic complexity would be high due to numerous decision paths in parsing logic."
+    },
+    {
+      "taskId": 2,
+      "taskTitle": "LLVM Integration and Code Generation",
+      "complexityScore": 9,
+      "recommendedSubtasks": 8,
+      "expansionPrompt": "Divide the LLVM Integration and Code Generation task into subtasks covering LLVM infrastructure setup, AST visitor implementation, code generation for basic operations, healthcare-specific optimizations, compilation pipeline configuration, multi-architecture support, performance testing, and documentation.",
+      "reasoning": "This task requires deep technical knowledge of both LLVM internals and healthcare domain specifics. The complexity score of 9 reflects the difficulty of implementing AST-to-LLVM IR translation, creating domain-specific optimizations, and supporting multiple target architectures. The Halstead effort would be substantial due to the number of unique operators and operands involved."
+    },
+    {
+      "taskId": 3,
+      "taskTitle": "Memory Management System Implementation",
+      "complexityScore": 9,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Split the Memory Management System Implementation task into subtasks covering garbage collection algorithm, manual memory management constructs, safety verification mechanisms, healthcare-optimized allocation strategies, memory profiling tools, large dataset handling, and performance testing.",
+      "reasoning": "Memory management is inherently complex, especially when combining automatic and manual approaches. The score of 9 reflects the technical challenge of implementing low-pause garbage collection, safety guarantees, and optimizations for healthcare data. The cyclomatic complexity would be high due to numerous edge cases and safety checks."
+    },
+    {
+      "taskId": 4,
+      "taskTitle": "Healthcare Data Types and FHIR Integration",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide the Healthcare Data Types and FHIR Integration task into subtasks covering core healthcare type definitions, FHIR R4 parser implementation, query capabilities, validation mechanisms, storage optimization, and format conversion utilities.",
+      "reasoning": "This task requires deep domain knowledge of healthcare standards and data formats. The complexity score of 7 reflects the challenge of implementing comprehensive FHIR support while ensuring type safety and performance. The task has moderate cyclomatic complexity but high Halstead volume due to the large number of healthcare data types to implement."
+    },
+    {
+      "taskId": 5,
+      "taskTitle": "Statistical Functions for Clinical Research",
+      "complexityScore": 8,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Break down the Statistical Functions for Clinical Research task into subtasks covering survival analysis implementation, epidemiological modeling, clinical trial statistics, biostatistics functions, descriptive statistics, and hypothesis testing frameworks.",
+      "reasoning": "Implementing statistical methods for clinical research requires both statistical expertise and healthcare domain knowledge. The complexity score of 8 reflects the mathematical sophistication required and the need for correctness in healthcare applications. The Halstead difficulty would be high due to the mathematical complexity of the algorithms."
+    },
+    {
+      "taskId": 6,
+      "taskTitle": "Command-Line Tools and REPL Environment",
+      "complexityScore": 6,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide the Command-Line Tools and REPL Environment task into subtasks covering compiler command implementation, REPL environment development, package manager creation, project scaffolding tools, documentation utilities, and testing framework integration.",
+      "reasoning": "This task involves creating user-facing tools with good usability. The complexity score of 6 reflects the moderate technical challenge but significant integration work required. The task has lower cyclomatic complexity than core language components but requires careful attention to user experience for healthcare professionals."
+    },
+    {
+      "taskId": 7,
+      "taskTitle": "Privacy Framework Implementation",
+      "complexityScore": 9,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Split the Privacy Framework Implementation task into subtasks covering differential privacy mechanisms, federated learning implementation, secure computation primitives, data anonymization utilities, privacy budget management, compliance tools, and security testing.",
+      "reasoning": "Privacy-preserving analytics in healthcare is extremely complex due to regulatory requirements and mathematical sophistication. The score of 9 reflects the challenge of implementing differential privacy, federated learning, and compliance features. Both cyclomatic complexity and Halstead volume would be high due to security requirements and mathematical algorithms."
+    },
+    {
+      "taskId": 8,
+      "taskTitle": "Visualization and Dashboard Framework",
+      "complexityScore": 7,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide the Visualization and Dashboard Framework task into subtasks covering healthcare chart implementation, interactive component development, dashboard layout system, data binding mechanisms, export capabilities, and web deployment options.",
+      "reasoning": "Creating healthcare-specific visualizations requires both technical implementation skills and domain knowledge. The complexity score of 7 reflects the challenge of building interactive, publication-quality visualizations with healthcare relevance. The task has moderate cyclomatic complexity but requires significant attention to detail for clinical accuracy."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "IDE with Visual Programming Interface",
+      "complexityScore": 8,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Break down the IDE with Visual Programming Interface task into subtasks covering code editor implementation, visual programming interface development, debugging tools, project management features, healthcare-specific code completion, documentation system, and usability testing.",
+      "reasoning": "Building an IDE with both code and visual programming capabilities is highly complex. The score of 8 reflects the challenge of creating bidirectional translation between visual and code representations while maintaining healthcare context. The task has high cyclomatic complexity due to numerous UI interactions and code intelligence features."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "WebAssembly and Edge Device Support",
+      "complexityScore": 8,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Divide the WebAssembly and Edge Device Support task into subtasks covering WebAssembly code generation, RISC-V optimization, deployment utilities, streaming data processing, memory optimization, browser runtime development, and performance testing on target devices.",
+      "reasoning": "Optimizing for WebAssembly and edge medical devices requires specialized knowledge of both compilation targets and healthcare applications. The complexity score of 8 reflects the technical challenge of efficient code generation for resource-constrained environments. The task has high Halstead difficulty due to the optimization requirements for different target platforms."
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+# Task ID: 5
+# Title: Statistical Functions for Clinical Research
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Implement healthcare-specific statistical methods for clinical trials and epidemiology
+# Details:
+Develop the statistical functions module (`medi.stats`) with implementations of common methods used in clinical research and epidemiology. This includes:
+
+1. Implement survival analysis functions (Kaplan-Meier, Cox proportional hazards)
+2. Create epidemiological modeling tools (SIR, SEIR models)
+3. Implement clinical trial statistics (power analysis, sample size calculation)
+4. Develop biostatistics functions (odds ratio, relative risk, NNT)
+5. Create descriptive statistics optimized for healthcare data
+6. Implement hypothesis testing for clinical research
+
+The implementation should focus on correctness, performance, and ease of use for healthcare professionals. Functions should have healthcare-specific defaults and interpretations.
+
+Example implementation:
+```
+// Kaplan-Meier survival analysis
+func kaplan_meier(patients: Patient[], 
+                 start_date: DateColumn,
+                 end_date: DateColumn,
+                 event: BoolColumn) -> SurvivalCurve {
+  // Implementation of Kaplan-Meier estimator
+  // Optimized for healthcare data
+}
+
+// Epidemic modeling
+func sir_model(population: Population,
+              beta: Float,
+              gamma: Float,
+              initial_infected: Int) -> EpidemicCurve {
+  // Implementation of SIR model
+  // With healthcare-specific parameters
+}
+```
+
+# Test Strategy:
+1. Create unit tests comparing results with established statistical packages
+2. Test with reference datasets from clinical literature
+3. Verify correctness of statistical implementations
+4. Benchmark performance against R and Python equivalents
+5. Test with large healthcare datasets
+6. Validate results with domain experts
+7. Create integration tests with FHIR data sources
+
+# Subtasks:
+## 1. Implement Survival Analysis Functions [pending]
+### Dependencies: None
+### Description: Develop functions for Kaplan-Meier estimation, Cox proportional hazards models, and log-rank tests for time-to-event data analysis.
+### Details:
+Create functions that handle censored data, calculate survival probabilities, hazard ratios, and confidence intervals. Include visualization capabilities for survival curves and risk tables. Ensure proper handling of competing risks and stratified analyses.
+
+## 2. Develop Epidemiological Modeling Tools [pending]
+### Dependencies: None
+### Description: Create functions for calculating key epidemiological measures including relative risk, odds ratios, and attributable risk with appropriate confidence intervals.
+### Details:
+Implement case-control, cohort, and cross-sectional study analysis methods. Include functions for age-standardization, epidemic curve generation, and basic reproductive number (R0) estimation. Ensure proper handling of confounding variables and effect modification.
+
+## 3. Build Clinical Trial Statistics Package [pending]
+### Dependencies: 5.1
+### Description: Implement functions for sample size calculation, randomization procedures, interim analysis, and treatment effect estimation for various clinical trial designs.
+### Details:
+Create tools for parallel group, crossover, factorial, and adaptive trial designs. Include methods for handling missing data, intention-to-treat and per-protocol analyses, and multiple endpoint adjustments. Implement group sequential methods and stopping rules.
+
+## 4. Create Biostatistics Function Library [pending]
+### Dependencies: 5.1, 5.2
+### Description: Develop specialized biostatistical methods for genomic data analysis, longitudinal data modeling, and repeated measures designs.
+### Details:
+Implement mixed-effects models, generalized estimating equations, and methods for handling correlated data. Create functions for biomarker evaluation, ROC curve analysis, and diagnostic test assessment. Include methods for genomic data normalization and multiple testing correction.
+
+## 5. Implement Descriptive Statistics Module [pending]
+### Dependencies: None
+### Description: Create comprehensive functions for data summarization, visualization, and exploratory analysis tailored to clinical research data.
+### Details:
+Develop methods for calculating central tendency, dispersion, and distribution characteristics with appropriate confidence intervals. Create visualization tools for different data types including categorical, continuous, and time-series clinical data. Implement outlier detection and data quality assessment functions.
+
+## 6. Develop Hypothesis Testing Framework [pending]
+### Dependencies: 5.5
+### Description: Build a comprehensive framework for parametric and non-parametric hypothesis testing with appropriate multiple comparison adjustments.
+### Details:
+Implement t-tests, ANOVA, chi-square, Fisher's exact test, Mann-Whitney, and other common statistical tests. Create functions for multiple comparison corrections including Bonferroni, Holm, and false discovery rate methods. Include power analysis capabilities and effect size calculations for each test type.
+
