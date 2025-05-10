@@ -8,7 +8,7 @@
       "testStrategy": "1. Create unit tests for lexer token recognition with healthcare-specific tokens\n2. Develop parser tests with valid and invalid Medi syntax examples\n3. Test AST generation with complex healthcare queries\n4. Verify type checking for healthcare data types\n5. Create integration tests that parse complete Medi programs\n6. Benchmark parser performance with large healthcare code samples\n7. Validate error reporting and recovery mechanisms",
       "priority": "high",
       "dependencies": [],
-      "status": "pending",
+      "status": "in-progress",
       "subtasks": [
         {
           "id": 1,
@@ -16,7 +16,7 @@
           "description": "Develop a lexical analyzer to tokenize input code into meaningful tokens for the healthcare DSL.",
           "dependencies": [],
           "details": "Create a lexer that recognizes healthcare-specific keywords, identifiers, literals, and operators. Implement token classification for medical terminology, patient data references, and clinical workflow constructs. Define regular expressions for token patterns and implement the state machine for token recognition.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 2,
@@ -26,7 +26,7 @@
             1
           ],
           "details": "Create a recursive descent parser with functions for each grammar production rule. Implement parsing logic for healthcare-specific constructs like patient record access, clinical decision support rules, and medical data transformations. Handle operator precedence and associativity correctly.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 3,

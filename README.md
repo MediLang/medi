@@ -99,6 +99,13 @@ Medi supports a wide range of healthcare domains, with modular modules:
 *   Seamless integration with Python (`py_call`), R (`r_call`), SQL, and healthcare systems (e.g., Epic, Cerner, AWS HealthLake).
 *   Compatible with existing tools like pandas, scikit-learn, and survival, easing adoption.
 
+### 7. Rust-Inspired Design
+
+*   Clean, modern syntax with explicit visibility modifiers (`pub` keyword).
+*   Module system with a single-file approach for better organization and maintainability.
+*   Expression-oriented programming with powerful pattern matching.
+*   Uses `.mdi` file extension for source files, following industry-standard practices.
+
 ## Performance and RISC-V
 
 Medi is engineered for high performance, critical for healthcare’s big data and real-time needs:
@@ -135,7 +142,7 @@ Medi leverages RISC-V, an open-source instruction set architecture, to enhance p
 
 Below is a sample Medi script showcasing data science, AI, and compliance in a multi-domain scenario: real-time IoT monitoring, genomic analysis, AI-driven risk prediction, and FDA reporting, optimized for RISC-V.
 
-```medi
+```mdi
 // Configure RISC-V target for edge device (e.g., wearable)
 target riscv {
   architecture: "RV32IMAFDC", // RISC-V 32-bit with vector extensions
@@ -179,9 +186,9 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 
 ### Phase 1: Prototype (6-12 Months)
 
-*   Build parser and LLVM-based compiler for core syntax.
+*   Build parser and LLVM-based compiler for core syntax using Rust-inspired approach.
 *   Implement modules: `medi.data`, `medi.compliance`, `medi.stats`, `medi.ai`.
-*   Develop a basic IDE with visual analytics.
+*   Develop a basic IDE with visual analytics and .mdi file recognition.
 *   Test with synthetic data (FHIR, VCF, IoT streams).
 *   Target RISC-V (RV32) for IoT prototype.
 

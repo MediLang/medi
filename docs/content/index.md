@@ -18,6 +18,7 @@ Medi delivers secure, scalable, and clinician-friendly solutions for healthcare 
 * **Regulatory Automation:** Automated compliance checks and reporting for HIPAA, GDPR, FDA, and EMA.
 * **Clinician-Friendly Syntax:** Intuitive, Python/R-like syntax and a visual IDE for non-programmers.
 * **High Performance:** Compiled to machine code via LLVM, with WebAssembly and RISC-V support for edge devices.
+* **Rust-Inspired Design:** Clean, modern syntax with explicit visibility modifiers using the `.mdi` file extension.
 
 ## Status
 
