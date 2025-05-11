@@ -22,7 +22,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon-placeholder.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.3">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.3">
     
     
       
@@ -582,6 +582,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#file-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Extension
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#variables-and-types" class="md-nav__link">
     <span class="md-ellipsis">
       Variables and Types
@@ -1078,6 +1087,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#file-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Extension
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#variables-and-types" class="md-nav__link">
     <span class="md-ellipsis">
       Variables and Types
@@ -1168,108 +1186,113 @@
 
 
 <h1 id="medi-basic-syntax">Medi Basic Syntax<a class="headerlink" href="#medi-basic-syntax" title="Permanent link">&para;</a></h1>
-<p>Medi's syntax is designed to be intuitive for both beginners and experienced programmers, with special attention to healthcare domain needs.</p>
+<p>Medi's syntax is designed to be intuitive for both beginners and experienced programmers, with special attention to healthcare domain needs. Medi follows a Rust-inspired approach with clean, modern syntax while maintaining healthcare-specific features.</p>
+<h2 id="file-extension">File Extension<a class="headerlink" href="#file-extension" title="Permanent link">&para;</a></h2>
+<p>Medi source files use the <code>.mdi</code> extension:<br />
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myprogram.mdi
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>patient_analysis.mdi
+</code></pre></div></p>
 <h2 id="variables-and-types">Variables and Types<a class="headerlink" href="#variables-and-types" title="Permanent link">&para;</a></h2>
 <p>Medi uses type inference but also supports explicit typing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>// Type inference
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>patient_name = &quot;John Doe&quot;;  // String
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>heart_rate = 75;  // Integer
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>temperature = 98.6;  // Float
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>// Explicit typing
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>String patient_id = &quot;P-12345&quot;;
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>Integer bp_systolic = 120;
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>Float bmi = 22.5;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// Type inference
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>patient_name = &quot;John Doe&quot;;  // String
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>heart_rate = 75;  // Integer
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>temperature = 98.6;  // Float
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>// Explicit typing
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>String patient_id = &quot;P-12345&quot;;
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>Integer bp_systolic = 120;
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>Float bmi = 22.5;
 </code></pre></div>
 <h2 id="healthcare-data-types">Healthcare Data Types<a class="headerlink" href="#healthcare-data-types" title="Permanent link">&para;</a></h2>
 <p>Medi includes native healthcare data types:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// FHIR resources
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Patient john = fhir_resource(&quot;Patient&quot;, id: &quot;P-12345&quot;);
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>// Genomic data
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>VCF variants = load_vcf(&quot;sample.vcf&quot;);
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>// Time series (for vital signs)
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>TimeSeries ecg = load_series(&quot;ecg_data.csv&quot;, frequency: 250);
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>// FHIR resources
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Patient john = fhir_resource(&quot;Patient&quot;, id: &quot;P-12345&quot;);
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>// Genomic data
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>VCF variants = load_vcf(&quot;sample.vcf&quot;);
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>// Time series (for vital signs)
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>TimeSeries ecg = load_series(&quot;ecg_data.csv&quot;, frequency: 250);
 </code></pre></div>
 <h2 id="control-flow">Control Flow<a class="headerlink" href="#control-flow" title="Permanent link">&para;</a></h2>
 <p>Medi's control flow constructs are similar to Python and C-like languages:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>// If-else statement
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>if (heart_rate &gt; 100) {
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  alert(&quot;Tachycardia detected&quot;);
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>} else if (heart_rate &lt; 60) {
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  alert(&quot;Bradycardia detected&quot;);
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>} else {
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  log(&quot;Normal heart rate&quot;);
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>}
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>// For loop
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>for (patient in patients) {
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  calculate_risk_score(patient);
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>}
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>// While loop
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>while (monitoring_active) {
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>  read_vitals();
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>  sleep(1000);  // milliseconds
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>// If-else statement
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>if (heart_rate &gt; 100) {
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  alert(&quot;Tachycardia detected&quot;);
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>} else if (heart_rate &lt; 60) {
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  alert(&quot;Bradycardia detected&quot;);
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>} else {
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  log(&quot;Normal heart rate&quot;);
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>}
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>// For loop
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>for (patient in patients) {
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  calculate_risk_score(patient);
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>}
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>// While loop
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>while (monitoring_active) {
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>  read_vitals();
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>  sleep(1000);  // milliseconds
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>}
 </code></pre></div>
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <p>Functions are declared with the <code>function</code> keyword:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>// Basic function
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>function calculate_bmi(weight_kg, height_m) {
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  return weight_kg / (height_m * height_m);
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>}
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>// Function with explicit types
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>function Boolean is_hypertensive(Integer systolic, Integer diastolic) {
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  return systolic &gt;= 140 || diastolic &gt;= 90;
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>}
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>// With default parameters
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>function administer_medication(String med_id, Float dose, String route = &quot;oral&quot;) {
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>  // Implementation
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>// Basic function
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>function calculate_bmi(weight_kg, height_m) {
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  return weight_kg / (height_m * height_m);
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>}
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>// Function with explicit types
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>function Boolean is_hypertensive(Integer systolic, Integer diastolic) {
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>  return systolic &gt;= 140 || diastolic &gt;= 90;
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>}
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>// With default parameters
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>function administer_medication(String med_id, Float dose, String route = &quot;oral&quot;) {
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>  // Implementation
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>}
 </code></pre></div>
 <h2 id="data-pipeline-operators">Data Pipeline Operators<a class="headerlink" href="#data-pipeline-operators" title="Permanent link">&para;</a></h2>
 <p>Medi supports data pipelines inspired by R and F#:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>// Pipeline operator |&gt;
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>patients
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  |&gt; filter(condition: &quot;diabetes&quot;)
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  |&gt; sort(by: &quot;a1c_level&quot;, descending: true)
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  |&gt; limit(10)
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  |&gt; plot_risk_score();
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>// Pipeline operator |&gt;
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>patients
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  |&gt; filter(condition: &quot;diabetes&quot;)
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  |&gt; sort(by: &quot;a1c_level&quot;, descending: true)
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  |&gt; limit(10)
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  |&gt; plot_risk_score();
 </code></pre></div>
 <h2 id="healthcare-specific-syntax">Healthcare-Specific Syntax<a class="headerlink" href="#healthcare-specific-syntax" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>// FHIR queries
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>dataset diabetic_patients = fhir_query(&quot;Patient&quot;, filter: &quot;condition=diabetes&quot;);
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>// Compliance checks
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>regulate {
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  standard: &quot;HIPAA&quot;,
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  data: patient_records,
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>  checks: [&quot;phi_identification&quot;, &quot;access_control&quot;]
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>};
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>// Privacy-preserving analytics
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>federated {
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>  sites: [&quot;hospital_a&quot;, &quot;hospital_b&quot;, &quot;hospital_c&quot;],
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>  model: &quot;random_forest&quot;,
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>  target: &quot;readmission_risk&quot;
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>};
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>// FHIR queries
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>dataset diabetic_patients = fhir_query(&quot;Patient&quot;, filter: &quot;condition=diabetes&quot;);
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>// Compliance checks
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>regulate {
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  standard: &quot;HIPAA&quot;,
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  data: patient_records,
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  checks: [&quot;phi_identification&quot;, &quot;access_control&quot;]
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>};
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>// Privacy-preserving analytics
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>federated {
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>  sites: [&quot;hospital_a&quot;, &quot;hospital_b&quot;, &quot;hospital_c&quot;],
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>  model: &quot;random_forest&quot;,
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>  target: &quot;readmission_risk&quot;
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>};
 </code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>try {
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  result = analyze_bloodwork(sample_id);
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>} catch (SampleNotFoundError e) {
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  log(&quot;Sample not found: &quot; + e.message);
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  request_new_sample();
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>} catch (AnalysisError e) {
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  log(&quot;Analysis failed: &quot; + e.message);
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  retry_analysis();
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>} finally {
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>  cleanup_resources();
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>try {
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  result = analyze_bloodwork(sample_id);
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>} catch (SampleNotFoundError e) {
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  log(&quot;Sample not found: &quot; + e.message);
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  request_new_sample();
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>} catch (AnalysisError e) {
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>  log(&quot;Analysis failed: &quot; + e.message);
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>  retry_analysis();
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>} finally {
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  cleanup_resources();
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>}
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
