@@ -1270,7 +1270,7 @@
 <h2 id="1-ecosystem-vision-phased-plan">1. Ecosystem Vision &amp; Phased Plan<a class="headerlink" href="#1-ecosystem-vision-phased-plan" title="Permanent link">&para;</a></h2>
 <h3 id="phase-1-functional-compiler-in-rust-02-years">Phase 1: Functional Compiler in Rust (0–2 Years)<a class="headerlink" href="#phase-1-functional-compiler-in-rust-02-years" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Goal:</strong> Complete the Rust-written <code>medic</code> compiler with essential features.</li>
+<li><strong>Goal:</strong> Complete the Rust-written <code>medic</code> compiler with essential features, including Rust-like borrow checking for memory safety and concurrency.</li>
 <li><strong>Tasks:</strong></li>
 <li>Finish recursive descent parser for Medi’s syntax (<code>fhir_query</code>, <code>federated</code>)</li>
 <li>Implement type checking for healthcare types (e.g., <code>FHIRPatient</code>)</li>
@@ -1330,6 +1330,7 @@
 <li><strong>Iterative Development:</strong> Focus on a minimal, stable subset for self-hosting</li>
 <li><strong>Community Involvement:</strong> Use GitHub Discussions, RFCs for stabilization</li>
 <li><strong>Bootstrapping Strategy:</strong> Gradual transition (parser first, then compiler)</li>
+<li><strong>Borrow Checking:</strong> Adopt Rust-like borrow checking for safety and concurrency in Medi, ensuring memory safety and preventing data races in healthcare analytics.</li>
 </ul>
 <hr />
 <h2 id="4-how-to-contribute">4. How to Contribute<a class="headerlink" href="#4-how-to-contribute" title="Permanent link">&para;</a></h2>
