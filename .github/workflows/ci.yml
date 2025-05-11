@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   fmt-and-lint:
@@ -12,9 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Rust
-        uses: actions/setup-rust@v1
+        uses: dtolnay/rust-toolchain@v1
         with:
-          rust-version: stable
+          toolchain: latest
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
       - name: Install nightly for rustfmt (if needed)
         run: rustup component add rustfmt
       - name: Rustfmt check
