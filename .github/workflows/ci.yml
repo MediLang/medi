@@ -1,0 +1,23 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  fmt-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+      - name: Install nightly for rustfmt (if needed)
+        run: rustup component add rustfmt
+      - name: Rustfmt check
+        run: cargo fmt --all -- --check
+      - name: Clippy check
+        run: RUST_BACKTRACE=1 cargo clippy --all -- -D warnings
