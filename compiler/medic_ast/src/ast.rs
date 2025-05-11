@@ -31,9 +31,20 @@ pub struct BinaryExpressionNode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOperator {
-    Add, Sub, Mul, Div, Mod,
-    Eq, Neq, Lt, Gt, Le, Ge,
-    And, Or, Assign,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Eq,
+    Neq,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    And,
+    Or,
+    Assign,
 }
 
 #[derive(Debug, Clone, PartialEq)]

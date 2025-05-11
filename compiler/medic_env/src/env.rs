@@ -1,13 +1,19 @@
 // Type environment for Medic language in Rust
 // Mimics TypeScript's TypeEnv for variable/function scopes
 
-use std::collections::HashMap;
 use medic_type::types::MediType;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct TypeEnv {
     parent: Option<Box<TypeEnv>>,
     symbols: HashMap<String, MediType>,
+}
+
+impl Default for TypeEnv {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TypeEnv {
