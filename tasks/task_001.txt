@@ -30,13 +30,13 @@ Implementation approach:
 6. Validation against the example code snippets provided in the PRD
 
 # Subtasks:
-## 1. Develop Lexical Analyzer [in-progress]
+## 1. Develop Lexical Analyzer [done]
 ### Dependencies: None
 ### Description: Create a lexical analyzer (tokenizer) that converts input text into a stream of tokens for the parser
 ### Details:
 Implement token types for healthcare-specific terms, identifiers, literals, operators, and keywords. Include functionality for handling whitespace, comments, and special characters. Design the tokenizer to be efficient with proper error handling for invalid characters or token patterns.
 
-## 2. Implement Core Parser Components [pending]
+## 2. Implement Core Parser Components [in-progress]
 ### Dependencies: 1.1
 ### Description: Build the fundamental recursive descent parser structure with basic parsing functions
 ### Details:
