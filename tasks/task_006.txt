@@ -1,81 +1,80 @@
 # Task ID: 6
-# Title: Command-Line Tools and REPL Environment
+# Title: Implement Standard Library: medi.stats and medi.ai Modules
 # Status: pending
-# Dependencies: 2, 3
+# Dependencies: 5
 # Priority: medium
-# Description: Develop the compiler, REPL, and package manager command-line tools
+# Description: Develop the medi.stats module with statistical functions for clinical data and the medi.ai module with interfaces for ML model integration and risk prediction utilities.
 # Details:
-Implement the command-line tools for the Medi language, including the compiler, REPL environment, and package manager. This includes:
+Implement statistical and AI capabilities:
 
-1. Create the `medic` compiler command with appropriate options
-2. Implement the interactive REPL with healthcare-aware features
-3. Develop the package manager for Medi libraries
-4. Create project scaffolding and initialization tools
-5. Implement documentation generation utilities
-6. Develop testing and benchmarking tools
+medi.stats:
+1. Descriptive statistics for patient cohorts
+2. Hypothesis testing (t-tests, chi-square, etc.)
+3. Clinical trial analysis functions
+4. Epidemiological calculations
 
-The command-line interface should be intuitive for healthcare professionals with limited programming experience while providing advanced options for power users.
+medi.ai:
+1. ML model integration interfaces
+2. Risk prediction utilities
+3. Foundation for federated learning
+4. Model validation for healthcare applications
 
-Example command-line interface:
-```
-# Compile a Medi program
-medic compile program.medi --target x86_64 --optimize
-
-# Run the REPL with FHIR server connection
-medic repl --fhir-server https://hapi.fhir.org/baseR4
-
-# Create a new Medi project
-medic init clinical-trial-analysis
-
-# Install a package
-medic package install genomics-toolkit
-```
-
-The REPL should include healthcare-aware autocomplete, contextual help for medical concepts, and integrated documentation.
+Implementation approach:
+- Implement statistical algorithms optimized for healthcare data
+- Create interfaces to common ML frameworks (TensorFlow, PyTorch)
+- Develop healthcare-specific validation metrics
+- Implement risk prediction algorithms
+- Create secure federated learning primitives
+- Design model explainability utilities for clinical use
 
 # Test Strategy:
-1. Create integration tests for the compiler with various options
-2. Test REPL functionality with interactive scripts
-3. Verify package manager operations (install, update, remove)
-4. Test project scaffolding with different templates
-5. Validate documentation generation
-6. Test cross-platform functionality
-7. Create usability tests with healthcare professionals
+1. Statistical function validation against R/Python equivalents
+2. Performance benchmarks for statistical operations
+3. ML model integration tests
+4. Risk prediction accuracy validation
+5. Federated learning security tests
+6. Clinical validation with synthetic datasets
 
 # Subtasks:
-## 1. Implement Compiler Command Interface [pending]
+## 1. Implement Core Descriptive Statistics Module [pending]
 ### Dependencies: None
-### Description: Create a command-line interface for the compiler with options for source files, output formats, optimization levels, and error reporting tailored for healthcare applications.
+### Description: Develop the foundational descriptive statistics functionality for healthcare data analysis
 ### Details:
-Develop a robust CLI that accepts various flags and arguments, handles file paths correctly, provides meaningful error messages, and integrates with the core compiler. Include healthcare-specific validation options and HIPAA compliance checks.
+Create functions for calculating mean, median, mode, standard deviation, variance, quartiles, and data distribution analysis. Include specialized functions for handling healthcare-specific data types (e.g., lab values, vital signs). Implement data visualization utilities for generating histograms, box plots, and scatter plots with appropriate healthcare data considerations.
 
-## 2. Develop REPL Environment [pending]
+## 2. Develop Hypothesis Testing Framework [pending]
 ### Dependencies: 6.1
-### Description: Create an interactive Read-Eval-Print Loop environment that allows healthcare professionals to experiment with code snippets and test language features in real-time.
+### Description: Build statistical hypothesis testing capabilities for clinical data analysis
 ### Details:
-Implement command history, syntax highlighting, auto-completion for medical terminology and language constructs, and the ability to load/save sessions. Include helpful documentation access and example snippets for common healthcare algorithms.
+Implement t-tests, chi-square tests, ANOVA, and non-parametric tests (Mann-Whitney, Wilcoxon) with healthcare-specific interpretations. Create functions for calculating p-values, confidence intervals, and effect sizes. Include multiple comparison correction methods (Bonferroni, FDR) relevant for multi-endpoint clinical studies.
 
-## 3. Create Package Manager [pending]
-### Dependencies: 6.1
-### Description: Develop a package manager for distributing and installing libraries, modules, and dependencies specific to healthcare applications.
-### Details:
-Implement functionality for package discovery, installation, version management, dependency resolution, and security verification. Include features for managing healthcare-specific packages like standardized medical ontologies, FHIR resources, and clinical algorithms.
-
-## 4. Build Project Scaffolding Tools [pending]
-### Dependencies: 6.3
-### Description: Create utilities to generate project templates and boilerplate code for common healthcare application types.
-### Details:
-Develop commands to initialize new projects with appropriate directory structures, configuration files, and starter code. Include templates for different healthcare applications like clinical decision support systems, patient data analysis tools, and medical research applications.
-
-## 5. Implement Documentation Utilities [pending]
+## 3. Create Clinical Trial Analysis Module [pending]
 ### Dependencies: 6.1, 6.2
-### Description: Create tools for generating, managing, and accessing documentation for both the language itself and user-created healthcare applications.
+### Description: Develop specialized statistical functions for clinical trial data analysis
 ### Details:
-Develop utilities for extracting documentation from code comments, generating API references, creating user guides, and providing contextual help. Include healthcare-specific documentation templates and integration with medical knowledge bases.
+Implement survival analysis functions (Kaplan-Meier, Cox proportional hazards). Create utilities for randomization, sample size calculation, and power analysis. Build functions for interim analysis, adaptive trial designs, and treatment effect estimation with appropriate healthcare regulatory considerations.
 
-## 6. Integrate Testing Framework [pending]
-### Dependencies: 6.1, 6.3
-### Description: Develop command-line tools for running tests, generating test reports, and validating healthcare applications against clinical requirements and standards.
+## 4. Build Epidemiological Calculations Module [pending]
+### Dependencies: 6.1
+### Description: Implement statistical functions for epidemiological data analysis
 ### Details:
-Implement utilities for unit testing, integration testing, and compliance testing specific to healthcare applications. Include features for testing against medical datasets, validating clinical algorithms, and ensuring HIPAA compliance.
+Create functions for calculating incidence, prevalence, relative risk, odds ratio, and attributable risk. Implement age-standardization methods and epidemic curve analysis. Develop spatial statistics capabilities for geographical health data analysis and disease mapping.
+
+## 5. Develop ML Model Integration Interfaces [pending]
+### Dependencies: 6.1
+### Description: Create standardized interfaces for integrating machine learning models with healthcare data
+### Details:
+Design API interfaces for common ML frameworks (scikit-learn, TensorFlow, PyTorch). Implement data preprocessing pipelines specific to healthcare data (handling missing values, normalization). Create model serialization/deserialization utilities with versioning for healthcare regulatory compliance.
+
+## 6. Implement Risk Prediction Utilities [pending]
+### Dependencies: 6.3, 6.5
+### Description: Develop specialized functions for healthcare risk prediction and scoring
+### Details:
+Create implementations of common clinical risk scores (APACHE, SOFA, Framingham, etc.). Build calibration and discrimination assessment tools (calibration plots, ROC curves, decision curves). Implement net reclassification improvement and integrated discrimination improvement metrics for model comparison.
+
+## 7. Develop Healthcare Validation Framework [pending]
+### Dependencies: 6.5, 6.6
+### Description: Build comprehensive validation tools for healthcare AI models with federated learning capabilities
+### Details:
+Implement healthcare-specific validation metrics (sensitivity, specificity, PPV, NPV for various clinical thresholds). Create federated learning infrastructure for privacy-preserving distributed model training. Develop model fairness and bias assessment tools specific to healthcare populations. Build model explainability functions appropriate for clinical decision support.
 
