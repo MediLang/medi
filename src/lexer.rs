@@ -65,117 +65,73 @@ pub enum Token {
     #[regex(r"[0-9][0-9_]*", |lex| lex.slice().replace('_', "").parse().ok())] IntLiteral(i64),
     #[regex(r"[0-9][0-9_]*\.[0-9_]+([eE][+-]?[0-9_]+)?", |lex| lex.slice().replace('_', "").parse().ok())] FloatLiteral(f64),
     #[regex(r#"'([^'\\]|\\.)*'"#, |lex| lex.slice().to_string())] SingleQuotedString(String),
-    #[regex(r#"\"([^"\\]|\\.)*\""#, |lex| lex.slice().to_string())] DoubleQuotedString(String),
-    #[regex(r#"r#?\"([^"\\]|\\.)*\""#, |lex| lex.slice().to_string())] RawString(String),
-    #[regex(r#"b\"([^"\\]|\\.)*\""#, |lex| lex.slice().to_string())] ByteString(String),
+    #[regex(r#""([^"\\]|\\.)*""#, |lex| lex.slice().to_string())] DoubleQuotedString(String),
+    #[regex(r#"r"[^"]*""#, |lex| lex.slice().to_string())] RawString(String),
+    #[regex(r#"b"[^"]*""#, |lex| lex.slice().to_string())] ByteString(String),
+    #[regex(r#"'''[^']*'''"#, |lex| lex.slice().to_string())]
+    #[regex(r#"""[^"]*"""#, |lex| lex.slice().to_string())]
+    TripleQuotedString(String),
     #[token("true")] True,
     #[token("false")] False,
     #[token("null")] Null,
     #[token("None")] NoneVal,
 
-    // --- Operators ---
-    #[token("+")] Plus,
-    #[token("-")] Minus,
-    #[token("*")] Star,
-    #[token("**")] DoubleStar,
-    #[token("/")] Slash,
-    #[token("//")] DoubleSlash,
-    #[token("%") ] Percent,
-    #[token("=")] Assign,
+    // --- Operators (multi-char first, Rust best practice) ---
+    #[token("**=")] DoubleStarAssign,
+    #[token("//=")] DoubleSlashAssign,
     #[token("+=")] PlusAssign,
     #[token("-=")] MinusAssign,
     #[token("*=")] StarAssign,
     #[token("/=")] SlashAssign,
     #[token("%=")] PercentAssign,
-    #[token("**=")] DoubleStarAssign,
-    #[token("//=")] DoubleSlashAssign,
+    #[token("**")] DoubleStar,
+    #[token("//")] DoubleSlash,
     #[token("==")] EqEq,
     #[token("!=")] Neq,
-    #[token("<")] Lt,
-    #[token(">")] Gt,
     #[token("<=")] Le,
     #[token(">=")] Ge,
     #[token("&&")] AndAnd,
     #[token("||")] OrOr,
+    #[token("<<")] Shl,
+    #[token(">>")] Shr,
+    #[token("->")] Arrow,
+    #[token("+")] Plus,
+    #[token("-")] Minus,
+    #[token("*")] Star,
+    #[token("/")] Slash,
+    #[token("%")] Percent,
+    #[token("=")] Assign,
+    #[token("<")] Lt,
+    #[token(">")] Gt,
     #[token("!")] Bang,
     #[token("&")] BitAnd,
     #[token("|")] BitOr,
     #[token("^")] BitXor,
     #[token("~")] BitNot,
-    #[token("<<")] Shl,
-    #[token(">>")] Shr,
-    #[token("->")] Arrow,
+
+    // --- Delimiters ---
+    #[token("::")] DoubleColon,
     #[token(":")] Colon,
     #[token(";")] Semicolon,
     #[token(".")] Dot,
     #[token(",")] Comma,
-
-    // --- Delimiters ---
     #[token("(")] LParen,
     #[token(")")] RParen,
     #[token("[")] LBracket,
     #[token("]")] RBracket,
     #[token("{")] LBrace,
     #[token("}")] RBrace,
-    #[token("@") ] At,
+    #[token("@")] At,
     #[token("$")] Dollar,
     #[token("\\")] Backslash,
     #[token("_")] Underscore,
 
     // --- Whitespace and comments (skipped) ---
     #[regex(r"[ \t\n\r]+", logos::skip)]
-    #[regex(r"//[^\n]*", logos::skip)]
+    #[regex(r"//[^\n]*", logos::skip, priority = 2)]
     #[regex(r"#.*", logos::skip)]
     #[regex(r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/", logos::skip)]
-    #[regex(r"'''(.|\n)*?'''", logos::skip)]
-    #[regex(r#"""(.|\n)*?"""#, logos::skip)]
 
     // --- Error ---
-    Error,
-    
-    // Identifiers (variables, function names, medical terms)
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")] Identifier,
-    
-    // Literals
-    #[regex(r"[0-9]+", |lex| lex.slice().parse().ok())] IntLiteral(i64),
-    #[regex(r"[0-9]+\.[0-9]+", |lex| lex.slice().parse().ok())] FloatLiteral(f64),
-    #[regex(r#""([^"\\]|\\.)*""#, |lex| lex.slice().to_string())] StringLiteral(String),
-    #[token("true")] True,
-    #[token("false")] False,
-    
-    // Operators
-    #[token("+")] Plus,
-    #[token("-")] Minus,
-    #[token("*")] Star,
-    #[token("/")] Slash,
-    #[token("%") ] Percent,
-    #[token("=")] Assign,
-    #[token("==")] EqEq,
-    #[token("!=")] Neq,
-    #[token("<")] Lt,
-    #[token(">")] Gt,
-    #[token("<=")] Le,
-    #[token(">=")] Ge,
-    #[token("&&")] AndAnd,
-    #[token("||")] OrOr,
-    
-    // Delimiters
-    #[token("(")] LParen,
-    #[token(")")] RParen,
-    #[token("{")] LBrace,
-    #[token("}")] RBrace,
-    #[token(",")] Comma,
-    #[token(";")] Semicolon,
-    #[token(".")] Dot,
-    
-    // Whitespace (skipped)
-    #[regex(r"[ \t\n\r]+", logos::skip)]
-
-    // Comments (skipped)
-    #[regex(r"//[^
-]*", logos::skip)]
-    #[regex(r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/", logos::skip)]
-
-    // Error token for unrecognized input
     Error,
 }
