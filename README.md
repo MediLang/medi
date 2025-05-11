@@ -128,7 +128,7 @@ Medi leverages RISC-V, an open-source instruction set architecture, to enhance p
 
 #### Implementation:
 
-*   LLVM compiler targets RISC-V (RV32/RV64) with vector (RVV) and crypto extensions.
+*   LLVM medic targets RISC-V (RV32/RV64) with vector (RVV) and crypto extensions.
 *   WebAssembly runs on RISC-V-based devices, optimized for low power.
 *   Modules like `medi.genomics` and `medi.privacy` use RISC-V vector/crypto instructions.
 
@@ -180,13 +180,13 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 *   Clone the Repository: `git clone https://github.com/MediLang/medi.git`
 *   Join the Community: [X: @MediLangHQ](https://twitter.com/MediLangHQ) | [GitHub Discussions](https://github.com/MediLang/medi/discussions)
 *   Read the Docs: [medi-lang.org/docs](http://medi-lang.org/docs) (Coming Soon)
-*   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: compiler, standard library, IDE, RISC-V, AI models.
+*   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: medic, standard library, IDE, RISC-V, AI models.
 
 ## Development Roadmap
 
 ### Phase 1: Prototype (6-12 Months)
 
-*   Build parser and LLVM-based compiler for core syntax using Rust-inspired approach.
+*   Build parser and LLVM-based medic for core syntax using Rust-inspired approach.
 *   Implement modules: `medi.data`, `medi.compliance`, `medi.stats`, `medi.ai`.
 *   Develop a basic IDE with visual analytics and .mdi file recognition.
 *   Test with synthetic data (FHIR, VCF, IoT streams).

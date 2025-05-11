@@ -277,7 +277,7 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - Implement type system with healthcare data types
 - Create LLVM backend for initial code generation
 - Build basic memory management system
-- Develop command-line compiler and REPL
+- Develop command-line medic and REPL
 
 ### Standard Library Foundations
 - Implement `medi.data` module with FHIR support
@@ -553,11 +553,11 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
   - Develop automated security scanning in the build process
 
 ### 4. Compiler Correctness
-- **Risk**: Bugs in the compiler leading to incorrect code generation
+- **Risk**: Bugs in the medic leading to incorrect code generation
 - **Mitigation**:
-  - Implement extensive compiler test suite
+  - Implement extensive medic test suite
   - Use property-based testing for edge cases
-  - Develop formal verification for critical compiler components
+  - Develop formal verification for critical medic components
   - Create comprehensive validation suite for generated code
   - Establish regression testing infrastructure
 
@@ -602,7 +602,7 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 ## Resource Constraints
 
 ### 1. Development Expertise
-- **Risk**: Shortage of developers with both healthcare and compiler expertise
+- **Risk**: Shortage of developers with both healthcare and medic expertise
 - **Mitigation**:
   - Create specialized teams with complementary expertise
   - Develop internal training programs
