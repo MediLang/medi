@@ -1,82 +1,80 @@
 # Task ID: 2
-# Title: LLVM Integration and Code Generation
+# Title: Develop Healthcare-Specific Type System
 # Status: pending
 # Dependencies: 1
 # Priority: high
-# Description: Create LLVM backend for code generation with healthcare-specific optimizations
+# Description: Implement a type system with healthcare data types (FHIRPatient, Observation, etc.), type checking for healthcare operations, type inference, and safety guarantees for patient data handling.
 # Details:
-Implement the LLVM IR generation component that translates the Medi AST to LLVM Intermediate Representation for compilation. This includes:
+Design and implement a type system that includes:
+1. Core primitive types (int, float, string, etc.)
+2. Healthcare-specific types (FHIRPatient, Observation, Medication, etc.)
+3. Type checking rules for healthcare operations
+4. Type inference algorithm
+5. Safety mechanisms for patient data handling
+6. Privacy-aware type annotations
 
-1. Set up LLVM integration with the Medi compiler infrastructure
-2. Implement AST visitors to generate LLVM IR
-3. Create code generation for healthcare-specific operations
-4. Implement basic optimization passes for healthcare data processing
-5. Set up the compilation pipeline from Medi source to executable
-6. Support multiple target architectures (x86-64, ARM, RISC-V)
-
-The implementation should leverage LLVM's optimization capabilities while adding domain-specific optimizations for healthcare workloads. Focus on generating efficient code for healthcare data processing operations.
-
-Example optimization areas:
-- FHIR resource access patterns
-- Genomic data processing
-- Statistical functions for clinical trials
-- Privacy-preserving operations
+Implementation approach:
+- Define type hierarchy with inheritance for healthcare types
+- Implement Hindley-Milner type inference with extensions for healthcare types
+- Create type checking visitors for the AST
+- Design privacy/compliance type annotations (e.g., @PHI, @anonymized)
+- Implement type compatibility rules for healthcare data
+- Create specialized type checking for regulatory constructs
 
 # Test Strategy:
-1. Create unit tests for LLVM IR generation from Medi AST nodes
-2. Develop integration tests that compile simple Medi programs
-3. Implement performance tests comparing generated code against Python/R equivalents
-4. Test cross-platform compilation for supported architectures
-5. Verify correctness of generated code with healthcare-specific operations
-6. Benchmark optimization passes with healthcare workloads
-7. Create regression tests to ensure consistent performance
+1. Unit tests for type checking rules
+2. Tests for type inference with complex expressions
+3. Validation of healthcare-specific type safety
+4. Edge case testing for type compatibility
+5. Tests for privacy annotations and their enforcement
+6. Performance testing of type checking system
 
 # Subtasks:
-## 1. LLVM Infrastructure Setup [pending]
+## 1. Define primitive healthcare types [pending]
 ### Dependencies: None
-### Description: Set up the LLVM development environment and integrate it with the existing codebase
+### Description: Create the foundational primitive types specific to healthcare data
 ### Details:
-Install LLVM libraries and tools, configure build system integration, establish project structure for code generation components, and create initial interfaces between the compiler frontend and LLVM backend
+Define basic types like PatientID, MedicalCode, Dosage, Measurement, DateTime, and other atomic healthcare data types. Include validation rules and constraints for each primitive type. Document the semantics and intended usage of each type.
 
-## 2. AST Visitor Implementation [pending]
+## 2. Implement healthcare-specific type hierarchy [pending]
 ### Dependencies: 2.1
-### Description: Develop AST visitor pattern to traverse the abstract syntax tree and prepare for LLVM IR generation
+### Description: Design and implement the hierarchical structure of healthcare types
 ### Details:
-Create visitor classes that traverse the AST nodes, implement type checking and validation during traversal, design IR generation interfaces, and handle symbol resolution for healthcare-specific constructs
+Create composite types like Patient, Medication, Diagnosis, Procedure, and LabResult. Define inheritance relationships and type composition rules. Implement interfaces for common healthcare operations. Document the relationships between types.
 
-## 3. Basic Operations Code Generation [pending]
-### Dependencies: 2.2
-### Description: Implement LLVM IR generation for fundamental language operations and control structures
+## 3. Develop type checking rules [pending]
+### Dependencies: 2.1, 2.2
+### Description: Implement the rules for validating type correctness in healthcare contexts
 ### Details:
-Generate LLVM IR for arithmetic operations, variable declarations, control flow (if/else, loops), function definitions and calls, and basic data structures relevant to healthcare applications
+Define type compatibility rules for healthcare operations. Implement type checking algorithms for function applications. Create specialized rules for healthcare-specific operations like medication dosage calculations and diagnostic code validations.
 
-## 4. Healthcare-Specific Optimizations [pending]
+## 4. Implement type inference algorithm [pending]
 ### Dependencies: 2.3
-### Description: Develop domain-specific optimization passes for healthcare data processing and analysis
+### Description: Create a Hindley-Milner based type inference system with healthcare extensions
 ### Details:
-Create custom LLVM optimization passes for efficient patient data processing, implement vectorization for medical image processing, optimize memory access patterns for large healthcare datasets, and ensure numerical stability for biostatistical calculations
+Implement unification algorithm for healthcare types. Develop constraint solving for healthcare-specific type relationships. Create type variable handling and generalization mechanisms. Optimize for common healthcare data processing patterns.
 
-## 5. Compilation Pipeline Configuration [pending]
-### Dependencies: 2.3, 2.4
-### Description: Configure the end-to-end compilation pipeline from source code to executable
+## 5. Create patient data safety mechanisms [pending]
+### Dependencies: 2.2, 2.3
+### Description: Implement type-level safeguards for patient data integrity
 ### Details:
-Set up the compilation stages including parsing, AST generation, LLVM IR generation, optimization passes, target code generation, and linking, with appropriate command-line interfaces and configuration options
+Develop immutability controls for critical patient data. Implement audit trail type wrappers. Create validation types for ensuring data consistency. Design error types that preserve patient safety during exceptional conditions.
 
-## 6. Multi-Architecture Support [pending]
-### Dependencies: 2.5
-### Description: Extend code generation to support multiple target architectures
+## 6. Implement privacy annotations [pending]
+### Dependencies: 2.2, 2.5
+### Description: Add HIPAA-compliant privacy annotations to the type system
 ### Details:
-Configure LLVM backend for x86, ARM, and potentially GPU targets, implement architecture-specific optimizations, create target-specific intrinsics for healthcare operations, and ensure consistent behavior across platforms
+Create PHI (Protected Health Information) type markers. Implement consent-based access control types. Develop de-identification type transformations. Create type-level mechanisms for privacy policy enforcement.
 
-## 7. Performance Testing and Benchmarking [pending]
-### Dependencies: 2.6
-### Description: Develop comprehensive performance tests for generated code across various healthcare workloads
+## 7. Define type compatibility rules [pending]
+### Dependencies: 2.3, 2.4, 2.6
+### Description: Establish rules for type compatibility and conversion in healthcare contexts
 ### Details:
-Create benchmark suite with representative healthcare algorithms, implement performance measurement infrastructure, compare against baseline implementations, optimize critical paths based on profiling data, and validate numerical accuracy
+Define subtyping relationships between healthcare types. Implement safe conversion operations between related types. Create compatibility checking for interoperability with external healthcare systems. Document type conversion risks and safety guarantees.
 
-## 8. Documentation and Integration Guide [pending]
-### Dependencies: 2.7
-### Description: Create detailed documentation for the LLVM integration and code generation components
+## 8. Develop comprehensive testing framework [pending]
+### Dependencies: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7
+### Description: Create tests to verify correctness of the healthcare type system
 ### Details:
-Document the LLVM IR generation process, optimization passes, target-specific considerations, extension points for future development, troubleshooting guides, and examples of generated code for common healthcare algorithms
+Implement unit tests for each type and operation. Create integration tests for complex healthcare workflows. Develop property-based tests for type system invariants. Create compliance test suite for privacy and security requirements. Document test coverage and validation approach.
 
