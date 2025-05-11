@@ -1,4 +1,4 @@
-// Type system definitions for Medi language in Rust
+// Type system definitions for Medic language in Rust
 // This mirrors the MediType union and healthcare-specific types from TypeScript
 
 use std::collections::HashMap;

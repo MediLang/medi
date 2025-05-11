@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "medic",
+    "medic_ast",
+    "medic_env",
+    "medic_lexer",
+    "medic_parser",
+    "medic_type",
+    "medic_typeck"
+]

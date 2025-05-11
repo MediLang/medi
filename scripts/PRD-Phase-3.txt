@@ -4,12 +4,12 @@
 
 ## EXECUTIVE SUMMARY
 
-Phase 3 represents a critical maturation period for the Medi programming language, focusing on production readiness and beginning the self-hosting journey. With a stable foundation from Phase 2, this phase will expand Medi into enterprise environments, enhance AI capabilities, and begin the strategic transition toward a self-hosted compiler. This marks the evolution of Medi from an innovative prototype to a production-ready platform for healthcare analytics.
+Phase 3 represents a critical maturation period for the Medi programming language, focusing on production readiness and beginning the self-hosting journey. With a stable foundation from Phase 2, this phase will expand Medi into enterprise environments, enhance AI capabilities, and begin the strategic transition toward a self-hosted medic. This marks the evolution of Medi from an innovative prototype to a production-ready platform for healthcare analytics.
 
 ## BUSINESS OBJECTIVES
 
 1. Establish Medi as a production-ready language for enterprise healthcare environments
-2. Begin the strategic transition toward self-hosting the Medi compiler
+2. Begin the strategic transition toward self-hosting the Medi medic
 3. Expand AI and advanced analytics capabilities for clinical decision support
 4. Integrate with major healthcare systems and cloud platforms
 5. Build a sustainable ecosystem with comprehensive documentation and training
@@ -19,10 +19,10 @@ Phase 3 represents a critical maturation period for the Medi programming languag
 ### 1. Self-Hosting Preparation
 
 #### Compiler Subset Identification
-- Identify a subset of Medi suitable for compiler development
+- Identify a subset of Medi suitable for medic development
 - Define bootstrapping strategy with clear milestones
-- Document compiler internals for reimplementation
-- Create test suites for validating compiler components
+- Document medic internals for reimplementation
+- Create test suites for validating medic components
 
 #### Parser Reimplementation
 - Rewrite the parser in Medi using recursive descent with pattern matching
@@ -126,10 +126,10 @@ Phase 3 represents a critical maturation period for the Medi programming languag
 **User Story:** As a Medi language contributor, I want to work on a self-hosted parser implementation.
 ```medi
 // Example code to be supported in Phase 3
-module medi::compiler::parser;
+module medi::medic::parser;
 
-use medi::compiler::lexer::Token;
-use medi::compiler::ast::{Expr, Stmt, TypeExpr};
+use medi::medic::lexer::Token;
+use medi::medic::ast::{Expr, Stmt, TypeExpr};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -444,11 +444,11 @@ dashboard::patient_flow(admission_forecast)
 3. **Phase 3C (Months 30-36):** Privacy/compliance checker porting
 
 ### Bootstrapping Strategy
-1. Use Rust-written compiler to compile Medi-written compiler components
+1. Use Rust-written medic to compile Medi-written medic components
 2. Test Medi-written components against comprehensive test suite
 3. Gradually replace Rust components with Medi equivalents
-4. Validate against golden compiler inputs/outputs
-5. Document compiler internals for future maintenance
+4. Validate against golden medic inputs/outputs
+5. Document medic internals for future maintenance
 
 ### Testing Framework
 - Feature-by-feature comparison testing
@@ -460,7 +460,7 @@ dashboard::patient_flow(admission_forecast)
 - Compiler architecture documentation
 - Component interfaces and internal APIs
 - Self-hosting roadmap and milestones
-- Contributor guidelines for compiler development
+- Contributor guidelines for medic development
 
 ## RISKS & MITIGATION
 
@@ -475,7 +475,7 @@ dashboard::patient_flow(admission_forecast)
 
 ## SUCCESS CRITERIA
 
-1. Self-hosted parser implementation passing compiler test suite
+1. Self-hosted parser implementation passing medic test suite
 2. Enterprise deployments in at least 5 major healthcare institutions
 3. AI component with clinical validation in 2+ use cases
 4. Integration with at least 2 major EHR systems
@@ -486,16 +486,16 @@ dashboard::patient_flow(admission_forecast)
 ## LOOKING AHEAD: PHASE 4
 
 Phase 4 will complete the self-hosting journey by:
-1. Fully rewriting all compiler components in Medi
-2. Bootstrapping the entire compiler (using Medi to compile itself)
-3. Optimizing the self-hosted compiler for performance
+1. Fully rewriting all medic components in Medi
+2. Bootstrapping the entire medic (using Medi to compile itself)
+3. Optimizing the self-hosted medic for performance
 4. Releasing Medi 1.0 as a fully mature, self-hosted language
 
 ## APPENDIX
 
 ### Glossary
 - **Self-hosting**: A programming language implemented in itself
-- **Bootstrapping**: Using an existing compiler to compile a new compiler
+- **Bootstrapping**: Using an existing medic to compile a new medic
 - **EHR**: Electronic Health Record
 - **SMART on FHIR**: A set of open specifications for EHR integration
 - **Federated Learning**: Machine learning technique that trains algorithms across multiple devices

@@ -9,7 +9,7 @@ Medi is a programming language purpose-built for healthcare analytics, with the 
 ## 1. Ecosystem Vision & Phased Plan
 
 ### Phase 1: Functional Compiler in Rust (0–2 Years)
-- **Goal:** Complete the Rust-written `medic` compiler with essential features.
+- **Goal:** Complete the Rust-written `medic` compiler with essential features, including Rust-like borrow checking for memory safety and concurrency.
 - **Tasks:**
   - Finish recursive descent parser for Medi’s syntax (`fhir_query`, `federated`)
   - Implement type checking for healthcare types (e.g., `FHIRPatient`)
@@ -65,6 +65,7 @@ Medi is a programming language purpose-built for healthcare analytics, with the 
 - **Iterative Development:** Focus on a minimal, stable subset for self-hosting
 - **Community Involvement:** Use GitHub Discussions, RFCs for stabilization
 - **Bootstrapping Strategy:** Gradual transition (parser first, then compiler)
+- **Borrow Checking:** Adopt Rust-like borrow checking for safety and concurrency in Medi, ensuring memory safety and preventing data races in healthcare analytics.
 
 ---
 

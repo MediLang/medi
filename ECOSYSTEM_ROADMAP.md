@@ -41,7 +41,7 @@ Written in Rust, with plans to become self-hosted (see `SELF_HOSTING.md`).
 
 ### Development Plan
 #### Phase 1 (0–12 Months)
-* Build core compiler stages (parsing, type checking, codegen).
+* Build core `medic` stages (parsing, type checking, borrow checking, codegen).
 #### Phase 2 (12–18 Months)
 * Add privacy/compliance checker and optimize for WebAssembly/RISC-V.
 
@@ -74,7 +74,7 @@ Enforces healthcare-specific privacy and compliance rules at compile time.
 * Validates regulatory compliance (e.g., HIPAA, GDPR, FDA) via constructs like `regulate`.
 
 ### Implementation
-Integrated into the `medic` compiler, written in Rust.
+Integrated into `medic`, the Medi language compiler written in Rust.
 
 ### Development Plan
 #### Phase 1 (6–12 Months)
@@ -448,7 +448,7 @@ Phase 3 (18–36 Months): Expand with community crates.
 Overall Development Phases
 
 Phase 1: Prototype (0–12 Months):
-Build core components: parser, medic compiler, medipack, standard library.
+Build core components: parser, `medic` (compiler), medipack, standard library.
 Focus on healthcare syntax and basic functionality.
 
 

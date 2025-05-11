@@ -128,7 +128,7 @@ Medi leverages RISC-V, an open-source instruction set architecture, to enhance p
 
 #### Implementation:
 
-*   LLVM compiler targets RISC-V (RV32/RV64) with vector (RVV) and crypto extensions.
+*   LLVM medic targets RISC-V (RV32/RV64) with vector (RVV) and crypto extensions.
 *   WebAssembly runs on RISC-V-based devices, optimized for low power.
 *   Modules like `medi.genomics` and `medi.privacy` use RISC-V vector/crypto instructions.
 
@@ -180,13 +180,13 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 *   Clone the Repository: `git clone https://github.com/MediLang/medi.git`
 *   Join the Community: [X: @MediLangHQ](https://twitter.com/MediLangHQ) | [GitHub Discussions](https://github.com/MediLang/medi/discussions)
 *   Read the Docs: [medi-lang.org/docs](http://medi-lang.org/docs) (Coming Soon)
-*   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: compiler, standard library, IDE, RISC-V, AI models.
+*   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: medic, standard library, IDE, RISC-V, AI models.
 
 ## Development Roadmap
 
 ### Phase 1: Prototype (6-12 Months)
 
-*   Build parser and LLVM-based compiler for core syntax using Rust-inspired approach.
+*   Build parser and LLVM-based medic for core syntax using Rust-inspired approach.
 *   Implement modules: `medi.data`, `medi.compliance`, `medi.stats`, `medi.ai`.
 *   Develop a basic IDE with visual analytics and .mdi file recognition.
 *   Test with synthetic data (FHIR, VCF, IoT streams).
@@ -221,7 +221,38 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
     *   `medi.compliance`: Regulatory automation.
     *   `medi.ai`: AI models for diagnostics, NLP, prediction.
     *   `medi.ops`: Hospital operations.
-*   **IDE:** Electron-based, with code completion, compliance warnings, and visual interface.
+
+## Project Structure (Rust-Inspired)
+
+This repository follows a Rust-style workspace structure:
+
+- **Cargo.toml (workspace, in medi/)**: Defines the workspace and its member crates.
+- **compiler/**: All Rust source files for the Medic compiler (not in a src/ subdirectory).
+- **library/**: (Optional) Standard library crate(s) for Medic.
+- **src/**: Reserved for future Medi language source code. Do not use for the compiler.
+- **tests/**: Integration and system tests for the compiler and library.
+
+### Building the Project
+
+Run all builds from the medi/ directory root:
+```sh
+cargo build --workspace
+```
+
+### Running Tests
+
+Run all tests for all crates:
+```sh
+cargo test --workspace
+```
+
+### Directory Purposes
+- `compiler/`: Rust crate for the Medic compiler (`medic`). All Rust source files go directly here.
+- `library/`: Rust crate(s) for the Medic standard library.
+- `src/`: Reserved for future Medi language source code (not used for compiler).
+- `tests/`: Integration/system tests (Rust or other frameworks).
+
+This structure closely follows the Rust project layout inspiration.
 
 ## Contributing
 

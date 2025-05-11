@@ -47,11 +47,55 @@ dependencies = [
 ]
 
 [[package]]
-name = "medi"
+name = "medic"
+version = "0.1.0"
+dependencies = [
+ "medic_ast",
+ "medic_env",
+ "medic_lexer",
+ "medic_parser",
+ "medic_type",
+ "medic_typeck",
+]
+
+[[package]]
+name = "medic_ast"
+version = "0.1.0"
+
+[[package]]
+name = "medic_env"
+version = "0.1.0"
+dependencies = [
+ "medic_type",
+]
+
+[[package]]
+name = "medic_lexer"
 version = "0.1.0"
 dependencies = [
  "logos",
+]
+
+[[package]]
+name = "medic_parser"
+version = "0.1.0"
+dependencies = [
+ "medic_ast",
+ "medic_lexer",
  "nom",
+]
+
+[[package]]
+name = "medic_type"
+version = "0.1.0"
+
+[[package]]
+name = "medic_typeck"
+version = "0.1.0"
+dependencies = [
+ "medic_ast",
+ "medic_env",
+ "medic_type",
 ]
 
 [[package]]
@@ -110,6 +154,10 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "tests"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-ident"

@@ -4,7 +4,7 @@
 
 ## EXECUTIVE SUMMARY
 
-Phase 1 focuses on building the foundational components of the Medi programming language, establishing the core infrastructure necessary for a minimum viable product that demonstrates the language's unique value proposition in healthcare. This phase will deliver a working prototype of the Medi compiler, essential standard library modules, and basic development tools, enabling early adopters to explore Medi's healthcare-specific features.
+Phase 1 focuses on building the foundational components of the Medi programming language, establishing the core infrastructure necessary for a minimum viable product that demonstrates the language's unique value proposition in healthcare. This phase will deliver a working prototype of the Medi medic, essential standard library modules, and basic development tools, enabling early adopters to explore Medi's healthcare-specific features.
 
 ## BUSINESS OBJECTIVES
 
@@ -30,6 +30,7 @@ Phase 1 focuses on building the foundational components of the Medi programming 
 - Safety guarantees for patient data handling
 
 #### Compiler (`medic`)
+- Implement Rust-like borrow checking for memory safety and concurrency
 - LLVM backend integration for efficient code generation
 - Support for WebAssembly target (for browser deployments)
 - Initial RISC-V support for medical IoT devices
@@ -138,7 +139,7 @@ let analysis = run_risk_model(synthetic_patients);
 ### System Performance
 - Compilation time: < 2 seconds for simple scripts
 - Runtime performance: Within 2x of equivalent C++ for numerical operations
-- Memory usage: < 100MB for compiler, < 50MB runtime for edge device deployment
+- Memory usage: < 100MB for medic, < 50MB runtime for edge device deployment
 
 ### Compatibility
 - Development platform support: Linux (Ubuntu 20.04+), macOS (10.15+), Windows 10/11
@@ -169,7 +170,7 @@ let analysis = run_risk_model(synthetic_patients);
 
 ## SUCCESS CRITERIA
 
-1. Working compiler that can process basic Medi scripts
+1. Working medic that can process basic Medi scripts
 2. Successful compilation and execution of all key use case examples
 3. Standard library with core healthcare functionality
 4. Basic IDE with visual analytics capabilities
@@ -191,7 +192,7 @@ This phase establishes fundamentals for expansion in Phase 2, where we will:
 - **AST**: Abstract Syntax Tree
 - **FHIR**: Fast Healthcare Interoperability Resources
 - **HIPAA**: Health Insurance Portability and Accountability Act
-- **LLVM**: Low Level Virtual Machine (compiler infrastructure)
+- **LLVM**: Low Level Virtual Machine (medic infrastructure)
 - **RISC-V**: An open standard instruction set architecture
 
 ### References

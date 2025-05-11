@@ -1,0 +1,13 @@
+[package]
+name = "medic"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+medic_ast = { path = "../medic_ast" }
+medic_env = { path = "../medic_env" }
+medic_lexer = { path = "../medic_lexer" }
+medic_parser = { path = "../medic_parser" }
+medic_type = { path = "../medic_type" }
+medic_typeck = { path = "../medic_typeck" }
+

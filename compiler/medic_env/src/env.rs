@@ -1,8 +1,8 @@
-// Type environment for Medi language in Rust
+// Type environment for Medic language in Rust
 // Mimics TypeScript's TypeEnv for variable/function scopes
 
 use std::collections::HashMap;
-use crate::types::MediType;
+use medic_type::types::MediType;
 
 #[derive(Debug, Clone)]
 pub struct TypeEnv {
