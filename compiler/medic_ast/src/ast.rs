@@ -4,6 +4,9 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
     Identifier(String),
+    IcdCode(String),
+    CptCode(String),
+    SnomedCode(String),
     Literal(LiteralNode),
     Binary(Box<BinaryExpressionNode>),
     Call(Box<CallExpressionNode>),

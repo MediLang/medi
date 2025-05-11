@@ -1,0 +1,9 @@
+[package]
+name = "medic_parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+medic_ast = { path = "../medic_ast" }
+medic_lexer = { path = "../medic_lexer" }
+nom = "7"

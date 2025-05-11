@@ -1,9 +1,9 @@
-pub mod ast;
-pub mod types;
-pub mod env;
-pub mod type_checker;
-pub mod parser;
-pub mod lexer;
+pub mod medic_ast;
+pub mod medic_types;
+pub mod medic_env;
+pub mod medic_type;
+pub mod medic_parser;
+pub mod medic_lexer;
 
 #[cfg(test)]
 mod tests {

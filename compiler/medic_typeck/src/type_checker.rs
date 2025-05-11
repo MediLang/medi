@@ -1,9 +1,9 @@
-// Type checker for Medi language in Rust
+// Type checker for Medic language in Rust
 // This is a basic structure; expand with more rules as needed
 
-use crate::ast::*;
-use crate::types::*;
-use crate::env::TypeEnv;
+use medic_ast::ast::*;
+use medic_type::types::*;
+use medic_env::env::TypeEnv;
 
 pub struct TypeChecker<'a> {
     env: &'a mut TypeEnv,
@@ -16,6 +16,7 @@ impl<'a> TypeChecker<'a> {
 
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
         match expr {
+            ExpressionNode::IcdCode(_) | ExpressionNode::CptCode(_) | ExpressionNode::SnomedCode(_) => MediType::String,
             ExpressionNode::Identifier(name) => {
                 self.env.get(name).cloned().unwrap_or(MediType::Unknown)
             }

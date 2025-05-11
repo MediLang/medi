@@ -1,0 +1,10 @@
+[package]
+name = "medic_typeck"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+medic_type = { path = "../medic_type" }
+medic_ast = { path = "../medic_ast" }
+medic_env = { path = "../medic_env" }
+

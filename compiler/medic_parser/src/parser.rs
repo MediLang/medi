@@ -1,7 +1,10 @@
-// Parser implementation for Medi language using nom (industry standard)
+// Parser implementation for Medic language using nom (industry standard)
 // Expands to handle literals, identifiers, parenthesized expressions, and scaffolds for more
 
-use crate::ast::*;
+use medic_ast::ast::*;
+use medic_ast::ast; // For ast::TypeName references
+use nom::error::Error;
+use nom::combinator::opt;
 use nom::{IResult, branch::alt, bytes::complete::tag, character::complete::{alphanumeric1, digit1, multispace0, char}, combinator::{map, map_res}, sequence::{delimited, preceded, tuple}, multi::{many0, separated_list0}};
 
 pub fn parse_int_literal(input: &str) -> IResult<&str, ExpressionNode> {
@@ -58,7 +61,7 @@ fn parse_paren_expr(input: &str) -> IResult<&str, ExpressionNode> {
 
 
 // ---- Binary Expression Parsing with Precedence ----
-use crate::ast::{BinaryOperator};
+use medic_ast::ast::{BinaryOperator};
 
 fn get_precedence(op: &BinaryOperator) -> u8 {
     match op {
@@ -75,6 +78,7 @@ fn get_precedence(op: &BinaryOperator) -> u8 {
 fn parse_operator(input: &str) -> IResult<&str, BinaryOperator> {
     preceded(multispace0,
         alt((
+            // All tag combinators use &str input, which is correct for nom 7 and &str parsers
             map(tag("+"), |_| BinaryOperator::Add),
             map(tag("-"), |_| BinaryOperator::Sub),
             map(tag("*"), |_| BinaryOperator::Mul),
@@ -106,7 +110,7 @@ fn parse_binary_expr(input: &str, min_prec: u8) -> IResult<&str, ExpressionNode>
             // Parse rhs with higher precedence for right-associative
             let (next_input, mut rhs) = parse_binary_expr(input, prec + 1)?;
             input = next_input;
-            lhs = ExpressionNode::Binary(Box::new(crate::ast::BinaryExpressionNode {
+            lhs = ExpressionNode::Binary(Box::new(ast::BinaryExpressionNode {
                 left: lhs,
                 operator: op,
                 right: rhs,
@@ -134,6 +138,63 @@ fn is_healthcare_query(name: &str) -> bool {
 }
 
 fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
+    use nom::combinator::map;
+    use nom::bytes::complete::take_while_m_n;
+    use nom::sequence::{tuple, preceded};
+    use nom::character::complete::{char, alpha1, digit1};
+    use nom::branch::alt;
+    use nom::IResult;
+    use medic_ast::ast::ExpressionNode;
+
+    // ICD10:ICD10:[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,4})?
+    let parse_icd_code = map(
+        tuple(
+            (
+                tag::<&str, &str, Error<&str>>("ICD10:"),
+                take_while_m_n::<_, _, Error<&str>>(1, 1, |c: char| c.is_ascii_uppercase()),
+                take_while_m_n::<_, _, Error<&str>>(2, 2, |c: char| c.is_ascii_digit() || c == 'A' || c == 'B'),
+                opt(preceded(char('.'), take_while_m_n::<_, _, Error<&str>>(1, 4, |c: char| c.is_ascii_digit() || c.is_ascii_uppercase()))),
+            )
+        ),
+        |(prefix, letter, digits, opt_ext): (&str, &str, &str, Option<&str>)| {
+            let mut s = String::from(prefix);
+            s.push_str(letter);
+            s.push_str(digits);
+            if let Some(ext) = opt_ext { s.push('.'); s.push_str(ext); }
+            ExpressionNode::IcdCode(s)
+        }
+    );
+    // CPT:CPT:[0-9]{5}
+    let parse_cpt_code = map(
+        tuple(
+            (
+                tag::<&str, &str, Error<&str>>("CPT:"),
+                take_while_m_n::<_, _, Error<&str>>(5, 5, |c: char| c.is_ascii_digit()),
+            )
+        ),
+        |(prefix, digits): (&str, &str)| {
+            let mut s = String::from(prefix);
+            s.push_str(digits);
+            ExpressionNode::CptCode(s)
+        }
+    );
+    // SNOMED:SNOMED:[0-9]{6,9}
+    let parse_snomed_code = map(
+        tuple(
+            (
+                tag::<&str, &str, Error<&str>>("SNOMED:"),
+                take_while_m_n::<_, _, Error<&str>>(6, 9, |c: char| c.is_ascii_digit()),
+            )
+        ),
+        |(prefix, digits): (&str, &str)| {
+            let mut s = String::from(prefix);
+            s.push_str(digits);
+            ExpressionNode::SnomedCode(s)
+        }
+    );
+    if let Ok((rest, expr)) = alt((parse_icd_code, parse_cpt_code, parse_snomed_code))(input) {
+        return Ok((rest, expr));
+    }
     let (mut input, mut expr) = alt((parse_bool_literal, parse_float_literal, parse_string_literal, parse_int_literal, parse_identifier, parse_paren_expr))(input)?;
     println!("[DEBUG] After primary parse: next input = {:?}", &input[..input.len().min(20)]);
     loop {
@@ -144,13 +205,13 @@ fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
         if let Ok((next_input, args)) = call_res {
             match &expr {
                 ExpressionNode::Identifier(name) if is_healthcare_query(name) => {
-                    expr = ExpressionNode::HealthcareQuery(Box::new(crate::ast::HealthcareQueryNode {
+                    expr = ExpressionNode::HealthcareQuery(Box::new(ast::HealthcareQueryNode {
                         query_type: name.clone(),
                         arguments: args,
                     }));
                 }
                 _ => {
-                    expr = ExpressionNode::Call(Box::new(crate::ast::CallExpressionNode {
+                    expr = ExpressionNode::Call(Box::new(ast::CallExpressionNode {
                         callee: expr,
                         arguments: args,
                     }));
@@ -166,7 +227,7 @@ fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
         )(input);
         if let Ok((next_input, prop_expr)) = res {
             if let ExpressionNode::Identifier(prop) = prop_expr {
-                expr = ExpressionNode::Member(Box::new(crate::ast::MemberExpressionNode {
+                expr = ExpressionNode::Member(Box::new(ast::MemberExpressionNode {
                     object: expr,
                     property: prop,
                 }));
@@ -186,15 +247,16 @@ fn parse_primary_expr(input: &str) -> IResult<&str, ExpressionNode> {
 }
 
 // Top-level expression parser: parses full binary expressions
+
 pub fn parse_expression(input: &str) -> IResult<&str, ExpressionNode> {
     parse_binary_expr(input, 0)
 }
 
 // ---- Statement Parsing ----
-use crate::ast::{StatementNode, LetStatementNode, AssignmentNode, BlockNode, IfNode};
+use medic_ast::ast::{StatementNode, LetStatementNode, AssignmentNode, BlockNode, IfNode, ExpressionNode, LiteralNode, BinaryExpressionNode};
 
 fn parse_let_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, tag("let"))(input)?;
+    let (input, _) = preceded(multispace0, nom::bytes::complete::tag("let"))(input)?;
     let (input, name_expr) = preceded(multispace0, parse_identifier)(input)?;
     let name = if let ExpressionNode::Identifier(n) = name_expr { n } else { return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Tag))); };
     let (input, _) = preceded(multispace0, char('='))(input)?;
@@ -385,7 +447,7 @@ fn parse_return_statement(input: &str) -> IResult<&str, StatementNode> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{StatementNode, LetStatementNode, AssignmentNode, BlockNode, IfNode, ExpressionNode, LiteralNode, BinaryOperator, BinaryExpressionNode};
+    use medic_ast::ast::{StatementNode, LetStatementNode, AssignmentNode, BlockNode, IfNode, WhileNode, ForNode, MatchNode, ReturnNode};
 
     #[test]
     fn test_let_statement() {
@@ -531,6 +593,27 @@ mod tests {
         let input = "3.14";
         let (_rest, expr) = parse_float_literal(input).unwrap();
         assert_eq!(expr, ExpressionNode::Literal(LiteralNode::Float(3.14)));
+    }
+
+    #[test]
+    fn test_icd_code() {
+        let input = "ICD10:E11.9";
+        let (_rest, expr) = parse_primary_expr(input).unwrap();
+        assert_eq!(expr, ExpressionNode::IcdCode("ICD10:E11.9".to_string()));
+    }
+
+    #[test]
+    fn test_cpt_code() {
+        let input = "CPT:99213";
+        let (_rest, expr) = parse_primary_expr(input).unwrap();
+        assert_eq!(expr, ExpressionNode::CptCode("CPT:99213".to_string()));
+    }
+
+    #[test]
+    fn test_snomed_code() {
+        let input = "SNOMED:44054006";
+        let (_rest, expr) = parse_primary_expr(input).unwrap();
+        assert_eq!(expr, ExpressionNode::SnomedCode("SNOMED:44054006".to_string()));
     }
 }
 

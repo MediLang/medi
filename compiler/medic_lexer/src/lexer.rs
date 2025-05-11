@@ -14,6 +14,11 @@ pub enum Token {
     #[token("regulate")] Regulate,
     #[token("report")] Report,
 
+    // --- Medical Codes ---
+    #[regex(r"ICD10:[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,4})?", |lex| lex.slice().to_string())] IcdCode(String),
+    #[regex(r"CPT:[0-9]{5}", |lex| lex.slice().to_string())] CptCode(String),
+    #[regex(r"SNOMED:[0-9]{6,9}", |lex| lex.slice().to_string())] SnomedCode(String),
+
     // --- General keywords ---
     #[token("let")] Let,
     #[token("fn")] Fn,

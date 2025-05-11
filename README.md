@@ -221,7 +221,38 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
     *   `medi.compliance`: Regulatory automation.
     *   `medi.ai`: AI models for diagnostics, NLP, prediction.
     *   `medi.ops`: Hospital operations.
-*   **IDE:** Electron-based, with code completion, compliance warnings, and visual interface.
+
+## Project Structure (Rust-Inspired)
+
+This repository follows a Rust-style workspace structure:
+
+- **Cargo.toml (workspace, in medi/)**: Defines the workspace and its member crates.
+- **compiler/**: All Rust source files for the Medic compiler (not in a src/ subdirectory).
+- **library/**: (Optional) Standard library crate(s) for Medic.
+- **src/**: Reserved for future Medi language source code. Do not use for the compiler.
+- **tests/**: Integration and system tests for the compiler and library.
+
+### Building the Project
+
+Run all builds from the medi/ directory root:
+```sh
+cargo build --workspace
+```
+
+### Running Tests
+
+Run all tests for all crates:
+```sh
+cargo test --workspace
+```
+
+### Directory Purposes
+- `compiler/`: Rust crate for the Medic compiler (`medic`). All Rust source files go directly here.
+- `library/`: Rust crate(s) for the Medic standard library.
+- `src/`: Reserved for future Medi language source code (not used for compiler).
+- `tests/`: Integration/system tests (Rust or other frameworks).
+
+This structure closely follows the Rust project layout inspiration.
 
 ## Contributing
 

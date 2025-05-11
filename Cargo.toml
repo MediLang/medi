@@ -1,8 +1,11 @@
-[package]
-name = "medi"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-logos = "0.13"
-nom = "7"
+[workspace]
+members = [
+    "compiler/medic",
+    "compiler/medic_ast",
+    "compiler/medic_env",
+    "compiler/medic_lexer",
+    "compiler/medic_parser",
+    "compiler/medic_type",
+    "compiler/medic_typeck",
+    "tests",
+]
