@@ -15,7 +15,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: latest
+          toolchain: stable
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
       - name: Install nightly for rustfmt (if needed)
