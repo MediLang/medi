@@ -1,84 +1,75 @@
-# Development Roadmap
+# Medi Ecosystem & Self-Hosting Roadmap
 
-Medi is under active development with a phased approach to deliver a full-featured healthcare programming language.
+_Last updated: May 11, 2025_
 
-## Current Status
+Medi is a programming language purpose-built for healthcare analytics, with the tagline "Empowering Healthcare with Secure, Fast, and Clinician-Friendly Analytics." This roadmap merges our ecosystem vision and the self-hosting plan, inspired by Rust’s journey to maturity.
 
-![Status](https://img.shields.io/badge/Status-Pre--alpha%20(Prototype)-orange)
+---
 
-Medi is currently in pre-alpha stage, with core language features and initial modules under development.
+## 1. Ecosystem Vision & Phased Plan
 
-## Phase 1: Prototype (6-12 Months)
+### Phase 1: Functional Compiler in Rust (0–2 Years)
+- **Goal:** Complete the Rust-written `medic` compiler with essential features.
+- **Tasks:**
+  - Finish recursive descent parser for Medi’s syntax (`fhir_query`, `federated`)
+  - Implement type checking for healthcare types (e.g., `FHIRPatient`)
+  - Add privacy/compliance checker (HIPAA/GDPR)
+  - Ensure LLVM codegen supports WebAssembly and RISC-V
+- **Milestone:** Medi 0.1 release, compiling simple healthcare analytics scripts
 
-The initial phase focuses on creating a functional language prototype:
+### Phase 2: Syntax & Ecosystem Stabilization (2–3 Years)
+- **Goal:** Finalize Medi’s syntax and core features, expand the ecosystem
+- **Tasks:**
+  - Stabilize healthcare constructs (`fhir_query`, `regulate`, `predict_risk`)
+  - Define the standard library (`medi.data`, `medi.ai`, `medi.compliance`)
+  - Launch `medipack` (package manager) and `medipacks.io` registry
+  - Gather community feedback, refine language
+- **Milestone:** Medi 0.5 release, stable language core, ecosystem growth
 
-* Build parser and LLVM-based compiler for core syntax
-* Implement foundational modules:
-  * `medi.data`: FHIR, HL7, DICOM support
-  * `medi.compliance`: Basic regulatory frameworks
-  * `medi.stats`: Statistical methods for healthcare
-  * `medi.ai`: Initial AI capabilities
-* Develop a basic IDE with visual analytics
-* Test with synthetic datasets (FHIR, VCF, IoT streams)
-* Target RISC-V (RV32) for IoT prototype implementation
+### Phase 3: Begin Self-Hosting Transition (3–4 Years)
+- **Goal:** Start rewriting the compiler in Medi, using Rust compiler to bootstrap
+- **Tasks:**
+  - Identify a stable Medi subset for compiler dev
+  - Rewrite parser in Medi, port type checker and privacy checker
+  - Interface with LLVM backend via FFI
+- **Milestone:** Medi 0.8 release, partially self-hosted compiler
 
-### Milestone 1: Language Fundamentals (Month 3)
-* Core syntax and parser
-* Basic type system
-* Standard library foundation
+### Phase 4: Complete Self-Hosting (4–5 Years)
+- **Goal:** Fully rewrite `medic` in Medi, achieving self-hosting
+- **Tasks:**
+  - Port all compiler components to Medi
+  - Optimize performance
+  - Bootstrap: use Rust `medic` to compile Medi `medic`, then self-compile
+- **Milestone:** Medi 1.0 release, fully self-hosted
 
-### Milestone 2: Healthcare Integration (Month 6)
-* FHIR/HL7 integration
-* Initial statistical functions
-* Synthetic data testing
+### Phase 5: Post-Self-Hosting (5+ Years)
+- **Goal:** Maintain and enhance the self-hosted compiler
+- **Tasks:**
+  - Add new features to `medic` using Medi (e.g., federated learning optimizations)
+  - Leverage Medi’s healthcare features to improve the compiler
 
-### Milestone 3: Developer Tools (Month 9)
-* Basic IDE implementation
-* Documentation system
-* Early adopter program
+---
 
-## Phase 2: Pilot and Grants (12-18 Months)
+## 2. Key Ecosystem Components (from ECOSYSTEM_ROADMAP.md)
+- **Parser:** Healthcare-specific syntax, clinician-friendly errors, recursive descent (Rust → Medi)
+- **Compiler (`medic`):** Privacy/compliance checking, LLVM backend, WebAssembly/RISC-V, self-hosting
+- **Package Manager (`medipack`):** Healthcare registry, `Medi.toml`, visual IDE support
+- **Privacy/Compliance Checker:** Compile-time enforcement of HIPAA/GDPR/FDA
+- **Type System:** Healthcare types (`FHIRPatient`, `DICOMImage`), generics, traits
+- **Macro System:** Declarative/procedural macros for healthcare tasks
+- **Runtime:** Minimal, with privacy and compliance hooks
 
-The second phase expands capabilities and begins real-world testing:
+---
 
-* Pilot with universities/hospitals on trials, IoT, or AI use cases
-* Expand library with new modules:
-  * `medi.iot`: Real-time streaming capabilities
-  * `medi.viz`: Advanced visualization
-  * `medi.privacy`: Privacy-preserving analytics
-* Enhance RISC-V support (RV64, vector extensions)
-* Apply for grants (NIH, EU Horizon Europe, RISC-V Foundation)
-* Grow community through social media and GitHub
+## 3. Lessons from Rust
+- **Iterative Development:** Focus on a minimal, stable subset for self-hosting
+- **Community Involvement:** Use GitHub Discussions, RFCs for stabilization
+- **Bootstrapping Strategy:** Gradual transition (parser first, then compiler)
 
-### Milestone 4: Real-world Testing (Month 12)
-* Initial pilot programs
-* Bug fixes and performance improvements
-* Community feedback integration
+---
 
-### Milestone 5: Enhanced Features (Month 15)
-* Advanced RISC-V optimization
-* Federated learning capabilities
-* Expanded healthcare standards support
-
-## Phase 3: Production Release (18-36 Months)
-
-The final phase delivers a production-ready language:
-
-* Complete the standard library:
-  * Finalize `medi.ai` with production-ready models
-  * Add `medi.ops` for hospital operations
-* Launch plugin marketplace for extensions
-* Optimize for:
-  * Big data processing
-  * Edge device deployment
-  * Quantum computing readiness
-* Launch formal training programs and certifications
-* Integrate with major healthcare platforms:
-  * Epic
-  * Cerner
-  * Cloud platforms (AWS, Azure, GCP)
-
-### Milestone 6: Beta Release (Month 18)
+## 4. How to Contribute
+Help us achieve self-hosting for Medi! Check out `CONTRIBUTING.md` for guidelines, and share your ideas on GitHub Discussions or X @MediLangHQ.
 * Feature complete standard library
 * Comprehensive documentation
 * Performance benchmarking
