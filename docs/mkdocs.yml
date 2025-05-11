@@ -94,6 +94,8 @@ nav:
 plugins:
   - search
   - mkdocstrings
+  - autorefs:
+      link_titles: true
 
 extra:
   social:
