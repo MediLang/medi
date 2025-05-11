@@ -36,13 +36,13 @@ Implementation approach:
 ### Details:
 Implement token types for healthcare-specific terms, identifiers, literals, operators, and keywords. Include functionality for handling whitespace, comments, and special characters. Design the tokenizer to be efficient with proper error handling for invalid characters or token patterns.
 
-## 2. Implement Core Parser Components [in-progress]
+## 2. Implement Core Parser Components [done]
 ### Dependencies: 1.1
 ### Description: Build the fundamental recursive descent parser structure with basic parsing functions
 ### Details:
 Create the parser class with methods for each grammar rule. Implement core parsing functions for expressions, statements, declarations, and control structures. Design the parser to handle recursive grammar rules efficiently and maintain proper state throughout the parsing process.
 
-## 3. Add Healthcare-Specific Syntax Support [pending]
+## 3. Add Healthcare-Specific Syntax Support [in-progress]
 ### Dependencies: 1.2
 ### Description: Extend the parser to handle healthcare-specific syntax and domain concepts
 ### Details:
@@ -59,6 +59,12 @@ Design node classes for all syntax elements. Modify parsing functions to constru
 ### Description: Add semantic analysis capabilities to validate healthcare-specific rules and constraints
 ### Details:
 Create a semantic analyzer that traverses the AST to perform type checking, scope analysis, and healthcare-specific validation rules. Implement symbol table management for tracking identifiers and their properties. Add validation for medical terminology consistency and logical healthcare constraints.
+
+## 5.5. Implement Borrow Checking [pending]
+### Dependencies: 1.5
+### Description: Add Rust-like borrow checking to the compiler for memory safety and concurrency
+### Details:
+Design and implement a borrow checker to enforce safe references, prevent data races, and ensure memory safety in Medi programs. Take inspiration from Rust's borrow checker to track lifetimes and mutability of variables, especially in concurrent and healthcare-critical contexts.
 
 ## 6. Create Error Reporting System [pending]
 ### Dependencies: 1.1, 1.2, 1.5

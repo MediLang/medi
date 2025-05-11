@@ -142,6 +142,7 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 ### 1. Compiler Infrastructure
 - **Lexer & Parser**: Custom-built for healthcare-specific syntax with support for domain-specific constructs
 - **Type System**: Static typing with inference, healthcare data types, and safety guarantees
+- **Borrow Checking**: Rust-inspired borrow checking for memory safety and safe concurrency in healthcare analytics
 - **Semantic Analyzer**: Domain-aware analysis with healthcare-specific optimizations
 - **LLVM IR Generator**: Translates Medi code to LLVM Intermediate Representation
 - **Optimization Pipeline**: Healthcare-specific optimizations for data processing, privacy, and performance

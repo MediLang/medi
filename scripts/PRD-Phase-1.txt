@@ -30,6 +30,7 @@ Phase 1 focuses on building the foundational components of the Medi programming 
 - Safety guarantees for patient data handling
 
 #### Compiler (`medic`)
+- Implement Rust-like borrow checking for memory safety and concurrency
 - LLVM backend integration for efficient code generation
 - Support for WebAssembly target (for browser deployments)
 - Initial RISC-V support for medical IoT devices
