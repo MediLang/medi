@@ -241,227 +241,244 @@ Written in Rust, inspired by `rustup`.
 
 ## 14. Toolchain
 
-Role: Collection of tools: medic, medipack, standard library, and optional components (e.g., medifmt, medicheck).
-Medi-Specific:
-Includes healthcare-specific tools (e.g., medicheck for compliance linting).
+### Role: 
+Collection of tools: `medic`, `medipack`, `standard library`, and optional components (e.g., `medifmt`, `medicheck`).
 
+### Medi-Specific:
+Includes healthcare-specific tools (e.g., `medicheck` for compliance linting).
 
-Implementation: Managed by mediup, built in Rust.
+### Implementation: Managed by `mediup`, built in Rust.
 Development Plan:
-Phase 1 (6–12 Months): Bundle medic, medipack, and standard library.
-Phase 2 (12–18 Months): Add medifmt and medicheck.
+#### Phase 1 (6–12 Months): 
+* Bundle `medic`, `medipack`, and `standard library`.
+#### Phase 2 (12–18 Months): *
+* Add `medifmt` and `medicheck`.
+
+## 15. Medipack Subcommands and Plugins
+
+### Role: 
+Extends `medipack` with tools like `medipack-watch`, `medipack-audit`, medipack-gen.
+
+### Medi-Specific:
+* `medipack-audit`: Audits code for HIPAA/GDPR compliance.
+* `medipack-gen`: Generates boilerplate for healthcare modules (e.g., FHIR integrations).
 
 
-
-15. Medipack Subcommands and Plugins
-
-Role: Extends medipack with tools like medipack-watch, medipack-audit, medipack-gen.
-Medi-Specific:
-medipack-audit: Audits code for HIPAA/GDPR compliance.
-medipack-gen: Generates boilerplate for healthcare modules (e.g., FHIR integrations).
-
-
-Implementation: Written in Rust, inspired by Cargo plugins.
+### Implementation: Written in Rust, inspired by Cargo plugins.
 Development Plan:
-Phase 2 (12–18 Months): Implement medipack-watch and medipack-audit.
-Phase 3 (18–36 Months): Add medipack-gen and community plugins.
+#### Phase 2 (12–18 Months): 
+* Implement `medipack-watch` and `medipack-audit`.
+#### Phase 3 (18–36 Months): 
+* Add `medipack-gen` and community plugins.
 
+## 16. Codegen Backends
 
+### Role: 
+Generates machine code for Medi programs.
 
-16. Codegen Backends
+### Medi-Specific:
+* Primary backend: LLVM for optimized codegen.
+* Experimental: WebAssembly for edge devices, RISC-V for medical hardware.
 
-Role: Generates machine code for Medi programs.
-Medi-Specific:
-Primary backend: LLVM for optimized codegen.
-Experimental: WebAssembly for edge devices, RISC-V for medical hardware.
-
-
-Implementation: Leverages LLVM, written in Rust.
+### Implementation: Leverages LLVM, written in Rust.
 Development Plan:
-Phase 1 (0–12 Months): Use LLVM for basic codegen.
-Phase 2 (12–18 Months): Add WebAssembly and RISC-V support.
+#### Phase 1 (0–12 Months): 
+* Use LLVM for basic codegen.
+#### Phase 2 (12–18 Months): 
+* Add WebAssembly and RISC-V support.
 
+## 17. Linker Integration
 
+### Role: 
+Uses external linkers to produce executables.
 
-17. Linker Integration
+### Medi-Specific:
+* Supports linkers for RISC-V and WebAssembly targets, with custom scripts for medical devices.
 
-Role: Uses external linkers to produce executables.
-Medi-Specific:
-Supports linkers for RISC-V and WebAssembly targets, with custom scripts for medical devices.
+### Implementation: 
+Integrates with `lld` and platform-specific linkers, written in Rust.
 
-
-Implementation: Integrates with lld and platform-specific linkers, written in Rust.
 Development Plan:
-Phase 1 (6–12 Months): Integrate with lld for basic linking.
-Phase 2 (12–18 Months): Add RISC-V and WebAssembly linker scripts.
+#### Phase 1 (6–12 Months): 
+* Integrate with `lld` for basic linking.
+#### Phase 2 (12–18 Months): 
+* Add RISC-V and WebAssembly linker scripts.
 
+## 18. Memory Allocators
 
+### Role:
+Manages memory allocation for Medi programs.
 
-18. Memory Allocators
+### Medi-Specific:
+* Default: System allocator for general use.
+* Customizable for low-latency IoT (e.g., wearables) using #![global_allocator].
 
-Role: Manages memory allocation for Medi programs.
-Medi-Specific:
-Default: System allocator for general use.
-Customizable for low-latency IoT (e.g., wearables) using #![global_allocator].
-
-
-Implementation: Written in Rust, inspired by Rust’s allocators.
+### Implementation: Written in Rust, inspired by Rust’s allocators.
 Development Plan:
-Phase 1 (6–12 Months): Use system allocator.
-Phase 2 (12–18 Months): Add custom allocator support for IoT.
 
+#### Phase 1 (6–12 Months): 
+* Use system allocator.
+#### Phase 2 (12–18 Months): 
+* Add custom allocator support for IoT.
 
+## 19. Inline Assembly
 
-19. Inline Assembly
+### Role: 
+Supports architecture-specific assembly for performance-critical code.
 
-Role: Supports architecture-specific assembly for performance-critical code.
-Medi-Specific:
+### Medi-Specific:
 Used for RISC-V medical devices (e.g., custom instructions for genomic alignment).
 
-
-Implementation: Written in Rust, inspired by Rust’s asm! macro.
+### Implementation: Written in Rust, inspired by Rust’s asm! macro.
 Development Plan:
-Phase 2 (12–18 Months): Implement inline assembly for RISC-V.
-Phase 3 (18–36 Months): Optimize for genomic and imaging tasks.
 
+#### Phase 2 (12–18 Months): 
+* Implement inline assembly for RISC-V.
+#### Phase 3 (18–36 Months): 
+* Optimize for genomic and imaging tasks.
 
+## 20. Bindgen and Medibindgen
 
-20. Bindgen and Medibindgen
+### Role:
+Generates FFI bindings for interoperability.
 
-Role: Generates FFI bindings for interoperability.
-Medi-Specific:
-bindgen: Generates Medi bindings from Python/R libraries.
-medibindgen: Generates Python/R bindings from Medi code.
+### Medi-Specific:
+* `bindgen`: Generates Medi bindings from Python/R libraries.
+* `medibindgen`: Generates Python/R bindings from Medi code.
 
-
-Implementation: Written in Rust, inspired by bindgen and cbindgen.
+### Implementation: Written in Rust, inspired by bindgen and cbindgen.
 Development Plan:
-Phase 1 (6–12 Months): Implement bindgen for Python/R.
-Phase 2 (12–18 Months): Add medibindgen for Medi-to-Python/R.
 
+#### Phase 1 (6–12 Months): 
+* Implement `bindgen` for Python/R.
+#### Phase 2 (12–18 Months): 
+* Add `medibindgen` for Medi-to-Python/R.
 
+## 21. WebAssembly Support
 
-21. WebAssembly Support
+### Role: 
+Targets WebAssembly for edge devices and browser-based analytics.
 
-Role: Targets WebAssembly for edge devices and browser-based analytics.
-Medi-Specific:
-Supports wasm32-unknown-unknown and wasm32-wasi for wearables and dashboards.
-Tools: wasm-bindgen for JavaScript interop, wasm-pack for packaging.
+### Medi-Specific:
+* Supports wasm32-unknown-unknown and wasm32-wasi for wearables and dashboards.
+* Tools: `wasm-bindgen` for JavaScript interop, `wasm-pack` for packaging.
 
-
-Implementation: Leverages Rust’s WebAssembly tools.
+### Implementation: Leverages Rust’s WebAssembly tools.
 Development Plan:
-Phase 1 (6–12 Months): Enable WebAssembly codegen.
-Phase 2 (12–18 Months): Add wasm-bindgen and wasm-pack support.
 
+#### Phase 1 (6–12 Months): 
+* Enable WebAssembly `codegen`.
+#### Phase 2 (12–18 Months): 
+* Add `wasm-bindgen` and `wasm-pack` support.
 
+## 22. Error Handling Infrastructure
 
-22. Error Handling Infrastructure
+### Role: 
+Manages errors in Medi programs.
 
-Role: Manages errors in Medi programs.
-Medi-Specific:
-Uses Result and Option for error handling, with healthcare-specific errors (e.g., ComplianceError).
-Libraries: medithiserror (custom errors), medianyhow (flexible handling).
+### Medi-Specific:
+* Uses `Result` and `Option` for error handling, with healthcare-specific errors (e.g., `ComplianceError`).
+* Libraries: `medithiserror` (custom errors), `medianyhow` (flexible handling).
 
-
-Implementation: Written in Rust, inspired by thiserror and anyhow.
+### Implementation: Written in Rust, inspired by thiserror and anyhow.
 Development Plan:
-Phase 1 (6–12 Months): Implement Result and Option.
-Phase 2 (12–18 Months): Add medithiserror and medianyhow.
+#### Phase 1 (6–12 Months): 
+* Implement `Result` and `Option`.
+#### Phase 2 (12–18 Months): 
+* Add `medithiserror` and `medianyhow`.
 
+## 23. Async Runtime Ecosystem
 
+### Role:
+* Supports `asynchronous` programming for real-time analytics.
 
-23. Async Runtime Ecosystem
+### Medi-Specific:
+* Runtimes: `meditokio` (full-featured for hospital systems), `mediasync` (lightweight for IoT).
 
-Role: Supports asynchronous programming for real-time analytics.
-Medi-Specific:
-Runtimes: meditokio (full-featured for hospital systems), mediasync (lightweight for IoT).
-
-
-Implementation: Written in Rust, inspired by tokio and async-std.
+### Implementation: Written in Rust, inspired by tokio and async-std.
 Development Plan:
-Phase 2 (12–18 Months): Implement mediasync for IoT.
-Phase 3 (18–36 Months): Add meditokio for hospital systems.
+#### Phase 2 (12–18 Months): 
+* Implement `mediasync` for IoT.
+#### Phase 3 (18–36 Months): 
+* Add `meditokio` for hospital systems.
 
+## 24. Community Crates and Ecosystem
 
+### Role: 
+Expands Medi’s capabilities through community libraries.
 
-24. Community Crates and Ecosystem
+### Medi-Specific:
+* Libraries: `medi.ai` (AI models), `medi.genomics` (sequence analysis), `medi.viz` (dashboards).
 
-Role: Expands Medi’s capabilities through community libraries.
-Medi-Specific:
-Libraries: medi.ai (AI models), medi.genomics (sequence analysis), medi.viz (dashboards).
-
-
-Implementation: Hosted on medipacks.io, built by the community.
+### Implementation: Hosted on medipacks.io, built by the community.
 Development Plan:
-Phase 2 (12–18 Months): Launch medipacks.io with initial crates.
-Phase 3 (18–36 Months): Grow ecosystem with community contributions.
+#### Phase 2 (12–18 Months): 
+* Launch medipacks.io with initial crates.
+#### Phase 3 (18–36 Months): 
+* Grow ecosystem with community contributions.
 
+## 25. Standard Library
 
+### Role: 
+Provides core abstractions for Medi programs.
 
-25. Standard Library
+### Medi-Specific:
+* Includes healthcare abstractions (e.g., `fhir`, `dicom`, `iot`).
+* Split into `std` (OS-dependent) and `core/alloc` for #![no_std].
 
-Role: Provides core abstractions for Medi programs.
-Medi-Specific:
-Includes healthcare abstractions (e.g., fhir, dicom, iot).
-Split into std (OS-dependent) and core/alloc for #![no_std].
-
-
-Implementation: Written in Rust, with plans to port to Medi.
+### Implementation: Written in Rust, with plans to port to Medi.
 Development Plan:
-Phase 1 (0–12 Months): Build core library (fhir, dicom).
-Phase 2 (12–18 Months): Add iot and #![no_std] support.
+#### Phase 1 (0–12 Months): 
+* Build core library (`fhir`, `dicom`).
+#### Phase 2 (12–18 Months): 
+* Add `iot` and #![no_std] support.
 
+## 26. Tooling Ecosystem
 
+### Role: 
+Enhances developer experience with tools.
 
-26. Tooling Ecosystem
+### Medi-Specific:
+* `medifmt`: Auto-formats code.
+* `medicheck`: Lints for compliance and idiomatic Medi code.
+* `medi-analyzer`: IDE support for Medi.
+* `medimiri`: Detects undefined behavior.
 
-Role: Enhances developer experience with tools.
-Medi-Specific:
-medifmt: Auto-formats code.
-medicheck: Lints for compliance and idiomatic Medi code.
-medi-analyzer: IDE support for Medi.
-medimiri: Detects undefined behavior.
-
-
-Implementation: Written in Rust, inspired by rustfmt, clippy, rust-analyzer.
+### Implementation: Written in Rust, inspired by rustfmt, clippy, rust-analyzer.
 Development Plan:
-Phase 2 (12–18 Months): Implement medifmt and medicheck.
-Phase 3 (18–36 Months): Add medi-analyzer and medimiri.
+#### Phase 2 (12–18 Months): 
+* Implement `medifmt` and `medicheck`.
+#### Phase 3 (18–36 Months): 
+* Add `medi-analyzer` and `medimiri`.
 
+## 27. Medipacks.io
 
+### Role: 
+* Central repository for Medi libraries.
 
-27. Medipacks.io
+### Medi-Specific:
+* Hosts healthcare-focused crates (e.g., `medi.ai`, `medi.compliance`).
 
-Role: Central repository for Medi libraries.
-Medi-Specific:
-Hosts healthcare-focused crates (e.g., medi.ai, medi.compliance).
-
-
-Implementation: Modeled after crates.io, built in Rust.
+### Implementation: Modeled after crates.io, built in Rust.
 Development Plan:
-Phase 2 (12–18 Months): Launch medipacks.io.
-Phase 3 (18–36 Months): Expand with community crates.
+#### Phase 2 (12–18 Months): 
+* Launch `medipacks.io`.
+#### Phase 3 (18–36 Months): 
+* Expand with community crates.
 
+## Overall Development Phases
 
+#### Phase 1: Prototype (0–12 Months):
+* Build core components: parser, `medic` (compiler), `medipack`, standard library.
+* Focus on healthcare syntax and basic functionality.
 
-Overall Development Phases
+#### Phase 2: Pilot (12–18 Months):
+* Test with universities/hospitals, expand the library (`medi.iot`, `medi.viz`, `medi.privacy`), and enhance RISC-V support.
+* Launch `medipacks.io` and initial tooling (`medifmt`, `medicheck`).
 
-Phase 1: Prototype (0–12 Months):
-Build core components: parser, `medic` (compiler), medipack, standard library.
-Focus on healthcare syntax and basic functionality.
+#### Phase 3: Production Release (18–36 Months):
+* Launch Medi v1.0 with a full library, plugin marketplace, and integrations (Epic, Cerner).
+* Complete tooling ecosystem (`medi-analyzer`, `medimiri`) and grow community crates.
 
-
-Phase 2: Pilot (12–18 Months):
-Test with universities/hospitals, expand the library (medi.iot, medi.viz, medi.privacy), and enhance RISC-V support.
-Launch medipacks.io and initial tooling (medifmt, medicheck).
-
-
-Phase 3: Production Release (18–36 Months):
-Launch Medi v1.0 with a full library, plugin marketplace, and integrations (Epic, Cerner).
-Complete tooling ecosystem (medi-analyzer, medimiri) and grow community crates.
-
-
-
-How to Contribute
-Join us in building Medi’s ecosystem! Check out CONTRIBUTING.md for guidelines, and share your ideas on GitHub Discussions or X @MediLangHQ.
+### How to Contribute
+Join us in building Medi’s ecosystem! Check out [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines, and share your ideas on GitHub Discussions or X @MediLangHQ.
