@@ -9,6 +9,12 @@ dev-debug.log
 # Dependency directories
 node_modules/
 
+# Rust
+target/
+Cargo.lock
+compiler/target/
+compiler/Cargo.lock
+
 # Environment variables
 .env
 

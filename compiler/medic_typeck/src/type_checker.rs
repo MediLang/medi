@@ -54,6 +54,13 @@ impl<'a> TypeChecker<'a> {
                     | BinaryOperator::Le
                     | BinaryOperator::Ge => MediType::Bool,
                     BinaryOperator::And | BinaryOperator::Or => MediType::Bool,
+                    BinaryOperator::Range => {
+                        if left == right {
+                            MediType::Range(Box::new(left))
+                        } else {
+                            MediType::Unknown
+                        }
+                    }
                     BinaryOperator::Assign => left, // Assignment returns the type of the left side
                 }
             }

@@ -11,6 +11,7 @@ pub enum MediType {
     String,
     Void,
     Unknown,
+    Range(Box<MediType>),
     // For struct-like types (member access)
     Struct(HashMap<String, MediType>),
     // For records (named fields, e.g. healthcare queries)

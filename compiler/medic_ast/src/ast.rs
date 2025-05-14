@@ -45,6 +45,7 @@ pub enum BinaryOperator {
     And,
     Or,
     Assign,
+    Range,
 }
 
 #[derive(Debug, Clone, PartialEq)]

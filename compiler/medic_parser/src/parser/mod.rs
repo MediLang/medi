@@ -66,12 +66,13 @@ use medic_ast::ast::BinaryOperator;
 
 fn get_precedence(op: &BinaryOperator) -> u8 {
     match op {
+        BinaryOperator::Mul | BinaryOperator::Div | BinaryOperator::Mod => 5,
+        BinaryOperator::Add | BinaryOperator::Sub => 4,
+        BinaryOperator::Lt | BinaryOperator::Gt | BinaryOperator::Le | BinaryOperator::Ge => 3,
+        BinaryOperator::Eq | BinaryOperator::Neq => 2,
+        BinaryOperator::And => 1,
         BinaryOperator::Or => 1,
-        BinaryOperator::And => 2,
-        BinaryOperator::Eq | BinaryOperator::Neq => 3,
-        BinaryOperator::Lt | BinaryOperator::Gt | BinaryOperator::Le | BinaryOperator::Ge => 4,
-        BinaryOperator::Add | BinaryOperator::Sub => 5,
-        BinaryOperator::Mul | BinaryOperator::Div | BinaryOperator::Mod => 6,
+        BinaryOperator::Range => 1,
         BinaryOperator::Assign => 0, // Assignment is lowest precedence
     }
 }
@@ -95,6 +96,7 @@ fn parse_operator(input: &str) -> IResult<&str, BinaryOperator> {
             map(tag("&&"), |_| BinaryOperator::And),
             map(tag("||"), |_| BinaryOperator::Or),
             map(tag("="), |_| BinaryOperator::Assign),
+            map(tag(".."), |_| BinaryOperator::Range),
         )),
     )(input)
 }
@@ -132,11 +134,7 @@ fn parse_call_args(input: &str) -> IResult<&str, Vec<ExpressionNode>> {
     )(input)
 }
 
-fn is_healthcare_query(name: &str) -> bool {
-    matches!(name, "fhir_query" | "kaplan_meier" | "regulate" | "report")
-}
-
-fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
+pub fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
     use nom::branch::alt;
     use nom::bytes::complete::take_while_m_n;
     use nom::character::complete::char;
@@ -182,73 +180,91 @@ fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
         },
     );
     // SNOMED:SNOMED:[0-9]{6,9}
-    let parse_snomed_code = map(
-        tuple((
+    let snomed_code = map(
+        pair(
             tag::<&str, &str, NomError<&str>>("SNOMED:"),
             take_while_m_n::<_, _, NomError<&str>>(6, 9, |c: char| c.is_ascii_digit()),
-        )),
+        ),
         |(prefix, digits): (&str, &str)| {
             let mut s = String::from(prefix);
             s.push_str(digits);
             ExpressionNode::SnomedCode(s)
         },
     );
-    if let Ok((rest, expr)) = alt((parse_icd_code, parse_cpt_code, parse_snomed_code))(input) {
+
+    if let Ok((rest, expr)) = alt((parse_icd_code, parse_cpt_code, snomed_code))(input) {
         return Ok((rest, expr));
     }
-    let (mut input, mut expr) = alt((
-        parse_bool_literal,
-        parse_float_literal,
-        parse_string_literal,
-        parse_identifier,
-        parse_paren_expr,
-    ))(input)?;
-    println!(
-        "[DEBUG] After primary parse: next input = {:?}",
-        &input[..input.len().min(20)]
-    );
+
+    let (input, expr) = parse_primary_expr(input)?;
+    let mut current_input = input;
+    let mut current_expr = expr;
+
     loop {
-        // Always attempt to parse function/healthcare call (allowing optional whitespace before '(')
-        println!(
-            "[DEBUG] Attempting parse_call_args on input: {:?}",
-            &input[..input.len().min(20)]
-        );
-        let call_res = parse_call_args(input);
-        println!("[DEBUG] Result of parse_call_args: {:?}", call_res);
-        if let Ok((next_input, args)) = call_res {
-            if let ExpressionNode::Identifier(name) = &expr {
-                if is_healthcare_query(name) {
-                    expr = ExpressionNode::HealthcareQuery(Box::new(ast::HealthcareQueryNode {
-                        query_type: name.clone(),
-                        arguments: args,
-                    }));
-                } else {
-                    expr = ExpressionNode::Call(Box::new(ast::CallExpressionNode {
-                        callee: expr,
-                        arguments: args,
-                    }));
-                }
+        // Try to parse member access
+        let member_access = preceded::<_, _, _, nom::error::Error<_>, _, _>(
+            multispace0,
+            pair(char('.'), parse_identifier),
+        )(current_input);
+
+        match member_access {
+            Ok((next_input, (_, ExpressionNode::Identifier(property)))) => {
+                current_input = next_input;
+                current_expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+                    object: current_expr,
+                    property,
+                }));
             }
-            input = next_input;
-            continue;
+            Ok((_, _)) => break, // Any other expression type is not valid for member access
+            Err(_) => break,
         }
-        // Member access
-        let res = preceded(preceded(multispace0, char('.')), parse_identifier)(input);
-        if let Ok((next_input, ExpressionNode::Identifier(prop))) = res {
-            expr = ExpressionNode::Member(Box::new(ast::MemberExpressionNode {
-                object: expr,
-                property: prop,
+
+        // Try to parse call arguments
+        if let Ok((next_input, args)) = parse_call_args(current_input) {
+            current_input = next_input;
+            current_expr = ExpressionNode::Call(Box::new(CallExpressionNode {
+                callee: current_expr,
+                arguments: args,
             }));
-            input = next_input;
-        } else {
-            break;
         }
     }
-    Ok((input, expr))
+
+    Ok((current_input, current_expr))
 }
 
 fn parse_primary_expr(input: &str) -> IResult<&str, ExpressionNode> {
-    parse_member_expr(input)
+    let (mut input, mut expr) = preceded(
+        multispace0,
+        alt((
+            parse_bool_literal,
+            parse_float_literal,
+            parse_int_literal,
+            parse_string_literal,
+            parse_identifier,
+            parse_paren_expr,
+        )),
+    )(input)?;
+
+    // Try to parse member access
+    loop {
+        let member_access = preceded::<_, _, _, nom::error::Error<_>, _, _>(
+            multispace0,
+            pair(char('.'), parse_identifier),
+        )(input);
+
+        match member_access {
+            Ok((next_input, (_, ExpressionNode::Identifier(property)))) => {
+                input = next_input;
+                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+                    object: expr,
+                    property,
+                }));
+            }
+            _ => break,
+        }
+    }
+
+    Ok((input, expr))
 }
 
 // Top-level expression parser: parses full binary expressions
@@ -284,7 +300,7 @@ fn parse_let_statement(input: &str) -> IResult<&str, StatementNode> {
 }
 
 fn parse_assignment(input: &str) -> IResult<&str, StatementNode> {
-    let (input, target) = parse_member_expr(input)?;
+    let (input, target) = parse_identifier(input)?;
     let (input, _) = preceded(multispace0, char('='))(input)?;
     let (input, value) = parse_expression(input)?;
     let (input, _) = preceded(multispace0, char(';'))(input)?;
@@ -301,21 +317,20 @@ fn parse_expr_statement(input: &str) -> IResult<&str, StatementNode> {
 }
 
 fn parse_block(input: &str) -> IResult<&str, StatementNode> {
-    let (input, stmts) = delimited(
-        preceded(multispace0, char('{')),
-        many0(parse_statement),
-        preceded(multispace0, char('}')),
-    )(input)?;
+    let (input, _) = preceded(multispace0, char('{'))(input)?;
+    let (input, mut stmts) = many0(parse_statement)(input)?;
+    let (input, last_expr) = opt(preceded(multispace0, parse_expression))(input)?;
+    let (input, _) = preceded(multispace0, char('}'))(input)?;
+
+    if let Some(expr) = last_expr {
+        stmts.push(StatementNode::Expr(expr));
+    }
     Ok((input, StatementNode::Block(BlockNode { statements: stmts })))
 }
 
 fn parse_if_statement(input: &str) -> IResult<&str, StatementNode> {
     let (input, _) = preceded(multispace0, tag("if"))(input)?;
-    let (input, cond) = delimited(
-        preceded(multispace0, char('(')),
-        parse_expression,
-        preceded(multispace0, char(')')),
-    )(input)?;
+    let (input, cond) = preceded(multispace0, parse_expression)(input)?;
     let (input, then_branch) = parse_block(input)?;
     let (input, else_branch) = {
         let input_trim = preceded(
@@ -323,36 +338,117 @@ fn parse_if_statement(input: &str) -> IResult<&str, StatementNode> {
             tag::<&str, &str, NomError<&str>>("else"),
         )(input);
         if let Ok((input, _)) = input_trim {
-            let (input, else_block) = parse_block(input)?;
-            match else_block {
-                StatementNode::Block(b) => (input, Some(b)),
-                _ => {
-                    return Err(nom::Err::Failure(nom::error::Error::new(
+            let (input, maybe_if) = opt(preceded(
+                multispace0::<&str, NomError<&str>>,
+                tag::<&str, &str, NomError<&str>>("if"),
+            ))(input)?;
+
+            if maybe_if.is_some() {
+                // This is an else-if
+                let (input, cond) = preceded(multispace0, parse_expression)(input)?;
+                let (input, body) = parse_block(input)?;
+                let (input, else_branch) = {
+                    let input_trim = preceded(
+                        multispace0::<&str, NomError<&str>>,
+                        tag::<&str, &str, NomError<&str>>("else"),
+                    )(input);
+                    if let Ok((input, _)) = input_trim {
+                        let (input, else_block) = parse_block(input)?;
+                        match else_block {
+                            StatementNode::Block(b) => Ok((input, Some(b))),
+                            _ => Err(nom::Err::Error(nom::error::Error::new(
+                                input,
+                                nom::error::ErrorKind::Tag,
+                            ))),
+                        }
+                    } else {
+                        Ok((input, None))
+                    }?
+                };
+                match body {
+                    StatementNode::Block(then_block) => {
+                        let if_stmt = StatementNode::If(Box::new(IfNode {
+                            condition: cond,
+                            then_branch: then_block,
+                            else_branch,
+                        }));
+                        Ok((
+                            input,
+                            Some(BlockNode {
+                                statements: vec![if_stmt],
+                            }),
+                        ))
+                    }
+                    _ => Err(nom::Err::Error(nom::error::Error::new(
                         input,
                         nom::error::ErrorKind::Tag,
-                    )));
+                    ))),
+                }
+            } else {
+                // This is a regular else block
+                let (input, else_block) = parse_block(input)?;
+                match else_block {
+                    StatementNode::Block(b) => Ok((input, Some(b))),
+                    _ => Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        nom::error::ErrorKind::Tag,
+                    ))),
                 }
             }
         } else {
-            (input, None)
-        }
+            Ok((input, None))
+        }?
     };
-    Ok((
-        input,
-        StatementNode::If(Box::new(IfNode {
-            condition: cond,
-            then_branch: match then_branch {
-                StatementNode::Block(b) => b,
-                _ => {
-                    return Err(nom::Err::Error(nom::error::Error::new(
+
+    match then_branch {
+        StatementNode::Block(then_block) => {
+            if let Some(BlockNode {
+                statements: else_statements,
+            }) = else_branch
+            {
+                if else_statements.len() == 1 && matches!(else_statements[0], StatementNode::If(_))
+                {
+                    // If the else branch contains a single if statement, use its else branch
+                    if let StatementNode::If(if_node) = &else_statements[0] {
+                        Ok((
+                            input,
+                            StatementNode::If(Box::new(IfNode {
+                                condition: cond,
+                                then_branch: then_block,
+                                else_branch: if_node.else_branch.clone(),
+                            })),
+                        ))
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    Ok((
                         input,
-                        nom::error::ErrorKind::Tag,
-                    )));
+                        StatementNode::If(Box::new(IfNode {
+                            condition: cond,
+                            then_branch: then_block,
+                            else_branch: Some(BlockNode {
+                                statements: else_statements,
+                            }),
+                        })),
+                    ))
                 }
-            },
-            else_branch,
-        })),
-    ))
+            } else {
+                Ok((
+                    input,
+                    StatementNode::If(Box::new(IfNode {
+                        condition: cond,
+                        then_branch: then_block,
+                        else_branch: None,
+                    })),
+                ))
+            }
+        }
+        _ => Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        ))),
+    }
 }
 
 fn parse_statement(input: &str) -> IResult<&str, StatementNode> {
@@ -402,11 +498,7 @@ fn parse_float_literal(input: &str) -> IResult<&str, ExpressionNode> {
 
 fn parse_while_statement(input: &str) -> IResult<&str, StatementNode> {
     let (input, _) = preceded(multispace0, tag("while"))(input)?;
-    let (input, cond) = delimited(
-        preceded(multispace0, char('(')),
-        parse_expression,
-        preceded(multispace0, char(')')),
-    )(input)?;
+    let (input, cond) = preceded(multispace0, parse_expression)(input)?;
     let (input, body) = parse_block(input)?;
     match body {
         StatementNode::Block(b) => Ok((
@@ -426,17 +518,18 @@ fn parse_while_statement(input: &str) -> IResult<&str, StatementNode> {
 fn parse_for_statement(input: &str) -> IResult<&str, StatementNode> {
     let (input, _) = preceded(multispace0, tag("for"))(input)?;
     let (input, var_expr) = preceded(multispace0, parse_identifier)(input)?;
-    let var = if let ExpressionNode::Identifier(n) = var_expr {
-        n
-    } else {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
+    let var = match var_expr {
+        ExpressionNode::Identifier(n) => n,
+        _ => {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Tag,
+            )))
+        }
     };
     let (input, _) = preceded(multispace0, tag("in"))(input)?;
-    let (input, iter) = parse_expression(input)?;
-    let (input, body) = parse_block(input)?;
+    let (input, iter) = preceded(multispace0, parse_expression)(input)?;
+    let (input, body) = preceded(multispace0, parse_block)(input)?;
     match body {
         StatementNode::Block(b) => Ok((
             input,
@@ -451,7 +544,7 @@ fn parse_for_statement(input: &str) -> IResult<&str, StatementNode> {
 
 fn parse_match_statement(input: &str) -> IResult<&str, StatementNode> {
     let (input, _) = preceded(multispace0, tag("match"))(input)?;
-    let (input, expr) = parse_expression(input)?;
+    let (input, expr) = preceded(multispace0, parse_expression)(input)?;
     let (mut input, _) = preceded(multispace0, char('{'))(input)?;
     let mut arms = Vec::new();
     loop {
@@ -464,29 +557,17 @@ fn parse_match_statement(input: &str) -> IResult<&str, StatementNode> {
             input = after_brace;
             break;
         }
-        let (ni, pat) = match parse_pattern(next_input) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(nom::Err::Failure(nom::error::Error::new(
-                    next_input,
-                    nom::error::ErrorKind::Tag,
-                )));
-            }
-        };
+        let (ni, pat) = preceded(multispace0, parse_pattern)(next_input)?;
         let (ni, _) = preceded(multispace0, tag("=>"))(ni)?;
-        let (ni, block) = parse_block(ni)?;
-        match block {
-            StatementNode::Block(b) => arms.push((pat, b)),
-            _ => {
-                return Err(nom::Err::Failure(nom::error::Error::new(
-                    ni,
-                    nom::error::ErrorKind::Tag,
-                )));
-            }
-        }
+        let (ni, expr) = preceded(multispace0, parse_expression)(ni)?;
+        let (ni, _) = opt(preceded(multispace0, char(',')))(ni)?;
+        arms.push((
+            pat,
+            BlockNode {
+                statements: vec![StatementNode::Expr(expr)],
+            },
+        ));
         input = ni;
-        let (ni2, _) = multispace0::<&str, NomError<&str>>(input)?;
-        input = ni2;
     }
     Ok((
         input,
@@ -522,198 +603,4 @@ fn parse_return_statement(input: &str) -> IResult<&str, StatementNode> {
 // ---- End Statement Parsing ----
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use medic_ast::ast::{
-        AssignmentNode, BlockNode, ForNode, IfNode, LetStatementNode, MatchNode, ReturnNode,
-        StatementNode, WhileNode,
-    };
-
-    #[test]
-    fn test_let_statement() {
-        let input = "let x = 42;";
-        let (_rest, stmt) = parse_let_statement(input).unwrap();
-        assert_eq!(
-            stmt,
-            StatementNode::Let(Box::new(LetStatementNode {
-                name: "x".to_string(),
-                value: ExpressionNode::Literal(LiteralNode::Int(42)),
-            }))
-        );
-    }
-
-    #[test]
-    fn test_assignment_statement() {
-        let input = "x = 5;";
-        let (_rest, stmt) = parse_assignment(input).unwrap();
-        assert_eq!(
-            stmt,
-            StatementNode::Assignment(Box::new(AssignmentNode {
-                target: ExpressionNode::Identifier("x".to_string()),
-                value: ExpressionNode::Literal(LiteralNode::Int(5)),
-            }))
-        );
-    }
-
-    #[test]
-    fn test_block_statement() {
-        let input = "{ let x = 1; x = 2; }";
-        let (_rest, stmt) = parse_block(input).unwrap();
-        assert_eq!(
-            stmt,
-            StatementNode::Block(BlockNode {
-                statements: vec![
-                    StatementNode::Let(Box::new(LetStatementNode {
-                        name: "x".to_string(),
-                        value: ExpressionNode::Literal(LiteralNode::Int(1)),
-                    })),
-                    StatementNode::Assignment(Box::new(AssignmentNode {
-                        target: ExpressionNode::Identifier("x".to_string()),
-                        value: ExpressionNode::Literal(LiteralNode::Int(2)),
-                    })),
-                ]
-            })
-        );
-    }
-
-    #[test]
-    fn test_if_else_statement() {
-        let input = "if (x > 0) { let y = 1; } else { let y = 2; }";
-        let (_rest, stmt) = parse_if_statement(input).unwrap();
-        assert_eq!(
-            stmt,
-            StatementNode::If(Box::new(IfNode {
-                condition: ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                    left: ExpressionNode::Identifier("x".to_string()),
-                    operator: BinaryOperator::Gt,
-                    right: ExpressionNode::Literal(LiteralNode::Int(0)),
-                })),
-                then_branch: BlockNode {
-                    statements: vec![StatementNode::Let(Box::new(LetStatementNode {
-                        name: "y".to_string(),
-                        value: ExpressionNode::Literal(LiteralNode::Int(1)),
-                    }))]
-                },
-                else_branch: Some(BlockNode {
-                    statements: vec![StatementNode::Let(Box::new(LetStatementNode {
-                        name: "y".to_string(),
-                        value: ExpressionNode::Literal(LiteralNode::Int(2)),
-                    }))]
-                })
-            }))
-        );
-    }
-
-    #[test]
-    fn test_while_statement() {
-        let input = "while (x < 10) { x = x + 1; }";
-        let (_rest, stmt) = parse_while_statement(input).unwrap();
-        match stmt {
-            StatementNode::While(wn) => {
-                assert_eq!(
-                    wn.condition,
-                    ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                        left: ExpressionNode::Identifier("x".to_string()),
-                        operator: BinaryOperator::Lt,
-                        right: ExpressionNode::Literal(LiteralNode::Int(10)),
-                    }))
-                );
-                assert_eq!(wn.body.statements.len(), 1);
-            }
-            _ => panic!("Expected while statement"),
-        }
-    }
-
-    #[test]
-    fn test_for_statement() {
-        let input = "for i in patients { let x = i; }";
-        let (_rest, stmt) = parse_for_statement(input).unwrap();
-        match stmt {
-            StatementNode::For(fn_) => {
-                assert_eq!(fn_.var, "i");
-                assert_eq!(fn_.body.statements.len(), 1);
-            }
-            _ => panic!("Expected for statement"),
-        }
-    }
-
-    #[test]
-    fn test_match_statement() {
-        let input = "match x { 1 => { let y = 10; } 2 => { let y = 20; } }";
-        let (_rest, stmt) = parse_match_statement(input).unwrap();
-        match stmt {
-            StatementNode::Match(mn) => {
-                assert_eq!(mn.arms.len(), 2);
-            }
-            _ => panic!("Expected match statement"),
-        }
-    }
-
-    #[test]
-    fn test_return_statement() {
-        let input = "return 42;";
-        let (_rest, stmt) = parse_return_statement(input).unwrap();
-        match stmt {
-            StatementNode::Return(rn) => {
-                assert_eq!(
-                    rn.value,
-                    Some(ExpressionNode::Literal(LiteralNode::Int(42)))
-                );
-            }
-            _ => panic!("Expected return statement"),
-        }
-    }
-
-    #[test]
-    fn test_return_unit_statement() {
-        let input = "return;";
-        let (_rest, stmt) = parse_return_statement(input).unwrap();
-        match stmt {
-            StatementNode::Return(rn) => {
-                assert_eq!(rn.value, None);
-            }
-            _ => panic!("Expected return statement"),
-        }
-    }
-
-    #[test]
-    fn test_bool_literal() {
-        let input = "true";
-        let (_rest, expr) = parse_bool_literal(input).unwrap();
-        assert_eq!(expr, ExpressionNode::Literal(LiteralNode::Bool(true)));
-        let input = "false";
-        let (_rest, expr) = parse_bool_literal(input).unwrap();
-        assert_eq!(expr, ExpressionNode::Literal(LiteralNode::Bool(false)));
-    }
-
-    #[test]
-    fn test_float_literal() {
-        let input = "3.14";
-        let (_rest, expr) = parse_float_literal(input).unwrap();
-        assert_eq!(expr, ExpressionNode::Literal(LiteralNode::Float(3.14)));
-    }
-
-    #[test]
-    fn test_icd_code() {
-        let input = "ICD10:E11.9";
-        let (_rest, expr) = parse_primary_expr(input).unwrap();
-        assert_eq!(expr, ExpressionNode::IcdCode("ICD10:E11.9".to_string()));
-    }
-
-    #[test]
-    fn test_cpt_code() {
-        let input = "CPT:99213";
-        let (_rest, expr) = parse_primary_expr(input).unwrap();
-        assert_eq!(expr, ExpressionNode::CptCode("CPT:99213".to_string()));
-    }
-
-    #[test]
-    fn test_snomed_code() {
-        let input = "SNOMED:44054006";
-        let (_rest, expr) = parse_primary_expr(input).unwrap();
-        assert_eq!(
-            expr,
-            ExpressionNode::SnomedCode("SNOMED:44054006".to_string())
-        );
-    }
-}
+mod tests;
