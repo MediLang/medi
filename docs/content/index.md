@@ -2,7 +2,7 @@
 
 ![Medi Logo](./assets/medi-logo.png)
 
-# The Medi Programming Language
+# The Medi Book
 
 [Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md) | [Glossary](./glossary.md)
 

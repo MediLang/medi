@@ -1,4 +1,4 @@
-site_name: Medi Documentation
+site_name: The Medi Book
 site_url: https://medi-lang.org/docs/
 site_description: Documentation for the Medi healthcare programming language
 site_author: The Medi Team
@@ -12,7 +12,7 @@ site_dir: site
 
 theme:
   name: material
-  logo: assets/images/medi-logo-placeholder.png
+  logo: assets/medi-logo.png
   favicon: assets/images/favicon-placeholder.png
   palette:
     - media: "(prefers-color-scheme: light)"
