@@ -136,19 +136,52 @@ let analysis = run_risk_model(synthetic_patients);
 
 ## TECHNICAL REQUIREMENTS
 
+### Compiler Infrastructure
+
+#### Lexical & Syntax
+- UTF-8 source encoding with platform-independent line endings
+- Healthcare-aware tokenization with medical literals
+- Context-sensitive parsing with medical DSL support
+- Basic error reporting with medical context
+
+#### Type System (Phase 1)
+- Basic types: int, float, string, bool
+- Core medical types: patient_id, vital, lab_result
+- Simple trait system with MedicalRecord, PrivacyProtected
+- Type inference for local variables
+
+#### Memory Management
+- Safe zone with basic garbage collection
+- Simplified real-time zone for IoT prototypes
+- Basic borrow checking for memory safety
+
+### Runtime System
+
+#### Memory & Concurrency
+- Basic garbage collector for safe zone
+- Simple task-based parallelism
+- Channel-based message passing
+- Basic error handling with Result type
+
+#### Standard Library (Phase 1)
+- Core types and collections
+- Basic FHIR/HL7 integration
+- Simple statistical functions
+- Privacy-aware data types
+
 ### System Performance
-- Compilation time: < 2 seconds for simple scripts
-- Runtime performance: Within 2x of equivalent C++ for numerical operations
-- Memory usage: < 100MB for medic, < 50MB runtime for edge device deployment
+- Compilation: < 2s for simple scripts
+- Runtime: Within 2x of C++ for numerics
+- Memory: < 100MB compiler, < 50MB runtime
 
-### Compatibility
-- Development platform support: Linux (Ubuntu 20.04+), macOS (10.15+), Windows 10/11
-- Target deployment: x86-64, ARM64, WebAssembly, RISC-V (basic)
-- Integration: Python FFI for existing tools
+### Platform Support
+- Development: Linux (Ubuntu 20.04+)
+- Targets: x86-64, basic RISC-V
+- Integration: Python FFI prototype
 
-### Security & Compliance
-- HIPAA-aware privacy checks
-- Basic data anonymization
+### Security & Privacy
+- Basic HIPAA compliance checking
+- Simple data anonymization
 - Secure compilation pipeline
 
 ## TESTING REQUIREMENTS

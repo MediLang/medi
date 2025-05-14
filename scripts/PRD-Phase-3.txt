@@ -16,31 +16,52 @@ Phase 3 represents a critical maturation period for the Medi programming languag
 
 ## CORE COMPONENTS & DELIVERABLES
 
-### 1. Self-Hosting Preparation
+### 1. Self-Hosting Implementation
 
-#### Compiler Subset Identification
-- Identify a subset of Medi suitable for medic development
-- Define bootstrapping strategy with clear milestones
-- Document medic internals for reimplementation
-- Create test suites for validating medic components
+#### Compiler Infrastructure
+- **Lexical & Parser**
+  - Self-hosted lexer with medical token support
+  - Recursive descent parser in Medi
+  - Healthcare-specific AST nodes
+  - Full error recovery and reporting
 
-#### Parser Reimplementation
-- Rewrite the parser in Medi using recursive descent with pattern matching
-- Ensure feature parity with Rust implementation
-- Develop comprehensive tests for validation
-- Optimize for maintainability and extensibility
+- **Type System**
+  - Self-hosted type checker
+  - Advanced trait resolution
+  - Privacy-aware type inference
+  - Medical type validation
 
-#### Type System & Checker Porting
-- Port the type checker to Medi, leveraging healthcare types
-- Implement privacy/compliance checker in Medi
-- Create bidirectional type inference implementation
-- Develop validation framework for type system integrity
+- **Memory Management**
+  - Self-hosted borrow checker
+  - Zone-based memory analysis
+  - Privacy boundary verification
+  - Real-time guarantees checking
 
-#### Integration Strategy
-- Design integration plan for Medi components with existing Rust codebase
-- Create interoperability layer between languages
-- Establish performance benchmarking for comparison
-- Document transition strategy for remaining components
+#### Runtime Components
+- **Memory System**
+  - Custom garbage collector in Medi
+  - Zone-based allocator
+  - Privacy-preserving memory layout
+  - Real-time memory management
+
+- **Concurrency Engine**
+  - Task scheduler implementation
+  - Channel-based communication
+  - Distributed computing framework
+  - Privacy-aware task isolation
+
+#### Standard Library
+- **Core Implementation**
+  - Self-hosted collections
+  - Medical type primitives
+  - Error handling system
+  - I/O abstractions
+
+- **Healthcare Modules**
+  - FHIR/HL7 processing
+  - Privacy framework
+  - Analytics engine
+  - Real-time monitoring
 
 ### 2. AI and Advanced Analytics
 
