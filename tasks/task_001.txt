@@ -1,6 +1,6 @@
 # Task ID: 1
 # Title: Implement Lexer and Parser for Medi Language
-# Status: pending
+# Status: in-progress
 # Dependencies: None
 # Priority: high
 # Description: Develop a recursive descent parser for Medi's core syntax with support for healthcare-specific constructs and AST generation.
@@ -32,7 +32,7 @@ fn report_error(error: ParseError) -> String {
 Create unit tests for lexer and parser components. Test with valid and invalid Medi code samples, including all healthcare-specific constructs from the PRD examples. Verify correct AST generation for each language construct. Test error reporting with various syntax errors to ensure messages are clear and clinician-friendly.
 
 # Subtasks:
-## 1. Define Token Types and Structure [pending]
+## 1. Define Token Types and Structure [done]
 ### Dependencies: None
 ### Description: Define all token types needed for the healthcare-specific language, including literals, operators, keywords, and identifiers. Create a comprehensive token structure that supports UTF-8 encoding.
 ### Details:
@@ -44,7 +44,7 @@ Acceptance Criteria:
 - Unit tests for token structure
 Estimated Complexity: Medium - requires domain knowledge of healthcare terminology and careful design to ensure extensibility.
 
-## 2. Implement Lexical Analyzer (Lexer) [pending]
+## 2. Implement Lexical Analyzer (Lexer) [done]
 ### Dependencies: 1.1
 ### Description: Develop the lexer component that converts input text into a stream of tokens based on the defined token types. Ensure proper handling of whitespace, comments, and special characters.
 ### Details:

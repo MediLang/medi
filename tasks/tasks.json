@@ -8,7 +8,7 @@
       "testStrategy": "Create unit tests for lexer and parser components. Test with valid and invalid Medi code samples, including all healthcare-specific constructs from the PRD examples. Verify correct AST generation for each language construct. Test error reporting with various syntax errors to ensure messages are clear and clinician-friendly.",
       "priority": "high",
       "dependencies": [],
-      "status": "pending",
+      "status": "in-progress",
       "subtasks": [
         {
           "id": 1,
@@ -16,7 +16,7 @@
           "description": "Define all token types needed for the healthcare-specific language, including literals, operators, keywords, and identifiers. Create a comprehensive token structure that supports UTF-8 encoding.",
           "dependencies": [],
           "details": "Acceptance Criteria:\n- Complete enumeration of all token types\n- Token structure with position tracking (line, column)\n- Support for UTF-8 encoded text\n- Documentation of each token type and its purpose\n- Unit tests for token structure\nEstimated Complexity: Medium - requires domain knowledge of healthcare terminology and careful design to ensure extensibility.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 2,
@@ -26,7 +26,7 @@
             1
           ],
           "details": "Acceptance Criteria:\n- Correctly tokenize all language constructs\n- Handle whitespace and comments appropriately\n- Proper position tracking for error reporting\n- Support for string literals with escape sequences\n- Performance optimization for large inputs\n- Comprehensive test suite covering edge cases\nEstimated Complexity: High - requires careful state management and performance considerations.",
-          "status": "pending"
+          "status": "done"
         },
         {
           "id": 3,
