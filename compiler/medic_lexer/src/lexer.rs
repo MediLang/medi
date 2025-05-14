@@ -1,10 +1,12 @@
-// Lexer for Medi language using the industry-standard 'logos' crate
-// Recognizes healthcare keywords, identifiers, literals, operators, and delimiters
+//! Lexer for Medi language using the industry-standard 'logos' crate
+//! Recognizes healthcare keywords, identifiers, literals, operators, and delimiters
 
+use crate::token::{Location, Token, TokenType};
 use logos::Logos;
 
+/// Raw token type used by the logos lexer
 #[derive(Logos, Debug, PartialEq, Clone)]
-pub enum Token {
+pub enum LogosToken {
     // --- Healthcare-specific keywords ---
     #[token("patient")]
     Patient,
@@ -247,4 +249,178 @@ pub enum Token {
     #[regex(r"/\*[^*]*\*+(?:[^/*][^*]*\*+)*/", logos::skip)]
     // --- Error ---
     Error,
+}
+
+/// Medi language lexer
+pub struct Lexer<'source> {
+    /// The logos lexer instance
+    logos_lexer: logos::Lexer<'source, LogosToken>,
+    /// Current line number (1-based)
+    line: usize,
+    /// Current column number (1-based)
+    column: usize,
+    /// Current byte offset in source
+    offset: usize,
+}
+
+impl<'source> Lexer<'source> {
+    /// Create a new lexer for the given source text
+    pub fn new(source: &'source str) -> Self {
+        Self {
+            logos_lexer: LogosToken::lexer(source),
+            line: 1,
+            column: 1,
+            offset: 0,
+        }
+    }
+
+    /// Convert a LogosToken to our semantic Token type
+    fn convert_token(&self, logos_token: LogosToken, lexeme: &str) -> Token {
+        let location = Location {
+            line: self.line,
+            column: self.column,
+            offset: self.offset,
+        };
+
+        let token_type = match logos_token {
+            // Healthcare keywords
+            LogosToken::Patient => TokenType::Identifier("patient".to_string()),
+            LogosToken::Observation => TokenType::Identifier("observation".to_string()),
+            LogosToken::Medication => TokenType::Identifier("medication".to_string()),
+            LogosToken::FhirQuery => TokenType::Fhir,
+            LogosToken::Regulate => TokenType::Regulate,
+
+            // Medical codes
+            LogosToken::IcdCode(code) => TokenType::ICD10(code),
+            LogosToken::SnomedCode(code) => TokenType::SNOMED(code),
+
+            // Keywords
+            LogosToken::Let => TokenType::Let,
+            LogosToken::Fn => TokenType::Fn,
+            LogosToken::Const => TokenType::Const,
+            LogosToken::Type => TokenType::Type,
+            LogosToken::Struct => TokenType::Struct,
+            LogosToken::Enum => TokenType::Enum,
+            LogosToken::Impl => TokenType::Impl,
+            LogosToken::Trait => TokenType::Trait,
+            LogosToken::Mod => TokenType::Module,
+            LogosToken::Pub => TokenType::Pub,
+
+            // Literals
+            LogosToken::IntLiteral(n) => TokenType::Integer(n),
+            LogosToken::FloatLiteral(n) => TokenType::Float(n),
+            LogosToken::SingleQuotedString(s) | LogosToken::DoubleQuotedString(s) => {
+                TokenType::String(s)
+            }
+            LogosToken::True => TokenType::Boolean(true),
+            LogosToken::False => TokenType::Boolean(false),
+
+            // Operators
+            LogosToken::Plus => TokenType::Plus,
+            LogosToken::Minus => TokenType::Minus,
+            LogosToken::Star => TokenType::Star,
+            LogosToken::Slash => TokenType::Slash,
+            LogosToken::Percent => TokenType::Percent,
+            LogosToken::Assign => TokenType::Equal,
+            LogosToken::EqEq => TokenType::EqualEqual,
+            LogosToken::Neq => TokenType::NotEqual,
+            LogosToken::Lt => TokenType::Less,
+            LogosToken::Gt => TokenType::Greater,
+            LogosToken::Le => TokenType::LessEqual,
+            LogosToken::Ge => TokenType::GreaterEqual,
+            LogosToken::Arrow => TokenType::Arrow,
+
+            // Delimiters
+            LogosToken::Dot => TokenType::Dot,
+
+            // Other
+            LogosToken::Identifier => TokenType::Identifier(lexeme.to_string()),
+            LogosToken::Error => {
+                TokenType::Error(format!("Invalid token at {}:{}", self.line, self.column))
+            }
+            _ => TokenType::Error(format!(
+                "Unhandled token type at {}:{}",
+                self.line, self.column
+            )),
+        };
+
+        Token::new(token_type, lexeme.to_string(), location)
+    }
+
+    /// Update line and column numbers based on lexeme
+    fn update_position(&mut self, lexeme: &str) {
+        for c in lexeme.chars() {
+            if c == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+            self.offset += c.len_utf8();
+        }
+    }
+}
+
+impl Iterator for Lexer<'_> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let logos_token = self.logos_lexer.next()?;
+        let lexeme = self.logos_lexer.slice();
+        let token = match logos_token {
+            Ok(token) => self.convert_token(token, lexeme),
+            Err(_) => Token::new(
+                TokenType::Error(format!("Invalid token at {}:{}", self.line, self.column)),
+                lexeme.to_string(),
+                Location {
+                    line: self.line,
+                    column: self.column,
+                    offset: self.offset,
+                },
+            ),
+        };
+        self.update_position(lexeme);
+        Some(token)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lexer_basic() {
+        let source = "let x = 42";
+        let mut lexer = Lexer::new(source);
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Let));
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Identifier(ref s) if s == "x"));
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Equal));
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Integer(42)));
+    }
+
+    #[test]
+    fn test_lexer_healthcare() {
+        let source = "patient.fhir_query ICD10:A01.1";
+        let mut lexer = Lexer::new(source);
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Identifier(ref s) if s == "patient"));
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Dot));
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::Fhir));
+
+        let token = lexer.next().unwrap();
+        assert!(matches!(token.token_type, TokenType::ICD10(ref s) if s == "ICD10:A01.1"));
+    }
 }
