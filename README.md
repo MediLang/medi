@@ -1,5 +1,7 @@
 <div align="center">
 
+![Medi Logo](./docs/content/assets/medi-logo.png)
+
 # The Medi Programming Language
 
 [Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md)
