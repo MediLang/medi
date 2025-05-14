@@ -1,67 +1,83 @@
 # Task ID: 5
-# Title: Develop Standard Library: medi.data Module
+# Title: Develop Core Standard Library Modules
 # Status: pending
 # Dependencies: 2, 4
 # Priority: high
-# Description: Implement the medi.data module with FHIR resource definitions and parsers, native representation of healthcare data structures, querying capabilities for patient records, and data validation against healthcare standards.
+# Description: Implement essential standard library modules including medi.data, medi.stats, medi.compliance, and medi.ai.
 # Details:
-Create the medi.data standard library module:
-1. FHIR R4 resource definitions and parsers
-2. Native Medi representations of healthcare data structures
-3. Query engine for patient records using FHIR paths
-4. Data validation against healthcare standards
-5. Serialization/deserialization for healthcare formats
+Develop the core standard library modules for Medi:
 
-Implementation approach:
-- Generate Medi type definitions from FHIR R4 specification
-- Implement FHIR path query engine
-- Create efficient in-memory representations of healthcare data
-- Develop validation rules based on FHIR profiles
-- Implement JSON/XML parsers for healthcare data
-- Create query optimization for common healthcare data access patterns
+1. `medi.data`:
+   - FHIR resource definitions and parsers
+   - Native representation of healthcare data structures
+   - Querying capabilities for patient records
+   - Data validation against healthcare standards
+
+2. `medi.stats`:
+   - Basic statistical functions for clinical data
+   - Descriptive statistics for patient cohorts
+   - Simple hypothesis testing (t-tests, etc.)
+   - Foundations for clinical trial analysis
+
+3. `medi.compliance`:
+   - HIPAA compliance checking primitives
+   - Data anonymization utilities
+   - Audit trail generation
+   - Basic regulatory reporting templates
+
+4. `medi.ai`:
+   - Interfaces for ML model integration
+   - Simple risk prediction utilities
+   - Foundation for federated learning
+
+Pseudo-code for standard library implementation:
+```rust
+// medi.data module
+struct FHIRResource { /* ... */ }
+struct FHIRPatient : FHIRResource { /* ... */ }
+struct FHIRObservation : FHIRResource { /* ... */ }
+
+fn fhir_query(resource_type: &str) -> QueryBuilder { /* ... */ }
+fn validate_fhir(resource: &FHIRResource) -> Result<(), ValidationError> { /* ... */ }
+
+// medi.stats module
+fn mean(values: &[f64]) -> f64 { /* ... */ }
+fn t_test(group1: &[f64], group2: &[f64]) -> TTestResult { /* ... */ }
+
+// medi.compliance module
+fn check_hipaa_compliance(data: &Data, rules: &[ComplianceRule]) -> ComplianceResult { /* ... */ }
+fn anonymize(data: &Data, method: AnonymizationMethod) -> AnonymizedData { /* ... */ }
+
+// medi.ai module
+fn load_model(path: &str) -> Model { /* ... */ }
+fn predict_risk(patient: &FHIRPatient, model: &Model) -> RiskScore { /* ... */ }
+```
 
 # Test Strategy:
-1. Unit tests for FHIR resource handling
-2. Query performance benchmarks
-3. Validation tests against FHIR test suite
-4. Interoperability tests with existing FHIR servers
-5. Memory efficiency tests with large datasets
-6. Conformance testing against FHIR specification
+Create comprehensive unit tests for each standard library module. Test FHIR parsing and querying with real and synthetic healthcare data. Validate statistical functions against known results. Test compliance checking against HIPAA requirements. Benchmark AI model integration. Create integration tests that use multiple modules together to solve healthcare problems from the key use cases in the PRD.
 
 # Subtasks:
-## 1. Implement FHIR resource definitions and parsers [pending]
+## 1. Develop medi.data Module [pending]
 ### Dependencies: None
-### Description: Create comprehensive FHIR resource class definitions and parsers that can handle all required FHIR resources (Patient, Observation, Medication, etc.)
+### Description: Create the medi.data module for standardized healthcare data structures and operations
 ### Details:
-Implement class structures for FHIR resources with proper inheritance hierarchy. Create parsers that can validate and transform raw FHIR JSON/XML into structured objects. Include support for FHIR extensions and ensure compliance with the latest FHIR specification version.
+Implement core data structures for patient records, medical events, and clinical observations. Include functions for data validation, sanitization, and transformation. Create parsers for common healthcare formats (FHIR, HL7, DICOM). Develop serialization/deserialization utilities. Implement secure storage abstractions with encryption. Add comprehensive documentation with examples. Test with real and synthetic healthcare datasets, focusing on data integrity, performance with large datasets, and compliance with standards.
 
-## 2. Develop native healthcare data structure representations [pending]
+## 2. Develop medi.stats Module [pending]
 ### Dependencies: 5.1
-### Description: Create internal data structures optimized for healthcare data that can efficiently represent clinical information beyond FHIR
+### Description: Create the medi.stats module for healthcare-specific statistical analysis
 ### Details:
-Design and implement domain-specific data structures for clinical concepts, time-series data, and hierarchical medical taxonomies. Include support for medical coding systems (SNOMED CT, LOINC, ICD-10) and create mapping functions between FHIR resources and these native structures.
+Implement statistical functions for clinical trials, epidemiology, and outcomes research. Create visualization tools for medical data. Develop risk scoring and predictive modeling utilities. Add functions for population health analysis. Implement quality metrics calculations (HEDIS, STAR). Create time-series analysis for patient monitoring data. Test with benchmark datasets, validate against established statistical packages, and ensure numerical stability across diverse datasets.
 
-## 3. Build patient record query engine [pending]
+## 3. Develop medi.compliance Module [pending]
+### Dependencies: 5.1
+### Description: Create the medi.compliance module for healthcare regulatory requirements
+### Details:
+Implement HIPAA compliance validation tools. Create audit logging mechanisms. Develop de-identification and anonymization utilities. Add consent management functions. Implement data retention policy enforcement. Create regulatory reporting templates (FDA, CMS). Develop validation for international standards (GDPR, PIPEDA). Test with compliance checklists, penetration testing for security features, and validation against regulatory requirements documentation.
+
+## 4. Develop medi.ai Module [pending]
 ### Dependencies: 5.1, 5.2
-### Description: Implement a flexible query engine that allows efficient retrieval and filtering of patient healthcare data
+### Description: Create the medi.ai module for healthcare-specific AI and ML capabilities
 ### Details:
-Create a query DSL (Domain Specific Language) for healthcare data access patterns. Implement indexing strategies for common query paths. Support temporal queries, code-based filtering, and complex clinical criteria. Ensure the engine can handle both FHIR-based and native data structure queries.
-
-## 4. Implement healthcare standards validation [pending]
-### Dependencies: 5.1, 5.2
-### Description: Create validation mechanisms to ensure data conforms to healthcare standards and terminology systems
-### Details:
-Implement validators for FHIR profiles and implementation guides. Add support for terminology validation against standard code systems. Create constraint checking for clinical data integrity and implement validation reporting that provides detailed error information.
-
-## 5. Develop serialization/deserialization for healthcare formats [pending]
-### Dependencies: 5.1, 5.2, 5.4
-### Description: Implement conversion utilities for various healthcare data formats beyond FHIR (HL7v2, CDA, DICOM)
-### Details:
-Create serializers and deserializers for legacy healthcare formats. Implement bidirectional conversion between FHIR and other formats. Support bulk import/export operations and ensure data fidelity during format conversions.
-
-## 6. Optimize performance for healthcare data operations [pending]
-### Dependencies: 5.1, 5.2, 5.3, 5.5
-### Description: Implement performance optimizations for healthcare data access patterns and large dataset handling
-### Details:
-Profile and optimize critical data paths. Implement lazy loading strategies for large resources. Create caching mechanisms for frequently accessed data. Optimize memory usage for large patient datasets and implement parallel processing for bulk operations.
+Implement medical image processing utilities. Create NLP functions for clinical text. Develop predictive modeling for disease progression. Add diagnostic decision support tools. Implement patient risk stratification. Create model validation tools specific to healthcare. Develop explainability functions for clinical AI. Test with benchmark medical datasets, validate against clinical ground truth, and perform bias testing across diverse patient populations.
 

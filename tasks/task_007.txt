@@ -1,67 +1,63 @@
 # Task ID: 7
-# Title: Develop Standard Library: medi.compliance Module
+# Title: Build Command-Line Interface and REPL
 # Status: pending
-# Dependencies: 5
-# Priority: high
-# Description: Create the medi.compliance module with HIPAA compliance checking primitives, data anonymization utilities, audit trail generation, and basic regulatory reporting templates.
+# Dependencies: 3, 4, 5
+# Priority: medium
+# Description: Develop the medic compiler CLI with basic options, a REPL for interactive development, and package manager foundation.
 # Details:
-Implement the compliance module:
-1. HIPAA compliance checking primitives
-2. Data anonymization utilities following Safe Harbor method
-3. Audit trail generation for data access
-4. Regulatory reporting templates
-5. Privacy impact analysis tools
+Implement a command-line interface (CLI) for the Medi compiler (`medic`) with basic compilation options. Create a Read-Eval-Print Loop (REPL) for interactive development. Lay the foundation for a package manager (`medipack`). Implement a basic documentation generator.
 
-Implementation approach:
-- Implement HIPAA Safe Harbor de-identification algorithms
-- Create rule-based compliance checking system
-- Develop audit logging with tamper-evident design
-- Implement k-anonymity and differential privacy techniques
-- Create report generators for common regulatory requirements
-- Design compliance verification for data processing pipelines
+Key components:
+1. Compiler CLI with options for target selection, optimization level, etc.
+2. Interactive REPL with healthcare data visualization
+3. Package manager foundation with dependency resolution
+4. Documentation generator for Medi code
+
+Pseudo-code for CLI implementation:
+```rust
+struct CompilerOptions {
+  input_file: String,
+  output_file: Option<String>,
+  target: Target,
+  opt_level: OptLevel,
+  // Other options
+}
+
+fn parse_cli_args() -> CompilerOptions { /* ... */ }
+
+fn compile_file(options: &CompilerOptions) -> Result<(), CompileError> { /* ... */ }
+
+fn run_repl() -> Result<(), ReplError> {
+  loop {
+    // Read input
+    // Parse and evaluate
+    // Print result
+    // Handle special commands
+  }
+}
+
+fn generate_docs(input_files: &[String], output_dir: &str) -> Result<(), DocError> { /* ... */ }
+```
 
 # Test Strategy:
-1. Compliance rule validation against HIPAA requirements
-2. De-identification effectiveness testing
-3. Audit trail integrity verification
-4. Performance impact assessment of compliance features
-5. Validation against real-world compliance scenarios
-6. Security testing of anonymization techniques
+Create integration tests for the CLI with various command-line options. Test the REPL with interactive sessions including healthcare data analysis. Test documentation generation with sample Medi code. Verify correct handling of compiler errors and warnings. Test package management functionality with mock packages.
 
 # Subtasks:
-## 1. Implement HIPAA compliance checking primitives [pending]
+## 1. Implement Compiler Command-Line Interface [pending]
 ### Dependencies: None
-### Description: Develop core functions to validate data handling against HIPAA requirements
+### Description: Develop a robust CLI for the compiler that handles command-line arguments, file processing, and execution options
 ### Details:
-Create a library of validation functions that check for PHI identifiers, verify proper access controls, validate encryption standards compliance, and implement authorization verification. Include configurable rule sets for different HIPAA sections (Privacy Rule, Security Rule, Breach Notification).
+Create a CLI that supports: 1) File input/output options, 2) Compilation flags and optimization levels, 3) Error reporting with clear messages and line numbers, 4) Verbose mode for debugging, 5) Help documentation, 6) Version information. Integrate with the compiler pipeline to process source files. Implement proper exit codes for success/failure states. Design for extensibility to add new options in future releases. Ensure cross-platform compatibility.
 
-## 2. Build data anonymization utilities [pending]
+## 2. Develop REPL with Healthcare Data Visualization [pending]
 ### Dependencies: 7.1
-### Description: Create comprehensive tools for de-identifying sensitive healthcare data
+### Description: Create an interactive Read-Eval-Print Loop with specialized features for healthcare data visualization and exploration
 ### Details:
-Implement k-anonymity algorithms, pseudonymization functions, data masking techniques, and statistical disclosure controls. Include configurable anonymization levels and methods for different data types (text, numeric, dates, geographic).
+Build a REPL environment that: 1) Provides immediate feedback for code snippets, 2) Supports multi-line input with syntax highlighting, 3) Implements healthcare-specific visualization commands for patient data, trends, and metrics, 4) Includes data import/export capabilities for common healthcare formats, 5) Offers context-aware autocompletion, 6) Maintains session history. Ensure visualizations are accessible and clinically relevant. Integrate with the compiler's interpreter mode for real-time execution.
 
-## 3. Develop audit trail generation system [pending]
+## 3. Create Documentation Generator [pending]
 ### Dependencies: 7.1
-### Description: Create a tamper-evident logging system for all data access and modifications
+### Description: Implement a tool to automatically generate documentation from source code and integrate it with the CLI
 ### Details:
-Implement cryptographic verification of log integrity, sequential event recording, comprehensive metadata capture (who, what, when, where, why), and immutable storage mechanisms. Include query interfaces for compliance investigations.
-
-## 4. Create regulatory reporting templates [pending]
-### Dependencies: 7.1, 7.3
-### Description: Design standardized formats for compliance reporting to regulatory bodies
-### Details:
-Develop configurable report templates for different regulatory requirements, data extraction and aggregation functions, scheduled report generation capabilities, and export formats (PDF, CSV, structured XML).
-
-## 5. Implement privacy impact analysis tools [pending]
-### Dependencies: 7.1, 7.2
-### Description: Build assessment framework for evaluating privacy implications of system changes
-### Details:
-Create data flow mapping tools, risk scoring algorithms, automated privacy threshold assessments, and mitigation recommendation engines. Include documentation generation for regulatory submissions.
-
-## 6. Develop security validation framework [pending]
-### Dependencies: 7.1, 7.3, 7.5
-### Description: Build comprehensive testing system for security controls verification
-### Details:
-Implement automated penetration testing modules, encryption verification tools, access control validation, security configuration assessment, and vulnerability scanning integration. Include compliance-specific test suites mapped to regulatory requirements.
+Develop a documentation generator that: 1) Extracts documentation comments from source code, 2) Generates structured documentation in multiple formats (HTML, PDF, Markdown), 3) Creates cross-references between related components, 4) Includes examples and usage patterns, 5) Documents healthcare-specific functions with clinical context. Add CLI commands to generate documentation on demand. Implement templates for consistent documentation styling. Include validation to ensure documentation completeness and accuracy.
 

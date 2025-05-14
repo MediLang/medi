@@ -3,78 +3,62 @@
 # Status: pending
 # Dependencies: 1
 # Priority: high
-# Description: Implement a type system with healthcare data types (FHIRPatient, Observation, etc.), type checking for healthcare operations, type inference, and safety guarantees for patient data handling.
+# Description: Implement a type system with healthcare data types, type checking for healthcare operations, and type inference.
 # Details:
-Design and implement a type system that includes:
-1. Core primitive types (int, float, string, etc.)
-2. Healthcare-specific types (FHIRPatient, Observation, Medication, etc.)
-3. Type checking rules for healthcare operations
-4. Type inference algorithm
-5. Safety mechanisms for patient data handling
-6. Privacy-aware type annotations
+Design and implement a type system that includes basic types (int, float, string, bool) and healthcare-specific types like `FHIRPatient`, `Observation`, etc. Implement type checking for healthcare-specific operations and type inference for improved developer experience. Add safety guarantees for patient data handling.
 
-Implementation approach:
-- Define type hierarchy with inheritance for healthcare types
-- Implement Hindley-Milner type inference with extensions for healthcare types
-- Create type checking visitors for the AST
-- Design privacy/compliance type annotations (e.g., @PHI, @anonymized)
-- Implement type compatibility rules for healthcare data
-- Create specialized type checking for regulatory constructs
+The type system should include:
+1. Core medical types: patient_id, vital, lab_result
+2. Simple trait system with MedicalRecord, PrivacyProtected traits
+3. Type inference for local variables
+
+Pseudo-code for type system:
+```rust
+enum Type {
+  Int, Float, String, Bool,
+  PatientId, Vital, LabResult,
+  FHIRPatient, Observation,
+  // Other healthcare types
+}
+
+trait MedicalRecord { /* ... */ }
+trait PrivacyProtected { /* ... */ }
+
+fn infer_type(ast_node: &AST, context: &TypeContext) -> Result<Type, TypeError> {
+  // Implement type inference logic
+}
+
+fn check_types(ast: &AST) -> Result<(), TypeError> {
+  // Implement type checking for the entire AST
+  // Special handling for healthcare operations
+}
+```
 
 # Test Strategy:
-1. Unit tests for type checking rules
-2. Tests for type inference with complex expressions
-3. Validation of healthcare-specific type safety
-4. Edge case testing for type compatibility
-5. Tests for privacy annotations and their enforcement
-6. Performance testing of type checking system
+Create unit tests for type checking and inference. Test with various healthcare data types and operations. Verify type safety for patient data handling. Test edge cases like type conversions and inference in complex expressions. Ensure type errors are reported with clear, healthcare-context-aware messages.
 
 # Subtasks:
-## 1. Define primitive healthcare types [pending]
+## 1. Basic Type System Implementation [pending]
 ### Dependencies: None
-### Description: Create the foundational primitive types specific to healthcare data
+### Description: Implement the core type system infrastructure including primitive types, type declarations, and basic type checking mechanisms.
 ### Details:
-Define basic types like PatientID, MedicalCode, Dosage, Measurement, DateTime, and other atomic healthcare data types. Include validation rules and constraints for each primitive type. Document the semantics and intended usage of each type.
+Implement primitive types (string, number, boolean), type declarations syntax, type annotations, and basic type checking mechanisms. Create the TypeChecker class that will interface with the parser. Develop unit tests for each primitive type and basic type operations. Integration points: Receive AST from parser and attach type information to nodes.
 
-## 2. Implement healthcare-specific type hierarchy [pending]
+## 2. Healthcare-Specific Type Definitions [pending]
 ### Dependencies: 2.1
-### Description: Design and implement the hierarchical structure of healthcare types
+### Description: Define and implement healthcare domain-specific types such as PatientID, MedicalRecord, Diagnosis, and related type traits.
 ### Details:
-Create composite types like Patient, Medication, Diagnosis, Procedure, and LabResult. Define inheritance relationships and type composition rules. Implement interfaces for common healthcare operations. Document the relationships between types.
+Create healthcare-specific types (PatientID, MedicalRecord, Diagnosis, Medication, LabResult, etc.). Implement type traits for healthcare data (Identifiable, Timestamped, Auditable). Develop validation rules for each healthcare type. Test with realistic healthcare data examples. Integration points: Extend the type registry from subtask 1 with healthcare types.
 
-## 3. Develop type checking rules [pending]
+## 3. Type Checking and Inference Implementation [pending]
 ### Dependencies: 2.1, 2.2
-### Description: Implement the rules for validating type correctness in healthcare contexts
+### Description: Implement advanced type checking and type inference algorithms for healthcare data operations and transformations.
 ### Details:
-Define type compatibility rules for healthcare operations. Implement type checking algorithms for function applications. Create specialized rules for healthcare-specific operations like medication dosage calculations and diagnostic code validations.
+Implement type inference for variable declarations and expressions. Create type checking for healthcare-specific operations (e.g., patient record merging, medication interactions). Develop error reporting for type mismatches with healthcare context. Test with complex healthcare workflows. Integration points: Hook type inference into expression evaluation in the parser.
 
-## 4. Implement type inference algorithm [pending]
-### Dependencies: 2.3
-### Description: Create a Hindley-Milner based type inference system with healthcare extensions
-### Details:
-Implement unification algorithm for healthcare types. Develop constraint solving for healthcare-specific type relationships. Create type variable handling and generalization mechanisms. Optimize for common healthcare data processing patterns.
-
-## 5. Create patient data safety mechanisms [pending]
+## 4. Patient Data Safety Guarantees [pending]
 ### Dependencies: 2.2, 2.3
-### Description: Implement type-level safeguards for patient data integrity
+### Description: Implement safety guarantees for patient data handling including privacy annotations, access control types, and data flow analysis.
 ### Details:
-Develop immutability controls for critical patient data. Implement audit trail type wrappers. Create validation types for ensuring data consistency. Design error types that preserve patient safety during exceptional conditions.
-
-## 6. Implement privacy annotations [pending]
-### Dependencies: 2.2, 2.5
-### Description: Add HIPAA-compliant privacy annotations to the type system
-### Details:
-Create PHI (Protected Health Information) type markers. Implement consent-based access control types. Develop de-identification type transformations. Create type-level mechanisms for privacy policy enforcement.
-
-## 7. Define type compatibility rules [pending]
-### Dependencies: 2.3, 2.4, 2.6
-### Description: Establish rules for type compatibility and conversion in healthcare contexts
-### Details:
-Define subtyping relationships between healthcare types. Implement safe conversion operations between related types. Create compatibility checking for interoperability with external healthcare systems. Document type conversion risks and safety guarantees.
-
-## 8. Develop comprehensive testing framework [pending]
-### Dependencies: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7
-### Description: Create tests to verify correctness of the healthcare type system
-### Details:
-Implement unit tests for each type and operation. Create integration tests for complex healthcare workflows. Develop property-based tests for type system invariants. Create compliance test suite for privacy and security requirements. Document test coverage and validation approach.
+Implement privacy annotation types (PHI, Anonymized, Authorized). Create access control type checking for patient data. Develop data flow analysis to track sensitive information. Implement HIPAA compliance type checks. Test with privacy violation scenarios. Integration points: Integrate with error reporting system and provide safety verification API for the runtime.
 

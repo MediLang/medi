@@ -1,87 +1,77 @@
 # Task ID: 3
-# Title: Build LLVM Backend Integration for Code Generation
+# Title: Build LLVM Backend Integration for Compiler
 # Status: pending
 # Dependencies: 1, 2
 # Priority: high
-# Description: Develop the compiler backend using LLVM for efficient code generation with support for WebAssembly and initial RISC-V targets, including a basic optimization pipeline for healthcare workloads.
+# Description: Implement LLVM backend integration for efficient code generation with support for WebAssembly and initial RISC-V targets.
 # Details:
-Implement the LLVM backend integration:
-1. AST to LLVM IR translation
-2. Support for WebAssembly target generation
-3. Basic RISC-V support for medical IoT devices
-4. Healthcare-specific optimization passes
-5. Privacy/compliance checking stage
-6. Code generation for healthcare primitives
+Integrate LLVM (version 15.0+) as the backend for the Medi compiler. Implement code generation from Medi AST to LLVM IR. Add support for WebAssembly target for browser deployments and initial RISC-V support for medical IoT devices. Implement a basic optimization pipeline focused on healthcare workloads.
 
-Implementation approach:
-- Use LLVM 15.0+ API for IR generation
-- Implement AST visitor that generates LLVM IR
-- Create custom optimization passes for healthcare workloads
-- Implement target-specific code generation for x86-64, ARM64, WebAssembly, and RISC-V
-- Design privacy-preserving code generation patterns
-- Implement intrinsics for healthcare operations
-- Create HIPAA/GDPR compliance verification pass
+Key components:
+1. AST to LLVM IR translation
+2. Target-specific code generation (x86-64, WebAssembly, RISC-V)
+3. Basic optimization passes for healthcare workloads
+4. Integration with the Medi type system
+
+Pseudo-code for LLVM integration:
+```rust
+struct LLVMContext { /* ... */ }
+struct IRBuilder { /* ... */ }
+
+fn generate_llvm_ir(ast: &AST, context: &LLVMContext) -> Result<Module, CodeGenError> {
+  let builder = IRBuilder::new(context);
+  // Translate AST to LLVM IR
+  // Handle healthcare-specific constructs
+}
+
+fn optimize_module(module: &Module, level: OptLevel) -> Result<Module, OptError> {
+  // Apply optimization passes
+  // Healthcare-specific optimizations
+}
+
+fn generate_target_code(module: &Module, target: Target) -> Result<Vec<u8>, CodeGenError> {
+  // Generate machine code for the specified target
+  // Support x86-64, WebAssembly, RISC-V
+}
+```
 
 # Test Strategy:
-1. Unit tests for IR generation
-2. Integration tests with end-to-end compilation
-3. Performance benchmarks against C++ equivalents
-4. Cross-platform compilation tests
-5. Validation of generated code against healthcare requirements
-6. Security and privacy compliance tests
+Create integration tests for code generation with LLVM. Test compilation of Medi code to different targets (x86-64, WebAssembly, RISC-V). Benchmark generated code performance against the 2x C++ performance target. Test optimization passes with healthcare-specific workloads. Verify correct execution of compiled code across platforms.
 
 # Subtasks:
-## 1. AST to LLVM IR Translation [pending]
+## 1. LLVM Setup and Environment Configuration [pending]
 ### Dependencies: None
-### Description: Develop the translation layer from Abstract Syntax Tree to LLVM Intermediate Representation
+### Description: Set up LLVM infrastructure and configure the build environment for backend integration
 ### Details:
-Implement a robust translation mechanism that converts the language's AST into LLVM IR. This includes handling all language constructs, type systems, and ensuring semantic equivalence. Create visitor patterns for AST traversal and corresponding LLVM IR generation functions.
+Install LLVM development packages (version 15.0+), configure CMake build system to link against LLVM libraries, set up header includes for LLVM API access, create wrapper classes for LLVM context, module, and builder objects, and establish the basic pipeline architecture for code generation
 
-## 2. WebAssembly Target Support [pending]
+## 2. AST to LLVM IR Translation [pending]
 ### Dependencies: 3.1
-### Description: Add support for WebAssembly as a compilation target
+### Description: Implement the translation layer from AST nodes to LLVM IR instructions
 ### Details:
-Configure LLVM backend to support WebAssembly target. Implement necessary target-specific optimizations, handle memory model differences, and ensure proper function calling conventions. Test WebAssembly output with browser and standalone runtimes.
+Create visitor pattern for AST traversal, implement IR generation for expressions (arithmetic, logical, comparison), handle variable declarations and assignments, implement control flow structures (if/else, loops, functions), manage memory allocations, and ensure proper scope handling for variables
 
-## 3. RISC-V Support Implementation [pending]
-### Dependencies: 3.1
-### Description: Implement RISC-V architecture support in the compiler backend
+## 3. Target-Specific Code Generation [pending]
+### Dependencies: 3.2
+### Description: Implement backend code generation for x86-64, WebAssembly, and RISC-V targets
 ### Details:
-Add RISC-V as a target architecture, including support for various RISC-V extensions relevant to healthcare applications. Implement code generation strategies optimized for RISC-V instruction set and develop testing infrastructure for RISC-V targets.
+Configure target machine settings for each architecture, implement target-specific intrinsics and optimizations, handle calling conventions for each platform, manage register allocation strategies, implement platform-specific memory models, and create target triple detection logic
 
-## 4. Healthcare-Specific Optimization Passes [pending]
-### Dependencies: 3.1
-### Description: Develop custom LLVM optimization passes for healthcare workloads
-### Details:
-Create specialized optimization passes targeting common healthcare computational patterns such as signal processing, statistical analysis, and image processing. Implement domain-specific algebraic simplifications and memory access optimizations for healthcare data structures.
-
-## 5. Privacy and Compliance Checking [pending]
-### Dependencies: 3.1, 3.4
-### Description: Implement privacy and regulatory compliance verification in the compiler pipeline
-### Details:
-Develop static analysis passes to verify code compliance with healthcare regulations (HIPAA, GDPR, etc.). Implement data flow analysis to track PHI/PII and ensure proper anonymization, encryption, and access controls are in place.
-
-## 6. Code Generation for Healthcare Primitives [pending]
-### Dependencies: 3.1, 3.4
-### Description: Implement efficient code generation for healthcare-specific primitives and operations
-### Details:
-Create optimized code generation patterns for healthcare-specific operations like secure patient data handling, medical imaging functions, and biosignal processing. Develop intrinsics and specialized library calls for common healthcare algorithms.
-
-## 7. Cross-Platform Testing Framework [pending]
+## 4. Optimization Pipeline Integration [pending]
 ### Dependencies: 3.2, 3.3
-### Description: Develop comprehensive testing infrastructure across all supported platforms
+### Description: Implement LLVM optimization passes tailored for healthcare workloads
 ### Details:
-Build an automated testing framework that validates compiler output across WebAssembly, RISC-V, and other supported targets. Implement test cases covering healthcare-specific scenarios and ensure consistent behavior across platforms.
+Configure optimization pipeline with appropriate pass manager, implement function-level and module-level optimization passes, add healthcare-specific optimizations for numerical stability and precision, implement vectorization for SIMD operations, add memory access pattern optimizations, and create debug/release optimization profiles
 
-## 8. Performance Benchmarking Suite [pending]
-### Dependencies: 3.2, 3.3, 3.4, 3.6
-### Description: Create benchmarking tools to measure and optimize compiler performance
+## 5. Type System Integration [pending]
+### Dependencies: 3.2
+### Description: Integrate the language's type system with LLVM's type representation
 ### Details:
-Develop a comprehensive benchmarking suite with healthcare-relevant workloads. Implement performance measurement infrastructure, establish baseline metrics, and create visualization tools for performance analysis across different targets and optimization levels.
+Map language primitive types to LLVM types, implement struct and array type representations, handle function types and signatures, implement generic type specialization for LLVM, manage ABI-compliant data layout, and ensure proper type conversions and promotions
 
-## 9. Security Validation System [pending]
-### Dependencies: 3.5, 3.6, 3.7
-### Description: Implement security validation for generated code
+## 6. Testing Framework for Backend Validation [pending]
+### Dependencies: 3.1, 3.2, 3.3, 3.4, 3.5
+### Description: Develop comprehensive testing infrastructure for the LLVM backend
 ### Details:
-Develop security validation tools to analyze generated code for vulnerabilities. Implement checks for common security issues in healthcare applications, including data leakage, authentication bypasses, and side-channel attacks. Create reporting mechanisms for security findings.
+Create unit tests for IR generation, implement integration tests for end-to-end compilation, develop performance benchmarks for optimization evaluation, add regression tests for known edge cases, implement cross-platform validation tests, and create automated CI/CD pipeline for backend testing
 

@@ -1,61 +1,73 @@
 # Task ID: 8
-# Title: Create Command-Line Interface and Development Tools
+# Title: Develop Basic IDE with Visual Analytics
 # Status: pending
-# Dependencies: 3, 4
-# Priority: medium
-# Description: Develop the command-line interface including the compiler (medic), REPL for interactive development, package manager foundation (medipack), and documentation generator.
+# Dependencies: 1, 2, 5
+# Priority: low
+# Description: Create a basic IDE with visual analytics capabilities, syntax highlighting, and code completion for Medi.
 # Details:
-Implement development tools:
-1. Compiler CLI (medic) with options for different targets and optimization levels
-2. Interactive REPL for Medi development
-3. Package manager foundation (medipack)
-4. Documentation generator with healthcare-specific annotations
-5. Build system integration
+Develop a basic Integrated Development Environment (IDE) for Medi with visual analytics capabilities, support for `.mdi` file recognition, syntax highlighting, and basic code completion. Create a prototype of the visual programming interface.
+
+Key components:
+1. Text editor with syntax highlighting for Medi
+2. Code completion using the type system
+3. Visual analytics for healthcare data
+4. Integration with the medic compiler
+5. Prototype visual programming interface
 
 Implementation approach:
-- Use modern CLI framework (e.g., clap, argparse) for command-line parsing
-- Implement REPL with history, auto-completion, and healthcare data visualization
-- Design package specification format for medipack
-- Create documentation generator that understands healthcare annotations
-- Implement build system with dependency management
-- Design project templates for common healthcare applications
+1. Build on existing open-source editor frameworks
+2. Implement Medi language server protocol
+3. Create visualization components for healthcare data
+4. Design visual programming blocks for healthcare operations
+
+Pseudo-code for IDE components:
+```typescript
+class MediLanguageServer {
+  // Implement Language Server Protocol
+  onCompletion(document: TextDocument, position: Position): CompletionItem[] { /* ... */ }
+  onHover(document: TextDocument, position: Position): Hover { /* ... */ }
+  // Other LSP methods
+}
+
+class HealthcareVisualizer {
+  renderPatientData(patient: FHIRPatient): SVGElement { /* ... */ }
+  renderStatistics(data: StatisticalResult): SVGElement { /* ... */ }
+  // Other visualization methods
+}
+
+class VisualProgrammingInterface {
+  createBlock(blockType: string): Block { /* ... */ }
+  connectBlocks(source: Block, target: Block): Connection { /* ... */ }
+  generateCode(): string { /* ... */ }
+  // Other visual programming methods
+}
+```
 
 # Test Strategy:
-1. CLI functionality tests
-2. REPL interactive testing
-3. Package management workflow tests
-4. Documentation generation validation
-5. Cross-platform testing of development tools
-6. Usability testing with healthcare developers
+Create UI tests for the IDE components. Test syntax highlighting with various Medi code samples. Test code completion with healthcare-specific constructs. Verify visual analytics with sample healthcare data. Test integration with the compiler. Conduct usability testing with target users (clinicians, researchers, developers).
 
 # Subtasks:
-## 1. Implement compiler CLI with target options [pending]
+## 1. Implement Text Editor with Syntax Highlighting [pending]
 ### Dependencies: None
-### Description: Develop a command-line interface for the compiler with options to target different platforms and healthcare environments
+### Description: Develop a text editor component with syntax highlighting capabilities for multiple programming languages
 ### Details:
-Create a CLI tool that accepts source files and compilation options. Implement flags for target platforms (web, mobile, embedded), optimization levels, and healthcare-specific settings like HIPAA compliance mode. Include error reporting with healthcare context-aware messages and warnings for potential compliance issues.
+Implementation details: Use Monaco Editor or CodeMirror as the base editor component. Implement syntax highlighting for Python, JavaScript, and SQL at minimum. Add line numbering, bracket matching, and code folding features. User experience requirements: Ensure responsive editing with minimal lag, customizable themes (light/dark), and keyboard shortcuts for common operations. Integration points: Create a modular architecture that allows other components to access and modify editor content programmatically.
 
-## 2. Build interactive REPL with healthcare features [pending]
+## 2. Develop Code Completion Using Type System [pending]
 ### Dependencies: 8.1
-### Description: Create a Read-Eval-Print Loop environment with specialized features for healthcare development
+### Description: Implement intelligent code completion functionality leveraging the language's type system
 ### Details:
-Develop an interactive shell that allows testing code snippets with immediate feedback. Include healthcare-specific features like medical terminology autocompletion, built-in test patient data, and visualization of clinical algorithms. Implement syntax highlighting and error checking with healthcare context awareness.
+Implementation details: Integrate with Language Server Protocol (LSP) for language-aware code completion. Implement type inference for dynamically typed languages. Create a suggestion display component that shows parameter hints and documentation. User experience requirements: Low-latency suggestions (under 200ms), filtering capabilities, and keyboard navigation for completion items. Integration points: Connect with the text editor component, access to project files for context-aware completion, and hooks for custom completion providers.
 
-## 3. Establish package manager foundation [pending]
-### Dependencies: None
-### Description: Create the core package management system for distributing and consuming healthcare-specific libraries
+## 3. Create Visual Analytics for Healthcare Data [pending]
+### Dependencies: 8.1
+### Description: Develop visualization components specifically designed for healthcare data analysis
 ### Details:
-Design and implement a package manager that handles dependency resolution, versioning, and package distribution. Include features for verifying package integrity, compliance validation for healthcare libraries, and metadata for clinical usage domains. Support both public and private repository configurations for healthcare organizations.
+Implementation details: Build reusable chart components (line charts, scatter plots, heatmaps) optimized for healthcare metrics. Implement data preprocessing utilities for common healthcare data formats (FHIR, HL7). Create interactive dashboards with filtering capabilities. User experience requirements: Accessible visualizations following healthcare UI guidelines, tooltips with detailed information, and export functionality. Integration points: Data connectors to common healthcare databases, integration with the editor for custom visualization code, and APIs for extending with new visualization types.
 
-## 4. Create documentation generator with healthcare annotations [pending]
-### Dependencies: None
-### Description: Develop a tool to generate documentation from code with support for healthcare-specific annotations
+## 4. Design Prototype Visual Programming Interface [pending]
+### Dependencies: 8.1, 8.2, 8.3
+### Description: Create a prototype interface for visual programming that integrates with the text-based IDE
 ### Details:
-Build a documentation generator that extracts comments and type information from source code. Implement special annotation support for clinical relevance, compliance requirements, validation status, and evidence basis. Include features to generate both technical documentation and clinician-friendly explanations of algorithms.
-
-## 5. Implement build system integration [pending]
-### Dependencies: 8.1, 8.3
-### Description: Create a build system that integrates with existing healthcare development workflows
-### Details:
-Develop a build system that handles compilation, testing, and packaging of projects. Implement integration with common CI/CD pipelines, support for healthcare-specific testing frameworks, and automated compliance checking. Include features for generating deployment artifacts for different healthcare environments with appropriate security configurations.
+Implementation details: Develop a node-based programming canvas using a library like D3.js or React Flow. Implement drag-and-drop functionality for code blocks and data sources. Create a bidirectional sync between visual representation and text code. User experience requirements: Intuitive connection mechanism between nodes, undo/redo functionality, and visual feedback for execution flow. Integration points: Conversion between visual representation and text code, integration with code completion system, and hooks into the healthcare visualization components.
 

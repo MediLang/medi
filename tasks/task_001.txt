@@ -1,80 +1,99 @@
 # Task ID: 1
-# Title: Implement Recursive Descent Parser for Medi Core Syntax
-# Status: in-progress
+# Title: Implement Lexer and Parser for Medi Language
+# Status: pending
 # Dependencies: None
 # Priority: high
-# Description: Develop a complete recursive descent parser that handles Medi's core syntax including healthcare-specific constructs and generates an AST with healthcare-aware semantic analysis.
+# Description: Develop a recursive descent parser for Medi's core syntax with support for healthcare-specific constructs and AST generation.
 # Details:
-Create a parser module that implements:
-1. Lexical analyzer for Medi tokens
-2. Recursive descent parser for core language constructs
-3. Support for healthcare-specific syntax (`fhir_query`, `predict_risk`, `regulate`)
-4. AST generation with node types for healthcare constructs
-5. Basic semantic analysis for healthcare operations
-6. Error reporting system with clinician-friendly messages
+Create a lexer that handles UTF-8 source encoding and tokenizes Medi code with support for medical literals. Implement a recursive descent parser that can parse the core syntax including healthcare-specific constructs like `fhir_query`, `predict_risk`, and `regulate`. Generate an Abstract Syntax Tree (AST) with healthcare-aware semantic analysis. Implement clinician-friendly error reporting.
 
-Implementation approach:
-- Use modern C++ (17/20) for the parser implementation
-- Define token types including healthcare-specific keywords
-- Implement parser combinators for complex healthcare expressions
-- Create AST node hierarchy with specialized nodes for FHIR, regulatory, and statistical operations
-- Implement visitor pattern for AST traversal
-- Design error recovery mechanisms to improve developer experience
+Pseudo-code for parser implementation:
+```rust
+struct Token { type: TokenType, value: String, position: Position }
+struct AST { type: NodeType, children: Vec<AST>, value: Option<Value> }
+
+fn tokenize(source: String) -> Vec<Token> {
+  // Implement lexical analysis for Medi tokens
+  // Handle medical literals and healthcare-specific keywords
+}
+
+fn parse(tokens: Vec<Token>) -> Result<AST, ParseError> {
+  // Implement recursive descent parser
+  // Handle healthcare constructs like fhir_query, regulate, etc.
+  // Build and return AST
+}
+
+fn report_error(error: ParseError) -> String {
+  // Generate clinician-friendly error messages
+}
+```
 
 # Test Strategy:
-1. Unit tests for each parser component
-2. Integration tests with sample Medi programs
-3. Test suite covering all language constructs
-4. Error handling tests with malformed inputs
-5. Performance benchmarks for parsing speed
-6. Validation against the example code snippets provided in the PRD
+Create unit tests for lexer and parser components. Test with valid and invalid Medi code samples, including all healthcare-specific constructs from the PRD examples. Verify correct AST generation for each language construct. Test error reporting with various syntax errors to ensure messages are clear and clinician-friendly.
 
 # Subtasks:
-## 1. Develop Lexical Analyzer [done]
+## 1. Define Token Types and Structure [pending]
 ### Dependencies: None
-### Description: Create a lexical analyzer (tokenizer) that converts input text into a stream of tokens for the parser
+### Description: Define all token types needed for the healthcare-specific language, including literals, operators, keywords, and identifiers. Create a comprehensive token structure that supports UTF-8 encoding.
 ### Details:
-Implement token types for healthcare-specific terms, identifiers, literals, operators, and keywords. Include functionality for handling whitespace, comments, and special characters. Design the tokenizer to be efficient with proper error handling for invalid characters or token patterns.
+Acceptance Criteria:
+- Complete enumeration of all token types
+- Token structure with position tracking (line, column)
+- Support for UTF-8 encoded text
+- Documentation of each token type and its purpose
+- Unit tests for token structure
+Estimated Complexity: Medium - requires domain knowledge of healthcare terminology and careful design to ensure extensibility.
 
-## 2. Implement Core Parser Components [done]
+## 2. Implement Lexical Analyzer (Lexer) [pending]
 ### Dependencies: 1.1
-### Description: Build the fundamental recursive descent parser structure with basic parsing functions
+### Description: Develop the lexer component that converts input text into a stream of tokens based on the defined token types. Ensure proper handling of whitespace, comments, and special characters.
 ### Details:
-Create the parser class with methods for each grammar rule. Implement core parsing functions for expressions, statements, declarations, and control structures. Design the parser to handle recursive grammar rules efficiently and maintain proper state throughout the parsing process.
+Acceptance Criteria:
+- Correctly tokenize all language constructs
+- Handle whitespace and comments appropriately
+- Proper position tracking for error reporting
+- Support for string literals with escape sequences
+- Performance optimization for large inputs
+- Comprehensive test suite covering edge cases
+Estimated Complexity: High - requires careful state management and performance considerations.
 
-## 3. Add Healthcare-Specific Syntax Support [in-progress]
-### Dependencies: 1.2
-### Description: Extend the parser to handle healthcare-specific syntax and domain concepts
+## 3. Implement Recursive Descent Parser [pending]
+### Dependencies: 1.1, 1.2
+### Description: Build the parser that consumes tokens from the lexer and verifies syntactic correctness according to the grammar rules. Implement recursive descent parsing techniques for healthcare-specific constructs.
 ### Details:
-Implement parsing rules for healthcare terminology, medical data structures, patient record formats, and clinical decision support syntax. Include specialized grammar for handling medical codes (ICD, CPT, SNOMED), lab values, medication dosages, and temporal medical events.
+Acceptance Criteria:
+- Implementation of all grammar rules
+- Proper handling of operator precedence
+- Support for nested expressions and statements
+- Memory-efficient parsing of large documents
+- Comprehensive test suite for all grammar constructs
+- Documentation of parsing algorithms
+Estimated Complexity: Very High - requires implementation of mutually recursive procedures and careful handling of grammar ambiguities.
 
 ## 4. Develop Abstract Syntax Tree (AST) Generation [pending]
-### Dependencies: 1.2, 1.3
-### Description: Create AST node classes and integrate AST building into the parser
+### Dependencies: 1.3
+### Description: Extend the parser to generate an Abstract Syntax Tree representation of the parsed input, which will be used for further processing and evaluation.
 ### Details:
-Design node classes for all syntax elements. Modify parsing functions to construct and return appropriate AST nodes. Implement visitor pattern support for AST traversal. Ensure the AST accurately represents the hierarchical structure of the parsed input.
+Acceptance Criteria:
+- Well-defined AST node types for all language constructs
+- Visitor pattern implementation for AST traversal
+- Position information preserved in AST nodes
+- Memory-efficient AST representation
+- Serialization/deserialization support
+- Unit tests for AST generation and traversal
+Estimated Complexity: High - requires careful design of node types and efficient memory management.
 
-## 5. Implement Semantic Analysis [pending]
-### Dependencies: 1.4
-### Description: Add semantic analysis capabilities to validate healthcare-specific rules and constraints
+## 5. Implement Clinician-Friendly Error Reporting [pending]
+### Dependencies: 1.2, 1.3, 1.4
+### Description: Create a robust error reporting system that provides clear, contextual error messages suitable for clinicians without programming background. Include suggestions for fixing common errors.
 ### Details:
-Create a semantic analyzer that traverses the AST to perform type checking, scope analysis, and healthcare-specific validation rules. Implement symbol table management for tracking identifiers and their properties. Add validation for medical terminology consistency and logical healthcare constraints.
-
-## 5.5. Implement Borrow Checking [pending]
-### Dependencies: 1.5
-### Description: Add Rust-like borrow checking to the compiler for memory safety and concurrency
-### Details:
-Design and implement a borrow checker to enforce safe references, prevent data races, and ensure memory safety in Medi programs. Take inspiration from Rust's borrow checker to track lifetimes and mutability of variables, especially in concurrent and healthcare-critical contexts.
-
-## 6. Create Error Reporting System [pending]
-### Dependencies: 1.1, 1.2, 1.5
-### Description: Develop a comprehensive error detection and reporting system
-### Details:
-Implement error detection at lexical, syntactic, and semantic levels. Create clear, informative error messages with line/column information. Add error recovery mechanisms to continue parsing after errors. Design a logging system for tracking and reporting multiple errors in a single parse.
-
-## 7. Develop Testing Framework [pending]
-### Dependencies: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
-### Description: Create a comprehensive testing framework for the parser
-### Details:
-Implement unit tests for lexer, parser components, and semantic analyzer. Create integration tests with healthcare-specific test cases. Develop performance tests to measure parsing efficiency. Add regression tests to prevent reintroduction of fixed bugs. Include edge case testing for error handling and recovery mechanisms.
+Acceptance Criteria:
+- Clear error messages with line and column information
+- Context-aware error suggestions
+- Categorization of errors by severity
+- Recovery mechanisms to continue parsing after errors
+- Visual highlighting of error locations in source
+- Documentation of common errors and solutions
+- User testing with clinical staff
+Estimated Complexity: High - requires natural language generation and deep understanding of common user mistakes.
 
