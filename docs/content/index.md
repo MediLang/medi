@@ -2,13 +2,13 @@
 
 # The Medi Programming Language
 
-[Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md)
+[Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md) | [Glossary](./glossary.md)
 
 ![License](https://img.shields.io/badge/License-MIT-blue) ![Status](https://img.shields.io/badge/Status-Pre--alpha%20(Prototype)-orange)
 
 </div>
 
-Medi is a programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. With a beginner-friendly syntax inspired by Python and R, high performance rivaling Julia, Rust, and C++, and native support for healthcare standards like FHIR, HL7, and DICOM, Medi empowers clinicians, researchers, and developers to unlock insights from complex medical data.
+Medi is a programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. With a beginner-friendly syntax inspired by Python and R, high performance rivaling Julia, Rust, and C++, and native support for healthcare standards like FHIR, HL7, and DICOM, Medi empowers clinicians, researchers, and developers to unlock insights from complex medical data. New to healthcare informatics? Check out our [comprehensive glossary](./glossary.md) of healthcare and bioinformatics terms.
 
 ## Why Medi?
 
