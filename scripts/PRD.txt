@@ -140,38 +140,110 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 ## System Components
 
 ### 1. Compiler Infrastructure
-- **Lexer & Parser**: Custom-built for healthcare-specific syntax with support for domain-specific constructs
-- **Type System**: Static typing with inference, healthcare data types, and safety guarantees
-- **Borrow Checking**: Rust-inspired borrow checking for memory safety and safe concurrency in healthcare analytics
-- **Semantic Analyzer**: Domain-aware analysis with healthcare-specific optimizations
-- **LLVM IR Generator**: Translates Medi code to LLVM Intermediate Representation
-- **Optimization Pipeline**: Healthcare-specific optimizations for data processing, privacy, and performance
-- **Code Generator**: Targets multiple architectures (x86-64, ARM, RISC-V) and WebAssembly
+
+#### Lexical & Syntactic Analysis
+- **Source Representation**: UTF-8 encoded, platform-independent line endings
+- **Lexer**: Healthcare-aware tokenization with medical literals
+- **Parser**: Context-sensitive parsing with medical DSL support
+
+#### Type System
+- **Basic Types**: Standard programming types (int, float, string)
+- **Medical Types**: Native `patient_id`, `vital`, `lab_result`
+- **Privacy-Aware**: Types track data sensitivity and compliance requirements
+- **Trait System**: `MedicalRecord`, `PrivacyProtected` base traits
+
+#### Memory Safety
+- **Ownership Zones**:
+  - `safe`: Garbage collected, Python-like ease
+  - `real_time`: Manual memory management for IoT
+- **Borrow Checker**: Rust-inspired memory safety guarantees
+
+#### Code Generation
+- **LLVM Backend**: Optimized for medical workloads
+- **Target Support**: x86-64, ARM64, WebAssembly, RISC-V
+- **Healthcare Optimizations**: SIMD for genomics, privacy-preserving compilation
 
 ### 2. Runtime System
-- **Memory Management**: Hybrid approach with:
-  - Low-pause garbage collection for general operations
-  - Rust-inspired manual control (`scope`) for low-latency IoT tasks
-- **Concurrency Framework**:
-  - Multi-threading with OpenMP-style parallelism
-  - Asynchronous operations with async/await pattern
-  - Distributed computing integration (MPI/Spark)
-- **Healthcare I/O Subsystem**:
-  - Native parsers and generators for healthcare standards
-  - Streaming data processing for real-time analytics
-  - Secure data handling with encryption and access controls
+
+#### Memory Management
+- **Safe Zone Runtime**:
+  - Generational garbage collector
+  - Reference counting for deterministic cleanup
+  - Automatic privacy boundary enforcement
+
+- **Real-time Zone Runtime**:
+  - Manual memory management via `scope`
+  - Zero-allocation critical paths
+  - Predictable latency guarantees
+
+#### Concurrency
+- **Task-based Parallelism**:
+  - Lightweight tasks for async operations
+  - Channel-based message passing
+  - Lock-free data structures
+
+- **Healthcare-specific Features**:
+  - Federated computation isolation
+  - Privacy-preserving parallel processing
+  - Real-time guarantees for medical devices
+
+#### Error Handling
+- **Result Type**: `Result<T, E>` for expected errors
+- **Try/Catch**: For exceptional cases
+- **Medical Error Types**: Domain-specific error hierarchy
 
 ### 3. Standard Library
-- **Core Modules**:
-  - `medi.data`: FHIR, HL7, DICOM, genomic format handlers
-  - `medi.privacy`: Federated learning, differential privacy, encryption
-  - `medi.stats`: Statistical methods for trials, epidemiology, biostatistics
-  - `medi.viz`: Visualization and dashboarding
-  - `medi.compliance`: Regulatory frameworks and reporting
-  - `medi.ai`: Pre-trained models and inference engines
-  - `medi.iot`: Real-time streaming and edge processing
-  - `medi.ops`: Hospital operations optimization
-- **Extension System**: Plugin architecture for domain-specific extensions
+
+#### Core Library (`medi::core`)
+- Basic types and traits
+- Collections and iterators
+- Error handling primitives
+- Concurrency primitives
+- I/O operations
+
+#### Healthcare Standards (`medi::standards`)
+- **FHIR Integration**: `medi::standards::fhir`
+  - Resource models and validation
+  - Query builders and execution
+  - Bulk data operations
+
+- **Clinical Standards**: `medi::standards::clinical`
+  - HL7 message handling
+  - DICOM image processing
+  - ICD-10 and SNOMED CT integration
+
+#### Data Science (`medi::science`)
+- **Statistics**: `medi::science::stats`
+  - Clinical trial analysis
+  - Epidemiology models
+  - Biostatistics functions
+
+- **Machine Learning**: `medi::science::ml`
+  - Medical image processing
+  - Genomic analysis
+  - Clinical prediction models
+
+#### Privacy and Security (`medi::privacy`)
+- **Compliance**: `medi::privacy::compliance`
+  - HIPAA enforcement
+  - GDPR requirements
+  - FDA regulations
+
+- **Secure Computing**: `medi::privacy::secure`
+  - Federated learning
+  - Differential privacy
+  - Medical-grade encryption
+
+#### Real-time Systems (`medi::rt`)
+- **Device Integration**: `medi::rt::device`
+  - Medical device protocols
+  - Sensor data processing
+  - Alert systems
+
+- **Edge Computing**: `medi::rt::edge`
+  - WebAssembly runtime
+  - RISC-V optimization
+  - Power management
 
 ### 4. Development Environment
 - **Medi Studio IDE**:
