@@ -1,6 +1,6 @@
 <div align="center">
 
-![Medi Logo](./docs/content/assets/medi-logo.png)
+<img src="./docs/content/assets/medi-logo.png" alt="Medi Logo" width="200">
 
 # The Medi Programming Language
 

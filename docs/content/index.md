@@ -1,6 +1,6 @@
 <div align="center">
 
-![Medi Logo](./assets/medi-logo.png)
+<img src="./assets/medi-logo.png" alt="Medi Logo" width="200">
 
 # The Medi Book
 
