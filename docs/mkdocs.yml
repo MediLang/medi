@@ -17,14 +17,14 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: teal
+      primary: "#3ebbb3"
       accent: indigo
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: teal
+      primary: "#3ebbb3"
       accent: indigo
       toggle:
         icon: material/toggle-switch
