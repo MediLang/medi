@@ -37,7 +37,7 @@
             2
           ],
           "details": "Acceptance Criteria:\n- Implementation of all grammar rules\n- Proper handling of operator precedence\n- Support for nested expressions and statements\n- Memory-efficient parsing of large documents\n- Comprehensive test suite for all grammar constructs\n- Documentation of parsing algorithms\nEstimated Complexity: Very High - requires implementation of mutually recursive procedures and careful handling of grammar ambiguities.",
-          "status": "pending"
+          "status": "in-progress"
         },
         {
           "id": 4,

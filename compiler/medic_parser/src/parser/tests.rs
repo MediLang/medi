@@ -86,11 +86,15 @@ mod parser_tests {
     #[test]
     fn test_block_statement() {
         let input = "{
-            let x = 42;
-            x = 43;
+        let x = 1;
+        x = 2;
             44
         }";
         let token_slice = str_to_token_slice(input);
+
+        // Print out the tokens
+        println!("Tokens: {:?}", token_slice.0);
+
         let (_, block) = parse_block(token_slice).unwrap();
         let BlockNode { statements } = block;
         assert_eq!(statements.len(), 3);
@@ -103,7 +107,6 @@ mod parser_tests {
     }
 
     #[test]
-    #[ignore] // Temporarily ignore this test until if statement parsing is implemented
     fn test_if_else_statement() {
         let input = "if x == 42 {
             let y = 1;
@@ -129,7 +132,29 @@ mod parser_tests {
                     statements: else_statements,
                 } = if_node.else_branch.unwrap();
                 assert_eq!(else_statements.len(), 1);
-                assert!(matches!(else_statements[0], StatementNode::Let(_)));
+
+                // For an 'else if' chain, the else branch contains a nested if statement
+                match &else_statements[0] {
+                    StatementNode::If(nested_if) => {
+                        // Check the nested if's condition
+                        assert!(matches!(nested_if.condition, ExpressionNode::Binary(_)));
+
+                        // Check the nested if's then branch
+                        let BlockNode {
+                            statements: nested_then_statements,
+                        } = &nested_if.then_branch;
+                        assert_eq!(nested_then_statements.len(), 1);
+                        assert!(matches!(nested_then_statements[0], StatementNode::Let(_)));
+
+                        // Check the nested if's else branch
+                        let BlockNode {
+                            statements: nested_else_statements,
+                        } = nested_if.else_branch.as_ref().unwrap();
+                        assert_eq!(nested_else_statements.len(), 1);
+                        assert!(matches!(nested_else_statements[0], StatementNode::Let(_)));
+                    }
+                    _ => panic!("Expected nested If statement in else branch"),
+                }
             }
             _ => panic!("Expected If statement"),
         }

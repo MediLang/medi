@@ -57,7 +57,7 @@ Acceptance Criteria:
 - Comprehensive test suite covering edge cases
 Estimated Complexity: High - requires careful state management and performance considerations.
 
-## 3. Implement Recursive Descent Parser [pending]
+## 3. Implement Recursive Descent Parser [in-progress]
 ### Dependencies: 1.1, 1.2
 ### Description: Build the parser that consumes tokens from the lexer and verifies syntactic correctness according to the grammar rules. Implement recursive descent parsing techniques for healthcare-specific constructs.
 ### Details:
