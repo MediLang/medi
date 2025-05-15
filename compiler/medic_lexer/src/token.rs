@@ -132,7 +132,7 @@ impl Token {
     /// # Examples
     ///
     /// ```
-    /// use your_crate::{Token, TokenType, Location};
+    /// use medic_lexer::token::{Token, TokenType, Location};
     ///
     /// let token = Token::new(TokenType::Fn, "fn".to_string(), Location { line: 1, column: 1, offset: 0 });
     /// assert!(token.is_keyword());
