@@ -263,24 +263,49 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Identi
         // Handle healthcare-specific keywords as identifiers
         TokenType::Patient => {
             let (remaining_input, _) = input.take_split(1);
-            Ok((remaining_input, IdentifierNode { name: "patient".to_string() }))
+            Ok((
+                remaining_input,
+                IdentifierNode {
+                    name: "patient".to_string(),
+                },
+            ))
         }
         TokenType::Observation => {
             let (remaining_input, _) = input.take_split(1);
-            Ok((remaining_input, IdentifierNode { name: "observation".to_string() }))
+            Ok((
+                remaining_input,
+                IdentifierNode {
+                    name: "observation".to_string(),
+                },
+            ))
         }
         TokenType::Medication => {
             let (remaining_input, _) = input.take_split(1);
-            Ok((remaining_input, IdentifierNode { name: "medication".to_string() }))
+            Ok((
+                remaining_input,
+                IdentifierNode {
+                    name: "medication".to_string(),
+                },
+            ))
         }
         // Handle general keywords as identifiers when used as such
         TokenType::If => {
             let (remaining_input, _) = input.take_split(1);
-            Ok((remaining_input, IdentifierNode { name: "if".to_string() }))
+            Ok((
+                remaining_input,
+                IdentifierNode {
+                    name: "if".to_string(),
+                },
+            ))
         }
         TokenType::Else => {
             let (remaining_input, _) = input.take_split(1);
-            Ok((remaining_input, IdentifierNode { name: "else".to_string() }))
+            Ok((
+                remaining_input,
+                IdentifierNode {
+                    name: "else".to_string(),
+                },
+            ))
         }
         _ => Err(nom::Err::Error(NomError::from_error_kind(
             input,
@@ -624,7 +649,7 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
         _ => {
             // Create a custom error message for unsupported l-values
             eprintln!("Invalid l-value in assignment. Only identifiers and member expressions are supported as l-values, but found: {:?}", target);
-            
+
             // Return an error
             return Err(nom::Err::Error(NomError::from_error_kind(
                 input,
