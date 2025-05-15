@@ -2,10 +2,9 @@
 //! Handles healthcare-specific constructs, expressions, and statements
 
 use medic_ast::ast::{
-    BinaryExpressionNode, BinaryOperator, BlockNode,
-    ExpressionNode,
-    IdentifierNode, LetStatementNode, LiteralNode, LiteralValueNode,
-    PatternNode, ProgramNode, ReturnNode, StatementNode,
+    BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, IdentifierNode,
+    LetStatementNode, LiteralNode, LiteralValueNode, PatternNode, ProgramNode, ReturnNode,
+    StatementNode,
 };
 use medic_lexer::token::{Token, TokenType};
 use nom::{
@@ -14,7 +13,13 @@ use nom::{
     error::{Error as NomError, ErrorKind, ParseError},
     multi::many0,
     sequence::terminated, // Added for parse_statement
-    Compare, IResult, InputIter, InputLength, InputTake, InputTakeAtPosition, Slice,
+    Compare,
+    IResult,
+    InputIter,
+    InputLength,
+    InputTake,
+    InputTakeAtPosition,
+    Slice,
 };
 use std::iter::Enumerate;
 use std::ops::{Range, RangeFrom, RangeTo}; // Range, RangeTo might be needed for Slice impl
@@ -108,7 +113,7 @@ where
 
         for (i, token) in self.0.iter().enumerate().take(min_len) {
             // Compare TokenType for equality. Location/span is ignored for parsing logic.
-            if token.token_type != t_slice[i].token_type { 
+            if token.token_type != t_slice[i].token_type {
                 return nom::CompareResult::Error;
             }
         }
@@ -125,7 +130,6 @@ where
         self.compare(t)
     }
 }
-
 
 impl<'a> InputTakeAtPosition for TokenSlice<'a> {
     type Item = &'a Token;
@@ -168,7 +172,7 @@ impl<'a> InputTakeAtPosition for TokenSlice<'a> {
         }
     }
 
-     fn split_at_position1_complete<P, E: ParseError<Self>>(
+    fn split_at_position1_complete<P, E: ParseError<Self>>(
         &self,
         predicate: P,
         e: ErrorKind,
@@ -227,7 +231,8 @@ where
             return Err(nom::Err::Error(E::from_error_kind(input, err_kind)));
         }
         let first_token = &input.0[0];
-        if pred(&first_token.token_type) { // Pass reference to TokenType
+        if pred(&first_token.token_type) {
+            // Pass reference to TokenType
             let (remaining_input, _) = input.take_split(1);
             Ok((remaining_input, first_token.clone())) // Clone Token for output
         } else {
@@ -236,25 +241,29 @@ where
     }
 }
 
-
-
 // ---- Core Parser Functions ----
 
 /// Parses an identifier token and returns an IdentifierNode.
 pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, IdentifierNode> {
     if input.is_empty() {
         // Using NomError::from_error_kind directly as per nom 7.x preferred style
-        return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
+        return Err(nom::Err::Error(NomError::from_error_kind(
+            input,
+            ErrorKind::Eof,
+        )));
     }
     // Peek at the first token without consuming, using the slice directly.
-    let token = &input.0[0]; 
+    let token = &input.0[0];
     match &token.token_type {
         TokenType::Identifier(name) => {
             // take_split(1) consumes the token and returns (remaining_input, consumed_token_slice)
             let (remaining_input, _) = input.take_split(1);
             Ok((remaining_input, IdentifierNode { name: name.clone() }))
         }
-        _ => Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Tag))),
+        _ => Err(nom::Err::Error(NomError::from_error_kind(
+            input,
+            ErrorKind::Tag,
+        ))),
     }
 }
 
@@ -268,9 +277,7 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
 
 /// Parses primary expressions (literals, identifiers, parenthesized expressions).
 /// This is the base case for the recursive descent precedence climbing parser.
-fn parse_primary_expression(
-    input: TokenSlice<'_>,
-) -> IResult<TokenSlice<'_>, ExpressionNode> {
+fn parse_primary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     alt((
         parse_literal_expression,
         map(parse_identifier, ExpressionNode::Identifier),
@@ -295,7 +302,12 @@ fn get_operator_precedence(token_type: &TokenType) -> i32 {
     match token_type {
         TokenType::Star | TokenType::Slash | TokenType::Percent => 3,
         TokenType::Plus | TokenType::Minus => 2,
-        TokenType::Less | TokenType::LessEqual | TokenType::Greater | TokenType::GreaterEqual | TokenType::EqualEqual | TokenType::NotEqual => 1,
+        TokenType::Less
+        | TokenType::LessEqual
+        | TokenType::Greater
+        | TokenType::GreaterEqual
+        | TokenType::EqualEqual
+        | TokenType::NotEqual => 1,
         TokenType::And => 0,
         TokenType::Or => -1,
         _ => -2, // Not a binary operator or lowest precedence
@@ -305,7 +317,10 @@ fn get_operator_precedence(token_type: &TokenType) -> i32 {
 /// Parses a binary operator token.
 pub fn parse_binary_operator(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BinaryOperator> {
     if input.is_empty() {
-        return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
+        return Err(nom::Err::Error(NomError::from_error_kind(
+            input,
+            ErrorKind::Eof,
+        )));
     }
     let token = &input.0[0];
     let op = match &token.token_type {
@@ -329,7 +344,10 @@ pub fn parse_binary_operator(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, B
         let (remaining_input, _) = input.take_split(1);
         Ok((remaining_input, operator))
     } else {
-        Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Tag)))
+        Err(nom::Err::Error(NomError::from_error_kind(
+            input,
+            ErrorKind::Tag,
+        )))
     }
 }
 
@@ -357,12 +375,13 @@ fn parse_binary_expression_recursive(
 
         // It's an operator we should handle. Parse it.
         let (after_op_input, operator) = parse_binary_operator(remaining_input)?;
-        
-        // Parse the right-hand side expression. 
-        // For right-associative operators, pass op_precedence. 
+
+        // Parse the right-hand side expression.
+        // For right-associative operators, pass op_precedence.
         // For left-associative, pass op_precedence + 1 to bind tighter.
         // Most arithmetic operators are left-associative.
-        let (after_rhs_input, rhs) = parse_binary_expression_recursive(after_op_input, op_precedence + 1)?;
+        let (after_rhs_input, rhs) =
+            parse_binary_expression_recursive(after_op_input, op_precedence + 1)?;
 
         // Combine LHS, operator, and RHS into a new LHS.
         lhs = ExpressionNode::Binary(Box::new(BinaryExpressionNode {
@@ -376,22 +395,20 @@ fn parse_binary_expression_recursive(
     Ok((remaining_input, lhs))
 }
 
-
 // ---- Literal Parsing ----
 
 /// Parses a literal token and returns a LiteralNode wrapped in an ExpressionNode.
-pub fn parse_literal_expression(
-    input: TokenSlice<'_>,
-) -> IResult<TokenSlice<'_>, ExpressionNode> {
-    map(parse_literal, |lit_node| {
-        ExpressionNode::Literal(lit_node)
-    })(input)
+pub fn parse_literal_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    map(parse_literal, |lit_node| ExpressionNode::Literal(lit_node))(input)
 }
 
 /// Parses a literal token and returns a LiteralNode.
 pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNode> {
     if input.is_empty() {
-        return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
+        return Err(nom::Err::Error(NomError::from_error_kind(
+            input,
+            ErrorKind::Eof,
+        )));
     }
     let token = &input.0[0];
     match &token.token_type {
@@ -405,7 +422,10 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNo
         }
         TokenType::String(val) => {
             let (remaining, _) = input.take_split(1);
-            Ok((remaining, LiteralNode::String(LiteralValueNode::String(val.clone()))))
+            Ok((
+                remaining,
+                LiteralNode::String(LiteralValueNode::String(val.clone())),
+            ))
         }
         TokenType::Boolean(val) => {
             let (remaining, _) = input.take_split(1);
@@ -416,10 +436,12 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNo
         //     let (remaining, _) = input.take_split(1);
         //     Ok((remaining, LiteralNode::Null(LiteralValueNode::Null)))
         // }
-        _ => Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Tag))),
+        _ => Err(nom::Err::Error(NomError::from_error_kind(
+            input,
+            ErrorKind::Tag,
+        ))),
     }
 }
-
 
 // ---- Statement Parsing ----
 
@@ -427,18 +449,18 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNo
 /// e.g., `{ let x = 5; return x; }` or `{ let x = 5; x }`
 pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
-    
+
     // Use many0 to parse zero or more statements within the block.
     let (i, mut statements) = many0(parse_statement)(i)?;
-    
+
     // Check if there's a trailing expression (without semicolon)
     let (i, maybe_expr) = opt(parse_expression)(i)?;
-    
+
     // If we found a trailing expression, add it as an expression statement
     if let Some(expr) = maybe_expr {
         statements.push(StatementNode::Expr(expr));
     }
-    
+
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(i)?;
     Ok((i, BlockNode { statements }))
 }
@@ -469,7 +491,9 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)(i)?;
     Ok((
         i,
-        StatementNode::Return(Box::new(ReturnNode { value: value_opt.map(Box::new) }))
+        StatementNode::Return(Box::new(ReturnNode {
+            value: value_opt.map(Box::new),
+        })),
     ))
 }
 
@@ -477,23 +501,24 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 /// This function tries different statement parsers in order.
 pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     alt((
-        parse_let_statement, // Assumes this is the TokenSlice version
+        parse_let_statement,    // Assumes this is the TokenSlice version
         parse_return_statement, // Assumes this is the TokenSlice version
         // Block statements
         map(parse_block, StatementNode::Block), // Assumes parse_block is TokenSlice version
-        parse_assignment_statement, // Assignment statement
-
+        parse_assignment_statement,             // Assignment statement
         // Expression statements (e.g., function_call(); or assignment;)
         // Must be followed by a semicolon.
         map(
-            terminated(parse_expression, take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)),
-            StatementNode::Expr
-        )
-        // TODO: Add other statement parsers here, e.g.:
-        // parse_if_statement,
-        // parse_while_statement,
-        // parse_for_statement,
-        // parse_match_statement,
+            terminated(
+                parse_expression,
+                take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag),
+            ),
+            StatementNode::Expr,
+        ), // TODO: Add other statement parsers here, e.g.:
+           // parse_if_statement,
+           // parse_while_statement,
+           // parse_for_statement,
+           // parse_match_statement,
     ))(input)
 }
 /// Parses a complete program (a sequence of statements).
@@ -511,52 +536,67 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 /// Parse an if statement from a token stream
 pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation
-    Err(nom::Err::Error(NomError::new(input, ErrorKind::Permutation)))
+    Err(nom::Err::Error(NomError::new(
+        input,
+        ErrorKind::Permutation,
+    )))
 }
 
 /// Parse an assignment statement from a token stream
 pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Parse identifier
     let (i, id) = parse_identifier(input)?;
-    
+
     // Parse equals sign
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Equal), ErrorKind::Tag)(i)?;
-    
+
     // Parse expression
     let (i, value) = parse_expression(i)?;
-    
+
     // Parse semicolon
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)(i)?;
-    
+
     // Create assignment node
     let target = ExpressionNode::Identifier(id);
     let assignment = medic_ast::ast::AssignmentNode { target, value };
-    
+
     Ok((i, StatementNode::Assignment(Box::new(assignment))))
 }
 
 /// Parse a while statement from a token stream
 pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation - to be refactored with TokenSlice
-    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
+    Err(nom::Err::Error(NomError::from_error_kind(
+        input,
+        ErrorKind::Permutation,
+    )))
 }
 
 /// Parse a for statement from a token stream
 pub fn parse_for_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation - to be refactored with TokenSlice
-    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
+    Err(nom::Err::Error(NomError::from_error_kind(
+        input,
+        ErrorKind::Permutation,
+    )))
 }
 
 /// Parse a match statement from a token stream
 pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation - to be refactored with TokenSlice
-    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
+    Err(nom::Err::Error(NomError::from_error_kind(
+        input,
+        ErrorKind::Permutation,
+    )))
 }
 
 /// Parse a pattern from a token stream
 pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
     // Placeholder implementation - to be refactored with TokenSlice for actual pattern parsing
-    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
+    Err(nom::Err::Error(NomError::from_error_kind(
+        input,
+        ErrorKind::Permutation,
+    )))
 }
 
 #[cfg(test)]
