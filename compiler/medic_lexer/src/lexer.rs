@@ -354,10 +354,125 @@ impl<'source> Lexer<'source> {
             LogosToken::Error => {
                 TokenType::Error(format!("Invalid token at {}:{}", self.line, self.column))
             }
-            _ => TokenType::Error(format!(
-                "Unhandled token type at {}:{}",
+
+            // Healthcare-specific keywords not yet handled
+            LogosToken::KaplanMeier => TokenType::Identifier("kaplan_meier".to_string()),
+            LogosToken::Report => TokenType::Identifier("report".to_string()),
+
+            // Medical codes not yet handled
+            LogosToken::CptCode(code) => TokenType::Identifier(format!("CPT:{}", code)),
+
+            // General keywords not yet handled
+            LogosToken::Elif => TokenType::Identifier("elif".to_string()),
+            LogosToken::Case => TokenType::Identifier("case".to_string()),
+            LogosToken::Yield => TokenType::Identifier("yield".to_string()),
+            LogosToken::Await => TokenType::Identifier("await".to_string()),
+            LogosToken::Async => TokenType::Identifier("async".to_string()),
+            LogosToken::Not => TokenType::Not,
+            LogosToken::And => TokenType::And,
+            LogosToken::Or => TokenType::Or,
+            LogosToken::Is => TokenType::Identifier("is".to_string()),
+            LogosToken::As => TokenType::Identifier("as".to_string()),
+            LogosToken::From => TokenType::Identifier("from".to_string()),
+            LogosToken::Import => TokenType::Import,
+            LogosToken::With => TokenType::Identifier("with".to_string()),
+            LogosToken::Try => TokenType::Identifier("try".to_string()),
+            LogosToken::Except => TokenType::Identifier("except".to_string()),
+            LogosToken::Raise => TokenType::Identifier("raise".to_string()),
+            LogosToken::Finally => TokenType::Identifier("finally".to_string()),
+            LogosToken::Pass => TokenType::Identifier("pass".to_string()),
+            LogosToken::Del => TokenType::Identifier("del".to_string()),
+            LogosToken::Global => TokenType::Identifier("global".to_string()),
+            LogosToken::Static => TokenType::Identifier("static".to_string()),
+            LogosToken::Export => TokenType::Identifier("export".to_string()),
+
+            // Literals not yet handled
+            LogosToken::BinLiteral(n) => TokenType::Integer(n),
+            LogosToken::OctLiteral(n) => TokenType::Integer(n),
+            LogosToken::HexLiteral(n) => TokenType::Integer(n),
+            LogosToken::RawString(s) => TokenType::String(s),
+            LogosToken::ByteString(s) => TokenType::String(s),
+            LogosToken::TripleQuotedString(s) => TokenType::String(s),
+            LogosToken::Null => TokenType::Identifier("null".to_string()),
+            LogosToken::NoneVal => TokenType::Identifier("None".to_string()),
+
+            // Operators not yet handled
+            LogosToken::DoubleStarAssign => TokenType::Error(format!(
+                "Operator '**=' not supported at {}:{}",
                 self.line, self.column
             )),
+            LogosToken::DoubleSlashAssign => TokenType::Error(format!(
+                "Operator '//=' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::PlusAssign => TokenType::Error(format!(
+                "Operator '+=' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::MinusAssign => TokenType::Error(format!(
+                "Operator '-=' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::StarAssign => TokenType::Error(format!(
+                "Operator '*=' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::SlashAssign => TokenType::Error(format!(
+                "Operator '/=' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::PercentAssign => TokenType::Error(format!(
+                "Operator '%=' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::DoubleStar => TokenType::Error(format!(
+                "Operator '**' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::DoubleSlash => TokenType::Error(format!(
+                "Operator '//' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::AndAnd => TokenType::And,
+            LogosToken::OrOr => TokenType::Or,
+            LogosToken::Shl => TokenType::Error(format!(
+                "Operator '<<' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::Shr => TokenType::Error(format!(
+                "Operator '>>' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::Bang => TokenType::Not,
+            LogosToken::BitAnd => TokenType::Error(format!(
+                "Operator '&' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::BitOr => TokenType::Pipe,
+            LogosToken::BitXor => TokenType::Error(format!(
+                "Operator '^' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::BitNot => TokenType::Error(format!(
+                "Operator '~' not supported at {}:{}",
+                self.line, self.column
+            )),
+
+            // Delimiters not yet handled
+            LogosToken::DoubleColon => TokenType::Error(format!(
+                "Delimiter '::' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::At => TokenType::At,
+            LogosToken::Dollar => TokenType::Error(format!(
+                "Delimiter '$' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::Backslash => TokenType::Error(format!(
+                "Delimiter '\\' not supported at {}:{}",
+                self.line, self.column
+            )),
+            LogosToken::Underscore => TokenType::Identifier("_".to_string()),
         };
 
         Token::new(token_type, lexeme.to_string(), location)
