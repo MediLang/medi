@@ -44,14 +44,14 @@ impl<'a> TokenSlice<'a> {
 
 // --- nom Trait Implementations for TokenSlice ---
 
-impl<'a> InputLength for TokenSlice<'a> {
+impl InputLength for TokenSlice<'_> {
     #[inline]
     fn input_len(&self) -> usize {
         self.0.len()
     }
 }
 
-impl<'a> InputTake for TokenSlice<'a> {
+impl InputTake for TokenSlice<'_> {
     #[inline]
     fn take(&self, count: usize) -> Self {
         TokenSlice(&self.0[0..count])
@@ -95,7 +95,7 @@ impl<'a> InputIter for TokenSlice<'a> {
     }
 }
 
-impl<'a, T> Compare<T> for TokenSlice<'a>
+impl<T> Compare<T> for TokenSlice<'_>
 where
     T: AsRef<[Token]>, // Allows comparison with &[Token], Vec<Token>, etc.
 {
@@ -106,19 +106,17 @@ where
         let r = t_slice.len();
         let min_len = std::cmp::min(l, r);
 
-        for i in 0..min_len {
+        for (i, token) in self.0.iter().enumerate().take(min_len) {
             // Compare TokenType for equality. Location/span is ignored for parsing logic.
-            if self.0[i].token_type != t_slice[i].token_type { 
+            if token.token_type != t_slice[i].token_type { 
                 return nom::CompareResult::Error;
             }
         }
 
-        if l == r {
-            nom::CompareResult::Ok
-        } else if l < r {
-            nom::CompareResult::Incomplete
-        } else { // l > r, self is longer and a prefix match
-            nom::CompareResult::Ok 
+        match l.cmp(&r) {
+            std::cmp::Ordering::Equal => nom::CompareResult::Ok,
+            std::cmp::Ordering::Less => nom::CompareResult::Incomplete,
+            std::cmp::Ordering::Greater => nom::CompareResult::Ok, // self is longer and a prefix match
         }
     }
 
@@ -193,21 +191,21 @@ impl<'a> InputTakeAtPosition for TokenSlice<'a> {
 }
 
 // Slice implementations to allow TokenSlice to be sliced.
-impl<'a> Slice<Range<usize>> for TokenSlice<'a> {
+impl Slice<Range<usize>> for TokenSlice<'_> {
     #[inline]
     fn slice(&self, range: Range<usize>) -> Self {
         TokenSlice(&self.0[range])
     }
 }
 
-impl<'a> Slice<RangeTo<usize>> for TokenSlice<'a> {
+impl Slice<RangeTo<usize>> for TokenSlice<'_> {
     #[inline]
     fn slice(&self, range: RangeTo<usize>) -> Self {
         TokenSlice(&self.0[range])
     }
 }
 
-impl<'a> Slice<RangeFrom<usize>> for TokenSlice<'a> {
+impl Slice<RangeFrom<usize>> for TokenSlice<'_> {
     #[inline]
     fn slice(&self, range: RangeFrom<usize>) -> Self {
         TokenSlice(&self.0[range])
@@ -243,7 +241,7 @@ where
 // ---- Core Parser Functions ----
 
 /// Parses an identifier token and returns an IdentifierNode.
-pub fn parse_identifier<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, IdentifierNode> {
+pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, IdentifierNode> {
     if input.is_empty() {
         // Using NomError::from_error_kind directly as per nom 7.x preferred style
         return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
@@ -262,7 +260,7 @@ pub fn parse_identifier<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, Id
 
 /// Parses an expression, handling literals, identifiers, and potentially more complex forms.
 /// This will be the entry point for expression parsing and will incorporate operator precedence.
-pub fn parse_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> {
+pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // For now, calls the recursive helper starting with the lowest precedence level (0).
     // The actual operator precedence logic will be built into parse_binary_expression_recursive.
     parse_binary_expression_recursive(input, 0)
@@ -270,9 +268,9 @@ pub fn parse_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, Ex
 
 /// Parses primary expressions (literals, identifiers, parenthesized expressions).
 /// This is the base case for the recursive descent precedence climbing parser.
-fn parse_primary_expression<'a>(
-    input: TokenSlice<'a>,
-) -> IResult<TokenSlice<'a>, ExpressionNode> {
+fn parse_primary_expression(
+    input: TokenSlice<'_>,
+) -> IResult<TokenSlice<'_>, ExpressionNode> {
     alt((
         parse_literal_expression,
         map(parse_identifier, ExpressionNode::Identifier),
@@ -305,7 +303,7 @@ fn get_operator_precedence(token_type: &TokenType) -> i32 {
 }
 
 /// Parses a binary operator token.
-pub fn parse_binary_operator<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, BinaryOperator> {
+pub fn parse_binary_operator(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BinaryOperator> {
     if input.is_empty() {
         return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
     }
@@ -337,10 +335,10 @@ pub fn parse_binary_operator<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a
 
 /// Recursively parses binary expressions using precedence climbing.
 /// `min_precedence` is the minimum precedence level an operator must have to be parsed by this call.
-fn parse_binary_expression_recursive<'a>(
-    input: TokenSlice<'a>,
+fn parse_binary_expression_recursive(
+    input: TokenSlice<'_>,
     min_precedence: i32,
-) -> IResult<TokenSlice<'a>, ExpressionNode> {
+) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // Parse the left-hand side expression (could be a primary expression or another binary expression).
     let (mut remaining_input, mut lhs) = parse_primary_expression(input)?;
 
@@ -382,16 +380,16 @@ fn parse_binary_expression_recursive<'a>(
 // ---- Literal Parsing ----
 
 /// Parses a literal token and returns a LiteralNode wrapped in an ExpressionNode.
-pub fn parse_literal_expression<'a>(
-    input: TokenSlice<'a>,
-) -> IResult<TokenSlice<'a>, ExpressionNode> {
+pub fn parse_literal_expression(
+    input: TokenSlice<'_>,
+) -> IResult<TokenSlice<'_>, ExpressionNode> {
     map(parse_literal, |lit_node| {
         ExpressionNode::Literal(lit_node)
     })(input)
 }
 
 /// Parses a literal token and returns a LiteralNode.
-pub fn parse_literal<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, LiteralNode> {
+pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNode> {
     if input.is_empty() {
         return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
     }
@@ -427,7 +425,7 @@ pub fn parse_literal<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, Liter
 
 /// Parses a block of statements enclosed in curly braces.
 /// e.g., `{ let x = 5; return x; }` or `{ let x = 5; x }`
-pub fn parse_block<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, BlockNode> {
+pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
     
     // Use many0 to parse zero or more statements within the block.
@@ -447,7 +445,7 @@ pub fn parse_block<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, BlockNo
 
 /// Parses a let statement.
 /// e.g., `let x = 10;`
-pub fn parse_let_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Let), ErrorKind::Tag)(input)?;
     let (i, identifier_node) = parse_identifier(i)?;
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Equal), ErrorKind::Tag)(i)?;
@@ -464,7 +462,7 @@ pub fn parse_let_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>,
 
 /// Parses a return statement.
 /// e.g., `return x;` or `return;`
-pub fn parse_return_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Return), ErrorKind::Tag)(input)?;
     // Use nom's `opt` combinator to parse an optional expression.
     let (i, value_opt) = opt(parse_expression)(i)?;
@@ -477,7 +475,7 @@ pub fn parse_return_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'
 
 /// Parses any valid statement.
 /// This function tries different statement parsers in order.
-pub fn parse_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     alt((
         parse_let_statement, // Assumes this is the TokenSlice version
         parse_return_statement, // Assumes this is the TokenSlice version
@@ -499,7 +497,7 @@ pub fn parse_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, Sta
     ))(input)
 }
 /// Parses a complete program (a sequence of statements).
-pub fn parse_program<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ProgramNode> {
+pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
     // A program is zero or more statements.
     let (i, statements) = many0(parse_statement)(input)?;
     // Ensure all input is consumed by the program parser, or it's an error if there are trailing tokens.
@@ -511,13 +509,13 @@ pub fn parse_program<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, Progr
 // ---- Placeholder functions from before - to be implemented or refined ----
 
 /// Parse an if statement from a token stream
-pub fn parse_if_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation
     Err(nom::Err::Error(NomError::new(input, ErrorKind::Permutation)))
 }
 
 /// Parse an assignment statement from a token stream
-pub fn parse_assignment_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Parse identifier
     let (i, id) = parse_identifier(input)?;
     
@@ -538,25 +536,25 @@ pub fn parse_assignment_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSli
 }
 
 /// Parse a while statement from a token stream
-pub fn parse_while_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation - to be refactored with TokenSlice
     Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
 
 /// Parse a for statement from a token stream
-pub fn parse_for_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_for_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation - to be refactored with TokenSlice
     Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
 
 /// Parse a match statement from a token stream
-pub fn parse_match_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Placeholder implementation - to be refactored with TokenSlice
     Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
 
 /// Parse a pattern from a token stream
-pub fn parse_pattern<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, PatternNode> {
+pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
     // Placeholder implementation - to be refactored with TokenSlice for actual pattern parsing
     Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
