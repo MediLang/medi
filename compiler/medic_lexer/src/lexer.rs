@@ -264,8 +264,15 @@ pub struct Lexer<'source> {
 }
 
 impl<'source> Lexer<'source> {
-    /// Create a new lexer for the given source text
-    pub fn new(source: &'source str) -> Self {
+    /// Constructs a new `Lexer` for the provided source text, initializing position tracking.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut lexer = Lexer::new("let x = 42");
+    /// let token = lexer.next().unwrap();
+    /// assert_eq!(token.token_type, TokenType::Let);
+    /// ```    pub fn new(source: &'source str) -> Self {
         Self {
             logos_lexer: LogosToken::lexer(source),
             line: 1,
@@ -274,8 +281,22 @@ impl<'source> Lexer<'source> {
         }
     }
 
-    /// Convert a LogosToken to our semantic Token type
-    fn convert_token(&self, logos_token: LogosToken, lexeme: &str) -> Token {
+    /// Converts a raw `LogosToken` and its lexeme into a semantic `Token` with type and source location.
+    ///
+    /// Maps the given `LogosToken` variant and its corresponding lexeme to the appropriate `TokenType`,
+    /// attaching the current line, column, and offset information to produce a fully-formed `Token`.
+    /// Handles healthcare keywords, medical codes, general keywords, literals, operators, delimiters,
+    /// identifiers, and error tokens. Unrecognized tokens are mapped to an error token with location info.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let lexer = Lexer::new("let x = 42");
+    /// let logos_token = LogosToken::Let;
+    /// let token = lexer.convert_token(logos_token, "let");
+    /// assert_eq!(token.token_type, TokenType::Let);
+    /// assert_eq!(token.lexeme, "let");
+    /// ```    fn convert_token(&self, logos_token: LogosToken, lexeme: &str) -> Token {
         let location = Location {
             line: self.line,
             column: self.column,
@@ -363,8 +384,19 @@ impl<'source> Lexer<'source> {
         Token::new(token_type, lexeme.to_string(), location)
     }
 
-    /// Update line and column numbers based on lexeme
-    fn update_position(&mut self, lexeme: &str) {
+    /// Updates the lexer's line, column, and offset counters based on the characters in the given lexeme.
+    ///
+    /// Increments the line number and resets the column on newline characters; otherwise, increments the column for each character. The byte offset is advanced by the UTF-8 length of each character.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut lexer = Lexer::new("foo\nbar");
+    /// lexer.update_position("foo\n");
+    /// assert_eq!(lexer.line, 2);
+    /// assert_eq!(lexer.column, 1);
+    /// assert_eq!(lexer.offset, 4);
+    /// ```    fn update_position(&mut self, lexeme: &str) {
         for c in lexeme.chars() {
             if c == '\n' {
                 self.line += 1;
@@ -380,6 +412,17 @@ impl<'source> Lexer<'source> {
 impl Iterator for Lexer<'_> {
     type Item = Token;
 
+    /// Advances the lexer and returns the next token from the source text.
+    ///
+    /// Returns `None` when the end of the input is reached. Produces error tokens for unrecognized input.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut lexer = Lexer::new("let x = 42");
+    /// let token = lexer.next().unwrap();
+    /// assert_eq!(token.token_type, TokenType::Let);
+    /// ```
     fn next(&mut self) -> Option<Self::Item> {
         let logos_token = self.logos_lexer.next()?;
         let lexeme = self.logos_lexer.slice();
