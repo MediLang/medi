@@ -297,8 +297,8 @@ impl<'source> Lexer<'source> {
     /// let token = lexer.convert_token(logos_token, "let");
     /// assert_eq!(token.token_type, TokenType::Let);
     /// assert_eq!(token.lexeme, "let");
-    /// ```    fn convert_token(&self, logos_token: LogosToken, lexeme: &str) -> Token {
-        let location = Location {
+    /// ```
+    fn convert_token(&self, logos_token: LogosToken, lexeme: &str) -> Token {
             line: self.line,
             column: self.column,
             offset: self.offset,
