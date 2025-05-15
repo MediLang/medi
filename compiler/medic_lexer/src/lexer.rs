@@ -292,6 +292,7 @@ impl<'source> Lexer<'source> {
 
             // Medical codes
             LogosToken::IcdCode(code) => TokenType::ICD10(code),
+            LogosToken::CptCode(code) => TokenType::CPT(code),
             LogosToken::SnomedCode(code) => TokenType::SNOMED(code),
 
             // Keywords
@@ -360,7 +361,6 @@ impl<'source> Lexer<'source> {
             LogosToken::Report => TokenType::Identifier("report".to_string()),
 
             // Medical codes not yet handled
-            LogosToken::CptCode(code) => TokenType::Identifier(format!("CPT:{}", code)),
 
             // General keywords not yet handled
             LogosToken::Elif => TokenType::Identifier("elif".to_string()),

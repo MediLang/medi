@@ -51,6 +51,7 @@ pub enum TokenType {
     ICD10(String),
     LOINC(String),
     SNOMED(String),
+    CPT(String),
 
     // Operators
     Plus,
