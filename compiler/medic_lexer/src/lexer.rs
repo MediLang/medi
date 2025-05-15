@@ -290,9 +290,9 @@ impl<'source> Lexer<'source> {
 
         let token_type = match logos_token {
             // Healthcare keywords
-            LogosToken::Patient => TokenType::Identifier("patient".to_string()),
-            LogosToken::Observation => TokenType::Identifier("observation".to_string()),
-            LogosToken::Medication => TokenType::Identifier("medication".to_string()),
+            LogosToken::Patient => TokenType::Patient,
+            LogosToken::Observation => TokenType::Observation,
+            LogosToken::Medication => TokenType::Medication,
             LogosToken::FhirQuery => TokenType::Fhir,
             LogosToken::Regulate => TokenType::Regulate,
 
@@ -316,8 +316,8 @@ impl<'source> Lexer<'source> {
             LogosToken::While => TokenType::While,
             LogosToken::For => TokenType::For,
             LogosToken::In => TokenType::In,
-            LogosToken::If => TokenType::Identifier("if".to_string()),
-            LogosToken::Else => TokenType::Identifier("else".to_string()),
+            LogosToken::If => TokenType::If,
+            LogosToken::Else => TokenType::Else,
             LogosToken::Match => TokenType::Match,
 
             // Literals
@@ -565,7 +565,7 @@ mod tests {
         let mut lexer = Lexer::new(source);
 
         let token = lexer.next().unwrap();
-        assert!(matches!(token.token_type, TokenType::Identifier(ref s) if s == "patient"));
+        assert!(matches!(token.token_type, TokenType::Patient));
 
         let token = lexer.next().unwrap();
         assert!(matches!(token.token_type, TokenType::Dot));

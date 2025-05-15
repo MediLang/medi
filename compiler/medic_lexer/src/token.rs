@@ -29,6 +29,8 @@ pub enum TokenType {
     For,
     In,
     Match,
+    If,
+    Else,
 
     // Healthcare-specific keywords
     Fhir,
@@ -38,6 +40,9 @@ pub enum TokenType {
     Federated,
     Safe,
     RealTime,
+    Patient,
+    Observation,
+    Medication,
 
     // Literals
     Integer(i64),
@@ -143,6 +148,11 @@ impl Token {
                 | TokenType::Federated
                 | TokenType::Safe
                 | TokenType::RealTime
+                | TokenType::If
+                | TokenType::Else
+                | TokenType::Patient
+                | TokenType::Observation
+                | TokenType::Medication
         )
     }
 
@@ -153,6 +163,9 @@ impl Token {
             TokenType::Fhir
                 | TokenType::Query
                 | TokenType::Regulate
+                | TokenType::Patient
+                | TokenType::Observation
+                | TokenType::Medication
                 | TokenType::PatientId(_)
                 | TokenType::ICD10(_)
                 | TokenType::LOINC(_)

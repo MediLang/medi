@@ -260,6 +260,28 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Identi
             let (remaining_input, _) = input.take_split(1);
             Ok((remaining_input, IdentifierNode { name: name.clone() }))
         }
+        // Handle healthcare-specific keywords as identifiers
+        TokenType::Patient => {
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, IdentifierNode { name: "patient".to_string() }))
+        }
+        TokenType::Observation => {
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, IdentifierNode { name: "observation".to_string() }))
+        }
+        TokenType::Medication => {
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, IdentifierNode { name: "medication".to_string() }))
+        }
+        // Handle general keywords as identifiers when used as such
+        TokenType::If => {
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, IdentifierNode { name: "if".to_string() }))
+        }
+        TokenType::Else => {
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, IdentifierNode { name: "else".to_string() }))
+        }
         _ => Err(nom::Err::Error(NomError::from_error_kind(
             input,
             ErrorKind::Tag,
@@ -581,6 +603,15 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
 }
 
 /// Parse an assignment statement from a token stream
+///
+/// # Supported L-values
+/// Currently, only the following expression types are supported as l-values:
+/// - Identifiers (e.g., `x = 10;`)
+/// - Member expressions (e.g., `obj.prop = 20;`)
+///
+/// # Error Handling
+/// If an unsupported expression type is used as an l-value, the parser will
+/// emit a diagnostic message and return an error.
 pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Parse the left-hand side expression (l-value)
     // This can be an identifier or a member expression
@@ -591,10 +622,14 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
     match &target {
         ExpressionNode::Identifier(_) | ExpressionNode::Member(_) => {}
         _ => {
+            // Create a custom error message for unsupported l-values
+            eprintln!("Invalid l-value in assignment. Only identifiers and member expressions are supported as l-values, but found: {:?}", target);
+            
+            // Return an error
             return Err(nom::Err::Error(NomError::from_error_kind(
                 input,
                 ErrorKind::Tag,
-            )))
+            )));
         }
     }
 
