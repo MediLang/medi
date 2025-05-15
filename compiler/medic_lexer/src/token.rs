@@ -110,16 +110,8 @@ pub struct Token {
 }
 
 impl Token {
-    /// Constructs a new `Token` with the specified type, lexeme, and location.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let location = Location { line: 1, column: 5, offset: 4 };
-    /// let token = Token::new(TokenType::Let, "let".to_string(), location);
-    /// assert_eq!(token.lexeme, "let");
-    /// assert_eq!(token.location.line, 1);
-    /// ```    pub fn new(token_type: TokenType, lexeme: String, location: Location) -> Self {
+    /// Creates a new token
+    pub fn new(token_type: TokenType, lexeme: String, location: Location) -> Self {
         Token {
             token_type,
             lexeme,
@@ -127,19 +119,8 @@ impl Token {
         }
     }
 
-    /// Returns `true` if the token represents a language keyword, including healthcare-specific keywords.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use medic_lexer::token::{Token, TokenType, Location};
-    ///
-    /// let token = Token::new(TokenType::Fn, "fn".to_string(), Location { line: 1, column: 1, offset: 0 });
-    /// assert!(token.is_keyword());
-    ///
-    /// let token = Token::new(TokenType::Identifier, "my_var".to_string(), Location { line: 1, column: 4, offset: 3 });
-    /// assert!(!token.is_keyword());
-    /// ```    pub fn is_keyword(&self) -> bool {
+    /// Returns true if this token is a keyword
+    pub fn is_keyword(&self) -> bool {
         matches!(
             self.token_type,
             TokenType::Module
@@ -164,21 +145,8 @@ impl Token {
         )
     }
 
-    /// Determines whether the token represents a healthcare-specific keyword or literal.
-    ///
-    /// Returns `true` if the token type is one of the healthcare-related keywords (`Fhir`, `Query`, `Regulate`) or healthcare-specific literals (`PatientId`, `ICD10`, `LOINC`, `SNOMED`); otherwise, returns `false`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use your_crate::{Token, TokenType, Location};
-    ///
-    /// let token = Token::new(TokenType::Fhir, "fhir".to_string(), Location { line: 1, column: 1, offset: 0 });
-    /// assert!(token.is_healthcare_token());
-    ///
-    /// let token = Token::new(TokenType::Let, "let".to_string(), Location { line: 1, column: 1, offset: 0 });
-    /// assert!(!token.is_healthcare_token());
-    /// ```    pub fn is_healthcare_token(&self) -> bool {
+    /// Returns true if this token is a healthcare-specific token
+    pub fn is_healthcare_token(&self) -> bool {
         matches!(
             self.token_type,
             TokenType::Fhir
@@ -193,15 +161,6 @@ impl Token {
 }
 
 impl fmt::Display for Token {
-    /// Formats the token as a string showing its type, lexeme, and source location.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use your_crate::{Token, TokenType, Location};
-    /// let token = Token::new(TokenType::Let, "let".to_string(), Location { line: 1, column: 5, offset: 4 });
-    /// assert_eq!(format!("{}", token), "Token(Let 'let' at 1:5)");
-    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -212,14 +171,6 @@ impl fmt::Display for Token {
 }
 
 impl fmt::Display for Location {
-    /// Formats the location as "line:column".
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let loc = Location { line: 3, column: 15, offset: 42 };
-    /// assert_eq!(format!("{}", loc), "3:15");
-    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.line, self.column)
     }
