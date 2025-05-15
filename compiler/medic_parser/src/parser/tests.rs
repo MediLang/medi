@@ -29,6 +29,24 @@ mod parser_tests {
     }
 
     #[test]
+    /// Tests parsing of a `let` statement and verifies the AST node structure.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let input = "let x = 42;";
+    /// let token_slice = str_to_token_slice(input);
+    /// let (_, stmt) = parse_let_statement(token_slice).unwrap();
+    /// match stmt {
+    ///     StatementNode::Let(let_stmt) => {
+    ///         assert_eq!(let_stmt.name.name, "x");
+    ///         assert!(matches!(
+    ///             let_stmt.value,
+    ///             ExpressionNode::Literal(LiteralNode::Int(LiteralValueNode::Int(42)))
+    ///         ));
+    ///     }
+    ///     _ => panic!("Expected Let statement"),
+    /// }
     /// ```
     fn test_let_statement() {
         let input = "let x = 42;";
