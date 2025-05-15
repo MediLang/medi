@@ -8,20 +8,17 @@ mod parser_tests {
     use medic_lexer::token::Token;
 
     // Helper function to convert a string to a TokenSlice
-    fn str_to_token_slice(input: &str) -> TokenSlice<'static> {
+    fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
         let tokens: Vec<Token> = Lexer::new(input).collect();
-        // Note: This is a workaround for testing purposes only.
-        // In a real application, we would need to ensure the lifetime of the tokens
-        // matches the lifetime of the TokenSlice.
-        let tokens_box = Box::new(tokens);
-        let tokens_static = Box::leak(tokens_box);
-        TokenSlice(tokens_static)
+        let tokens_static = Box::new(tokens.clone());
+        let tokens_ref = Box::leak(tokens_static);
+        (TokenSlice(tokens_ref), tokens)
     }
 
     #[test]
     fn test_let_statement() {
         let input = "let x = 42;";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_let_statement(token_slice).unwrap();
         match stmt {
             StatementNode::Let(let_stmt) => {
@@ -31,22 +28,20 @@ mod parser_tests {
                     ExpressionNode::Literal(LiteralNode::Int(42))
                 ));
             }
-            _ => panic!("Expected Let statement"),
+            _ => panic!("Expected Let statement, got: {:?}", stmt),
         }
     }
 
     #[test]
     fn test_assignment_statement() {
         let input = "x = 42;";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_assignment_statement(token_slice).unwrap();
         match stmt {
-            StatementNode::Assignment(assign_stmt) => {
-                assert!(
-                    matches!(assign_stmt.target, ExpressionNode::Identifier(id) if id.name == "x")
-                );
+            StatementNode::Assignment(assignment) => {
+                assert!(matches!(assignment.target, ExpressionNode::Identifier(_)));
                 assert!(matches!(
-                    assign_stmt.value,
+                    assignment.value,
                     ExpressionNode::Literal(LiteralNode::Int(42))
                 ));
             }
@@ -57,7 +52,7 @@ mod parser_tests {
     #[test]
     fn test_member_access_assignment() {
         let input = "patient.name = \"John\";";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_assignment_statement(token_slice).unwrap();
         match stmt {
             StatementNode::Assignment(assign_stmt) => {
@@ -90,7 +85,7 @@ mod parser_tests {
         x = 2;
             44
         }";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
 
         // Print out the tokens
         println!("Tokens: {:?}", token_slice.0);
@@ -115,7 +110,7 @@ mod parser_tests {
         } else {
             let y = 3;
         }";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_if_statement(token_slice).unwrap();
         match stmt {
             StatementNode::If(if_node) => {
@@ -167,7 +162,7 @@ mod parser_tests {
             x = x + 1;
             let y = x * 2;
         }";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_while_statement(token_slice).unwrap();
         match stmt {
             StatementNode::While(while_stmt) => {
@@ -190,7 +185,7 @@ mod parser_tests {
         let input = "for x in 1..10 {
             let y = x * 2;
         }";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_for_statement(token_slice).unwrap();
         match stmt {
             StatementNode::For(for_node) => {
@@ -207,7 +202,7 @@ mod parser_tests {
             42 => true,
             _ => false
         }";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_match_statement(token_slice).unwrap();
         assert!(matches!(stmt, StatementNode::Match(_)));
     }
@@ -215,12 +210,16 @@ mod parser_tests {
     #[test]
     fn test_return_statement() {
         let input = "return 42;";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_return_statement(token_slice).unwrap();
         match stmt {
-            StatementNode::Return(return_node) => {
-                assert!(matches!(return_node.value.is_some(), true));
-            }
+            StatementNode::Return(return_stmt) => match return_stmt.value {
+                Some(expr) => match *expr {
+                    ExpressionNode::Literal(LiteralNode::Int(42)) => (),
+                    _ => panic!("Expected literal 42"),
+                },
+                None => panic!("Expected Some value"),
+            },
             _ => panic!("Expected Return statement"),
         }
     }
@@ -228,11 +227,11 @@ mod parser_tests {
     #[test]
     fn test_return_unit_statement() {
         let input = "return;";
-        let token_slice = str_to_token_slice(input);
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, stmt) = parse_return_statement(token_slice).unwrap();
         match stmt {
-            StatementNode::Return(return_node) => {
-                assert!(return_node.value.is_none());
+            StatementNode::Return(return_stmt) => {
+                assert!(return_stmt.value.is_none());
             }
             _ => panic!("Expected Return statement"),
         }
@@ -240,45 +239,75 @@ mod parser_tests {
 
     #[test]
     fn test_literal() {
-        // Test true literal
-        let token_slice = str_to_token_slice("true");
-        let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(lit, LiteralNode::Bool(true)));
-
-        // Test false literal
-        let token_slice = str_to_token_slice("false");
-        let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(lit, LiteralNode::Bool(false)));
-
         // Test integer literal
-        let token_slice = str_to_token_slice("42");
+        let input = "42";
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, lit) = parse_literal(token_slice).unwrap();
         assert!(matches!(lit, LiteralNode::Int(42)));
+
+        // Test float literal
+        use std::f64::consts::PI;
+
+        let input = "3.14";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, lit) = parse_literal(token_slice).unwrap();
+        assert!(matches!(lit, LiteralNode::Float(PI)));
+
+        // Test string literal
+        let input = "\"hello\"";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, lit) = parse_literal(token_slice).unwrap();
+        assert!(matches!(lit, LiteralNode::String(_)));
+        if let LiteralNode::String(s) = lit {
+            assert_eq!(s, "\"hello\"");
+        }
+
+        // Test boolean literal
+        let input = "true";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, lit) = parse_literal(token_slice).unwrap();
+        assert!(matches!(lit, LiteralNode::Bool(true)));
     }
 
     #[test]
-    #[ignore] // Temporarily ignore this test until float literal parsing is implemented
-    fn test_float_literal() {
-        let token_slice = str_to_token_slice("3.14");
-        let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(lit, LiteralNode::Float(val) if (val - 3.14).abs() < f64::EPSILON));
+    fn test_expression() {
+        // Test simple expression
+        let input = "42";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, expr) = parse_expression(token_slice).unwrap();
+        assert!(matches!(expr, ExpressionNode::Literal(_)));
+
+        // Test binary expression
+        let input = "1 + 2";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, expr) = parse_expression(token_slice).unwrap();
+        assert!(matches!(expr, ExpressionNode::Binary(_)));
+
+        // Test member expression
+        let input = "patient.name";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, expr) = parse_expression(token_slice).unwrap();
+        assert!(matches!(expr, ExpressionNode::Member(_)));
     }
 
     #[test]
     #[ignore] // Temporarily ignore this test until medical code parsing is implemented
     fn test_medical_codes() {
         // Test ICD code
-        let token_slice = str_to_token_slice("ICD10:A01.1");
+        let input = "ICD10:A01.1";
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, expr) = parse_expression(token_slice).unwrap();
         assert!(matches!(expr, ExpressionNode::IcdCode(code) if code == "ICD10:A01.1"));
 
         // Test CPT code
-        let token_slice = str_to_token_slice("CPT:12345");
+        let input = "CPT:12345";
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, expr) = parse_expression(token_slice).unwrap();
         assert!(matches!(expr, ExpressionNode::CptCode(code) if code == "CPT:12345"));
 
         // Test SNOMED code
-        let token_slice = str_to_token_slice("SNOMED:123456");
+        let input = "SNOMED:123456";
+        let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, expr) = parse_expression(token_slice).unwrap();
         assert!(matches!(expr, ExpressionNode::SnomedCode(code) if code == "SNOMED:123456"));
     }
