@@ -6,7 +6,7 @@
 
 [Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md)
 
-![License](https://img.shields.io/badge/License-MIT-blue) ![Status](https://img.shields.io/badge/Status-Pre--alpha%20(Prototype)-orange)
+![License](https://img.shields.io/badge/License-MIT-blue) ![Status](https://img.shields.io/badge/Status-Pre--alpha%20(Prototype)-orange) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/MediLang/medi?utm_source=oss&utm_medium=github&utm_campaign=MediLang%2Fmedi&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 </div>
 
