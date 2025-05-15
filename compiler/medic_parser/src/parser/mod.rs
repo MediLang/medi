@@ -399,7 +399,7 @@ fn parse_binary_expression_recursive(
 
 /// Parses a literal token and returns a LiteralNode wrapped in an ExpressionNode.
 pub fn parse_literal_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
-    map(parse_literal, |lit_node| ExpressionNode::Literal(lit_node))(input)
+    map(parse_literal, ExpressionNode::Literal)(input)
 }
 
 /// Parses a literal token and returns a LiteralNode.
