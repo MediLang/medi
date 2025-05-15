@@ -19,9 +19,11 @@ impl<'a> TypeChecker<'a> {
             ExpressionNode::IcdCode(_)
             | ExpressionNode::CptCode(_)
             | ExpressionNode::SnomedCode(_) => MediType::String,
-            ExpressionNode::Identifier(name) => {
-                self.env.get(name).cloned().unwrap_or(MediType::Unknown)
-            }
+            ExpressionNode::Identifier(name) => self
+                .env
+                .get(&name.name)
+                .cloned()
+                .unwrap_or(MediType::Unknown),
             ExpressionNode::Literal(lit) => match lit {
                 LiteralNode::Int(_) => MediType::Int,
                 LiteralNode::Float(_) => MediType::Float,
@@ -48,7 +50,7 @@ impl<'a> TypeChecker<'a> {
                         }
                     }
                     BinaryOperator::Eq
-                    | BinaryOperator::Neq
+                    | BinaryOperator::Ne
                     | BinaryOperator::Lt
                     | BinaryOperator::Gt
                     | BinaryOperator::Le
@@ -61,7 +63,6 @@ impl<'a> TypeChecker<'a> {
                             MediType::Unknown
                         }
                     }
-                    BinaryOperator::Assign => left, // Assignment returns the type of the left side
                 }
             }
             ExpressionNode::Call(call) => {
