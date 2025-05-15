@@ -21,11 +21,11 @@ impl<'a> TokenStream<'a> {
     /// let tokens = vec![Token::new(TokenType::Identifier, "foo".into())];
     /// let stream = TokenStream::new(&tokens);
     /// assert!(!stream.is_empty());
-    /// ```    pub fn new(tokens: &'a [Token]) -> Self {
+    /// ```
+    pub fn new(tokens: &'a [Token]) -> Self {
         TokenStream {
             tokens,
             position: 0,
-        }
     }
 
     /// Returns a reference to the current token without advancing the stream.
