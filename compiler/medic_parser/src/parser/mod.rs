@@ -3,8 +3,7 @@
 
 use medic_ast::ast::{
     BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, IdentifierNode,
-    LetStatementNode, LiteralNode, LiteralValueNode, PatternNode, ProgramNode, ReturnNode,
-    StatementNode,
+    LetStatementNode, LiteralNode, PatternNode, ProgramNode, ReturnNode, StatementNode,
 };
 use medic_lexer::token::{Token, TokenType};
 use nom::{
@@ -414,27 +413,24 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNo
     match &token.token_type {
         TokenType::Integer(val) => {
             let (remaining, _) = input.take_split(1);
-            Ok((remaining, LiteralNode::Int(LiteralValueNode::Int(*val))))
+            Ok((remaining, LiteralNode::Int(*val)))
         }
         TokenType::Float(val) => {
             let (remaining, _) = input.take_split(1);
-            Ok((remaining, LiteralNode::Float(LiteralValueNode::Float(*val))))
+            Ok((remaining, LiteralNode::Float(*val)))
         }
         TokenType::String(val) => {
             let (remaining, _) = input.take_split(1);
-            Ok((
-                remaining,
-                LiteralNode::String(LiteralValueNode::String(val.clone())),
-            ))
+            Ok((remaining, LiteralNode::String(val.clone())))
         }
         TokenType::Boolean(val) => {
             let (remaining, _) = input.take_split(1);
-            Ok((remaining, LiteralNode::Bool(LiteralValueNode::Bool(*val))))
+            Ok((remaining, LiteralNode::Bool(*val)))
         }
         // Consider adding TokenType::Null if your language supports it
         // TokenType::Null => {
         //     let (remaining, _) = input.take_split(1);
-        //     Ok((remaining, LiteralNode::Null(LiteralValueNode::Null)))
+        //     Ok((remaining, LiteralNode::Null))
         // }
         _ => Err(nom::Err::Error(NomError::from_error_kind(
             input,

@@ -3,7 +3,7 @@ use super::*;
 #[cfg(test)]
 mod parser_tests {
     use super::*;
-    use medic_ast::ast::{BlockNode, ExpressionNode, LiteralNode, LiteralValueNode, StatementNode};
+    use medic_ast::ast::{BlockNode, ExpressionNode, LiteralNode, StatementNode};
     use medic_lexer::lexer::Lexer;
     use medic_lexer::token::Token;
 
@@ -28,7 +28,7 @@ mod parser_tests {
                 assert_eq!(let_stmt.name.name, "x");
                 assert!(matches!(
                     let_stmt.value,
-                    ExpressionNode::Literal(LiteralNode::Int(LiteralValueNode::Int(42)))
+                    ExpressionNode::Literal(LiteralNode::Int(42))
                 ));
             }
             _ => panic!("Expected Let statement"),
@@ -47,7 +47,7 @@ mod parser_tests {
                 );
                 assert!(matches!(
                     assign_stmt.value,
-                    ExpressionNode::Literal(LiteralNode::Int(LiteralValueNode::Int(42)))
+                    ExpressionNode::Literal(LiteralNode::Int(42))
                 ));
             }
             _ => panic!("Expected Assignment statement"),
@@ -69,9 +69,7 @@ mod parser_tests {
         assert!(matches!(statements[1], StatementNode::Assignment(_)));
         assert!(matches!(
             statements[2],
-            StatementNode::Expr(ExpressionNode::Literal(LiteralNode::Int(
-                LiteralValueNode::Int(44)
-            )))
+            StatementNode::Expr(ExpressionNode::Literal(LiteralNode::Int(44)))
         ));
     }
 
@@ -191,23 +189,17 @@ mod parser_tests {
         // Test true literal
         let token_slice = str_to_token_slice("true");
         let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(
-            lit,
-            LiteralNode::Bool(LiteralValueNode::Bool(true))
-        ));
+        assert!(matches!(lit, LiteralNode::Bool(true)));
 
         // Test false literal
         let token_slice = str_to_token_slice("false");
         let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(
-            lit,
-            LiteralNode::Bool(LiteralValueNode::Bool(false))
-        ));
+        assert!(matches!(lit, LiteralNode::Bool(false)));
 
         // Test integer literal
         let token_slice = str_to_token_slice("42");
         let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(lit, LiteralNode::Int(LiteralValueNode::Int(42))));
+        assert!(matches!(lit, LiteralNode::Int(42)));
     }
 
     #[test]
@@ -215,9 +207,7 @@ mod parser_tests {
     fn test_float_literal() {
         let token_slice = str_to_token_slice("3.14");
         let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(
-            matches!(lit, LiteralNode::Float(LiteralValueNode::Float(val)) if (val - 3.14).abs() < f64::EPSILON)
-        );
+        assert!(matches!(lit, LiteralNode::Float(val) if (val - 3.14).abs() < f64::EPSILON));
     }
 
     #[test]

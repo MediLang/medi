@@ -15,21 +15,12 @@ pub enum ExpressionNode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum LiteralValueNode {
-    // Renamed from old LiteralNode concept in parser
+pub enum LiteralNode {
+    // Direct representation of literal values
     Int(i64),
     Float(f64),
     Bool(bool),
     String(String),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum LiteralNode {
-    // This now aligns with parser's output for ExpressionNode::Literal
-    Int(LiteralValueNode),
-    Float(LiteralValueNode),
-    Bool(LiteralValueNode),
-    String(LiteralValueNode),
 }
 
 #[derive(Debug, Clone, PartialEq)]
