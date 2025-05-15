@@ -3,7 +3,7 @@
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
-    Identifier(String),
+    Identifier(IdentifierNode),
     IcdCode(String),
     CptCode(String),
     SnomedCode(String),
@@ -15,11 +15,21 @@ pub enum ExpressionNode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum LiteralNode {
+pub enum LiteralValueNode {
+    // Renamed from old LiteralNode concept in parser
     Int(i64),
     Float(f64),
     Bool(bool),
     String(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LiteralNode {
+    // This now aligns with parser's output for ExpressionNode::Literal
+    Int(LiteralValueNode),
+    Float(LiteralValueNode),
+    Bool(LiteralValueNode),
+    String(LiteralValueNode),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,14 +47,13 @@ pub enum BinaryOperator {
     Div,
     Mod,
     Eq,
-    Neq,
+    Ne,
     Lt,
     Gt,
     Le,
     Ge,
     And,
     Or,
-    Assign,
     Range,
 }
 
@@ -81,7 +90,7 @@ pub enum StatementNode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStatementNode {
-    pub name: String,
+    pub name: IdentifierNode,
     pub value: ExpressionNode,
 }
 
@@ -111,20 +120,44 @@ pub struct WhileNode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ForNode {
-    pub var: String,
+    pub var: IdentifierNode,
     pub iter: ExpressionNode,
     pub body: BlockNode,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchNode {
-    pub expr: ExpressionNode,
-    pub arms: Vec<(ExpressionNode, BlockNode)>,
+    pub expr: Box<ExpressionNode>,
+    pub arms: Vec<MatchArmNode>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReturnNode {
-    pub value: Option<ExpressionNode>,
+    pub value: Option<Box<ExpressionNode>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IdentifierNode {
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PatternNode {
+    Literal(LiteralNode),       // Pattern can be a literal
+    Identifier(IdentifierNode), // Pattern can be an identifier
+    Wildcard,                   // Represents the '_' pattern
+                                // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchArmNode {
+    pub pattern: PatternNode,
+    pub body: Box<ExpressionNode>, // Body of the arm, could also be a BlockNode in more complex scenarios
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProgramNode {
+    pub statements: Vec<StatementNode>,
 }
 
 // Add more AST nodes as needed (statements, declarations, etc.)
