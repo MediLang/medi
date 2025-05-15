@@ -305,6 +305,13 @@ impl<'source> Lexer<'source> {
             LogosToken::Trait => TokenType::Trait,
             LogosToken::Mod => TokenType::Module,
             LogosToken::Pub => TokenType::Pub,
+            LogosToken::Return => TokenType::Return,
+            LogosToken::While => TokenType::While,
+            LogosToken::For => TokenType::For,
+            LogosToken::In => TokenType::In,
+            LogosToken::If => TokenType::Identifier("if".to_string()),
+            LogosToken::Else => TokenType::Identifier("else".to_string()),
+            LogosToken::Match => TokenType::Match,
 
             // Literals
             LogosToken::IntLiteral(n) => TokenType::Integer(n),
@@ -332,6 +339,15 @@ impl<'source> Lexer<'source> {
 
             // Delimiters
             LogosToken::Dot => TokenType::Dot,
+            LogosToken::Comma => TokenType::Comma,
+            LogosToken::Colon => TokenType::Colon,
+            LogosToken::Semicolon => TokenType::Semicolon,
+            LogosToken::LParen => TokenType::LeftParen,
+            LogosToken::RParen => TokenType::RightParen,
+            LogosToken::LBracket => TokenType::LeftBracket,
+            LogosToken::RBracket => TokenType::RightBracket,
+            LogosToken::LBrace => TokenType::LeftBrace,
+            LogosToken::RBrace => TokenType::RightBrace,
 
             // Other
             LogosToken::Identifier => TokenType::Identifier(lexeme.to_string()),

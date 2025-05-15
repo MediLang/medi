@@ -1,606 +1,565 @@
-// Parser implementation for Medic language using nom (industry standard)
-// Expands to handle literals, identifiers, parenthesized expressions, and scaffolds for more
+//! Parser implementation for Medi language using nom and TokenSlice
+//! Handles healthcare-specific constructs, expressions, and statements
 
-use medic_ast::ast; // For ast::TypeName references
-use medic_ast::ast::*;
-use nom::character::complete::{alpha1, digit1};
-use nom::combinator::opt;
-use nom::error::Error as NomError;
-use nom::IResult;
+use medic_ast::ast::{
+    BinaryExpressionNode, BinaryOperator, BlockNode,
+    ExpressionNode,
+    IdentifierNode, LetStatementNode, LiteralNode, LiteralValueNode,
+    PatternNode, ProgramNode, ReturnNode, StatementNode,
+};
+use medic_lexer::token::{Token, TokenType};
 use nom::{
     branch::alt,
-    bytes::complete::tag,
-    character::complete::{char, multispace0},
-    combinator::{map, map_res},
-    multi::{many0, separated_list0},
-    sequence::{delimited, preceded, tuple},
+    combinator::{map, opt},
+    error::{Error as NomError, ErrorKind, ParseError},
+    multi::many0,
+    sequence::terminated, // Added for parse_statement
+    Compare, IResult, InputIter, InputLength, InputTake, InputTakeAtPosition, Slice,
 };
+use std::iter::Enumerate;
+use std::ops::{Range, RangeFrom, RangeTo}; // Range, RangeTo might be needed for Slice impl
 
-pub fn parse_int_literal(input: &str) -> IResult<&str, ExpressionNode> {
-    preceded(
-        multispace0,
-        map_res(digit1, |s: &str| {
-            s.parse::<i64>()
-                .map(|i| ExpressionNode::Literal(LiteralNode::Int(i)))
-        }),
-    )(input)
+// --- TokenSlice Definition ---
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct TokenSlice<'a>(pub &'a [Token]);
+
+impl<'a> TokenSlice<'a> {
+    pub fn new(data: &'a [Token]) -> Self {
+        TokenSlice(data)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    // Helper to peek at the first token without consuming
+    pub fn peek(&self) -> Option<&Token> {
+        self.0.first()
+    }
 }
 
-use nom::combinator::recognize;
-use nom::{bytes::complete::take_while, sequence::pair};
+// --- nom Trait Implementations for TokenSlice ---
 
-pub fn parse_identifier(input: &str) -> IResult<&str, ExpressionNode> {
-    preceded(
-        multispace0,
-        map(
-            recognize(pair(
-                alt((recognize(char('_')), alpha1)),
-                take_while(|c: char| c.is_alphanumeric() || c == '_'),
-            )),
-            |s: &str| ExpressionNode::Identifier(s.to_string()),
-        ),
-    )(input)
+impl<'a> InputLength for TokenSlice<'a> {
+    #[inline]
+    fn input_len(&self) -> usize {
+        self.0.len()
+    }
 }
 
-pub fn parse_string_literal(input: &str) -> IResult<&str, ExpressionNode> {
-    use nom::bytes::complete::is_not;
-    use nom::character::complete::char;
-    use nom::combinator::map;
-    use nom::sequence::delimited;
-    map(
-        delimited(preceded(multispace0, char('"')), is_not("\""), char('"')),
-        |s: &str| ExpressionNode::Literal(LiteralNode::String(s.to_string())),
-    )(input)
+impl<'a> InputTake for TokenSlice<'a> {
+    #[inline]
+    fn take(&self, count: usize) -> Self {
+        TokenSlice(&self.0[0..count])
+    }
+
+    #[inline]
+    fn take_split(&self, count: usize) -> (Self, Self) {
+        let (prefix, suffix) = self.0.split_at(count);
+        (TokenSlice(suffix), TokenSlice(prefix)) // nom expects (remaining, taken)
+    }
 }
 
-fn parse_paren_expr(input: &str) -> IResult<&str, ExpressionNode> {
-    delimited(
-        preceded(multispace0, char('(')),
-        parse_expression,
-        preceded(multispace0, char(')')),
-    )(input)
+// InputTakeSplit implementation removed as TokenSlice already has take_split in InputTake impl
+impl<'a> InputIter for TokenSlice<'a> {
+    type Item = &'a Token;
+    type Iter = Enumerate<std::slice::Iter<'a, Token>>;
+    type IterElem = std::slice::Iter<'a, Token>;
+
+    #[inline]
+    fn iter_indices(&self) -> Self::Iter {
+        self.0.iter().enumerate()
+    }
+    #[inline]
+    fn iter_elements(&self) -> Self::IterElem {
+        self.0.iter()
+    }
+    #[inline]
+    fn position<P>(&self, predicate: P) -> Option<usize>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        self.0.iter().position(predicate)
+    }
+    #[inline]
+    fn slice_index(&self, count: usize) -> Result<usize, nom::Needed> {
+        if self.0.len() >= count {
+            Ok(count)
+        } else {
+            Err(nom::Needed::new(count - self.0.len()))
+        }
+    }
 }
+
+impl<'a, T> Compare<T> for TokenSlice<'a>
+where
+    T: AsRef<[Token]>, // Allows comparison with &[Token], Vec<Token>, etc.
+{
+    #[inline]
+    fn compare(&self, t: T) -> nom::CompareResult {
+        let t_slice = t.as_ref();
+        let l = self.0.len();
+        let r = t_slice.len();
+        let min_len = std::cmp::min(l, r);
+
+        for i in 0..min_len {
+            // Compare TokenType for equality. Location/span is ignored for parsing logic.
+            if self.0[i].token_type != t_slice[i].token_type { 
+                return nom::CompareResult::Error;
+            }
+        }
+
+        if l == r {
+            nom::CompareResult::Ok
+        } else if l < r {
+            nom::CompareResult::Incomplete
+        } else { // l > r, self is longer and a prefix match
+            nom::CompareResult::Ok 
+        }
+    }
+
+    // Case-insensitivity is not relevant for tokens based on TokenType
+    fn compare_no_case(&self, t: T) -> nom::CompareResult {
+        self.compare(t)
+    }
+}
+
+
+impl<'a> InputTakeAtPosition for TokenSlice<'a> {
+    type Item = &'a Token;
+
+    fn split_at_position<P, E: ParseError<Self>>(&self, predicate: P) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        match self.0.iter().position(predicate) {
+            Some(n) => Ok(self.take_split(n)),
+            None => Err(nom::Err::Incomplete(nom::Needed::new(1))),
+        }
+    }
+
+    fn split_at_position1<P, E: ParseError<Self>>(
+        &self,
+        predicate: P,
+        e: ErrorKind,
+    ) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        match self.0.iter().position(predicate) {
+            Some(0) => Err(nom::Err::Error(E::from_error_kind(*self, e))),
+            Some(n) => Ok(self.take_split(n)),
+            None => Err(nom::Err::Incomplete(nom::Needed::new(1))),
+        }
+    }
+
+    fn split_at_position_complete<P, E: ParseError<Self>>(
+        &self,
+        predicate: P,
+    ) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        match self.0.iter().position(predicate) {
+            Some(n) => Ok(self.take_split(n)),
+            None => Ok(self.take_split(self.input_len())),
+        }
+    }
+
+     fn split_at_position1_complete<P, E: ParseError<Self>>(
+        &self,
+        predicate: P,
+        e: ErrorKind,
+    ) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        match self.0.iter().position(predicate) {
+            Some(0) => Err(nom::Err::Error(E::from_error_kind(*self, e))),
+            Some(n) => Ok(self.take_split(n)),
+            None => {
+                if self.input_len() == 0 {
+                    Err(nom::Err::Error(E::from_error_kind(*self, e)))
+                } else {
+                    Ok(self.take_split(self.input_len()))
+                }
+            }
+        }
+    }
+}
+
+// Slice implementations to allow TokenSlice to be sliced.
+impl<'a> Slice<Range<usize>> for TokenSlice<'a> {
+    #[inline]
+    fn slice(&self, range: Range<usize>) -> Self {
+        TokenSlice(&self.0[range])
+    }
+}
+
+impl<'a> Slice<RangeTo<usize>> for TokenSlice<'a> {
+    #[inline]
+    fn slice(&self, range: RangeTo<usize>) -> Self {
+        TokenSlice(&self.0[range])
+    }
+}
+
+impl<'a> Slice<RangeFrom<usize>> for TokenSlice<'a> {
+    #[inline]
+    fn slice(&self, range: RangeFrom<usize>) -> Self {
+        TokenSlice(&self.0[range])
+    }
+}
+
+// --- Helper Parser Functions ---
+
+/// A combinator that takes a token if it matches a predicate.
+pub fn take_token_if<'a, F, E: ParseError<TokenSlice<'a>>>(
+    mut pred: F,
+    err_kind: ErrorKind,
+) -> impl FnMut(TokenSlice<'a>) -> IResult<TokenSlice<'a>, Token, E>
+where
+    F: FnMut(&TokenType) -> bool, // Changed to take a reference to TokenType
+{
+    move |input: TokenSlice<'a>| {
+        if input.is_empty() {
+            return Err(nom::Err::Error(E::from_error_kind(input, err_kind)));
+        }
+        let first_token = &input.0[0];
+        if pred(&first_token.token_type) { // Pass reference to TokenType
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, first_token.clone())) // Clone Token for output
+        } else {
+            Err(nom::Err::Error(E::from_error_kind(input, err_kind)))
+        }
+    }
+}
+
+
+
+// ---- Core Parser Functions ----
+
+/// Parses an identifier token and returns an IdentifierNode.
+pub fn parse_identifier<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, IdentifierNode> {
+    if input.is_empty() {
+        // Using NomError::from_error_kind directly as per nom 7.x preferred style
+        return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
+    }
+    // Peek at the first token without consuming, using the slice directly.
+    let token = &input.0[0]; 
+    match &token.token_type {
+        TokenType::Identifier(name) => {
+            // take_split(1) consumes the token and returns (remaining_input, consumed_token_slice)
+            let (remaining_input, _) = input.take_split(1);
+            Ok((remaining_input, IdentifierNode { name: name.clone() }))
+        }
+        _ => Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Tag))),
+    }
+}
+
+/// Parses an expression, handling literals, identifiers, and potentially more complex forms.
+/// This will be the entry point for expression parsing and will incorporate operator precedence.
+pub fn parse_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> {
+    // For now, calls the recursive helper starting with the lowest precedence level (0).
+    // The actual operator precedence logic will be built into parse_binary_expression_recursive.
+    parse_binary_expression_recursive(input, 0)
+}
+
+/// Parses primary expressions (literals, identifiers, parenthesized expressions).
+/// This is the base case for the recursive descent precedence climbing parser.
+fn parse_primary_expression<'a>(
+    input: TokenSlice<'a>,
+) -> IResult<TokenSlice<'a>, ExpressionNode> {
+    alt((
+        parse_literal_expression,
+        map(parse_identifier, ExpressionNode::Identifier),
+        // Placeholder for parenthesized expressions: delimited(tag(TokenType::LeftParen), parse_expression, tag(TokenType::RightParen))
+        // Placeholder for function calls: parse_call_expression
+        // Placeholder for member access: parse_member_expression
+        // Placeholder for healthcare queries: parse_healthcare_query_expression
+    ))(input)
+}
+
+// Placeholder for parse_call_expression, parse_member_expression, parse_healthcare_query_expression
+// These will be implemented later when their AST nodes and token types are fully defined.
+// fn parse_call_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> { todo!() }
+// fn parse_member_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> { todo!() }
+// fn parse_healthcare_query_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> { todo!() }
 
 // ---- Binary Expression Parsing with Precedence ----
-use medic_ast::ast::BinaryOperator;
 
-fn get_precedence(op: &BinaryOperator) -> u8 {
-    match op {
-        BinaryOperator::Mul | BinaryOperator::Div | BinaryOperator::Mod => 5,
-        BinaryOperator::Add | BinaryOperator::Sub => 4,
-        BinaryOperator::Lt | BinaryOperator::Gt | BinaryOperator::Le | BinaryOperator::Ge => 3,
-        BinaryOperator::Eq | BinaryOperator::Neq => 2,
-        BinaryOperator::And => 1,
-        BinaryOperator::Or => 1,
-        BinaryOperator::Range => 1,
-        BinaryOperator::Assign => 0, // Assignment is lowest precedence
+/// Returns the precedence level for a given binary operator TokenType.
+/// Higher numbers indicate higher precedence.
+fn get_operator_precedence(token_type: &TokenType) -> i32 {
+    match token_type {
+        TokenType::Star | TokenType::Slash | TokenType::Percent => 3,
+        TokenType::Plus | TokenType::Minus => 2,
+        TokenType::Less | TokenType::LessEqual | TokenType::Greater | TokenType::GreaterEqual | TokenType::EqualEqual | TokenType::NotEqual => 1,
+        TokenType::And => 0,
+        TokenType::Or => -1,
+        _ => -2, // Not a binary operator or lowest precedence
     }
 }
 
-fn parse_operator(input: &str) -> IResult<&str, BinaryOperator> {
-    preceded(
-        multispace0,
-        alt((
-            // All tag combinators use &str input, which is correct for nom 7 and &str parsers
-            map(tag("+"), |_| BinaryOperator::Add),
-            map(tag("-"), |_| BinaryOperator::Sub),
-            map(tag("*"), |_| BinaryOperator::Mul),
-            map(tag("/"), |_| BinaryOperator::Div),
-            map(tag("%"), |_| BinaryOperator::Mod),
-            map(tag("=="), |_| BinaryOperator::Eq),
-            map(tag("!="), |_| BinaryOperator::Neq),
-            map(tag("<="), |_| BinaryOperator::Le),
-            map(tag(">="), |_| BinaryOperator::Ge),
-            map(tag("<"), |_| BinaryOperator::Lt),
-            map(tag(">"), |_| BinaryOperator::Gt),
-            map(tag("&&"), |_| BinaryOperator::And),
-            map(tag("||"), |_| BinaryOperator::Or),
-            map(tag("="), |_| BinaryOperator::Assign),
-            map(tag(".."), |_| BinaryOperator::Range),
-        )),
-    )(input)
+/// Parses a binary operator token.
+pub fn parse_binary_operator<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, BinaryOperator> {
+    if input.is_empty() {
+        return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
+    }
+    let token = &input.0[0];
+    let op = match &token.token_type {
+        TokenType::Plus => Some(BinaryOperator::Add),
+        TokenType::Minus => Some(BinaryOperator::Sub),
+        TokenType::Star => Some(BinaryOperator::Mul),
+        TokenType::Slash => Some(BinaryOperator::Div),
+        TokenType::Percent => Some(BinaryOperator::Mod),
+        TokenType::EqualEqual => Some(BinaryOperator::Eq),
+        TokenType::NotEqual => Some(BinaryOperator::Ne),
+        TokenType::Less => Some(BinaryOperator::Lt),
+        TokenType::LessEqual => Some(BinaryOperator::Le),
+        TokenType::Greater => Some(BinaryOperator::Gt),
+        TokenType::GreaterEqual => Some(BinaryOperator::Ge),
+        TokenType::And => Some(BinaryOperator::And),
+        TokenType::Or => Some(BinaryOperator::Or),
+        _ => None,
+    };
+
+    if let Some(operator) = op {
+        let (remaining_input, _) = input.take_split(1);
+        Ok((remaining_input, operator))
+    } else {
+        Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Tag)))
+    }
 }
 
-// Precedence climbing parser for binary expressions
-fn parse_binary_expr(input: &str, min_prec: u8) -> IResult<&str, ExpressionNode> {
-    let (mut input, mut lhs) = parse_primary_expr(input)?;
+/// Recursively parses binary expressions using precedence climbing.
+/// `min_precedence` is the minimum precedence level an operator must have to be parsed by this call.
+fn parse_binary_expression_recursive<'a>(
+    input: TokenSlice<'a>,
+    min_precedence: i32,
+) -> IResult<TokenSlice<'a>, ExpressionNode> {
+    // Parse the left-hand side expression (could be a primary expression or another binary expression).
+    let (mut remaining_input, mut lhs) = parse_primary_expression(input)?;
+
     loop {
-        let op_res = parse_operator(input);
-        if let Ok((next_input, op)) = op_res {
-            let prec = get_precedence(&op);
-            if prec < min_prec {
-                break;
-            }
-            // Consume operator
-            let (next_input, rhs) = parse_binary_expr(next_input, prec + 1)?;
-            lhs = ExpressionNode::Binary(Box::new(ast::BinaryExpressionNode {
-                left: lhs.clone(),
-                operator: op,
-                right: rhs,
-            }));
-            input = next_input;
-        } else {
+        // Peek at the next token to see if it's an operator.
+        if remaining_input.is_empty() {
+            break; // No more tokens, end of expression.
+        }
+        let potential_op_token = &remaining_input.0[0];
+        let op_precedence = get_operator_precedence(&potential_op_token.token_type);
+
+        // If the operator's precedence is less than the minimum for this recursive call, stop.
+        if op_precedence < min_precedence {
             break;
         }
-    }
-    Ok((input, lhs))
-}
 
-fn parse_call_args(input: &str) -> IResult<&str, Vec<ExpressionNode>> {
-    delimited(
-        preceded(multispace0, char('(')),
-        separated_list0(preceded(multispace0, char(',')), parse_expression),
-        preceded(multispace0, char(')')),
-    )(input)
-}
+        // It's an operator we should handle. Parse it.
+        let (after_op_input, operator) = parse_binary_operator(remaining_input)?;
+        
+        // Parse the right-hand side expression. 
+        // For right-associative operators, pass op_precedence. 
+        // For left-associative, pass op_precedence + 1 to bind tighter.
+        // Most arithmetic operators are left-associative.
+        let (after_rhs_input, rhs) = parse_binary_expression_recursive(after_op_input, op_precedence + 1)?;
 
-pub fn parse_member_expr(input: &str) -> IResult<&str, ExpressionNode> {
-    use nom::branch::alt;
-    use nom::bytes::complete::take_while_m_n;
-    use nom::character::complete::char;
-    use nom::combinator::map;
-    use nom::sequence::{preceded, tuple};
-
-    // ICD10:ICD10:[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,4})?
-    let parse_icd_code = map(
-        tuple((
-            tag::<&str, &str, NomError<&str>>("ICD10:"),
-            take_while_m_n::<_, _, NomError<&str>>(1, 1, |c: char| c.is_ascii_uppercase()),
-            take_while_m_n::<_, _, NomError<&str>>(2, 2, |c: char| {
-                c.is_ascii_digit() || c == 'A' || c == 'B'
-            }),
-            opt(preceded(
-                char::<&str, NomError<&str>>('.'),
-                take_while_m_n::<_, _, NomError<&str>>(1, 4, |c: char| {
-                    c.is_ascii_digit() || c.is_ascii_uppercase()
-                }),
-            )),
-        )),
-        |(prefix, letter, digits, opt_ext): (&str, &str, &str, Option<&str>)| {
-            let mut s = String::from(prefix);
-            s.push_str(letter);
-            s.push_str(digits);
-            if let Some(ext) = opt_ext {
-                s.push('.');
-                s.push_str(ext);
-            }
-            ExpressionNode::IcdCode(s)
-        },
-    );
-    // CPT:CPT:[0-9]{5}
-    let parse_cpt_code = map(
-        tuple((
-            tag::<&str, &str, NomError<&str>>("CPT:"),
-            take_while_m_n::<_, _, NomError<&str>>(5, 5, |c: char| c.is_ascii_digit()),
-        )),
-        |(prefix, digits): (&str, &str)| {
-            let mut s = String::from(prefix);
-            s.push_str(digits);
-            ExpressionNode::CptCode(s)
-        },
-    );
-    // SNOMED:SNOMED:[0-9]{6,9}
-    let snomed_code = map(
-        pair(
-            tag::<&str, &str, NomError<&str>>("SNOMED:"),
-            take_while_m_n::<_, _, NomError<&str>>(6, 9, |c: char| c.is_ascii_digit()),
-        ),
-        |(prefix, digits): (&str, &str)| {
-            let mut s = String::from(prefix);
-            s.push_str(digits);
-            ExpressionNode::SnomedCode(s)
-        },
-    );
-
-    if let Ok((rest, expr)) = alt((parse_icd_code, parse_cpt_code, snomed_code))(input) {
-        return Ok((rest, expr));
+        // Combine LHS, operator, and RHS into a new LHS.
+        lhs = ExpressionNode::Binary(Box::new(BinaryExpressionNode {
+            left: lhs,
+            operator,
+            right: rhs,
+        }));
+        remaining_input = after_rhs_input; // Continue parsing from after the RHS.
     }
 
-    let (input, expr) = parse_primary_expr(input)?;
-    let mut current_input = input;
-    let mut current_expr = expr;
+    Ok((remaining_input, lhs))
+}
 
-    loop {
-        // Try to parse member access
-        let member_access = preceded::<_, _, _, nom::error::Error<_>, _, _>(
-            multispace0,
-            pair(char('.'), parse_identifier),
-        )(current_input);
 
-        match member_access {
-            Ok((next_input, (_, ExpressionNode::Identifier(property)))) => {
-                current_input = next_input;
-                current_expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-                    object: current_expr,
-                    property,
-                }));
-            }
-            Ok((_, _)) => break, // Any other expression type is not valid for member access
-            Err(_) => break,
+// ---- Literal Parsing ----
+
+/// Parses a literal token and returns a LiteralNode wrapped in an ExpressionNode.
+pub fn parse_literal_expression<'a>(
+    input: TokenSlice<'a>,
+) -> IResult<TokenSlice<'a>, ExpressionNode> {
+    map(parse_literal, |lit_node| {
+        ExpressionNode::Literal(lit_node)
+    })(input)
+}
+
+/// Parses a literal token and returns a LiteralNode.
+pub fn parse_literal<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, LiteralNode> {
+    if input.is_empty() {
+        return Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Eof)));
+    }
+    let token = &input.0[0];
+    match &token.token_type {
+        TokenType::Integer(val) => {
+            let (remaining, _) = input.take_split(1);
+            Ok((remaining, LiteralNode::Int(LiteralValueNode::Int(*val))))
         }
-
-        // Try to parse call arguments
-        if let Ok((next_input, args)) = parse_call_args(current_input) {
-            current_input = next_input;
-            current_expr = ExpressionNode::Call(Box::new(CallExpressionNode {
-                callee: current_expr,
-                arguments: args,
-            }));
+        TokenType::Float(val) => {
+            let (remaining, _) = input.take_split(1);
+            Ok((remaining, LiteralNode::Float(LiteralValueNode::Float(*val))))
         }
-    }
-
-    Ok((current_input, current_expr))
-}
-
-fn parse_primary_expr(input: &str) -> IResult<&str, ExpressionNode> {
-    let (mut input, mut expr) = preceded(
-        multispace0,
-        alt((
-            parse_bool_literal,
-            parse_float_literal,
-            parse_int_literal,
-            parse_string_literal,
-            parse_identifier,
-            parse_paren_expr,
-        )),
-    )(input)?;
-
-    // Try to parse member access
-    loop {
-        let member_access = preceded::<_, _, _, nom::error::Error<_>, _, _>(
-            multispace0,
-            pair(char('.'), parse_identifier),
-        )(input);
-
-        match member_access {
-            Ok((next_input, (_, ExpressionNode::Identifier(property)))) => {
-                input = next_input;
-                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-                    object: expr,
-                    property,
-                }));
-            }
-            _ => break,
+        TokenType::String(val) => {
+            let (remaining, _) = input.take_split(1);
+            Ok((remaining, LiteralNode::String(LiteralValueNode::String(val.clone()))))
         }
+        TokenType::Boolean(val) => {
+            let (remaining, _) = input.take_split(1);
+            Ok((remaining, LiteralNode::Bool(LiteralValueNode::Bool(*val))))
+        }
+        // Consider adding TokenType::Null if your language supports it
+        // TokenType::Null => {
+        //     let (remaining, _) = input.take_split(1);
+        //     Ok((remaining, LiteralNode::Null(LiteralValueNode::Null)))
+        // }
+        _ => Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Tag))),
     }
-
-    Ok((input, expr))
 }
 
-// Top-level expression parser: parses full binary expressions
-
-pub fn parse_expression(input: &str) -> IResult<&str, ExpressionNode> {
-    parse_binary_expr(input, 0)
-}
 
 // ---- Statement Parsing ----
-use medic_ast::ast::{
-    AssignmentNode, BlockNode, ForNode, IfNode, LetStatementNode, MatchNode, ReturnNode,
-    StatementNode,
-};
 
-fn parse_let_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, nom::bytes::complete::tag("let"))(input)?;
-    let (input, name_expr) = preceded(multispace0, parse_identifier)(input)?;
-    let name = if let ExpressionNode::Identifier(n) = name_expr {
-        n
-    } else {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
-    };
-    let (input, _) = preceded(multispace0, char('='))(input)?;
-    let (input, value) = parse_expression(input)?;
-    let (input, _) = preceded(multispace0, char(';'))(input)?;
+/// Parses a block of statements enclosed in curly braces.
+/// e.g., `{ let x = 5; return x; }` or `{ let x = 5; x }`
+pub fn parse_block<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, BlockNode> {
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
+    
+    // Use many0 to parse zero or more statements within the block.
+    let (i, mut statements) = many0(parse_statement)(i)?;
+    
+    // Check if there's a trailing expression (without semicolon)
+    let (i, maybe_expr) = opt(parse_expression)(i)?;
+    
+    // If we found a trailing expression, add it as an expression statement
+    if let Some(expr) = maybe_expr {
+        statements.push(StatementNode::Expr(expr));
+    }
+    
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(i)?;
+    Ok((i, BlockNode { statements }))
+}
+
+/// Parses a let statement.
+/// e.g., `let x = 10;`
+pub fn parse_let_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Let), ErrorKind::Tag)(input)?;
+    let (i, identifier_node) = parse_identifier(i)?;
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Equal), ErrorKind::Tag)(i)?;
+    let (i, value_node) = parse_expression(i)?;
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)(i)?;
     Ok((
-        input,
-        StatementNode::Let(Box::new(LetStatementNode { name, value })),
+        i,
+        StatementNode::Let(Box::new(LetStatementNode {
+            name: identifier_node, // Corrected field name from 'identifier' to 'name'
+            value: value_node,
+        })),
     ))
 }
 
-fn parse_assignment(input: &str) -> IResult<&str, StatementNode> {
-    let (input, target) = parse_identifier(input)?;
-    let (input, _) = preceded(multispace0, char('='))(input)?;
-    let (input, value) = parse_expression(input)?;
-    let (input, _) = preceded(multispace0, char(';'))(input)?;
+/// Parses a return statement.
+/// e.g., `return x;` or `return;`
+pub fn parse_return_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Return), ErrorKind::Tag)(input)?;
+    // Use nom's `opt` combinator to parse an optional expression.
+    let (i, value_opt) = opt(parse_expression)(i)?;
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)(i)?;
     Ok((
-        input,
-        StatementNode::Assignment(Box::new(AssignmentNode { target, value })),
+        i,
+        StatementNode::Return(Box::new(ReturnNode { value: value_opt.map(Box::new) }))
     ))
 }
 
-fn parse_expr_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, expr) = parse_expression(input)?;
-    let (input, _) = preceded(multispace0, char(';'))(input)?;
-    Ok((input, StatementNode::Expr(expr)))
+/// Parses any valid statement.
+/// This function tries different statement parsers in order.
+pub fn parse_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    alt((
+        parse_let_statement, // Assumes this is the TokenSlice version
+        parse_return_statement, // Assumes this is the TokenSlice version
+        // Block statements
+        map(parse_block, StatementNode::Block), // Assumes parse_block is TokenSlice version
+        parse_assignment_statement, // Assignment statement
+
+        // Expression statements (e.g., function_call(); or assignment;)
+        // Must be followed by a semicolon.
+        map(
+            terminated(parse_expression, take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)),
+            StatementNode::Expr
+        )
+        // TODO: Add other statement parsers here, e.g.:
+        // parse_if_statement,
+        // parse_while_statement,
+        // parse_for_statement,
+        // parse_match_statement,
+    ))(input)
+}
+/// Parses a complete program (a sequence of statements).
+pub fn parse_program<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ProgramNode> {
+    // A program is zero or more statements.
+    let (i, statements) = many0(parse_statement)(input)?;
+    // Ensure all input is consumed by the program parser, or it's an error if there are trailing tokens.
+    // For now, we allow trailing tokens, as `many0` will stop on first error / non-match.
+    // To enforce full consumption, one might add: `if !i.is_empty() { return Err(...) }`
+    Ok((i, ProgramNode { statements }))
 }
 
-fn parse_block(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, char('{'))(input)?;
-    let (input, mut stmts) = many0(parse_statement)(input)?;
-    let (input, last_expr) = opt(preceded(multispace0, parse_expression))(input)?;
-    let (input, _) = preceded(multispace0, char('}'))(input)?;
+// ---- Placeholder functions from before - to be implemented or refined ----
 
-    if let Some(expr) = last_expr {
-        stmts.push(StatementNode::Expr(expr));
-    }
-    Ok((input, StatementNode::Block(BlockNode { statements: stmts })))
+/// Parse an if statement from a token stream
+pub fn parse_if_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    // Placeholder implementation
+    Err(nom::Err::Error(NomError::new(input, ErrorKind::Permutation)))
 }
 
-fn parse_if_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, tag("if"))(input)?;
-    let (input, cond) = preceded(multispace0, parse_expression)(input)?;
-    let (input, then_branch) = parse_block(input)?;
-    let (input, else_branch) = {
-        let input_trim = preceded(
-            multispace0::<&str, NomError<&str>>,
-            tag::<&str, &str, NomError<&str>>("else"),
-        )(input);
-        if let Ok((input, _)) = input_trim {
-            let (input, maybe_if) = opt(preceded(
-                multispace0::<&str, NomError<&str>>,
-                tag::<&str, &str, NomError<&str>>("if"),
-            ))(input)?;
-
-            if maybe_if.is_some() {
-                // This is an else-if
-                let (input, cond) = preceded(multispace0, parse_expression)(input)?;
-                let (input, body) = parse_block(input)?;
-                let (input, else_branch) = {
-                    let input_trim = preceded(
-                        multispace0::<&str, NomError<&str>>,
-                        tag::<&str, &str, NomError<&str>>("else"),
-                    )(input);
-                    if let Ok((input, _)) = input_trim {
-                        let (input, else_block) = parse_block(input)?;
-                        match else_block {
-                            StatementNode::Block(b) => Ok((input, Some(b))),
-                            _ => Err(nom::Err::Error(nom::error::Error::new(
-                                input,
-                                nom::error::ErrorKind::Tag,
-                            ))),
-                        }
-                    } else {
-                        Ok((input, None))
-                    }?
-                };
-                match body {
-                    StatementNode::Block(then_block) => {
-                        let if_stmt = StatementNode::If(Box::new(IfNode {
-                            condition: cond,
-                            then_branch: then_block,
-                            else_branch,
-                        }));
-                        Ok((
-                            input,
-                            Some(BlockNode {
-                                statements: vec![if_stmt],
-                            }),
-                        ))
-                    }
-                    _ => Err(nom::Err::Error(nom::error::Error::new(
-                        input,
-                        nom::error::ErrorKind::Tag,
-                    ))),
-                }
-            } else {
-                // This is a regular else block
-                let (input, else_block) = parse_block(input)?;
-                match else_block {
-                    StatementNode::Block(b) => Ok((input, Some(b))),
-                    _ => Err(nom::Err::Error(nom::error::Error::new(
-                        input,
-                        nom::error::ErrorKind::Tag,
-                    ))),
-                }
-            }
-        } else {
-            Ok((input, None))
-        }?
-    };
-
-    match then_branch {
-        StatementNode::Block(then_block) => {
-            if let Some(BlockNode {
-                statements: else_statements,
-            }) = else_branch
-            {
-                if else_statements.len() == 1 && matches!(else_statements[0], StatementNode::If(_))
-                {
-                    // If the else branch contains a single if statement, use its else branch
-                    if let StatementNode::If(if_node) = &else_statements[0] {
-                        Ok((
-                            input,
-                            StatementNode::If(Box::new(IfNode {
-                                condition: cond,
-                                then_branch: then_block,
-                                else_branch: if_node.else_branch.clone(),
-                            })),
-                        ))
-                    } else {
-                        unreachable!()
-                    }
-                } else {
-                    Ok((
-                        input,
-                        StatementNode::If(Box::new(IfNode {
-                            condition: cond,
-                            then_branch: then_block,
-                            else_branch: Some(BlockNode {
-                                statements: else_statements,
-                            }),
-                        })),
-                    ))
-                }
-            } else {
-                Ok((
-                    input,
-                    StatementNode::If(Box::new(IfNode {
-                        condition: cond,
-                        then_branch: then_block,
-                        else_branch: None,
-                    })),
-                ))
-            }
-        }
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        ))),
-    }
+/// Parse an assignment statement from a token stream
+pub fn parse_assignment_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    // Parse identifier
+    let (i, id) = parse_identifier(input)?;
+    
+    // Parse equals sign
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Equal), ErrorKind::Tag)(i)?;
+    
+    // Parse expression
+    let (i, value) = parse_expression(i)?;
+    
+    // Parse semicolon
+    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)(i)?;
+    
+    // Create assignment node
+    let target = ExpressionNode::Identifier(id);
+    let assignment = medic_ast::ast::AssignmentNode { target, value };
+    
+    Ok((i, StatementNode::Assignment(Box::new(assignment))))
 }
 
-fn parse_statement(input: &str) -> IResult<&str, StatementNode> {
-    preceded(
-        multispace0,
-        alt((
-            parse_let_statement,
-            parse_if_statement,
-            parse_while_statement,
-            parse_for_statement,
-            parse_match_statement,
-            parse_return_statement,
-            parse_block,
-            parse_assignment,
-            parse_expr_statement,
-        )),
-    )(input)
+/// Parse a while statement from a token stream
+pub fn parse_while_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    // Placeholder implementation - to be refactored with TokenSlice
+    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
 
-pub fn parse_program(input: &str) -> IResult<&str, Vec<StatementNode>> {
-    many0(parse_statement)(input)
+/// Parse a for statement from a token stream
+pub fn parse_for_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    // Placeholder implementation - to be refactored with TokenSlice
+    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
 
-fn parse_bool_literal(input: &str) -> IResult<&str, ExpressionNode> {
-    preceded(
-        multispace0,
-        alt((
-            map(tag("true"), |_| {
-                ExpressionNode::Literal(LiteralNode::Bool(true))
-            }),
-            map(tag("false"), |_| {
-                ExpressionNode::Literal(LiteralNode::Bool(false))
-            }),
-        )),
-    )(input)
+/// Parse a match statement from a token stream
+pub fn parse_match_statement<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, StatementNode> {
+    // Placeholder implementation - to be refactored with TokenSlice
+    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
 
-fn parse_float_literal(input: &str) -> IResult<&str, ExpressionNode> {
-    preceded(
-        multispace0,
-        map_res(recognize(tuple((digit1, char('.'), digit1))), |s: &str| {
-            s.parse::<f64>()
-                .map(|f| ExpressionNode::Literal(LiteralNode::Float(f)))
-        }),
-    )(input)
+/// Parse a pattern from a token stream
+pub fn parse_pattern<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, PatternNode> {
+    // Placeholder implementation - to be refactored with TokenSlice for actual pattern parsing
+    Err(nom::Err::Error(NomError::from_error_kind(input, ErrorKind::Permutation)))
 }
-
-fn parse_while_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, tag("while"))(input)?;
-    let (input, cond) = preceded(multispace0, parse_expression)(input)?;
-    let (input, body) = parse_block(input)?;
-    match body {
-        StatementNode::Block(b) => Ok((
-            input,
-            StatementNode::While(Box::new(WhileNode {
-                condition: cond,
-                body: b,
-            })),
-        )),
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        ))),
-    }
-}
-
-fn parse_for_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, tag("for"))(input)?;
-    let (input, var_expr) = preceded(multispace0, parse_identifier)(input)?;
-    let var = match var_expr {
-        ExpressionNode::Identifier(n) => n,
-        _ => {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                nom::error::ErrorKind::Tag,
-            )))
-        }
-    };
-    let (input, _) = preceded(multispace0, tag("in"))(input)?;
-    let (input, iter) = preceded(multispace0, parse_expression)(input)?;
-    let (input, body) = preceded(multispace0, parse_block)(input)?;
-    match body {
-        StatementNode::Block(b) => Ok((
-            input,
-            StatementNode::For(Box::new(ForNode { var, iter, body: b })),
-        )),
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        ))),
-    }
-}
-
-fn parse_match_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, tag("match"))(input)?;
-    let (input, expr) = preceded(multispace0, parse_expression)(input)?;
-    let (mut input, _) = preceded(multispace0, char('{'))(input)?;
-    let mut arms = Vec::new();
-    loop {
-        let (next_input, _) = multispace0::<&str, NomError<&str>>(input)?;
-        if let Ok((after_brace, _)) = preceded(
-            multispace0::<&str, NomError<&str>>,
-            char::<&str, NomError<&str>>('}'),
-        )(next_input)
-        {
-            input = after_brace;
-            break;
-        }
-        let (ni, pat) = preceded(multispace0, parse_pattern)(next_input)?;
-        let (ni, _) = preceded(multispace0, tag("=>"))(ni)?;
-        let (ni, expr) = preceded(multispace0, parse_expression)(ni)?;
-        let (ni, _) = opt(preceded(multispace0, char(',')))(ni)?;
-        arms.push((
-            pat,
-            BlockNode {
-                statements: vec![StatementNode::Expr(expr)],
-            },
-        ));
-        input = ni;
-    }
-    Ok((
-        input,
-        StatementNode::Match(Box::new(MatchNode { expr, arms })),
-    ))
-}
-
-fn parse_pattern(input: &str) -> IResult<&str, ExpressionNode> {
-    preceded(
-        multispace0,
-        alt((
-            parse_bool_literal,
-            parse_float_literal,
-            parse_int_literal,
-            parse_string_literal,
-            parse_identifier,
-        )),
-    )(input)
-}
-
-fn parse_return_statement(input: &str) -> IResult<&str, StatementNode> {
-    let (input, _) = preceded(multispace0, tag("return"))(input)?;
-    let (input, value) = if let Ok((input, expr)) = parse_expression(input) {
-        let (input, _) = preceded(multispace0, char(';'))(input)?;
-        (input, Some(expr))
-    } else {
-        let (input, _) = preceded(multispace0, char(';'))(input)?;
-        (input, None)
-    };
-    Ok((input, StatementNode::Return(Box::new(ReturnNode { value }))))
-}
-
-// ---- End Statement Parsing ----
 
 #[cfg(test)]
 mod tests;
