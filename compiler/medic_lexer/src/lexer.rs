@@ -272,7 +272,8 @@ impl<'source> Lexer<'source> {
     /// let mut lexer = Lexer::new("let x = 42");
     /// let token = lexer.next().unwrap();
     /// assert_eq!(token.token_type, TokenType::Let);
-    /// ```    pub fn new(source: &'source str) -> Self {
+    /// ```
+    pub fn new(source: &'source str) -> Self {
         Self {
             logos_lexer: LogosToken::lexer(source),
             line: 1,
