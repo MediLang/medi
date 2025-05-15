@@ -255,12 +255,16 @@ pub enum LogosToken {
 pub struct Lexer<'source> {
     /// The logos lexer instance
     logos_lexer: logos::Lexer<'source, LogosToken>,
+    /// Full source text
+    source: &'source str,
     /// Current line number (1-based)
     line: usize,
     /// Current column number (1-based)
     column: usize,
     /// Current byte offset in source
     offset: usize,
+    /// Previous span end position
+    prev_span_end: usize,
 }
 
 impl<'source> Lexer<'source> {
@@ -268,9 +272,11 @@ impl<'source> Lexer<'source> {
     pub fn new(source: &'source str) -> Self {
         Self {
             logos_lexer: LogosToken::lexer(source),
+            source,
             line: 1,
             column: 1,
             offset: 0,
+            prev_span_end: 0,
         }
     }
 
@@ -478,9 +484,17 @@ impl<'source> Lexer<'source> {
         Token::new(token_type, lexeme.to_string(), location)
     }
 
-    /// Update line and column numbers based on lexeme
-    fn update_position(&mut self, lexeme: &str) {
-        for c in lexeme.chars() {
+    /// Update line and column numbers based on the span from logos lexer
+    fn update_position(&mut self) {
+        // Get the current span from the logos lexer
+        let span = self.logos_lexer.span();
+
+        // Get the text between the previous span end and the current span end
+        // This includes any skipped whitespace and comments
+        let text_to_process = &self.source[self.prev_span_end..span.end];
+
+        // Update line and column for all characters including skipped ones
+        for c in text_to_process.chars() {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
@@ -489,6 +503,9 @@ impl<'source> Lexer<'source> {
             }
             self.offset += c.len_utf8();
         }
+
+        // Update the previous span end for the next call
+        self.prev_span_end = span.end;
     }
 }
 
@@ -498,6 +515,8 @@ impl Iterator for Lexer<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         let logos_token = self.logos_lexer.next()?;
         let lexeme = self.logos_lexer.slice();
+
+        // Create token with current position before updating
         let token = match logos_token {
             Ok(token) => self.convert_token(token, lexeme),
             Err(_) => Token::new(
@@ -510,7 +529,10 @@ impl Iterator for Lexer<'_> {
                 },
             ),
         };
-        self.update_position(lexeme);
+
+        // Update position using the span from logos lexer
+        self.update_position();
+
         Some(token)
     }
 }
