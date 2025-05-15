@@ -55,6 +55,35 @@ mod parser_tests {
     }
 
     #[test]
+    fn test_member_access_assignment() {
+        let input = "patient.name = \"John\";";
+        let token_slice = str_to_token_slice(input);
+        let (_, stmt) = parse_assignment_statement(token_slice).unwrap();
+        match stmt {
+            StatementNode::Assignment(assign_stmt) => {
+                // Check that the target is a member expression
+                match &assign_stmt.target {
+                    ExpressionNode::Member(member) => {
+                        // Check that the object is an identifier "patient"
+                        assert!(matches!(&member.object, 
+                            ExpressionNode::Identifier(id) if id.name == "patient"));
+                        // Check that the property is "name"
+                        assert_eq!(member.property, "name");
+                    }
+                    _ => panic!("Expected Member expression as target"),
+                }
+
+                // Check that the value is the string "John" (with quotes included)
+                assert!(matches!(
+                    assign_stmt.value,
+                    ExpressionNode::Literal(LiteralNode::String(s)) if s == "\"John\""
+                ));
+            }
+            _ => panic!("Expected Assignment statement"),
+        }
+    }
+
+    #[test]
     fn test_block_statement() {
         let input = "{
             let x = 42;

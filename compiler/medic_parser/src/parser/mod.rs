@@ -3,7 +3,8 @@
 
 use medic_ast::ast::{
     BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, IdentifierNode,
-    LetStatementNode, LiteralNode, PatternNode, ProgramNode, ReturnNode, StatementNode,
+    LetStatementNode, LiteralNode, MemberExpressionNode, PatternNode, ProgramNode, ReturnNode,
+    StatementNode,
 };
 use medic_lexer::token::{Token, TokenType};
 use nom::{
@@ -277,20 +278,61 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
 /// Parses primary expressions (literals, identifiers, parenthesized expressions).
 /// This is the base case for the recursive descent precedence climbing parser.
 fn parse_primary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
-    alt((
+    let (i, expr) = alt((
         parse_literal_expression,
         map(parse_identifier, ExpressionNode::Identifier),
         // Placeholder for parenthesized expressions: delimited(tag(TokenType::LeftParen), parse_expression, tag(TokenType::RightParen))
         // Placeholder for function calls: parse_call_expression
-        // Placeholder for member access: parse_member_expression
         // Placeholder for healthcare queries: parse_healthcare_query_expression
-    ))(input)
+    ))(input)?;
+
+    // Check for member access after the primary expression
+    parse_member_access(i, expr)
 }
 
-// Placeholder for parse_call_expression, parse_member_expression, parse_healthcare_query_expression
+/// Parse a member access expression (e.g., patient.name)
+/// This function takes an already parsed expression and checks if it's followed by a dot
+fn parse_member_access(
+    input: TokenSlice<'_>,
+    expr: ExpressionNode,
+) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    // Check if there's a dot after the expression
+    let dot_result: IResult<TokenSlice<'_>, Token> =
+        take_token_if(|tt| matches!(tt, TokenType::Dot), ErrorKind::Tag)(input);
+
+    match dot_result {
+        Ok((i, _)) => {
+            // There is a dot, so this is a member access
+            // Parse the property name (identifier)
+            let (i, property_token) =
+                take_token_if(|tt| matches!(tt, TokenType::Identifier(_)), ErrorKind::Tag)(i)?;
+
+            // Extract the property name from the token
+            let property = match &property_token.token_type {
+                TokenType::Identifier(name) => name.clone(),
+                _ => unreachable!(), // We already checked it's an identifier
+            };
+
+            // Create the member expression
+            let member_expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+                object: expr,
+                property,
+            }));
+
+            // Check for further member access (e.g., patient.name.first)
+            parse_member_access(i, member_expr)
+        }
+        Err(_) => {
+            // No dot, so this is not a member access
+            // Return the original expression
+            Ok((input, expr))
+        }
+    }
+}
+
+// Placeholder for parse_call_expression and parse_healthcare_query_expression
 // These will be implemented later when their AST nodes and token types are fully defined.
 // fn parse_call_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> { todo!() }
-// fn parse_member_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> { todo!() }
 // fn parse_healthcare_query_expression<'a>(input: TokenSlice<'a>) -> IResult<TokenSlice<'a>, ExpressionNode> { todo!() }
 
 // ---- Binary Expression Parsing with Precedence ----
@@ -540,20 +582,32 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
 
 /// Parse an assignment statement from a token stream
 pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // Parse identifier
-    let (i, id) = parse_identifier(input)?;
+    // Parse the left-hand side expression (l-value)
+    // This can be an identifier or a member expression
+    let (i, target) = parse_expression(input)?;
+
+    // Validate that the target is a valid l-value
+    // Currently we only support Identifier and Member expressions as l-values
+    match &target {
+        ExpressionNode::Identifier(_) | ExpressionNode::Member(_) => {}
+        _ => {
+            return Err(nom::Err::Error(NomError::from_error_kind(
+                input,
+                ErrorKind::Tag,
+            )))
+        }
+    }
 
     // Parse equals sign
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Equal), ErrorKind::Tag)(i)?;
 
-    // Parse expression
+    // Parse expression for the right-hand side
     let (i, value) = parse_expression(i)?;
 
     // Parse semicolon
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Semicolon), ErrorKind::Tag)(i)?;
 
     // Create assignment node
-    let target = ExpressionNode::Identifier(id);
     let assignment = medic_ast::ast::AssignmentNode { target, value };
 
     Ok((i, StatementNode::Assignment(Box::new(assignment))))
