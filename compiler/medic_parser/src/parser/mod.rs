@@ -15,7 +15,7 @@ use nom::{
 };
 
 use std::fmt::Debug;
-use std::ops::{Range, RangeFrom, RangeTo};
+use std::ops::{self, RangeFrom, RangeTo};
 
 /// A slice of tokens for parsing
 #[derive(Clone, Copy, Debug)]
@@ -87,8 +87,8 @@ impl Slice<RangeFrom<usize>> for TokenSlice<'_> {
     }
 }
 
-impl Slice<Range<usize>> for TokenSlice<'_> {
-    fn slice(&self, range: Range<usize>) -> Self {
+impl Slice<ops::Range<usize>> for TokenSlice<'_> {
+    fn slice(&self, range: ops::Range<usize>) -> Self {
         TokenSlice(&self.0[range])
     }
 }
@@ -366,8 +366,15 @@ pub fn parse_binary_expression(
                         take_token_if(|t| get_binary_operator(t).is_some(), ErrorKind::Tag)(input)?;
                     input = new_input;
 
-                    // Parse the right-hand side with a higher precedence to ensure proper associativity
-                    let (new_input, right) = parse_binary_expression(input, precedence + 1)?;
+                    // For range operator, use the same precedence to make it right-associative
+                    let next_precedence = if op == BinaryOperator::Range {
+                        precedence
+                    } else {
+                        precedence + 1
+                    };
+
+                    // Parse the right-hand side with the appropriate precedence
+                    let (new_input, right) = parse_binary_expression(input, next_precedence)?;
                     input = new_input;
 
                     // Create a binary expression
@@ -394,6 +401,8 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
 
 /// Get a binary operator from a token type
 pub fn get_binary_operator(token_type: &TokenType) -> Option<BinaryOperator> {
+    // Debug print to see the actual token type we're matching against
+    println!("get_binary_operator: {:?}", token_type);
     match token_type {
         TokenType::Plus => Some(BinaryOperator::Add),
         TokenType::Minus => Some(BinaryOperator::Sub),
