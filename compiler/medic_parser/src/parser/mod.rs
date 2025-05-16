@@ -7,14 +7,18 @@ use medic_lexer::token::{Token, TokenType};
 use nom::{
     branch::alt,
     combinator::{map, opt},
-    error::{Error as NomError, ErrorKind},
+    error::{Error as NomError, ErrorKind, ParseError},
     multi::many0,
     sequence::{delimited, terminated, tuple},
-    Err, IResult, InputLength,
+    Compare, CompareResult, Err, IResult, InputIter, InputLength, InputTake, InputTakeAtPosition,
+    Needed, ParseTo, Slice,
 };
 
+use std::fmt::Debug;
+use std::ops::{Range, RangeFrom, RangeTo};
+
 /// A slice of tokens for parsing
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct TokenSlice<'a>(pub &'a [Token]);
 
 impl<'a> TokenSlice<'a> {
@@ -28,40 +32,202 @@ impl<'a> TokenSlice<'a> {
         self.0.first()
     }
 
+    /// Peek at the first token without consuming it
+    pub fn peek(&self) -> Option<&'a Token> {
+        self.0.first()
+    }
+
     /// Check if the slice is empty
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    /// Peek at the first token without consuming it
-    pub fn peek(&self) -> Option<&Token> {
-        self.first()
+    /// Slice the token slice from the start to the end index
+    pub fn slice(&self, start: usize, end: usize) -> TokenSlice<'a> {
+        TokenSlice(&self.0[start..end])
+    }
+
+    /// Get the length of the token slice
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Advance the token slice by one token
+    pub fn advance(&self) -> TokenSlice<'a> {
+        TokenSlice(&self.0[1..])
     }
 }
 
-/// Implement InputLength for TokenSlice
 impl InputLength for TokenSlice<'_> {
     fn input_len(&self) -> usize {
         self.0.len()
     }
 }
 
+impl InputTake for TokenSlice<'_> {
+    fn take(&self, count: usize) -> Self {
+        TokenSlice(&self.0[..count])
+    }
+
+    fn take_split(&self, count: usize) -> (Self, Self) {
+        let (prefix, suffix) = self.0.split_at(count);
+        (TokenSlice(suffix), TokenSlice(prefix))
+    }
+}
+
+impl Slice<RangeTo<usize>> for TokenSlice<'_> {
+    fn slice(&self, range: RangeTo<usize>) -> Self {
+        TokenSlice(&self.0[range])
+    }
+}
+
+impl Slice<RangeFrom<usize>> for TokenSlice<'_> {
+    fn slice(&self, range: RangeFrom<usize>) -> Self {
+        TokenSlice(&self.0[range])
+    }
+}
+
+impl Slice<Range<usize>> for TokenSlice<'_> {
+    fn slice(&self, range: Range<usize>) -> Self {
+        TokenSlice(&self.0[range])
+    }
+}
+
+impl<'a> InputIter for TokenSlice<'a> {
+    type Item = &'a Token;
+    type Iter = std::iter::Enumerate<std::slice::Iter<'a, Token>>;
+    type IterElem = std::slice::Iter<'a, Token>;
+
+    fn iter_indices(&self) -> Self::Iter {
+        self.0.iter().enumerate()
+    }
+
+    fn iter_elements(&self) -> Self::IterElem {
+        self.0.iter()
+    }
+
+    fn position<P>(&self, predicate: P) -> Option<usize>
+    where
+        P: FnMut(Self::Item) -> bool,
+    {
+        self.0.iter().position(predicate)
+    }
+
+    fn slice_index(&self, count: usize) -> Result<usize, Needed> {
+        if self.0.len() >= count {
+            Ok(count)
+        } else {
+            Err(Needed::new(count))
+        }
+    }
+}
+
+impl Compare<Token> for TokenSlice<'_> {
+    fn compare(&self, t: Token) -> CompareResult {
+        match self.0.first() {
+            Some(token) if *token == t => CompareResult::Ok,
+            _ => CompareResult::Error,
+        }
+    }
+
+    fn compare_no_case(&self, t: Token) -> CompareResult {
+        self.compare(t)
+    }
+}
+
+impl ParseTo<Token> for TokenSlice<'_> {
+    fn parse_to(&self) -> Option<Token> {
+        self.0.first().cloned()
+    }
+}
+
+impl InputTakeAtPosition for TokenSlice<'_> {
+    type Item = Token;
+
+    fn split_at_position<P, E: ParseError<Self>>(&self, predicate: P) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        match self.0.split_first() {
+            Some((first, rest)) => {
+                if predicate(first.clone()) {
+                    Ok((TokenSlice(rest), TokenSlice(std::slice::from_ref(first))))
+                } else {
+                    let (remaining, _) =
+                        self.split_at_position1(predicate, ErrorKind::TakeTill1)?;
+                    Ok((remaining, TokenSlice(&[])))
+                }
+            }
+            None => Err(nom::Err::Error(E::from_error_kind(*self, ErrorKind::Eof))),
+        }
+    }
+
+    fn split_at_position1<P, E: ParseError<Self>>(
+        &self,
+        predicate: P,
+        e: ErrorKind,
+    ) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        if self.0.is_empty() {
+            Err(Err::Error(E::from_error_kind(*self, e)))
+        } else {
+            self.split_at_position(predicate)
+        }
+    }
+
+    fn split_at_position_complete<P, E: ParseError<Self>>(
+        &self,
+        predicate: P,
+    ) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        let mut index = 0;
+        for (i, item) in self.iter_elements().enumerate() {
+            if predicate(item.clone()) {
+                index = i;
+                break;
+            }
+        }
+
+        let (head, tail) = self.take_split(index);
+        Ok((tail, head))
+    }
+
+    fn split_at_position1_complete<P, E: ParseError<Self>>(
+        &self,
+        predicate: P,
+        e: ErrorKind,
+    ) -> IResult<Self, Self, E>
+    where
+        P: Fn(Self::Item) -> bool,
+    {
+        if self.0.is_empty() {
+            Err(Err::Error(E::from_error_kind(*self, e)))
+        } else {
+            self.split_at_position_complete(predicate)
+        }
+    }
+}
+
 /// Helper function to take a token if it matches a predicate
-pub fn take_token_if<'a, F>(
+pub fn take_token_if<F>(
     predicate: F,
     err_kind: ErrorKind,
-) -> impl Fn(TokenSlice<'a>) -> IResult<TokenSlice<'a>, Token>
+) -> impl Fn(TokenSlice<'_>) -> IResult<TokenSlice<'_>, Token>
 where
     F: Fn(&TokenType) -> bool,
 {
-    move |input: TokenSlice<'a>| {
+    move |input: TokenSlice<'_>| {
         if let Some(token) = input.first() {
             if predicate(&token.token_type) {
                 let remaining = &input.0[1..];
                 return Ok((TokenSlice(remaining), token.clone()));
             }
         }
-        Err(Err::Error(NomError::new(input.clone(), err_kind)))
+        Err(Err::Error(NomError::new(input, err_kind)))
     }
 }
 
@@ -101,10 +267,22 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
     Ok((input, BlockNode { statements }))
 }
 
-/// Parse a primary expression (literals, identifiers, parenthesized expressions)
+/// Parse a primary expression (literals, identifiers, parenthesized expressions, medical codes)
 pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
-    alt((
+    let (input, expr) = alt((
+        // Parse medical codes as expressions
+        map(
+            take_token_if(|t| t.is_medical_code(), ErrorKind::Tag),
+            |token| match token.token_type {
+                TokenType::ICD10(code) => ExpressionNode::IcdCode(code),
+                TokenType::CPT(code) => ExpressionNode::CptCode(code),
+                TokenType::SNOMED(code) => ExpressionNode::SnomedCode(code),
+                _ => unreachable!(),
+            },
+        ),
+        // Parse regular literals
         map(parse_literal, ExpressionNode::Literal),
+        // Parse identifiers
         map(parse_identifier, ExpressionNode::Identifier),
         // Parenthesized expressions
         delimited(
@@ -112,36 +290,57 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             parse_expression,
             take_token_if(|t| matches!(t, TokenType::RightParen), ErrorKind::Tag),
         ),
-    ))(input)
+    ))(input)?;
+
+    // Handle member expressions
+    let (input, members) = many0(tuple((
+        take_token_if(|t| matches!(t, TokenType::Dot), ErrorKind::Tag),
+        map(parse_identifier, ExpressionNode::Identifier),
+    )))(input)?;
+
+    // Build the member expression chain
+    let mut expr = expr;
+    for (_, member) in members {
+        expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+            object: expr,
+            property: match member {
+                ExpressionNode::Identifier(ident) => ident,
+                _ => {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        ErrorKind::Tag,
+                    )))
+                }
+            },
+        }));
+    }
+
+    Ok((input, expr))
 }
 
 /// Parse a member access expression (e.g., obj.prop)
 pub fn parse_member_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    // First parse the primary expression (identifier, literal, or parenthesized expression)
     let (mut input, mut expr) = parse_primary(input)?;
 
     // Keep parsing dot operators to build a chain of member accesses
-    loop {
-        if let Some(token) = input.peek() {
-            if matches!(token.token_type, TokenType::Dot) {
-                // Consume the dot
-                let (new_input, _) =
-                    take_token_if(|t| matches!(t, TokenType::Dot), ErrorKind::Tag)(input)?;
-                input = new_input;
-
-                // Parse the property name
-                let (new_input, property) = parse_identifier(input)?;
-                input = new_input;
-
-                // Create a member expression
-                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-                    object: expr,
-                    property,
-                }));
-
-                continue;
-            }
+    while let Some(token) = input.peek() {
+        if !matches!(token.token_type, TokenType::Dot) {
+            break;
         }
-        break;
+
+        // Consume the dot
+        input = input.advance();
+
+        // Parse the member name as an identifier
+        let (new_input, member) = parse_identifier(input)?;
+        input = new_input;
+
+        // Create a new member expression node with the member as the property
+        expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+            object: expr,
+            property: member,
+        }));
     }
 
     Ok((input, expr))
@@ -153,7 +352,7 @@ pub fn parse_binary_expression(
     min_precedence: u8,
 ) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // Parse the left-hand side
-    let (mut input, mut left) = parse_member_expression(input)?;
+    let (mut input, mut left) = parse_primary(input)?;
 
     // Keep parsing binary operators as long as they have at least the minimum precedence
     loop {
@@ -209,7 +408,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<BinaryOperator> {
         TokenType::GreaterEqual => Some(BinaryOperator::Ge),
         TokenType::And => Some(BinaryOperator::And),
         TokenType::Or => Some(BinaryOperator::Or),
-        TokenType::DotDot => Some(BinaryOperator::Range),
+        TokenType::Range => Some(BinaryOperator::Range),
         _ => None,
     }
 }
@@ -226,54 +425,16 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
         BinaryOperator::Range => 7,
     }
 }
-
-/// Extension trait for TokenType to add unwrapping methods
+/// Extension trait for TokenType to provide additional functionality
 trait TokenTypeExt {
-    fn unwrap_identifier(&self) -> String;
-    fn is_identifier(&self) -> bool;
-    fn unwrap_literal(&self) -> LiteralNode;
+    /// Check if the token is a literal (integer, float, boolean, or string)
     fn is_literal(&self) -> bool;
+
+    /// Check if the token is a medical code (ICD10, CPT, or SNOMED)
+    fn is_medical_code(&self) -> bool;
 }
 
 impl TokenTypeExt for TokenType {
-    fn unwrap_identifier(&self) -> String {
-        match self {
-            TokenType::Identifier(s) => s.clone(),
-            TokenType::Patient => "patient".to_string(),
-            TokenType::Observation => "observation".to_string(),
-            TokenType::Medication => "medication".to_string(),
-            TokenType::ICD10(code) => code.clone(),
-            TokenType::LOINC(code) => code.clone(),
-            TokenType::SNOMED(code) => code.clone(),
-            TokenType::CPT(code) => code.clone(),
-            _ => panic!("Expected an identifier token, got {:?}", self),
-        }
-    }
-
-    fn is_identifier(&self) -> bool {
-        matches!(
-            self,
-            TokenType::Identifier(_)
-                | TokenType::Patient
-                | TokenType::Observation
-                | TokenType::Medication
-                | TokenType::ICD10(_)
-                | TokenType::LOINC(_)
-                | TokenType::SNOMED(_)
-                | TokenType::CPT(_)
-        )
-    }
-
-    fn unwrap_literal(&self) -> LiteralNode {
-        match self {
-            TokenType::Integer(val) => LiteralNode::Int(*val),
-            TokenType::Float(val) => LiteralNode::Float(*val),
-            TokenType::Boolean(val) => LiteralNode::Bool(*val),
-            TokenType::String(val) => LiteralNode::String(val.clone()),
-            _ => panic!("Expected a literal token, got {:?}", self),
-        }
-    }
-
     fn is_literal(&self) -> bool {
         matches!(
             self,
@@ -283,40 +444,38 @@ impl TokenTypeExt for TokenType {
                 | TokenType::String(_)
         )
     }
+
+    fn is_medical_code(&self) -> bool {
+        matches!(
+            self,
+            TokenType::ICD10(_) | TokenType::CPT(_) | TokenType::SNOMED(_)
+        )
+    }
 }
 
 impl TokenTypeExt for Token {
-    fn unwrap_identifier(&self) -> String {
-        self.token_type.unwrap_identifier()
-    }
-
-    fn is_identifier(&self) -> bool {
-        self.token_type.is_identifier()
-    }
-
-    fn unwrap_literal(&self) -> LiteralNode {
-        self.token_type.unwrap_literal()
-    }
-
     fn is_literal(&self) -> bool {
         self.token_type.is_literal()
     }
-}
 
-/// Parse an identifier
-/// Only accepts valid identifiers (variables, healthcare keywords)
-pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, IdentifierNode> {
-    let (input, token) = take_token_if(|t| t.is_identifier(), ErrorKind::Tag)(input)?;
-    let identifier = IdentifierNode {
-        name: token.token_type.unwrap_identifier(),
-    };
-    Ok((input, identifier))
+    fn is_medical_code(&self) -> bool {
+        self.token_type.is_medical_code()
+    }
 }
 
 /// Parse a literal
 pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNode> {
-    let (input, token) = take_token_if(|t| t.is_literal(), ErrorKind::Tag)(input)?;
-    Ok((input, token.token_type.unwrap_literal()))
+    let (input, token) = take_token_if(|t| t.is_literal(), ErrorKind::Alpha)(input)?;
+    match token.token_type {
+        TokenType::Integer(n) => Ok((input, LiteralNode::Int(n))),
+        TokenType::Float(n) => Ok((input, LiteralNode::Float(n))),
+        TokenType::Boolean(b) => Ok((input, LiteralNode::Bool(b))),
+        TokenType::String(s) => Ok((input, LiteralNode::String(s.clone()))),
+        _ => Err(nom::Err::Error(nom::error::Error::from_error_kind(
+            input,
+            ErrorKind::Tag,
+        ))),
+    }
 }
 
 pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
@@ -328,7 +487,24 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
     Ok((i, ProgramNode { statements }))
 }
 
-// ---- Placeholder functions from before - to be implemented or refined ----
+/// Parses an identifier.
+/// e.g., `x`, `patient`
+pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, IdentifierNode> {
+    let (input, token) = take_token_if(
+        |t| matches!(t, TokenType::Identifier(_) | TokenType::Patient),
+        ErrorKind::Tag,
+    )(input)?;
+    Ok((
+        input,
+        IdentifierNode {
+            name: match token.token_type {
+                TokenType::Identifier(name) => name,
+                TokenType::Patient => "patient".to_string(),
+                _ => unreachable!(),
+            },
+        },
+    ))
+}
 
 /// Parse an if statement from a token stream
 ///
@@ -429,7 +605,7 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
 /// emit a diagnostic message and return an error.
 pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // First, parse the target of the assignment (l-value)
-    let (i, target) = parse_expression(input.clone())?;
+    let (i, target) = parse_expression(input)?;
 
     // Expect an assignment operator
     let (i, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(i)?;
@@ -450,7 +626,7 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
             eprintln!("Invalid l-value in assignment. Only identifiers and member expressions are supported as l-values, but found: {:?}", target);
 
             // Return an error
-            Err(Err::Error(NomError::new(input.clone(), ErrorKind::Tag)))
+            Err(Err::Error(NomError::new(input, ErrorKind::Tag)))
         }
     }
 }
@@ -477,7 +653,7 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
 /// Parses a let statement.
 /// e.g., `let x = 10;`
 pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Let), ErrorKind::Tag)(input)?;
+    let (i, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
     let (i, identifier_node) = parse_identifier(i)?;
     let (i, _) = take_token_if(|tt| matches!(tt, TokenType::Equal), ErrorKind::Tag)(i)?;
     let (i, value_node) = parse_expression(i)?;

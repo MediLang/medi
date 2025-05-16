@@ -95,7 +95,7 @@ pub enum TokenType {
     DoubleSlashAssign,
     Shl,
     Shr,
-    DotDot,
+    Range,
 
     // Delimiters
     LeftBrace,

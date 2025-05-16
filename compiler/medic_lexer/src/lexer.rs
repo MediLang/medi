@@ -155,14 +155,16 @@ pub enum LogosToken {
     Colon,
     #[token(";")]
     Semicolon,
-    #[token(".")]
-    Dot,
     #[token(",")]
     Comma,
+    #[token(".")]
+    Dot,
+    #[token("..")]
+    Range,
     #[token("(")]
-    LParen,
+    LeftParen,
     #[token(")")]
-    RParen,
+    RightParen,
     #[token("[")]
     LBracket,
     #[token("]")]
@@ -331,23 +333,25 @@ impl<'source> Lexer<'source> {
             LogosToken::BitXor => TokenType::BitXor,
             LogosToken::BitNot => TokenType::BitNot,
             LogosToken::Bang => TokenType::Not,
+
+            // Delimiters
             LogosToken::Dot => TokenType::Dot,
             LogosToken::At => TokenType::At,
 
-            // Delimiters
-            LogosToken::LParen => TokenType::LeftParen,
-            LogosToken::RParen => TokenType::RightParen,
+            LogosToken::LeftParen => TokenType::LeftParen,
+            LogosToken::RightParen => TokenType::RightParen,
             LogosToken::LBrace => TokenType::LeftBrace,
             LogosToken::RBrace => TokenType::RightBrace,
             LogosToken::LBracket => TokenType::LeftBracket,
             LogosToken::RBracket => TokenType::RightBracket,
-            LogosToken::Comma => TokenType::Comma,
             LogosToken::Colon => TokenType::Colon,
-            LogosToken::DoubleColon => TokenType::ColonColon,
             LogosToken::Semicolon => TokenType::Semicolon,
-            LogosToken::Dollar => TokenType::Dollar,
+            LogosToken::Comma => TokenType::Comma,
+            LogosToken::Range => TokenType::Range,
             LogosToken::Backslash => TokenType::Backslash,
             LogosToken::Underscore => TokenType::Identifier("_".to_string()),
+            LogosToken::DoubleColon => TokenType::ColonColon,
+            LogosToken::Dollar => TokenType::Dollar,
 
             // Error case
             LogosToken::Error => TokenType::Error(lexeme.to_string()),
