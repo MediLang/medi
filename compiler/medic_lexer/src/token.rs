@@ -95,6 +95,7 @@ pub enum TokenType {
     DoubleSlashAssign,
     Shl,
     Shr,
+    DotDot,
 
     // Delimiters
     LeftBrace,
@@ -180,7 +181,7 @@ impl Token {
         )
     }
 
-    /// Returns true if this token is a healthcare-specific token
+    /// Returns true if this token is a healthcare-specific token (e.g., Patient, Observation, Medication, PatientId, ICD10, LOINC, SNOMED, CPT)
     pub fn is_healthcare_token(&self) -> bool {
         matches!(
             self.token_type,
@@ -194,6 +195,7 @@ impl Token {
                 | TokenType::ICD10(_)
                 | TokenType::LOINC(_)
                 | TokenType::SNOMED(_)
+                | TokenType::CPT(_)
         )
     }
 }

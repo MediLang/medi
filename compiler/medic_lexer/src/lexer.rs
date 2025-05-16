@@ -56,7 +56,7 @@ pub enum LogosToken {
     // --- Numbers ---
     #[regex(r"[0-9]+", |lex| lex.slice().parse().unwrap_or(0))]
     Integer(i64),
-    #[regex(r"[0-9]+\\.[0-9]+", |lex| lex.slice().parse().unwrap_or(0.0))]
+    #[regex(r"[0-9]+\.[0-9]+", |lex| lex.slice().parse().unwrap_or(0.0))]
     Float(f64),
 
     // --- Identifiers ---
@@ -381,7 +381,11 @@ impl Iterator for Lexer<'_> {
 
     fn next(&mut self) -> Option<Token> {
         self.update_position();
-        let logos_token = self.logos_lexer.next()?.unwrap();
+        let next_token = self.logos_lexer.next()?;
+        let logos_token = match next_token {
+            Ok(token) => token,
+            Err(_) => LogosToken::Error,
+        };
         let lexeme = self.logos_lexer.slice();
         let span = self.logos_lexer.span();
         let token = self.convert_token(logos_token, lexeme, &span);

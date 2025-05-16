@@ -209,6 +209,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<BinaryOperator> {
         TokenType::GreaterEqual => Some(BinaryOperator::Ge),
         TokenType::And => Some(BinaryOperator::And),
         TokenType::Or => Some(BinaryOperator::Or),
+        TokenType::DotDot => Some(BinaryOperator::Range),
         _ => None,
     }
 }
@@ -241,6 +242,10 @@ impl TokenTypeExt for TokenType {
             TokenType::Patient => "patient".to_string(),
             TokenType::Observation => "observation".to_string(),
             TokenType::Medication => "medication".to_string(),
+            TokenType::ICD10(code) => code.clone(),
+            TokenType::LOINC(code) => code.clone(),
+            TokenType::SNOMED(code) => code.clone(),
+            TokenType::CPT(code) => code.clone(),
             _ => panic!("Expected an identifier token, got {:?}", self),
         }
     }
@@ -252,6 +257,10 @@ impl TokenTypeExt for TokenType {
                 | TokenType::Patient
                 | TokenType::Observation
                 | TokenType::Medication
+                | TokenType::ICD10(_)
+                | TokenType::LOINC(_)
+                | TokenType::SNOMED(_)
+                | TokenType::CPT(_)
         )
     }
 
