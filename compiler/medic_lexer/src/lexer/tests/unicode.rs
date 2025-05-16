@@ -17,7 +17,7 @@ fn test_lexer_unicode_identifiers() {
 
     // Collect tokens using the iterator
     let tokens: Vec<_> = Lexer::new(input).collect();
-    
+
     // Print the tokens for debugging
     for token in &tokens {
         println!("Token: {:?} (lexeme: '{}')", token.token_type, token.lexeme);
