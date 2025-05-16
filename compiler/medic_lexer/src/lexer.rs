@@ -16,12 +16,16 @@ pub enum LogosToken {
     Medication,
     #[token("fhir_query")]
     FhirQuery,
-    #[token("kaplan_meier")]
-    KaplanMeier,
     #[token("regulate")]
     Regulate,
-    #[token("report")]
-    Report,
+    #[token("scope")]
+    Scope,
+    #[token("federated")]
+    Federated,
+    #[token("safe")]
+    Safe,
+    #[token("real_time")]
+    RealTime,
 
     // --- Medical Codes ---
     #[regex(r"ICD10:[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,4})?", |lex| lex.slice().to_string())]
@@ -40,8 +44,6 @@ pub enum LogosToken {
     If,
     #[token("else")]
     Else,
-    #[token("elif")]
-    Elif,
     #[token("for")]
     For,
     #[token("while")]
@@ -50,82 +52,18 @@ pub enum LogosToken {
     Return,
     #[token("match")]
     Match,
-    #[token("case")]
-    Case,
-    #[token("yield")]
-    Yield,
-    #[token("await")]
-    Await,
-    #[token("async")]
-    Async,
-    #[token("in")]
-    In,
-    #[token("not")]
-    Not,
-    #[token("and")]
-    And,
-    #[token("or")]
-    Or,
-    #[token("is")]
-    Is,
-    #[token("as")]
-    As,
-    #[token("from")]
-    From,
-    #[token("import")]
-    Import,
-    #[token("with")]
-    With,
-    #[token("try")]
-    Try,
-    #[token("except")]
-    Except,
-    #[token("raise")]
-    Raise,
-    #[token("finally")]
-    Finally,
-    #[token("pass")]
-    Pass,
-    #[token("del")]
-    Del,
-    #[token("global")]
-    Global,
-    #[token("const")]
-    Const,
-    #[token("static")]
-    Static,
-    #[token("struct")]
-    Struct,
-    #[token("enum")]
-    Enum,
-    #[token("impl")]
-    Impl,
-    #[token("trait")]
-    Trait,
-    #[token("type")]
-    Type,
-    #[token("mod")]
-    Mod,
-    #[token("pub")]
-    Pub,
-    #[token("export")]
-    Export,
+
+    // --- Numbers ---
+    #[regex(r"[0-9]+", |lex| lex.slice().parse().unwrap_or(0))]
+    Integer(i64),
+    #[regex(r"[0-9]+\\.[0-9]+", |lex| lex.slice().parse().unwrap_or(0.0))]
+    Float(f64),
 
     // --- Identifiers ---
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*")]
-    Identifier,
+    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
+    Identifier(String),
 
     // --- Literals ---
-    #[regex(r"0b[01_]+", |lex| i64::from_str_radix(&lex.slice()[2..].replace('_', ""), 2).ok())]
-    BinLiteral(i64),
-    #[regex(r"0o[0-7_]+", |lex| i64::from_str_radix(&lex.slice()[2..].replace('_', ""), 8).ok())]
-    OctLiteral(i64),
-    #[regex(r"0x[0-9a-fA-F_]+", |lex| i64::from_str_radix(&lex.slice()[2..].replace('_', ""), 16).ok())]
-    HexLiteral(i64),
-    #[regex(r"[0-9][0-9_]*", |lex| lex.slice().replace('_', "").parse().ok())]
-    IntLiteral(i64),
-    #[regex(r"[0-9][0-9_]*\.[0-9_]+([eE][+-]?[0-9_]+)?", |lex| lex.slice().replace('_', "").parse().ok())]
-    FloatLiteral(f64),
     #[regex(r#"'([^'\\]|\\.)*'"#, |lex| lex.slice().to_string())]
     SingleQuotedString(String),
     #[regex(r#""([^"\\]|\\.)*""#, |lex| lex.slice().to_string())]
@@ -318,45 +256,45 @@ impl<'source> Lexer<'source> {
         };
 
         let token_type = match logos_token {
-            // Healthcare keywords
+            // Healthcare-specific keywords
             LogosToken::Patient => TokenType::Patient,
             LogosToken::Observation => TokenType::Observation,
             LogosToken::Medication => TokenType::Medication,
             LogosToken::FhirQuery => TokenType::FhirQuery,
             LogosToken::Regulate => TokenType::Regulate,
+            LogosToken::Scope => TokenType::Scope,
+            LogosToken::Federated => TokenType::Federated,
+            LogosToken::Safe => TokenType::Safe,
+            LogosToken::RealTime => TokenType::RealTime,
 
             // Medical codes
             LogosToken::IcdCode(code) => TokenType::ICD10(code),
             LogosToken::CptCode(code) => TokenType::CPT(code),
             LogosToken::SnomedCode(code) => TokenType::SNOMED(code),
 
-            // Keywords
+            // General keywords
             LogosToken::Let => TokenType::Let,
             LogosToken::Fn => TokenType::Fn,
-            LogosToken::Const => TokenType::Const,
-            LogosToken::Type => TokenType::Type,
-            LogosToken::Struct => TokenType::Struct,
-            LogosToken::Enum => TokenType::Enum,
-            LogosToken::Impl => TokenType::Impl,
-            LogosToken::Trait => TokenType::Trait,
-            LogosToken::Mod => TokenType::Module,
-            LogosToken::Pub => TokenType::Pub,
-            LogosToken::Return => TokenType::Return,
-            LogosToken::While => TokenType::While,
-            LogosToken::For => TokenType::For,
-            LogosToken::In => TokenType::In,
             LogosToken::If => TokenType::If,
             LogosToken::Else => TokenType::Else,
+            LogosToken::For => TokenType::For,
+            LogosToken::While => TokenType::While,
+            LogosToken::Return => TokenType::Return,
             LogosToken::Match => TokenType::Match,
+            LogosToken::Identifier(name) => TokenType::Identifier(name),
+            LogosToken::Integer(num) => TokenType::Integer(num),
+            LogosToken::Float(num) => TokenType::Float(num),
 
             // Literals
-            LogosToken::IntLiteral(n) => TokenType::Integer(n),
-            LogosToken::FloatLiteral(n) => TokenType::Float(n),
-            LogosToken::SingleQuotedString(s) | LogosToken::DoubleQuotedString(s) => {
-                TokenType::String(s)
-            }
             LogosToken::True => TokenType::Boolean(true),
             LogosToken::False => TokenType::Boolean(false),
+            LogosToken::Null => TokenType::Null,
+            LogosToken::NoneVal => TokenType::None,
+            LogosToken::SingleQuotedString(s) => TokenType::String(s),
+            LogosToken::DoubleQuotedString(s) => TokenType::String(s),
+            LogosToken::RawString(s) => TokenType::String(s),
+            LogosToken::ByteString(s) => TokenType::String(s),
+            LogosToken::TripleQuotedString(s) => TokenType::String(s),
 
             // Operators
             LogosToken::Plus => TokenType::Plus,
@@ -371,143 +309,45 @@ impl<'source> Lexer<'source> {
             LogosToken::Gt => TokenType::Greater,
             LogosToken::Le => TokenType::LessEqual,
             LogosToken::Ge => TokenType::GreaterEqual,
-            LogosToken::Arrow => TokenType::Arrow,
-
-            // Delimiters
-            LogosToken::Dot => TokenType::Dot,
-            LogosToken::Comma => TokenType::Comma,
-            LogosToken::Colon => TokenType::Colon,
-            LogosToken::Semicolon => TokenType::Semicolon,
-            LogosToken::LParen => TokenType::LeftParen,
-            LogosToken::RParen => TokenType::RightParen,
-            LogosToken::LBracket => TokenType::LeftBracket,
-            LogosToken::RBracket => TokenType::RightBracket,
-            LogosToken::LBrace => TokenType::LeftBrace,
-            LogosToken::RBrace => TokenType::RightBrace,
-
-            // Other
-            LogosToken::Identifier => TokenType::Identifier(lexeme.to_string()),
-            LogosToken::Error => {
-                TokenType::Error(format!("Invalid token at {}:{}", self.line, self.column))
-            }
-
-            // Healthcare-specific keywords not yet handled
-            LogosToken::KaplanMeier => TokenType::Identifier("kaplan_meier".to_string()),
-            LogosToken::Report => TokenType::Identifier("report".to_string()),
-
-            // Medical codes not yet handled
-
-            // General keywords not yet handled
-            LogosToken::Elif => TokenType::Identifier("elif".to_string()),
-            LogosToken::Case => TokenType::Identifier("case".to_string()),
-            LogosToken::Yield => TokenType::Identifier("yield".to_string()),
-            LogosToken::Await => TokenType::Identifier("await".to_string()),
-            LogosToken::Async => TokenType::Identifier("async".to_string()),
-            LogosToken::Not => TokenType::Not,
-            LogosToken::And => TokenType::And,
-            LogosToken::Or => TokenType::Or,
-            LogosToken::Is => TokenType::Identifier("is".to_string()),
-            LogosToken::As => TokenType::Identifier("as".to_string()),
-            LogosToken::From => TokenType::Identifier("from".to_string()),
-            LogosToken::Import => TokenType::Import,
-            LogosToken::With => TokenType::Identifier("with".to_string()),
-            LogosToken::Try => TokenType::Identifier("try".to_string()),
-            LogosToken::Except => TokenType::Identifier("except".to_string()),
-            LogosToken::Raise => TokenType::Identifier("raise".to_string()),
-            LogosToken::Finally => TokenType::Identifier("finally".to_string()),
-            LogosToken::Pass => TokenType::Identifier("pass".to_string()),
-            LogosToken::Del => TokenType::Identifier("del".to_string()),
-            LogosToken::Global => TokenType::Identifier("global".to_string()),
-            LogosToken::Static => TokenType::Identifier("static".to_string()),
-            LogosToken::Export => TokenType::Identifier("export".to_string()),
-
-            // Literals not yet handled
-            LogosToken::BinLiteral(n) => TokenType::Integer(n),
-            LogosToken::OctLiteral(n) => TokenType::Integer(n),
-            LogosToken::HexLiteral(n) => TokenType::Integer(n),
-            LogosToken::RawString(s) => TokenType::String(s),
-            LogosToken::ByteString(s) => TokenType::String(s),
-            LogosToken::TripleQuotedString(s) => TokenType::String(s),
-            LogosToken::Null => TokenType::Identifier("null".to_string()),
-            LogosToken::NoneVal => TokenType::Identifier("None".to_string()),
-
-            // Operators not yet handled
-            LogosToken::DoubleStarAssign => TokenType::Error(format!(
-                "Operator '**=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::DoubleSlashAssign => TokenType::Error(format!(
-                "Operator '//=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::PlusAssign => TokenType::Error(format!(
-                "Operator '+=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::MinusAssign => TokenType::Error(format!(
-                "Operator '-=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::StarAssign => TokenType::Error(format!(
-                "Operator '*=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::SlashAssign => TokenType::Error(format!(
-                "Operator '/=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::PercentAssign => TokenType::Error(format!(
-                "Operator '%=' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::DoubleStar => TokenType::Error(format!(
-                "Operator '**' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::DoubleSlash => TokenType::Error(format!(
-                "Operator '//' not supported at {}:{}",
-                self.line, self.column
-            )),
             LogosToken::AndAnd => TokenType::And,
             LogosToken::OrOr => TokenType::Or,
-            LogosToken::Shl => TokenType::Error(format!(
-                "Operator '<<' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::Shr => TokenType::Error(format!(
-                "Operator '>>' not supported at {}:{}",
-                self.line, self.column
-            )),
+            LogosToken::Shl => TokenType::Shl,
+            LogosToken::Shr => TokenType::Shr,
+            LogosToken::Arrow => TokenType::Arrow,
+            LogosToken::DoubleStar => TokenType::DoubleStar,
+            LogosToken::DoubleSlash => TokenType::DoubleSlash,
+            LogosToken::PlusAssign => TokenType::PlusAssign,
+            LogosToken::MinusAssign => TokenType::MinusAssign,
+            LogosToken::StarAssign => TokenType::StarAssign,
+            LogosToken::SlashAssign => TokenType::SlashAssign,
+            LogosToken::DoubleStarAssign => TokenType::DoubleStarAssign,
+            LogosToken::DoubleSlashAssign => TokenType::DoubleSlashAssign,
+            LogosToken::PercentAssign => TokenType::PercentAssign,
+            LogosToken::BitAnd => TokenType::BitAnd,
+            LogosToken::BitOr => TokenType::BitOr,
+            LogosToken::BitXor => TokenType::BitXor,
+            LogosToken::BitNot => TokenType::BitNot,
             LogosToken::Bang => TokenType::Not,
-            LogosToken::BitAnd => TokenType::Error(format!(
-                "Operator '&' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::BitOr => TokenType::Pipe,
-            LogosToken::BitXor => TokenType::Error(format!(
-                "Operator '^' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::BitNot => TokenType::Error(format!(
-                "Operator '~' not supported at {}:{}",
-                self.line, self.column
-            )),
-
-            // Delimiters not yet handled
-            LogosToken::DoubleColon => TokenType::Error(format!(
-                "Delimiter '::' not supported at {}:{}",
-                self.line, self.column
-            )),
+            LogosToken::Dot => TokenType::Dot,
             LogosToken::At => TokenType::At,
-            LogosToken::Dollar => TokenType::Error(format!(
-                "Delimiter '$' not supported at {}:{}",
-                self.line, self.column
-            )),
-            LogosToken::Backslash => TokenType::Error(format!(
-                "Delimiter '\\' not supported at {}:{}",
-                self.line, self.column
-            )),
+
+            // Delimiters
+            LogosToken::LParen => TokenType::LeftParen,
+            LogosToken::RParen => TokenType::RightParen,
+            LogosToken::LBrace => TokenType::LeftBrace,
+            LogosToken::RBrace => TokenType::RightBrace,
+            LogosToken::LBracket => TokenType::LeftBracket,
+            LogosToken::RBracket => TokenType::RightBracket,
+            LogosToken::Comma => TokenType::Comma,
+            LogosToken::Colon => TokenType::Colon,
+            LogosToken::DoubleColon => TokenType::ColonColon,
+            LogosToken::Semicolon => TokenType::Semicolon,
+            LogosToken::Dollar => TokenType::Dollar,
+            LogosToken::Backslash => TokenType::Backslash,
             LogosToken::Underscore => TokenType::Identifier("_".to_string()),
+
+            // Error case
+            LogosToken::Error => TokenType::Error(lexeme.to_string()),
         };
 
         Token::new(token_type, lexeme.to_string(), location)
@@ -520,7 +360,7 @@ impl<'source> Lexer<'source> {
 
         // Get the text between the previous span end and the current span end
         // This includes any skipped whitespace and comments
-        let text_to_process = &self.source[self.prev_span_end..span.end];
+        let text_to_process = &self.source[self.prev_span_end..span.start];
 
         // Update line and column for all characters including skipped ones
         for c in text_to_process.chars() {

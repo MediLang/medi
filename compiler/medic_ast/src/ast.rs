@@ -57,7 +57,7 @@ pub struct CallExpressionNode {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MemberExpressionNode {
     pub object: ExpressionNode,
-    pub property: String,
+    pub property: IdentifierNode,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -127,9 +127,21 @@ pub struct ReturnNode {
     pub value: Option<Box<ExpressionNode>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+use std::hash::Hash;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IdentifierNode {
     pub name: String,
+}
+
+impl IdentifierNode {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

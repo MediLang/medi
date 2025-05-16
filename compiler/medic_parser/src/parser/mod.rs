@@ -135,7 +135,7 @@ pub fn parse_member_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                 // Create a member expression
                 expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
                     object: expr,
-                    property: property.name,
+                    property,
                 }));
 
                 continue;

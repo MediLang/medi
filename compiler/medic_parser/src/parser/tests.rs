@@ -6,6 +6,7 @@ mod parser_tests {
     use medic_ast::ast::{BlockNode, ExpressionNode, LiteralNode, StatementNode};
     use medic_lexer::lexer::Lexer;
     use medic_lexer::token::Token;
+    use std::f64::consts::PI;
 
     // Helper function to convert a string to a TokenSlice
     fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
@@ -63,7 +64,7 @@ mod parser_tests {
                         assert!(matches!(&member.object, 
                             ExpressionNode::Identifier(id) if id.name == "patient"));
                         // Check that the property is "name"
-                        assert_eq!(member.property, "name");
+                        assert_eq!(member.property.name(), "name");
                     }
                     _ => panic!("Expected Member expression as target"),
                 }
@@ -249,7 +250,7 @@ mod parser_tests {
         let input = "3.141592653589793";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(lit, LiteralNode::Float(3.141592653589793)));
+        assert!(matches!(lit, LiteralNode::Float(PI)));
 
         // Test string literal
         let input = "\"hello\"";

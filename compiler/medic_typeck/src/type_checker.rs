@@ -93,7 +93,7 @@ impl<'a> TypeChecker<'a> {
                 let object_type = self.check_expr(&mem.object);
                 match object_type {
                     MediType::Struct(ref fields) => fields
-                        .get(&mem.property)
+                        .get(mem.property.name())
                         .cloned()
                         .unwrap_or(MediType::Unknown),
                     _ => MediType::Unknown, // Member access is only valid on structs

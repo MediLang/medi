@@ -31,6 +31,7 @@ pub enum TokenType {
     Match,
     If,
     Else,
+    UnsupportedKeyword(String),
 
     // Healthcare-specific keywords
     FhirQuery,
@@ -49,7 +50,9 @@ pub enum TokenType {
     Float(f64),
     String(String),
     Boolean(bool),
-    DateTime(String), // ISO 8601 format
+    DateTime(String),
+    Null,
+    None, // ISO 8601 format
 
     // Healthcare-specific literals
     PatientId(String),
@@ -77,6 +80,21 @@ pub enum TokenType {
     Pipe,
     Arrow,
     FatArrow,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitNot,
+    DoubleStar,
+    DoubleSlash,
+    PlusAssign,
+    MinusAssign,
+    StarAssign,
+    SlashAssign,
+    PercentAssign,
+    DoubleStarAssign,
+    DoubleSlashAssign,
+    Shl,
+    Shr,
 
     // Delimiters
     LeftBrace,
@@ -88,12 +106,12 @@ pub enum TokenType {
     Dot,
     Comma,
     Colon,
+    ColonColon,
     Semicolon,
     At,
-    Hash,
-    Question,
-    DotDot,
-    DotDotDot,
+    Dollar,
+    Backslash,
+    DoubleColon,
 
     // Identifiers and special tokens
     Identifier(String),
@@ -141,6 +159,13 @@ impl Token {
                 | TokenType::Impl
                 | TokenType::Pub
                 | TokenType::Priv
+                | TokenType::Return
+                | TokenType::While
+                | TokenType::For
+                | TokenType::In
+                | TokenType::Match
+                | TokenType::If
+                | TokenType::Else
                 | TokenType::FhirQuery
                 | TokenType::Query
                 | TokenType::Regulate
@@ -148,11 +173,10 @@ impl Token {
                 | TokenType::Federated
                 | TokenType::Safe
                 | TokenType::RealTime
-                | TokenType::If
-                | TokenType::Else
                 | TokenType::Patient
                 | TokenType::Observation
                 | TokenType::Medication
+                | TokenType::UnsupportedKeyword(_)
         )
     }
 
