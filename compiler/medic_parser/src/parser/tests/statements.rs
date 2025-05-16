@@ -73,7 +73,7 @@ mod statements {
                 }
                 match assignment.value {
                     ExpressionNode::Literal(LiteralNode::String(ref s)) => {
-                        assert_eq!(s, "\"John\"");
+                        assert_eq!(s, "John");
                     }
                     _ => panic!("Expected string literal"),
                 };

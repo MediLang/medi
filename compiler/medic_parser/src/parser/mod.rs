@@ -53,8 +53,13 @@ impl<'a> TokenSlice<'a> {
     }
 
     /// Advance the token slice by one token
+    /// Returns an empty slice if already at the end
     pub fn advance(&self) -> TokenSlice<'a> {
-        TokenSlice(&self.0[1..])
+        if self.0.is_empty() {
+            TokenSlice(&[])
+        } else {
+            TokenSlice(&self.0[1..])
+        }
     }
 }
 
@@ -149,14 +154,17 @@ impl InputTakeAtPosition for TokenSlice<'_> {
         P: Fn(Self::Item) -> bool,
     {
         match self.0.split_first() {
-            Some((first, rest)) => {
-                if predicate(first.clone()) {
-                    Ok((TokenSlice(rest), TokenSlice(std::slice::from_ref(first))))
-                } else {
-                    let (remaining, _) =
-                        self.split_at_position1(predicate, ErrorKind::TakeTill1)?;
-                    Ok((remaining, TokenSlice(&[])))
+            Some(_) => {
+                // Iterate through the tokens to find the first one that matches the predicate
+                for idx in 0..self.0.len() {
+                    if predicate(self.0[idx].clone()) {
+                        let (head, tail) = self.0.split_at(idx);
+                        return Ok((TokenSlice(tail), TokenSlice(head)));
+                    }
                 }
+                // If no token matches the predicate, return the entire slice as the tail
+                // and an empty slice as the head
+                Ok((TokenSlice(&[] as &[Token]), *self))
             }
             None => Err(nom::Err::Error(E::from_error_kind(*self, ErrorKind::Eof))),
         }
@@ -173,7 +181,18 @@ impl InputTakeAtPosition for TokenSlice<'_> {
         if self.0.is_empty() {
             Err(Err::Error(E::from_error_kind(*self, e)))
         } else {
-            self.split_at_position(predicate)
+            // Delegate to the safe implementation in split_at_position
+            match self.split_at_position(predicate) {
+                Ok((tail, head)) => {
+                    // If the head is empty, it means no token matched the predicate
+                    if head.is_empty() {
+                        Err(Err::Error(E::from_error_kind(*self, e)))
+                    } else {
+                        Ok((tail, head))
+                    }
+                }
+                Err(e) => Err(e),
+            }
         }
     }
 
@@ -417,7 +436,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<BinaryOperator> {
         TokenType::GreaterEqual => Some(BinaryOperator::Ge),
         TokenType::And => Some(BinaryOperator::And),
         TokenType::Or => Some(BinaryOperator::Or),
-        TokenType::Range => Some(BinaryOperator::Range),
+        TokenType::DotDot => Some(BinaryOperator::Range),
         _ => None,
     }
 }
@@ -644,7 +663,14 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     alt((
         parse_let_statement,
-        parse_assignment_statement,
+        // Wrap assignment statement with terminated to ensure semicolon is consumed
+        map(
+            terminated(
+                parse_assignment_statement,
+                take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag),
+            ),
+            |stmt| stmt,
+        ),
         parse_if_statement,
         parse_while_statement,
         parse_return_statement,

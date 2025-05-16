@@ -86,16 +86,25 @@ pub enum TokenType {
     BitNot,
     DoubleStar,
     DoubleSlash,
-    PlusAssign,
-    MinusAssign,
-    StarAssign,
-    SlashAssign,
-    PercentAssign,
+    PlusEqual,
+    MinusEqual,
+    StarEqual,
+    SlashEqual,
+    PercentEqual,
     DoubleStarAssign,
     DoubleSlashAssign,
     Shl,
     Shr,
     Range,
+    DotDot,
+    DotDotEqual,
+    Underscore,
+
+    // Literals
+    Bool(bool),
+
+    // Error token
+    LexerError,
 
     // Delimiters
     LeftBrace,
