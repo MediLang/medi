@@ -29,11 +29,11 @@ pub enum LogosToken {
 
     // --- Medical Codes ---
     #[regex(r"ICD10:[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,4})?", |lex| lex.slice().to_string())]
-    IcdCode(String),
+    ICD10(String),
     #[regex(r"CPT:[0-9]{5}", |lex| lex.slice().to_string())]
-    CptCode(String),
+    CPT(String),
     #[regex(r"SNOMED:[0-9]{6,9}", |lex| lex.slice().to_string())]
-    SnomedCode(String),
+    SNOMED(String),
 
     // --- General keywords ---
     #[token("let")]
@@ -221,20 +221,20 @@ impl<'source> Lexer<'source> {
     /// Convert a LogosToken to our semantic Token type
     /// Synchronize lexer position to match the given span from logos lexer
     fn sync_position_to(&mut self, span: &logos::Span) {
-        let range = span.clone();
-        let range_clone = range.clone();
-        let text = &self.source[range_clone];
-
         // Update offset
-        self.offset = range.end;
+        self.offset = span.end;
 
-        // Update line and column
-        for c in text.chars() {
-            if c == '\n' {
-                self.line += 1;
-                self.column = 1;
-            } else {
-                self.column += 1;
+        // Update line and column using byte-wise iteration
+        let text = &self.source[span.clone()];
+        for byte in text.as_bytes() {
+            match byte {
+                b'\n' => {
+                    self.line += 1;
+                    self.column = 1;
+                }
+                _ => {
+                    self.column += 1;
+                }
             }
         }
     }
@@ -246,14 +246,17 @@ impl<'source> Lexer<'source> {
         lexeme: &str,
         span: &logos::Span,
     ) -> Token {
-        // Sync position before creating token
-        self.sync_position_to(span);
-
-        let location = Location {
+        // 1️⃣ Capture position *before* we advance
+        let start_location = Location {
             line: self.line,
             column: self.column,
             offset: self.offset,
         };
+
+        // 2️⃣ Now advance cursor to the end of the current span
+        self.sync_position_to(span);
+
+        let location = start_location;
 
         let token_type = match logos_token {
             // Healthcare-specific keywords
@@ -268,9 +271,9 @@ impl<'source> Lexer<'source> {
             LogosToken::RealTime => TokenType::RealTime,
 
             // Medical codes
-            LogosToken::IcdCode(code) => TokenType::ICD10(code),
-            LogosToken::CptCode(code) => TokenType::CPT(code),
-            LogosToken::SnomedCode(code) => TokenType::SNOMED(code),
+            LogosToken::ICD10(code) => TokenType::ICD10(code),
+            LogosToken::CPT(code) => TokenType::CPT(code),
+            LogosToken::SNOMED(code) => TokenType::SNOMED(code),
 
             // General keywords
             LogosToken::Let => TokenType::Let,
