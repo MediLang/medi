@@ -237,12 +237,10 @@ trait TokenTypeExt {
 impl TokenTypeExt for TokenType {
     fn unwrap_identifier(&self) -> String {
         match self {
-            TokenType::Identifier(name) => name.clone(),
+            TokenType::Identifier(s) => s.clone(),
             TokenType::Patient => "patient".to_string(),
             TokenType::Observation => "observation".to_string(),
             TokenType::Medication => "medication".to_string(),
-            TokenType::If => "if".to_string(),
-            TokenType::Else => "else".to_string(),
             _ => panic!("Expected an identifier token, got {:?}", self),
         }
     }
@@ -254,8 +252,6 @@ impl TokenTypeExt for TokenType {
                 | TokenType::Patient
                 | TokenType::Observation
                 | TokenType::Medication
-                | TokenType::If
-                | TokenType::Else
         )
     }
 
@@ -299,6 +295,7 @@ impl TokenTypeExt for Token {
 }
 
 /// Parse an identifier
+/// Only accepts valid identifiers (variables, healthcare keywords)
 pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, IdentifierNode> {
     let (input, token) = take_token_if(|t| t.is_identifier(), ErrorKind::Tag)(input)?;
     let identifier = IdentifierNode {

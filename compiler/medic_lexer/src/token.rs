@@ -33,7 +33,7 @@ pub enum TokenType {
     Else,
 
     // Healthcare-specific keywords
-    Fhir,
+    FhirQuery,
     Query,
     Regulate,
     Scope,
@@ -141,7 +141,7 @@ impl Token {
                 | TokenType::Impl
                 | TokenType::Pub
                 | TokenType::Priv
-                | TokenType::Fhir
+                | TokenType::FhirQuery
                 | TokenType::Query
                 | TokenType::Regulate
                 | TokenType::Scope
@@ -160,7 +160,7 @@ impl Token {
     pub fn is_healthcare_token(&self) -> bool {
         matches!(
             self.token_type,
-            TokenType::Fhir
+            TokenType::FhirQuery
                 | TokenType::Query
                 | TokenType::Regulate
                 | TokenType::Patient
@@ -235,7 +235,7 @@ mod tests {
             column: 1,
             offset: 0,
         };
-        let token = Token::new(TokenType::Fhir, "fhir".to_string(), loc);
+        let token = Token::new(TokenType::FhirQuery, "fhir".to_string(), loc);
         assert!(token.is_healthcare_token());
 
         let token = Token::new(

@@ -246,12 +246,10 @@ mod parser_tests {
         assert!(matches!(lit, LiteralNode::Int(42)));
 
         // Test float literal
-        use std::f64::consts::PI;
-
-        let input = "3.14";
+        let input = "3.141592653589793";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, lit) = parse_literal(token_slice).unwrap();
-        assert!(matches!(lit, LiteralNode::Float(PI)));
+        assert!(matches!(lit, LiteralNode::Float(3.141592653589793)));
 
         // Test string literal
         let input = "\"hello\"";

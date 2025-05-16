@@ -281,7 +281,36 @@ impl<'source> Lexer<'source> {
     }
 
     /// Convert a LogosToken to our semantic Token type
-    fn convert_token(&self, logos_token: LogosToken, lexeme: &str) -> Token {
+    /// Synchronize lexer position to match the given span from logos lexer
+    fn sync_position_to(&mut self, span: &logos::Span) {
+        let range = span.clone();
+        let range_clone = range.clone();
+        let text = &self.source[range_clone];
+
+        // Update offset
+        self.offset = range.end;
+
+        // Update line and column
+        for c in text.chars() {
+            if c == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+        }
+    }
+
+    /// Convert a LogosToken to our semantic Token type
+    fn convert_token(
+        &mut self,
+        logos_token: LogosToken,
+        lexeme: &str,
+        span: &logos::Span,
+    ) -> Token {
+        // Sync position before creating token
+        self.sync_position_to(span);
+
         let location = Location {
             line: self.line,
             column: self.column,
@@ -293,7 +322,7 @@ impl<'source> Lexer<'source> {
             LogosToken::Patient => TokenType::Patient,
             LogosToken::Observation => TokenType::Observation,
             LogosToken::Medication => TokenType::Medication,
-            LogosToken::FhirQuery => TokenType::Fhir,
+            LogosToken::FhirQuery => TokenType::FhirQuery,
             LogosToken::Regulate => TokenType::Regulate,
 
             // Medical codes
@@ -503,8 +532,6 @@ impl<'source> Lexer<'source> {
             }
             self.offset += c.len_utf8();
         }
-
-        // Update the previous span end for the next call
         self.prev_span_end = span.end;
     }
 }
@@ -512,27 +539,12 @@ impl<'source> Lexer<'source> {
 impl Iterator for Lexer<'_> {
     type Item = Token;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let logos_token = self.logos_lexer.next()?;
-        let lexeme = self.logos_lexer.slice();
-
-        // Create token with current position before updating
-        let token = match logos_token {
-            Ok(token) => self.convert_token(token, lexeme),
-            Err(_) => Token::new(
-                TokenType::Error(format!("Invalid token at {}:{}", self.line, self.column)),
-                lexeme.to_string(),
-                Location {
-                    line: self.line,
-                    column: self.column,
-                    offset: self.offset,
-                },
-            ),
-        };
-
-        // Update position using the span from logos lexer
+    fn next(&mut self) -> Option<Token> {
         self.update_position();
-
+        let logos_token = self.logos_lexer.next()?.unwrap();
+        let lexeme = self.logos_lexer.slice();
+        let span = self.logos_lexer.span();
+        let token = self.convert_token(logos_token, lexeme, &span);
         Some(token)
     }
 }
@@ -571,7 +583,7 @@ mod tests {
         assert!(matches!(token.token_type, TokenType::Dot));
 
         let token = lexer.next().unwrap();
-        assert!(matches!(token.token_type, TokenType::Fhir));
+        assert!(matches!(token.token_type, TokenType::FhirQuery));
 
         let token = lexer.next().unwrap();
         assert!(matches!(token.token_type, TokenType::ICD10(ref s) if s == "ICD10:A01.1"));
