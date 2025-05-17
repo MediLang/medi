@@ -144,6 +144,21 @@ impl<'a> Lexer<'a> {
             LogosToken::StarEqual => TokenType::StarEqual,
             LogosToken::SlashEqual => TokenType::SlashEqual,
             LogosToken::PercentEqual => TokenType::PercentEqual,
+            LogosToken::DoubleStar => TokenType::DoubleStar,
+            LogosToken::DoubleStarAssign => TokenType::DoubleStarAssign,
+            LogosToken::BitAnd => TokenType::BitAnd,
+            LogosToken::BitAndAssign => TokenType::BitAndAssign,
+            // Bitwise OR is used as pipe in patterns
+            LogosToken::BitOr => TokenType::Pipe,
+            LogosToken::BitOrAssign => TokenType::BitOrAssign,
+            LogosToken::BitXor => TokenType::BitXor,
+            LogosToken::BitXorAssign => TokenType::BitXorAssign,
+            LogosToken::Shl => TokenType::Shl,
+            LogosToken::ShlAssign => TokenType::ShlAssign,
+            LogosToken::Shr => TokenType::Shr,
+            LogosToken::ShrAssign => TokenType::ShrAssign,
+            LogosToken::QuestionQuestion => TokenType::QuestionQuestion,
+            LogosToken::QuestionColon => TokenType::QuestionColon,
             LogosToken::Range => TokenType::Range,
             LogosToken::RangeInclusive => TokenType::RangeInclusive,
 
@@ -159,7 +174,6 @@ impl<'a> Lexer<'a> {
             LogosToken::Colon => TokenType::Colon,
             LogosToken::Semicolon => TokenType::Semicolon,
             LogosToken::Arrow => TokenType::Arrow,
-            LogosToken::Pipe => TokenType::Pipe,
             LogosToken::Underscore => TokenType::Underscore,
 
             // Error

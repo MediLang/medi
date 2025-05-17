@@ -30,22 +30,58 @@ pub struct BinaryExpressionNode {
     pub right: ExpressionNode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Binary operators in order of increasing precedence
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOperator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Eq,
-    Ne,
-    Lt,
-    Gt,
-    Le,
-    Ge,
-    And,
+    // Logical OR (left-associative)
     Or,
-    Range,
+
+    // Logical AND (left-associative)
+    And,
+
+    // Equality (left-associative)
+    Eq, // ==
+    Ne, // !=
+
+    // Comparison (left-associative)
+    Lt, // <
+    Le, // <=
+    Gt, // >
+    Ge, // >=
+
+    // Bitwise OR (left-associative)
+    BitOr, // |
+
+    // Bitwise XOR (left-associative)
+    BitXor, // ^
+
+    // Bitwise AND (left-associative)
+    BitAnd, // &
+
+    // Bit shifts (left-associative)
+    Shl, // <<
+    Shr, // >>
+
+    // Addition/Subtraction (left-associative)
+    Add, // +
+    Sub, // -
+
+    // Multiplication/Division/Modulo (left-associative)
+    Mul, // *
+    Div, // /
+    Mod, // %
+
+    // Exponentiation (right-associative)
+    Pow, // **
+
+    // Range (right-associative)
+    Range, // ..
+
+    // Null-coalescing (right-associative)
+    NullCoalesce, // ??
+
+    // Elvis operator (right-associative)
+    Elvis, // ?:
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -61,43 +61,80 @@ pub enum TokenType {
     SNOMED(String),
     CPT(String),
 
-    // Operators
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    Equal,
-    EqualEqual,
-    NotEqual,
-    Less,
-    Greater,
-    LessEqual,
-    GreaterEqual,
-    And,
-    Or,
-    Not,
-    Pipe,
-    Arrow,
-    FatArrow,
-    BitAnd,
-    BitOr,
-    BitXor,
-    BitNot,
-    DoubleStar,
-    DoubleSlash,
-    PlusEqual,
-    MinusEqual,
-    StarEqual,
-    SlashEqual,
-    PercentEqual,
-    DoubleStarAssign,
-    DoubleSlashAssign,
-    Shl,
-    Shr,
-    Range,
-    RangeInclusive,
-    Underscore,
+    // Operators - Grouped by precedence (lowest to highest)
+    // Logical OR
+    Or, // ||
+
+    // Logical AND
+    And, // &&
+
+    // Equality
+    EqualEqual, // ==
+    NotEqual,   // !=
+
+    // Comparison
+    Less,         // <
+    LessEqual,    // <=
+    Greater,      // >
+    GreaterEqual, // >=
+
+    // Bitwise OR
+    BitOr, // |
+
+    // Bitwise XOR
+    BitXor, // ^
+
+    // Bitwise AND
+    BitAnd, // &
+
+    // Bit shifts
+    Shl, // <<
+    Shr, // >>
+
+    // Addition/Subtraction
+    Plus,  // +
+    Minus, // -
+
+    // Multiplication/Division/Modulo
+    Star,    // *
+    Slash,   // /
+    Percent, // %
+
+    // Exponentiation
+    DoubleStar, // **
+
+    // Range
+    Range,          // ..
+    RangeInclusive, // ..=
+
+    // Null-coalescing
+    QuestionQuestion, // ??
+
+    // Elvis operator
+    QuestionColon, // ?:
+
+    // Assignment operators
+    Equal,             // =
+    PlusEqual,         // +=
+    MinusEqual,        // -=
+    StarEqual,         // *=
+    SlashEqual,        // /=
+    PercentEqual,      // %=
+    DoubleStarAssign,  // **=
+    DoubleSlashAssign, // //=
+    BitAndAssign,      // &=
+    BitOrAssign,       // |=
+    BitXorAssign,      // ^=
+    ShlAssign,         // <<=
+    ShrAssign,         // >>=
+
+    // Other operators
+    Not,        // !
+    BitNot,     // ~
+    Pipe,       // | (used in patterns)
+    Arrow,      // ->
+    FatArrow,   // =>
+    Underscore, // _
 
     // Literals
     Bool(bool),
