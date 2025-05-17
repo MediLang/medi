@@ -50,8 +50,8 @@ mod expressions {
 
     #[test]
     fn test_range_expression() {
-        // Test range expression
-        let input = "1..10";
+        // Test range expression with spaces
+        let input = "1 .. 10";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let (_, expr) = parse_expression(token_slice).unwrap();
         match expr {

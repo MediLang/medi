@@ -1,7 +1,13 @@
 use logos::Logos;
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, Clone)]
 pub enum LogosToken {
+    // Range operators (higher priority to match before float literals)
+    #[token("..=", priority = 1000)]
+    RangeInclusive,
+    #[token("..", priority = 999)]
+    Range,
+    
     // Keywords
     #[token("module")]
     Module,
@@ -41,16 +47,26 @@ pub enum LogosToken {
     If,
     #[token("else")]
     Else,
-
-    // Literals
-    #[regex(r"[0-9]+", |lex| {
-        lex.slice().parse::<i64>().map_err(|_| ())
-    })]
+    
+    // Single dot (for member access)
+    #[token(".")]
+    Dot,
+    
+    // Integer literals (including negative numbers)
+    #[regex(r"-?[0-9]+", |lex| lex.slice().parse().ok())]
     Integer(i64),
-    #[regex(r"[0-9]+\.[0-9]+", |lex| {
-        lex.slice().parse::<f64>().map_err(|_| ())
+    
+    // Float literals (must come after range operators)
+    // This regex matches:
+    // 1. Numbers with a decimal point and at least one digit after it (e.g., 3.14)
+    // 2. Numbers with a leading decimal point (e.g., .5)
+    // 3. Numbers in scientific notation (e.g., 1e10, 2.5e-3)
+    #[regex(r"[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?|\.[0-9]+([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+", |lex| {
+        lex.slice().parse().map_err(|_| ())
     })]
     Float(f64),
+    
+    // String literals - must start and end with a quote
     #[regex(r#""[^"\\]*(?:\\.[^"\\]*)*""#, |lex| {
         let s = lex.slice();
         // Remove the surrounding quotes and unescape the string
@@ -92,10 +108,6 @@ pub enum LogosToken {
         Ok::<_, ()>(s.to_string())
     })]
     CPT(String),
-
-    // Dot token
-    #[token(".")]
-    Dot,
 
     // Healthcare keywords
     #[token("patient")]
@@ -163,10 +175,7 @@ pub enum LogosToken {
     SlashEqual,
     #[token("%=")]
     PercentEqual,
-    #[token("..")]
-    DotDot,
-    #[token("..=")]
-    DotDotEqual,
+    // Range operators are now defined at the top with higher priority
 
     // Delimiters
     #[token("(")]

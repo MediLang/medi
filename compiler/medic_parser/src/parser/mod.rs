@@ -436,7 +436,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<BinaryOperator> {
         TokenType::GreaterEqual => Some(BinaryOperator::Ge),
         TokenType::And => Some(BinaryOperator::And),
         TokenType::Or => Some(BinaryOperator::Or),
-        TokenType::DotDot => Some(BinaryOperator::Range),
+        TokenType::Range => Some(BinaryOperator::Range),
         _ => None,
     }
 }

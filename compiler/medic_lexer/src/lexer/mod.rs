@@ -3,38 +3,43 @@
 
 use logos::Logos;
 use std::ops::Range;
+use std::collections::VecDeque;
 
 use crate::token::{Location, Token, TokenType};
 use crate::LogosToken;
 
 /// The main lexer struct that holds the state of the lexing process
 pub struct Lexer<'a> {
-    /// The source code being lexed
-    source: &'a str,
-    /// The current line number (1-based)
-    line: u32,
-    /// The current column number (1-based)
-    column: u32,
-    /// The current byte offset in the source
-    offset: usize,
     /// The inner Logos lexer
     inner: logos::Lexer<'a, LogosToken>,
+    
+    /// The source code being lexed
+    source: &'a str,
+    
+    /// Current byte offset in the source
+    offset: usize,
+    
+    /// Current line number (1-based)
+    line: u32,
+    
+    /// Current column number (1-based, in characters, not bytes)
+    column: u32,
+    
+    /// Tokens that have been generated but not yet returned
+    pending_tokens: VecDeque<Token>,
 }
 
 impl<'a> Lexer<'a> {
     /// Create a new lexer for the given source code
     pub fn new(source: &'a str) -> Self {
         let inner = LogosToken::lexer(source);
-        let line = 1;
-        let column = 1;
-        let offset = 0;
-
         Self {
-            source,
-            line,
-            column,
-            offset,
             inner,
+            source,
+            line: 1,
+            column: 1,
+            offset: 0,
+            pending_tokens: VecDeque::new(),
         }
     }
 
@@ -45,19 +50,13 @@ impl<'a> Lexer<'a> {
         let text = &self.source[self.offset..span.start];
 
         // Count newlines and update position
-        let mut iter = text.chars().peekable();
-        while let Some(c) = iter.next() {
+        for c in text.chars() {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
             } else if c == '\r' {
-                // Handle Windows line endings (\r\n)
-                if iter.peek() == Some(&'\n') {
-                    // Skip the next character since we've already handled this newline
-                    iter.next();
-                }
-                self.line += 1;
-                self.column = 1;
+                // Handle Windows line endings
+                continue;
             } else {
                 self.column += 1;
             }
@@ -65,6 +64,17 @@ impl<'a> Lexer<'a> {
 
         // Update the offset to the start of the current token
         self.offset = span.start;
+    }
+    
+    /// Create a location from a span
+    fn location_from_span(&self, span: &Range<usize>) -> Location {
+        // For simplicity, we'll use the current line/column as a base
+        // A more sophisticated implementation would track line/column for each span
+        Location {
+            line: self.line as usize,
+            column: self.column as usize,
+            offset: span.start,
+        }
     }
 
     /// Convert a LogosToken to our semantic TokenType
@@ -74,13 +84,6 @@ impl<'a> Lexer<'a> {
         lexeme: &str,
         span: &Range<usize>,
     ) -> Token {
-        // Capture position *before* we advance
-        let start_location = crate::token::Location {
-            line: self.line as usize,
-            column: self.column as usize,
-            offset: self.offset,
-        };
-
         // Update our position tracking
         self.sync_position_to(span);
 
@@ -109,7 +112,7 @@ impl<'a> Lexer<'a> {
 
             // Literals
             LogosToken::Integer(i) => TokenType::Integer(i),
-            LogosToken::Float(f) => TokenType::Float(f), // f32 to f64 conversion is handled in the LogosToken definition
+            LogosToken::Float(f) => TokenType::Float(f),
             LogosToken::String(s) => TokenType::String(s),
             LogosToken::Bool(b) => TokenType::Bool(b),
             LogosToken::Identifier(ident) => TokenType::Identifier(ident), // Standard keywords are already handled by LogosToken variants
@@ -141,8 +144,8 @@ impl<'a> Lexer<'a> {
             LogosToken::StarEqual => TokenType::StarEqual,
             LogosToken::SlashEqual => TokenType::SlashEqual,
             LogosToken::PercentEqual => TokenType::PercentEqual,
-            LogosToken::DotDot => TokenType::DotDot,
-            LogosToken::DotDotEqual => TokenType::DotDotEqual,
+            LogosToken::Range => TokenType::Range,
+            LogosToken::RangeInclusive => TokenType::RangeInclusive,
 
             // Delimiters
             LogosToken::LeftParen => TokenType::LeftParen,
@@ -175,113 +178,97 @@ impl<'a> Lexer<'a> {
             LogosToken::RealTime => TokenType::RealTime,
 
             // Skip whitespace and comments
-            LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment => {
-                // Skip these tokens as they don't affect the syntax
-                if let Some(token) = self.next_token() {
-                    return token;
-                } else {
-                    // If there are no more tokens, return an error token
-                    return Token {
-                        token_type: TokenType::LexerError,
-                        lexeme: "".to_string(),
-                        location: Location {
-                            line: self.line as usize,
-                            column: self.column as usize,
-                            offset: self.offset,
-                        },
-                    };
-                }
-            }
+            LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment => TokenType::Whitespace,
         };
 
-        // Create the token with the correct location information
+        // Create and return the token
         Token {
             token_type,
             lexeme: lexeme.to_string(),
-            location: start_location,
+            location: Location {
+                line: self.line as usize,
+                column: self.column as usize,
+                offset: self.offset,
+            },
         }
     }
-}
 
-impl Lexer<'_> {
-    /// Get the next token from the source code
+    /// Get the next token from the input stream
     pub fn next_token(&mut self) -> Option<Token> {
-        loop {
-            // Get the next token from the inner lexer
-            let logos_token = match self.inner.next()? {
-                Ok(token) => token,
-                Err(e) => {
-                    println!("Lexer error: {:?}", e);
-                    return None;
+        // If we have pending tokens, return them first
+        if let Some(token) = self.pending_tokens.pop_front() {
+            return Some(token);
+        }
+
+        // Get the next token from Logos
+        let (logos_token, span) = loop {
+            let token = match self.inner.next()? {
+                Ok(t) => t,
+                Err(_) => {
+                    let span = self.inner.span();
+                    let lexeme = &self.source[span.clone()];
+                    return Some(Token {
+                        token_type: TokenType::LexerError,
+                        lexeme: lexeme.to_string(),
+                        location: self.location_from_span(&span),
+                    });
                 }
             };
 
-            // Get the span of the current token
-            let span = self.inner.span();
-
-            // Get the lexeme from the source
-            let lexeme = &self.source[span.clone()];
-
-            // Debug output
-            println!(
-                "Processing token: {:?} '{}' at {:?} (span: {:?})",
-                logos_token,
-                lexeme,
-                span,
-                lexeme.as_bytes()
-            );
-
-            // Update position tracking
-            self.sync_position_to(&span);
-
-            // Handle whitespace and comments (skip them)
-            match &logos_token {
-                LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment => {
-                    println!("Skipping token: {:?}", logos_token);
-                    continue;
-                }
-
-                LogosToken::Error => {
-                    println!("Error token found: '{}'", lexeme);
-                    // Try to treat it as an identifier if it starts with a letter or underscore
-                    if lexeme
-                        .chars()
-                        .next()
-                        .is_some_and(|c| c.is_alphabetic() || c == '_' || !c.is_ascii())
-                    {
-                        println!("Treating as identifier: '{}'", lexeme);
-                        let token = Token {
-                            token_type: TokenType::Identifier(lexeme.to_string()),
-                            lexeme: lexeme.to_string(),
-                            location: Location {
-                                line: self.line as usize,
-                                column: self.column as usize,
-                                offset: self.offset,
-                            },
-                        };
-                        return Some(token);
-                    } else {
-                        println!("Invalid token: '{}'", lexeme);
-                        return Some(Token {
-                            token_type: TokenType::Error(format!("Invalid token: {}", lexeme)),
-                            lexeme: lexeme.to_string(),
-                            location: Location {
-                                line: self.line as usize,
-                                column: self.column as usize,
-                                offset: self.offset,
-                            },
-                        });
-                    }
-                }
-
-                _ => {
-                    // For all other tokens, convert them using the convert_token method
-                    let token = self.convert_token(logos_token, lexeme, &span);
-                    println!("Generated token: {:?}", token);
-                    return Some(token);
-                }
+            // Skip whitespace and comments
+            if !matches!(&token, LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment) {
+                break (token, self.inner.span());
             }
-        }
+        };
+
+        let lexeme = &self.source[span.clone()];
+        
+        // Convert the token
+        let token = match logos_token {
+            LogosToken::Range => Token {
+                token_type: TokenType::Range,
+                lexeme: lexeme.to_string(),
+                location: self.location_from_span(&span),
+            },
+            LogosToken::RangeInclusive => Token {
+                token_type: TokenType::RangeInclusive,
+                lexeme: lexeme.to_string(),
+                location: self.location_from_span(&span),
+            },
+            LogosToken::Integer(_) => {
+                // Check if this is followed by a range operator
+                let remaining = &self.source[span.end..];
+                if remaining.starts_with("..") {
+                    // Check for inclusive range
+                    let (range_type, range_len) = if remaining.starts_with("..=") {
+                        (TokenType::RangeInclusive, 3)
+                    } else {
+                        (TokenType::Range, 2)
+                    };
+
+                    // Create range token
+                    let range_span = span.end..(span.end + range_len);
+                    let range_lexeme = &self.source[range_span.clone()];
+                    let range_token = Token {
+                        token_type: range_type,
+                        lexeme: range_lexeme.to_string(),
+                        location: self.location_from_span(&range_span),
+                    };
+                    
+                    // Queue the range token
+                    self.pending_tokens.push_back(range_token);
+                    
+                    // Update the inner lexer's position by bumping the characters
+                    self.inner.bump(range_len);
+                }
+                
+                // Return the integer token
+                self.convert_token(logos_token, lexeme, &span)
+            },
+            _ => self.convert_token(logos_token, lexeme, &span),
+        };
+        
+        Some(token)
     }
 }
 

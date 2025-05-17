@@ -96,8 +96,7 @@ pub enum TokenType {
     Shl,
     Shr,
     Range,
-    DotDot,
-    DotDotEqual,
+    RangeInclusive,
     Underscore,
 
     // Literals
