@@ -31,33 +31,67 @@ fn test_lexer_float_numbers() {
 
     // Expected tokens: [let, x, =, 3.14, ;, let, y, =, 0.5, ;, let, z, =, 1e10, ;, let, w, =, 2.5e-3, ;, let, a, =, 42, ., ;]
     assert_eq!(tokens.len(), 26, "Unexpected number of tokens");
-    
+
     // Check the first float (3.14)
-    assert_eq!(tokens[3].token_type, TokenType::Float(3.14), "Expected Float(3.14) at position 3");
-    
+    match tokens[3].token_type {
+        TokenType::Float(value) => assert!(
+            (value - std::f64::consts::PI).abs() < f64::EPSILON,
+            "Expected Float(3.14) at position 3, got {}",
+            value
+        ),
+        _ => panic!(
+            "Expected Float at position 3, got {:?}",
+            tokens[3].token_type
+        ),
+    }
+
     // Check the float with leading decimal point (.5)
-    assert_eq!(tokens[8].token_type, TokenType::Float(0.5), "Expected Float(0.5) at position 8");
-    
+    assert_eq!(
+        tokens[8].token_type,
+        TokenType::Float(0.5),
+        "Expected Float(0.5) at position 8"
+    );
+
     // Check the scientific notation (1e10)
     match tokens[13].token_type {
-        TokenType::Float(value) => assert!((value - 10000000000.0).abs() < f64::EPSILON, "Expected value close to 10000000000.0, got {}", value),
-        _ => panic!("Expected Float token at position 13, got {:?}", tokens[13].token_type),
+        TokenType::Float(value) => assert!(
+            (value - 10000000000.0).abs() < f64::EPSILON,
+            "Expected value close to 10000000000.0, got {}",
+            value
+        ),
+        _ => panic!(
+            "Expected Float token at position 13, got {:?}",
+            tokens[13].token_type
+        ),
     }
-    
+
     // Check the scientific notation with negative exponent (2.5e-3)
     match tokens[18].token_type {
-        TokenType::Float(value) => assert!((value - 0.0025).abs() < f64::EPSILON, "Expected value close to 0.0025, got {}", value),
-        _ => panic!("Expected Float token at position 18, got {:?}", tokens[18].token_type),
+        TokenType::Float(value) => assert!(
+            (value - 0.0025).abs() < f64::EPSILON,
+            "Expected value close to 0.0025, got {}",
+            value
+        ),
+        _ => panic!(
+            "Expected Float token at position 18, got {:?}",
+            tokens[18].token_type
+        ),
     }
-    
+
     // Check the integer with trailing dot (42.)
     match tokens[23].token_type {
-        TokenType::Integer(42) => {},
-        _ => panic!("Expected Integer(42) at position 23, got {:?}", tokens[23].token_type),
+        TokenType::Integer(42) => {}
+        _ => panic!(
+            "Expected Integer(42) at position 23, got {:?}",
+            tokens[23].token_type
+        ),
     }
     match tokens[24].token_type {
-        TokenType::Dot => {},
-        _ => panic!("Expected Dot at position 24, got {:?}", tokens[24].token_type),
+        TokenType::Dot => {}
+        _ => panic!(
+            "Expected Dot at position 24, got {:?}",
+            tokens[24].token_type
+        ),
     }
 }
 
@@ -67,28 +101,31 @@ fn test_lexer_range_operator() {
     let mut lexer = Lexer::new(input);
 
     println!("Input: {}", input);
-    
+
     // Collect tokens and print detailed information
     let mut tokens = Vec::new();
-    
+
     // Print lexer state before processing
     println!("\n=== Lexer State Before Processing ===");
     println!("Source: {}", input);
-    
+
     // Process tokens one by one to see what's happening
     loop {
         match lexer.next() {
             Some(token) => {
-                println!("\nProcessing token: {:?} (lexeme: '{}')", token.token_type, token.lexeme);
+                println!(
+                    "\nProcessing token: {:?} (lexeme: '{}')",
+                    token.token_type, token.lexeme
+                );
                 println!("  Location: {:?}", token.location);
                 tokens.push(token);
-                
+
                 // Stop after a reasonable number of tokens to prevent infinite loops
                 if tokens.len() > 10 {
                     println!("\nWarning: More than 10 tokens generated, possible infinite loop");
                     break;
                 }
-            },
+            }
             None => {
                 println!("\nNo more tokens. Total tokens: {}", tokens.len());
                 break;
@@ -99,54 +136,90 @@ fn test_lexer_range_operator() {
     // Print all tokens for debugging
     println!("\n=== All Tokens ({}): ===", tokens.len());
     for (i, token) in tokens.iter().enumerate() {
-        println!("  {}: {:?} (lexeme: '{}')", i, token.token_type, token.lexeme);
+        println!(
+            "  {}: {:?} (lexeme: '{}')",
+            i, token.token_type, token.lexeme
+        );
     }
 
     // Check if we got any tokens at all
     if tokens.is_empty() {
         panic!("No tokens were generated from the input");
     }
-    
+
     // Print the first token's debug info
     if let Some(first_token) = tokens.first() {
-        println!("\nFirst token: {:?} (lexeme: '{}')", first_token.token_type, first_token.lexeme);
+        println!(
+            "\nFirst token: {:?} (lexeme: '{}')",
+            first_token.token_type, first_token.lexeme
+        );
     }
-    
+
     // Check the number of tokens (should be 3: 1, .., 10)
     if tokens.len() != 3 {
         println!("\nExpected 3 tokens but got {}:", tokens.len());
         for (i, token) in tokens.iter().enumerate() {
-            println!("  {}: {:?} (lexeme: '{}')", i, token.token_type, token.lexeme);
+            println!(
+                "  {}: {:?} (lexeme: '{}')",
+                i, token.token_type, token.lexeme
+            );
         }
         panic!("Unexpected number of tokens");
     }
 
     // Check each token
-    assert_eq!(tokens[0].token_type, TokenType::Integer(1), "Expected Integer(1) at position 0");
-    assert_eq!(tokens[1].token_type, TokenType::Range, "Expected Range token at position 1");
-    assert_eq!(tokens[2].token_type, TokenType::Integer(10), "Expected Integer(10) at position 2");
-    
+    assert_eq!(
+        tokens[0].token_type,
+        TokenType::Integer(1),
+        "Expected Integer(1) at position 0"
+    );
+    assert_eq!(
+        tokens[1].token_type,
+        TokenType::Range,
+        "Expected Range token at position 1"
+    );
+    assert_eq!(
+        tokens[2].token_type,
+        TokenType::Integer(10),
+        "Expected Integer(10) at position 2"
+    );
+
     // Verify the lexemes
     assert_eq!(tokens[0].lexeme, "1", "Expected lexeme '1' at position 0");
     assert_eq!(tokens[1].lexeme, "..", "Expected lexeme '..' at position 1");
     assert_eq!(tokens[2].lexeme, "10", "Expected lexeme '10' at position 2");
-    
+
     // Also test with spaces around the range operator
     let input_with_spaces = "1 .. 10";
     let lexer = Lexer::new(input_with_spaces);
     let tokens: Vec<Token> = lexer.collect();
-    
+
     println!("\nInput with spaces: {}", input_with_spaces);
     println!("All tokens ({}):", tokens.len());
     for (i, token) in tokens.iter().enumerate() {
-        println!("  {}: {:?} (lexeme: '{}')", i, token.token_type, token.lexeme);
+        println!(
+            "  {}: {:?} (lexeme: '{}')",
+            i, token.token_type, token.lexeme
+        );
     }
-    
+
     // Should still be 3 tokens (whitespace is skipped)
     assert_eq!(tokens.len(), 3, "Unexpected number of tokens with spaces");
-    assert_eq!(tokens[0].token_type, TokenType::Integer(1), "Expected Integer(1) at position 0 with spaces");
-    assert_eq!(tokens[1].token_type, TokenType::Range, "Expected Range token at position 1 with spaces");
-    assert_eq!(tokens[2].token_type, TokenType::Integer(10), "Expected Integer(10) at position 2 with spaces");
+    assert_eq!(
+        tokens[0].token_type,
+        TokenType::Integer(1),
+        "Expected Integer(1) at position 0 with spaces"
+    );
+    assert_eq!(
+        tokens[1].token_type,
+        TokenType::Range,
+        "Expected Range token at position 1 with spaces"
+    );
+    assert_eq!(
+        tokens[2].token_type,
+        TokenType::Integer(10),
+        "Expected Integer(10) at position 2 with spaces"
+    );
 }
 
 #[test]

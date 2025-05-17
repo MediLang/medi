@@ -7,7 +7,7 @@ pub enum LogosToken {
     RangeInclusive,
     #[token("..", priority = 999)]
     Range,
-    
+
     // Keywords
     #[token("module")]
     Module,
@@ -47,15 +47,15 @@ pub enum LogosToken {
     If,
     #[token("else")]
     Else,
-    
+
     // Single dot (for member access)
     #[token(".")]
     Dot,
-    
+
     // Integer literals (including negative numbers)
     #[regex(r"-?[0-9]+", |lex| lex.slice().parse().ok())]
     Integer(i64),
-    
+
     // Float literals (must come after range operators)
     // This regex matches:
     // 1. Numbers with a decimal point and at least one digit after it (e.g., 3.14)
@@ -65,7 +65,7 @@ pub enum LogosToken {
         lex.slice().parse().map_err(|_| ())
     })]
     Float(f64),
-    
+
     // String literals - must start and end with a quote
     #[regex(r#""[^"\\]*(?:\\.[^"\\]*)*""#, |lex| {
         let s = lex.slice();

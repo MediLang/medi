@@ -1,5 +1,4 @@
 use super::*;
-use medic_ast::ast::{BlockNode, ExpressionNode, StatementNode};
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
 
@@ -12,11 +11,9 @@ fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
 }
 
 #[cfg(test)]
-mod statements {
+mod statements_test {
     use super::*;
-    use medic_ast::ast::{
-        AssignmentNode, ExpressionNode, IdentifierNode, LiteralNode, StatementNode,
-    };
+    use medic_ast::ast::StatementNode;
 
     #[test]
     fn test_let_statement() {

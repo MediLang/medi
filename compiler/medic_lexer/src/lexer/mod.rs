@@ -2,8 +2,8 @@
 //! Converts source code into a stream of tokens for the parser
 
 use logos::Logos;
-use std::ops::Range;
 use std::collections::VecDeque;
+use std::ops::Range;
 
 use crate::token::{Location, Token, TokenType};
 use crate::LogosToken;
@@ -12,19 +12,19 @@ use crate::LogosToken;
 pub struct Lexer<'a> {
     /// The inner Logos lexer
     inner: logos::Lexer<'a, LogosToken>,
-    
+
     /// The source code being lexed
     source: &'a str,
-    
+
     /// Current byte offset in the source
     offset: usize,
-    
+
     /// Current line number (1-based)
     line: u32,
-    
+
     /// Current column number (1-based, in characters, not bytes)
     column: u32,
-    
+
     /// Tokens that have been generated but not yet returned
     pending_tokens: VecDeque<Token>,
 }
@@ -65,7 +65,7 @@ impl<'a> Lexer<'a> {
         // Update the offset to the start of the current token
         self.offset = span.start;
     }
-    
+
     /// Create a location from a span
     fn location_from_span(&self, span: &Range<usize>) -> Location {
         // For simplicity, we'll use the current line/column as a base
@@ -178,7 +178,9 @@ impl<'a> Lexer<'a> {
             LogosToken::RealTime => TokenType::RealTime,
 
             // Skip whitespace and comments
-            LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment => TokenType::Whitespace,
+            LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment => {
+                TokenType::Whitespace
+            }
         };
 
         // Create and return the token
@@ -216,13 +218,16 @@ impl<'a> Lexer<'a> {
             };
 
             // Skip whitespace and comments
-            if !matches!(&token, LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment) {
+            if !matches!(
+                &token,
+                LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment
+            ) {
                 break (token, self.inner.span());
             }
         };
 
         let lexeme = &self.source[span.clone()];
-        
+
         // Convert the token
         let token = match logos_token {
             LogosToken::Range => Token {
@@ -254,20 +259,20 @@ impl<'a> Lexer<'a> {
                         lexeme: range_lexeme.to_string(),
                         location: self.location_from_span(&range_span),
                     };
-                    
+
                     // Queue the range token
                     self.pending_tokens.push_back(range_token);
-                    
+
                     // Update the inner lexer's position by bumping the characters
                     self.inner.bump(range_len);
                 }
-                
+
                 // Return the integer token
                 self.convert_token(logos_token, lexeme, &span)
-            },
+            }
             _ => self.convert_token(logos_token, lexeme, &span),
         };
-        
+
         Some(token)
     }
 }

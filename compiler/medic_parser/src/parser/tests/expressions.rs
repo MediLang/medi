@@ -1,5 +1,4 @@
 use super::*;
-use medic_ast::ast::{ExpressionNode, LiteralNode};
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
 
@@ -12,9 +11,9 @@ fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
 }
 
 #[cfg(test)]
-mod expressions {
+mod expressions_test {
     use super::*;
-    use medic_ast::ast::{BinaryExpressionNode, BinaryOperator, ExpressionNode, LiteralNode};
+    use medic_ast::ast::{BinaryOperator, ExpressionNode};
 
     #[test]
     fn test_operator_precedence() {
