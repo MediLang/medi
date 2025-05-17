@@ -119,7 +119,7 @@ pub enum LogosToken {
     #[token("real_time")]
     RealTime,
 
-    // Error token (with lower priority)
+    /// Unrecognised input
     Error,
 
     // Operators
