@@ -45,6 +45,10 @@ pub enum TokenType {
     Observation,
     Medication,
 
+    // Medical operators
+    Of,
+    Per,
+
     // Literals
     Integer(i64),
     Float(f64),

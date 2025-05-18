@@ -116,6 +116,12 @@ pub enum LogosToken {
     Observation,
     #[token("medication")]
     Medication,
+
+    // Medical operators
+    #[token("of")]
+    Of,
+    #[token("per")]
+    Per,
     #[token("fhir_query")]
     FhirQuery,
     #[token("query")]

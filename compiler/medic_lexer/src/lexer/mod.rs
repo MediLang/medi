@@ -115,7 +115,18 @@ impl<'a> Lexer<'a> {
             LogosToken::Float(f) => TokenType::Float(f),
             LogosToken::String(s) => TokenType::String(s),
             LogosToken::Bool(b) => TokenType::Bool(b),
-            LogosToken::Identifier(ident) => TokenType::Identifier(ident), // Standard keywords are already handled by LogosToken variants
+            LogosToken::Identifier(ident) => {
+                // Check if this identifier is a keyword that wasn't handled by Logos
+                match ident.as_str() {
+                    "of" => TokenType::Of,
+                    "per" => TokenType::Per,
+                    _ => TokenType::Identifier(ident),
+                }
+            }
+
+            // Medical operators
+            LogosToken::Of => TokenType::Of,
+            LogosToken::Per => TokenType::Per,
 
             // Medical codes
             LogosToken::ICD10(code) => TokenType::ICD10(code),

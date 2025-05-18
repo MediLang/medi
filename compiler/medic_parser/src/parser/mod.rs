@@ -307,32 +307,33 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 /// Returns the operator and whether it's right-associative (true) or left-associative (false)
 pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bool)> {
     match token_type {
-        // Logical OR (left-associative)
-        TokenType::Or => Some((BinaryOperator::Or, false)),
+        // Medical operators
+        TokenType::Of => Some((BinaryOperator::Of, false)),
+        TokenType::Per => Some((BinaryOperator::Per, false)),
+        TokenType::Arrow => Some((BinaryOperator::UnitConversion, true)),
 
-        // Logical AND (left-associative)
-        TokenType::And => Some((BinaryOperator::And, false)),
-
-        // Equality (left-associative)
+        // Standard operators
+        TokenType::Plus => Some((BinaryOperator::Add, false)),
+        TokenType::Minus => Some((BinaryOperator::Sub, false)),
+        TokenType::Star => Some((BinaryOperator::Mul, false)),
+        TokenType::Slash => Some((BinaryOperator::Div, false)),
+        TokenType::Percent => Some((BinaryOperator::Mod, false)),
+        TokenType::DoubleStar => Some((BinaryOperator::Pow, true)),
+        TokenType::BitAnd => Some((BinaryOperator::BitAnd, false)),
+        TokenType::BitOr => Some((BinaryOperator::BitOr, false)),
+        TokenType::Shl => Some((BinaryOperator::Shl, false)),
+        TokenType::Shr => Some((BinaryOperator::Shr, false)),
         TokenType::EqualEqual => Some((BinaryOperator::Eq, false)),
         TokenType::NotEqual => Some((BinaryOperator::Ne, false)),
-
-        // Comparison (left-associative)
         TokenType::Less => Some((BinaryOperator::Lt, false)),
         TokenType::LessEqual => Some((BinaryOperator::Le, false)),
         TokenType::Greater => Some((BinaryOperator::Gt, false)),
         TokenType::GreaterEqual => Some((BinaryOperator::Ge, false)),
-
-        // Addition/Subtraction (left-associative)
-        TokenType::Plus => Some((BinaryOperator::Add, false)),
-        TokenType::Minus => Some((BinaryOperator::Sub, false)),
-
-        // Multiplication/Division/Modulo (left-associative)
-        TokenType::Star => Some((BinaryOperator::Mul, false)),
-        TokenType::Slash => Some((BinaryOperator::Div, false)),
-        TokenType::Percent => Some((BinaryOperator::Mod, false)),
-
-        // Not a binary operator
+        TokenType::QuestionQuestion => Some((BinaryOperator::NullCoalesce, true)),
+        TokenType::QuestionColon => Some((BinaryOperator::Elvis, true)),
+        TokenType::Range => Some((BinaryOperator::Range, false)),
+        TokenType::And => Some((BinaryOperator::And, false)),
+        TokenType::Or => Some((BinaryOperator::Or, false)),
         _ => None,
     }
 }
@@ -341,47 +342,56 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
 /// Higher numbers mean higher precedence
 pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
     match op {
-        // Logical OR (lowest precedence)
-        BinaryOperator::Or => 1,
+        // Unit conversion (highest precedence)
+        BinaryOperator::UnitConversion => 16,
 
-        // Logical AND
-        BinaryOperator::And => 2,
+        // Medical 'of' operator (e.g., '2 of 3 doses')
+        BinaryOperator::Of => 15,
 
-        // Null-coalescing (??)
-        BinaryOperator::NullCoalesce => 3,
+        // Range operator (has its own special handling in the parser)
+        BinaryOperator::Range => 14,
 
-        // Elvis operator (?:)
-        BinaryOperator::Elvis => 4,
-
-        // Equality
-        BinaryOperator::Eq | BinaryOperator::Ne => 5,
-
-        // Comparison
-        BinaryOperator::Lt | BinaryOperator::Le | BinaryOperator::Gt | BinaryOperator::Ge => 6,
-
-        // Bitwise OR
-        BinaryOperator::BitOr => 7,
-
-        // Bitwise XOR
-        BinaryOperator::BitXor => 8,
-
-        // Bitwise AND
-        BinaryOperator::BitAnd => 9,
-
-        // Bit shifts
-        BinaryOperator::Shl | BinaryOperator::Shr => 10,
-
-        // Addition/Subtraction
-        BinaryOperator::Add | BinaryOperator::Sub => 11,
+        // Exponentiation
+        BinaryOperator::Pow => 13,
 
         // Multiplication/Division/Modulo
         BinaryOperator::Mul | BinaryOperator::Div | BinaryOperator::Mod => 12,
 
-        // Exponentiation (highest precedence among binary operators)
-        BinaryOperator::Pow => 13,
+        // Addition/Subtraction
+        BinaryOperator::Add | BinaryOperator::Sub => 11,
 
-        // Range operator (has its own special handling in the parser)
-        BinaryOperator::Range => 14,
+        // Medical 'per' operator (e.g., '5 mg per day')
+        BinaryOperator::Per => 10,
+
+        // Bit shifts
+        BinaryOperator::Shl | BinaryOperator::Shr => 9,
+
+        // Bitwise AND
+        BinaryOperator::BitAnd => 8,
+
+        // Bitwise XOR
+        BinaryOperator::BitXor => 7,
+
+        // Bitwise OR
+        BinaryOperator::BitOr => 6,
+
+        // Comparison
+        BinaryOperator::Lt | BinaryOperator::Le | BinaryOperator::Gt | BinaryOperator::Ge => 5,
+
+        // Equality
+        BinaryOperator::Eq | BinaryOperator::Ne => 4,
+
+        // Elvis operator (?:)
+        BinaryOperator::Elvis => 3,
+
+        // Null-coalescing (??)
+        BinaryOperator::NullCoalesce => 2,
+
+        // Logical AND
+        BinaryOperator::And => 1,
+
+        // Logical OR (lowest precedence)
+        BinaryOperator::Or => 0,
     }
 }
 

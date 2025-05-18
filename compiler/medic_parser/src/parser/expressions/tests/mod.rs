@@ -39,3 +39,96 @@ mod expressions_test {
 
     // Add other test functions here...
 }
+
+#[cfg(test)]
+mod medical_operators_test {
+    use super::*;
+    use medic_ast::ast::{BinaryOperator, ExpressionNode, LiteralNode};
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_of_operator() {
+        // 2 of 3 doses should be parsed as (2 of 3) doses
+        let (input, _) = str_to_token_slice("2 of 3 doses");
+        let (_, expr) = parse_expression(input).unwrap();
+
+        // Debug output
+        println!("Parsed expression: {:#?}", expr);
+
+        match &expr {
+            ExpressionNode::Binary(bin) => {
+                assert_eq!(bin.operator, BinaryOperator::Of);
+                // The left side should be a literal integer 2
+                if let ExpressionNode::Literal(lit) = &bin.left {
+                    assert_eq!(format!("{:?}", lit), "Int(2)");
+                } else {
+                    panic!("Expected literal integer on left");
+                }
+
+                if let ExpressionNode::Binary(right_bin) = &bin.right {
+                    assert_eq!(right_bin.operator, BinaryOperator::Mul);
+                    // The left side of the multiplication should be a literal integer 3
+                    if let ExpressionNode::Literal(lit) = &right_bin.left {
+                        assert_eq!(format!("{:?}", lit), "Int(3)");
+                    } else {
+                        panic!("Expected literal integer on left of multiplication");
+                    }
+                    // The right side should be an identifier "doses"
+                    if let ExpressionNode::Identifier(ident) = &right_bin.right {
+                        assert_eq!(ident.name, "doses");
+                    } else {
+                        panic!("Expected identifier on right of multiplication");
+                    }
+                } else {
+                    panic!("Expected binary expression on right");
+                }
+            }
+            _ => panic!("Expected binary expression"),
+        }
+    }
+
+    #[test]
+    fn test_per_operator() {
+        // 5 mg per day should be parsed as (5 mg) per day
+        let (input, _) = str_to_token_slice("5 mg per day");
+        let (_, expr) = parse_expression(input).unwrap();
+
+        // Debug output
+        println!("Parsed expression: {:#?}", expr);
+
+        match &expr {
+            ExpressionNode::Binary(bin) => {
+                assert_eq!(bin.operator, BinaryOperator::Per);
+
+                // The left side should be a binary expression with multiplication
+                if let ExpressionNode::Binary(left_bin) = &bin.left {
+                    assert_eq!(left_bin.operator, BinaryOperator::Mul);
+
+                    // The left side of the multiplication should be a literal integer 5
+                    if let ExpressionNode::Literal(lit) = &left_bin.left {
+                        assert_eq!(format!("{:?}", lit), "Int(5)");
+                    } else {
+                        panic!("Expected literal integer 5 on left of multiplication");
+                    }
+
+                    // The right side of the multiplication should be an identifier "mg"
+                    if let ExpressionNode::Identifier(ident) = &left_bin.right {
+                        assert_eq!(ident.name, "mg");
+                    } else {
+                        panic!("Expected identifier 'mg' on right of multiplication");
+                    }
+                } else {
+                    panic!("Expected binary expression on left");
+                }
+
+                // The right side should be an identifier "day"
+                if let ExpressionNode::Identifier(ident) = &bin.right {
+                    assert_eq!(ident.name, "day");
+                } else {
+                    panic!("Expected identifier 'day' on right");
+                }
+            }
+            _ => panic!("Expected binary expression"),
+        }
+    }
+}

@@ -39,6 +39,10 @@ pub enum BinaryOperator {
     // Logical AND (left-associative)
     And,
 
+    // Medical-specific operators (left-associative)
+    Of,  // 'of' for temporal quantities (e.g., '2 of 3 doses')
+    Per, // 'per' for rates (e.g., '5 mg per day')
+
     // Equality (left-associative)
     Eq, // ==
     Ne, // !=
@@ -48,6 +52,9 @@ pub enum BinaryOperator {
     Le, // <=
     Gt, // >
     Ge, // >=
+
+    // Unit conversion (right-associative, highest precedence)
+    UnitConversion, // → (e.g., '5 mg→g')
 
     // Bitwise OR (left-associative)
     BitOr, // |
