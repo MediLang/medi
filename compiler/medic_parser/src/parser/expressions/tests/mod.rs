@@ -3,7 +3,18 @@ use crate::parser::TokenSlice;
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
 
-// Helper function to convert a string to a TokenSlice
+/// Converts an input string into a `TokenSlice` and its corresponding vector of tokens.
+///
+/// This function tokenizes the input string using the lexer, then creates a `TokenSlice`
+/// referencing a leaked static slice of the tokens. The original vector of tokens is also returned
+/// for further inspection or ownership.
+///
+/// # Examples
+///
+/// ```
+/// let (slice, tokens) = str_to_token_slice("1 + 2 * 3");
+/// assert!(!tokens.is_empty());
+/// ```
 fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
     let tokens: Vec<Token> = Lexer::new(input).collect();
     let tokens_static = Box::new(tokens.clone());
@@ -47,6 +58,18 @@ mod medical_operators_test {
     use pretty_assertions::assert_eq;
 
     #[test]
+    /// Tests parsing of the "of" operator in medical expressions.
+    ///
+    /// Verifies that the expression "2 of 3 doses" is parsed with the "of" operator at the root,
+    /// the left operand as the integer literal 2, and the right operand as a multiplication of 3 and "doses".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// test_of_operator();
+    /// // Passes if the AST structure matches:
+    /// // (2 of (3 * doses))
+    /// ```
     fn test_of_operator() {
         // 2 of 3 doses should be parsed as (2 of 3) doses
         let (input, _) = str_to_token_slice("2 of 3 doses");
@@ -88,6 +111,17 @@ mod medical_operators_test {
     }
 
     #[test]
+    /// Tests that the parser correctly handles the "per" operator in medical expressions.
+    ///
+    /// Verifies that the expression "5 mg per day" is parsed as a binary "per" operation,
+    /// where the left operand is a multiplication of the integer 5 and the identifier "mg",
+    /// and the right operand is the identifier "day".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// test_per_operator();
+    /// ```
     fn test_per_operator() {
         // 5 mg per day should be parsed as (5 mg) per day
         let (input, _) = str_to_token_slice("5 mg per day");

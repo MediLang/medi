@@ -14,6 +14,20 @@ impl<'a> TypeChecker<'a> {
         TypeChecker { env }
     }
 
+    /// Infers and returns the type of a given expression node in the Medic language.
+    ///
+    /// This method analyzes the provided expression node and determines its type according to Medic's type system rules. It supports literals, identifiers, binary operations (including arithmetic, comparison, logical, medical, range, unit conversion, bitwise, and null-coalescing operators), function calls, member access on structs, and healthcare-specific query expressions. If the type cannot be determined or is unsupported, `MediType::Unknown` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut env = TypeEnv::new();
+    /// env.insert("x".to_string(), MediType::Int);
+    /// let mut checker = TypeChecker::new(&mut env);
+    /// let expr = ExpressionNode::Identifier(IdentifierNode { name: "x".to_string() });
+    /// assert_eq!(checker.check_expr(&expr), MediType::Int);
+    /// ```
+    pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
         match expr {
             ExpressionNode::IcdCode(_)

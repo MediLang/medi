@@ -26,13 +26,32 @@ pub enum MediType {
 }
 
 impl MediType {
-    /// Returns true if the type is a numeric type (Int or Float)
-    pub fn is_numeric(&self) -> bool {
+    /// Checks if the type is numeric (`Int` or `Float`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::MediType;
+    /// assert!(MediType::Int.is_numeric());
+    /// assert!(MediType::Float.is_numeric());
+    /// assert!(!MediType::Bool.is_numeric());
+    /// ```    pub fn is_numeric(&self) -> bool {
         matches!(self, MediType::Int | MediType::Float)
     }
 
-    /// Returns true if two types can be compared with each other
-    pub fn is_comparable_with(&self, other: &Self) -> bool {
+    /// Determines whether two `MediType` values can be compared.
+    ///
+    /// Numeric types (`Int` and `Float`) are mutually comparable. Types that are exactly equal are also considered comparable. All other type combinations are not comparable.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_types::MediType;
+    ///
+    /// assert!(MediType::Int.is_comparable_with(&MediType::Float));
+    /// assert!(MediType::String.is_comparable_with(&MediType::String));
+    /// assert!(!MediType::Int.is_comparable_with(&MediType::String));
+    /// ```    pub fn is_comparable_with(&self, other: &Self) -> bool {
         match (self, other) {
             // Numeric types can be compared with each other
             (MediType::Int, MediType::Int)

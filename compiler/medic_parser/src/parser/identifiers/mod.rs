@@ -7,8 +7,29 @@ use crate::parser::{
 
 use super::expressions::parse_expression;
 
-/// Parse an identifier
-pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+/// Parses an identifier or certain keywords as an identifier, supporting member access expressions.
+///
+/// Accepts an identifier token or specific keywords (`Patient`, `Observation`, `Medication`, `If`, `Else`) as valid identifiers. If the identifier is immediately followed by a dot (`.`), parses the subsequent member access chain as a member expression.
+///
+/// # Returns
+///
+/// On success, returns the remaining input and an `ExpressionNode` representing the parsed identifier or member expression. Returns a parsing error if the input does not start with a valid identifier or supported keyword.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::identifiers::parse_identifier;
+/// use medic_parser::lexer::{Token, TokenType};
+/// use medic_parser::parser::ExpressionNode;
+///
+/// let tokens = &[
+///     Token { token_type: TokenType::Identifier("foo".to_string()), ..Default::default() },
+///     Token { token_type: TokenType::Dot, ..Default::default() },
+///     Token { token_type: TokenType::Identifier("bar".to_string()), ..Default::default() },
+/// ];
+/// let (rest, expr) = parse_identifier(tokens).unwrap();
+/// assert!(matches!(expr, ExpressionNode::Member { .. }));
+/// ```pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     if let Some(token) = input.peek() {
         match &token.token_type {
             TokenType::Identifier(name) => {
@@ -143,8 +164,28 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
     }
 }
 
-/// Parse a member access expression (e.g., `object.property`)
-pub fn parse_member_expression(
+/// Parses a chained member access expression (e.g., `object.property.subproperty`).
+///
+/// Continues parsing member accesses as long as dot tokens are present, constructing nested member expression nodes. Returns an error if a member property is not a valid identifier.
+///
+/// # Examples
+///
+/// ```
+/// # use medic_parser::parser::identifiers::{parse_identifier, parse_member_expression};
+/// # use medic_parser::lexer::{Token, TokenType, TokenSlice};
+/// # use medic_parser::ast::{ExpressionNode, MemberExpressionNode};
+/// let tokens = vec![
+///     Token::new(TokenType::Identifier("foo".into())),
+///     Token::new(TokenType::Dot),
+///     Token::new(TokenType::Identifier("bar".into())),
+///     Token::new(TokenType::Dot),
+///     Token::new(TokenType::Identifier("baz".into())),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let (input, object) = parse_identifier(input).unwrap();
+/// let (remaining, expr) = parse_member_expression(input, object).unwrap();
+/// // expr now represents foo.bar.baz as nested member expressions
+/// ```pub fn parse_member_expression(
     input: TokenSlice<'_>,
     object: ExpressionNode,
 ) -> IResult<TokenSlice<'_>, ExpressionNode> {

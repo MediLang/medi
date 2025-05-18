@@ -2,6 +2,7 @@ use medic_ast::ast::*;
 use medic_parser::parser::*;
 
 #[test]
+/// ```
 fn test_unit_conversion_precedence() {
     // 5 mg → g * 3 should be parsed as (5 mg → g) * 3
     let tokens = tokenize("5 mg → g * 3").unwrap();
@@ -24,6 +25,15 @@ fn test_unit_conversion_precedence() {
 }
 
 #[test]
+/// Tests that the expression "2 of 3 doses" is parsed with correct operator precedence,
+/// ensuring "of" binds before multiplication and the right operand is parsed as "3 doses".
+///
+/// # Examples
+///
+/// ```
+/// test_of_operator();
+/// ```
+fn test_of_operator() {
 fn test_of_operator() {
     // 2 of 3 doses should be parsed as (2 of 3) doses
     let tokens = tokenize("2 of 3 doses").unwrap();
@@ -46,6 +56,7 @@ fn test_of_operator() {
 }
 
 #[test]
+/// ```
 fn test_per_operator() {
     // 5 mg per day should be parsed as (5 mg) per day
     let tokens = tokenize("5 mg per day").unwrap();
@@ -69,6 +80,7 @@ fn test_per_operator() {
 }
 
 #[test]
+/// ```
 fn test_mixed_medical_operators() {
     // 2 of 3 doses per day should be parsed as (2 of (3 doses)) per day
     let tokens = tokenize("2 of 3 doses per day").unwrap();

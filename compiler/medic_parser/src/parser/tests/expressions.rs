@@ -17,6 +17,14 @@ mod expressions_test {
     use pretty_assertions::assert_eq;
 
     #[test]
+    /// Tests that the parser correctly applies operator precedence, ensuring multiplication is evaluated before addition in expressions like "2 + 3 * 4".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// test_operator_precedence();
+    /// // Passes if the AST represents 2 + (3 * 4) with correct operator hierarchy.
+    /// ```
     fn test_operator_precedence() {
         // Test operator precedence: multiplication before addition
         let input = "2 + 3 * 4";
@@ -51,6 +59,16 @@ mod expressions_test {
     }
     
     #[test]
+    /// Tests that the parser correctly applies operator precedence across all supported binary operators.
+    ///
+    /// Parses a complex expression containing every binary operator in order of increasing precedence and asserts that the resulting AST reflects the correct precedence hierarchy, starting with logical OR at the top level.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// test_operator_precedence_all_operators();
+    /// // Passes if the parser builds the correct AST for all operator precedence levels.
+    /// ```
     fn test_operator_precedence_all_operators() {
         // Test all operators in order of increasing precedence
         // This expression is designed to test all precedence levels
@@ -87,6 +105,15 @@ mod expressions_test {
     }
     
     #[test]
+    /// Tests that right-associative operators, specifically exponentiation (`**`), are parsed with correct associativity.
+    ///
+    /// Verifies that the expression `2 ** 3 ** 4` is parsed as `2 ** (3 ** 4)`, ensuring the AST nests exponentiation to the right.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// test_right_associative_operators();
+    /// ```
     fn test_right_associative_operators() {
         // Test right-associative operators: ** (exponentiation), ?: (elvis), ?? (null-coalesce)
         
@@ -125,6 +152,7 @@ mod expressions_test {
     }
     
     #[test]
+    /// ```
     fn test_mixed_precedence() {
         // Test mixed operators with different precedence and associativity
         let input = "a + b * c ** d ** e << f | g & h";
@@ -141,6 +169,7 @@ mod expressions_test {
     }
     
     #[test]
+    /// ```
     fn test_comparison_chain() {
         // Test that comparison operators don't chain (a < b < c is not allowed)
         let input = "a < b < c";
@@ -152,6 +181,15 @@ mod expressions_test {
     }
 
     #[test]
+    /// Tests parsing of a range expression and verifies the AST structure.
+    ///
+    /// Parses the expression `"1 .. 10"` and asserts that it produces a binary expression node with the range operator, where the left and right operands are integer literals `1` and `10`, respectively.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// test_range_expression();
+    /// ```
     fn test_range_expression() {
         // Test range expression with spaces
         let input = "1 .. 10";

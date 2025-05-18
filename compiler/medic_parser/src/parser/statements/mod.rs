@@ -10,8 +10,28 @@ use super::{expressions::parse_expression as parse_expr, identifiers::parse_iden
 
 use medic_ast::ast::LetStatementNode;
 
-/// Parse a let statement
-pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// Parses a `let` statement from the input token stream.
+///
+/// Expects the sequence: `let <identifier> = <expression>;`. Returns a `StatementNode::Let` containing the parsed variable name and value.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::statements::parse_let_statement;
+/// use medic_lexer::token::{Token, TokenType};
+/// use medic_parser::TokenSlice;
+///
+/// let tokens = vec![
+///     Token::new(TokenType::Let, "let", 0),
+///     Token::new(TokenType::Identifier, "x", 1),
+///     Token::new(TokenType::Equal, "=", 2),
+///     Token::new(TokenType::IntLiteral, "42", 3),
+///     Token::new(TokenType::Semicolon, ";", 4),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_let_statement(input);
+/// assert!(result.is_ok());
+/// ```pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'let' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
 
@@ -51,8 +71,36 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
 
 use medic_ast::ast::ReturnNode;
 
-/// Parse a return statement
-pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// Parses a `return` statement, optionally with a return value expression.
+///
+/// Accepts either a bare `return;` or `return <expression>;`, returning a `StatementNode::Return` with or without a value.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::statements::parse_return_statement;
+/// use medic_lexer::token::{TokenType, Token};
+/// use medic_parser::TokenSlice;
+///
+/// // Example: return 42;
+/// let tokens = vec![
+///     Token::new(TokenType::Return, 0..6),
+///     Token::new(TokenType::IntLiteral(42), 7..9),
+///     Token::new(TokenType::Semicolon, 9..10),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_return_statement(input);
+/// assert!(result.is_ok());
+///
+/// // Example: return;
+/// let tokens = vec![
+///     Token::new(TokenType::Return, 0..6),
+///     Token::new(TokenType::Semicolon, 6..7),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_return_statement(input);
+/// assert!(result.is_ok());
+/// ```pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'return' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::Return), ErrorKind::Tag)(input)?;
 
@@ -76,8 +124,27 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 
 use medic_ast::ast::IfNode;
 
-/// Parse an if statement
-pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// Parses an `if` statement, including optional `else` and `else if` clauses.
+///
+/// This function consumes the `if` keyword, parses the condition expression, and the associated block for the `then` branch. If an `else` keyword is present, it parses either an `else if` statement recursively or an `else` block. Returns an `IfNode` wrapped in a `StatementNode::If`.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::statements::parse_if_statement;
+/// use medic_lexer::token::{TokenType, Token};
+/// use medic_parser::parser::TokenSlice;
+///
+/// let tokens = vec![
+///     Token::new(TokenType::If, 0..2),
+///     Token::new(TokenType::Ident("x".into()), 3..4),
+///     Token::new(TokenType::LBrace, 5..6),
+///     Token::new(TokenType::RBrace, 6..7),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_if_statement(input);
+/// assert!(result.is_ok());
+/// ```pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'if' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
 
@@ -130,8 +197,20 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
 
 use medic_ast::ast::WhileNode;
 
-/// Parse a while statement
-pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// Parses a `while` statement, including its condition and body block.
+///
+/// Returns a `StatementNode::While` containing the parsed condition expression and body.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::statements::parse_while_statement;
+/// use medic_lexer::tokenize;
+///
+/// let tokens = tokenize("while x < 10 { x = x + 1; }");
+/// let result = parse_while_statement(&tokens);
+/// assert!(result.is_ok());
+/// ```pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'while' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
 
@@ -147,8 +226,21 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
     Ok((new_input, StatementNode::While(Box::new(while_node))))
 }
 
-/// Parse a statement
-pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// Parses a single statement from the input token stream.
+///
+/// Determines the statement type based on the first token and delegates to the appropriate parser for `let`, `return`, `if`, or `while` statements. If no recognized statement keyword is found, attempts to parse an expression statement terminated by a semicolon. Returns the parsed statement node and the remaining input.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::statements::parse_statement;
+/// use medic_parser::lexer::{tokenize, TokenSlice};
+///
+/// let tokens = tokenize("let x = 5;");
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_statement(input);
+/// assert!(result.is_ok());
+/// ```pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Check the first token to determine the statement type
     if let Some(token) = input.peek() {
         match token.token_type {

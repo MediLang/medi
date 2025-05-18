@@ -3,7 +3,16 @@ use crate::parser::TokenSlice;
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
 
-// Helper function to convert a string to a TokenSlice
+/// Converts a string into a `TokenSlice` and its corresponding vector of tokens.
+///
+/// This function lexes the input string into tokens, creates a `TokenSlice` referencing the tokens with a static lifetime, and returns both the `TokenSlice` and the owned vector of tokens.
+///
+/// # Examples
+///
+/// ```
+/// let (token_slice, tokens) = str_to_token_slice("let x = 42;");
+/// assert!(!tokens.is_empty());
+/// ```
 fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
     let tokens: Vec<Token> = Lexer::new(input).collect();
     let tokens_static = Box::new(tokens.clone());
