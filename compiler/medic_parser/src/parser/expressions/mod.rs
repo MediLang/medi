@@ -11,8 +11,16 @@ use crate::parser::parse_expression as parse_expression_global;
 
 use super::{identifiers::parse_identifier, literals::parse_literal};
 
-/// Check if an operator is a comparison operator
-fn is_comparison_operator(op: &BinaryOperator) -> bool {
+/// Returns `true` if the given operator is a comparison operator (`==`, `!=`, `<`, `<=`, `>`, or `>=`).
+///
+/// # Examples
+///
+/// ```
+/// use crate::parser::expressions::{is_comparison_operator, BinaryOperator};
+///
+/// assert!(is_comparison_operator(&BinaryOperator::Eq));
+/// assert!(!is_comparison_operator(&BinaryOperator::Add));
+/// ```fn is_comparison_operator(op: &BinaryOperator) -> bool {
     matches!(
         op,
         BinaryOperator::Eq
@@ -24,8 +32,25 @@ fn is_comparison_operator(op: &BinaryOperator) -> bool {
     )
 }
 
-/// Parse a binary expression with the given minimum precedence and a flag indicating if we're in a comparison context
-pub fn parse_binary_expression(
+/// Parses a binary expression from the input, respecting operator precedence and associativity.
+///
+/// This function starts by parsing a primary expression, then repeatedly parses binary operators and their right-hand side expressions as long as the operator's precedence is at least the specified minimum. It handles right- and left-associative operators, and provides special parsing logic for the `of` and `per` operators to allow chaining. If a comparison operator is encountered while already in a comparison context, an error is returned.
+///
+/// # Parameters
+/// - `min_precedence`: The minimum precedence required for an operator to be parsed at the current position.
+/// - `in_comparison`: Indicates whether the parser is currently within a comparison expression, preventing multiple comparisons in a single context.
+///
+/// # Returns
+/// Returns the remaining input and the parsed expression node.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::expressions::parse_binary_expression;
+/// // Assume `tokens` is a TokenSlice representing: 2 + 3 * 4
+/// let result = parse_binary_expression(tokens, 1, false);
+/// assert!(result.is_ok());
+/// ```pub fn parse_binary_expression(
     input: TokenSlice<'_>,
     min_precedence: u8,
     in_comparison: bool,
@@ -139,8 +164,21 @@ pub fn parse_binary_expression(
     Ok((input, left))
 }
 
-/// Parse a primary expression (literals, identifiers, parenthesized expressions)
-pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+/// Parses a primary expression, which can be a literal, an identifier, or a parenthesized expression.
+///
+/// Attempts to parse a literal value, an identifier (or member expression), or an expression enclosed in parentheses, in that order. Returns an error if none match.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::expressions::parse_primary;
+/// use medic_parser::lexer::{tokenize, TokenSlice};
+///
+/// let tokens = tokenize("42").unwrap();
+/// let input = TokenSlice::new(&tokens);
+/// let (rest, expr) = parse_primary(input).unwrap();
+/// assert!(matches!(expr, ExpressionNode::Literal(_)));
+/// ```pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // Try to parse a literal (numbers, strings, etc.)
     if let Ok((input, lit)) = super::literals::parse_literal(input) {
         return Ok((input, ExpressionNode::Literal(lit)));
@@ -172,8 +210,21 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
     )))
 }
 
-/// Parse an expression with the given minimum precedence
-pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+/// Parses a full expression, handling literals, identifiers, parenthesized expressions, and binary operators with correct precedence.
+///
+/// Special handling is provided for expressions where a literal is followed by an identifier and a `per` operator, parsing them as multiplication expressions. The function then parses any subsequent binary operators, respecting operator precedence and associativity, and returns the resulting expression node.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::parser::expressions::parse_expression;
+/// use medic_parser::lexer::{tokenize, TokenSlice};
+///
+/// let tokens = tokenize("3 doses per day").unwrap();
+/// let input = TokenSlice(&tokens);
+/// let result = parse_expression(input);
+/// assert!(result.is_ok());
+/// ```pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // First, parse the left-hand side of the expression
     let (mut input, mut left) = parse_primary(input)?;
 
@@ -205,8 +256,18 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
     parse_binary_expression_with_left(input, left, 1, false)
 }
 
-/// Parse an expression with a minimum precedence and comparison context
-fn parse_expression_with_min_precedence(
+/// Parses an expression starting from a primary expression, then parses any following binary operators with at least the given minimum precedence and comparison context.
+///
+/// # Examples
+///
+/// ```
+/// # use medic_parser::parser::expressions::{parse_expression_with_min_precedence, TokenSlice};
+/// # use medic_parser::lexer::tokenize;
+/// let tokens = tokenize("3 + 4 * 5").unwrap();
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_expression_with_min_precedence(slice, 1, false);
+/// assert!(result.is_ok());
+/// ```fn parse_expression_with_min_precedence(
     input: TokenSlice<'_>,
     min_precedence: u8,
     in_comparison: bool,
@@ -218,8 +279,27 @@ fn parse_expression_with_min_precedence(
     parse_binary_expression_with_left(input, left, min_precedence, in_comparison)
 }
 
-/// Parse a binary expression with a given left-hand side and minimum precedence
-fn parse_binary_expression_with_left(
+/// Parses a binary expression starting from a given left-hand side expression, handling operator precedence, associativity, and special cases for 'of' and 'per' operators.
+///
+/// This function repeatedly parses binary operators with precedence at least `min_precedence`, combining the current left-hand side with the next parsed right-hand side expression. It applies special parsing logic for the 'of' and 'per' operators to support unit and chained expressions. Operator associativity is respected by adjusting the precedence for recursive parsing. Comparison operators are tracked via the `in_comparison` flag to prevent multiple comparisons in a single context.
+///
+/// # Examples
+///
+/// ```
+/// # use crate::parser::expressions::{parse_primary, parse_binary_expression_with_left};
+/// # use crate::parser::tokens::{Token, TokenType, TokenSlice};
+/// # use crate::parser::ast::ExpressionNode;
+/// // Example: parsing "3 of doses"
+/// let tokens = vec![
+///     Token::new(TokenType::Literal(3.into())),
+///     Token::new(TokenType::Of),
+///     Token::new(TokenType::Identifier("doses".into())),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let (_, left) = parse_primary(slice).unwrap();
+/// let result = parse_binary_expression_with_left(slice.advance(1), left, 1, false);
+/// assert!(result.is_ok());
+/// ```fn parse_binary_expression_with_left(
     input: TokenSlice<'_>,
     left: ExpressionNode,
     min_precedence: u8,
@@ -358,8 +438,20 @@ fn parse_binary_expression_with_left(
     Ok((input, left))
 }
 
-/// Helper function to parse binary expressions with a minimum precedence
-fn parse_binary_expression_with_min_precedence(
+/// Parses a sequence of binary expressions starting from a given left-hand side, applying operators with at least the specified minimum precedence.
+///
+/// This function repeatedly parses binary operators and their right-hand operands, constructing a left-associative expression tree. Parsing stops when the next operator's precedence is lower than `min_precedence` or when no valid operator is found. If a comparison operator is encountered while already in a comparison context, an error is returned.
+///
+/// # Examples
+///
+/// ```
+/// # use medic_parser::parser::expressions::{parse_primary, parse_binary_expression_with_min_precedence};
+/// # use medic_parser::lexer::{tokenize, TokenSlice};
+/// let tokens = tokenize("1 + 2 * 3").unwrap();
+/// let (input, left) = parse_primary(TokenSlice::new(&tokens)).unwrap();
+/// let (_, expr) = parse_binary_expression_with_min_precedence(input, left, 1, false).unwrap();
+/// // The resulting expr represents (1 + (2 * 3))
+/// ```fn parse_binary_expression_with_min_precedence(
     input: TokenSlice<'_>,
     left: ExpressionNode,
     min_precedence: u8,

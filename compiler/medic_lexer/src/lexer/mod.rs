@@ -77,8 +77,21 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Convert a LogosToken to our semantic TokenType
-    fn convert_token(
+    /// Converts a `LogosToken` and its lexeme into a semantic `Token`.
+    ///
+    /// Maps the given `LogosToken` variant and lexeme string to the corresponding `TokenType`,
+    /// handling keywords, literals, operators, delimiters, medical codes, and healthcare-specific tokens.
+    /// Also updates the lexer's position tracking to reflect the token's location in the source code.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut lexer = Lexer::new("let x = 42");
+    /// let logos_token = LogosToken::Let;
+    /// let token = lexer.convert_token(logos_token, "let", &(0..3));
+    /// assert_eq!(token.token_type, TokenType::Let);
+    /// assert_eq!(token.lexeme, "let");
+    /// ```    fn convert_token(
         &mut self,
         logos_token: LogosToken,
         lexeme: &str,

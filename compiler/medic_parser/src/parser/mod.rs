@@ -89,6 +89,19 @@ impl InputTake for TokenSlice<'_> {
         TokenSlice(&self.0[..count])
     }
 
+    /// Splits the token slice at the given index, returning the suffix and prefix as new `TokenSlice` instances.
+    ///
+    /// The first element of the tuple is the suffix (tokens after the split point), and the second is the prefix (tokens before the split point).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tokens = vec![Token::new(TokenType::Plus), Token::new(TokenType::Minus)];
+    /// let slice = TokenSlice::new(&tokens);
+    /// let (suffix, prefix) = slice.take_split(1);
+    /// assert_eq!(prefix.len(), 1);
+    /// assert_eq!(suffix.len(), 1);
+    /// ```
     fn take_split(&self, count: usize) -> (Self, Self) {
         let (prefix, suffix) = self.0.split_at(count);
         (TokenSlice(suffix), TokenSlice(prefix))
@@ -96,12 +109,23 @@ impl InputTake for TokenSlice<'_> {
 }
 
 impl Slice<ops::RangeTo<usize>> for TokenSlice<'_> {
+    /// ```
     fn slice(&self, range: ops::RangeTo<usize>) -> Self {
         TokenSlice(&self.0[range])
     }
 }
 
 impl Slice<ops::RangeFrom<usize>> for TokenSlice<'_> {
+    /// Returns a new `TokenSlice` starting from the specified index to the end of the slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tokens = vec![Token::new(TokenType::Plus), Token::new(TokenType::Minus)];
+    /// let slice = TokenSlice::new(&tokens);
+    /// let rest = slice.slice(1..);
+    /// assert_eq!(rest.len(), 1);
+    /// ```
     fn slice(&self, range: ops::RangeFrom<usize>) -> Self {
         TokenSlice(&self.0[range])
     }
@@ -126,6 +150,16 @@ impl<'a> InputIter for TokenSlice<'a> {
         self.0.iter()
     }
 
+    /// Returns the index of the first token that satisfies the given predicate, or `None` if no such token exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tokens = [Token::Identifier("a".into()), Token::Plus, Token::Identifier("b".into())];
+    /// let slice = TokenSlice::new(&tokens);
+    /// let pos = slice.position(|t| matches!(t, Token::Plus));
+    /// assert_eq!(pos, Some(1));
+    /// ```
     fn position<P>(&self, predicate: P) -> Option<usize>
     where
         P: Fn(Self::Item) -> bool,
@@ -133,6 +167,19 @@ impl<'a> InputIter for TokenSlice<'a> {
         self.0.iter().position(predicate)
     }
 
+    /// Returns the index for slicing if the token slice contains at least `count` tokens, or an error indicating how many more tokens are needed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_parser::TokenSlice;
+    /// use nom::Needed;
+    ///
+    /// let tokens = vec![];
+    /// let slice = TokenSlice::new(&tokens);
+    /// assert_eq!(slice.slice_index(0), Ok(0));
+    /// assert_eq!(slice.slice_index(1), Err(Needed::new(1)));
+    /// ```
     fn slice_index(&self, count: usize) -> Result<usize, Needed> {
         if self.0.len() >= count {
             Ok(count)
@@ -143,6 +190,21 @@ impl<'a> InputIter for TokenSlice<'a> {
 }
 
 impl Compare<Token> for TokenSlice<'_> {
+    /// Compares the first token in the slice to the given token.
+    ///
+    /// Returns `CompareResult::Ok` if the first token matches, or `CompareResult::Error` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_lexer::{Token, TokenType};
+    /// use medic_parser::TokenSlice;
+    /// use nom::CompareResult;
+    ///
+    /// let tokens = [Token::new(TokenType::Plus, 0..1)];
+    /// let slice = TokenSlice::new(&tokens);
+    /// assert_eq!(slice.compare(tokens[0]), CompareResult::Ok);
+    /// ```
     fn compare(&self, t: Token) -> CompareResult {
         if self.0.first() == Some(&t) {
             CompareResult::Ok
@@ -165,6 +227,21 @@ impl ParseTo<Token> for TokenSlice<'_> {
 impl InputTakeAtPosition for TokenSlice<'_> {
     type Item = Token;
 
+    /// Splits the token slice at the first position where the predicate returns true.
+    ///
+    /// Returns a tuple containing the remaining tokens after the matched token and a slice containing the matched token itself. If no token satisfies the predicate, returns an error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_lexer::Token;
+    /// use medic_parser::TokenSlice;
+    ///
+    /// let tokens = vec![Token::from_type(TokenType::Plus), Token::from_type(TokenType::Minus)];
+    /// let slice = TokenSlice(&tokens);
+    /// let result = slice.split_at_position(|t| t.token_type == TokenType::Minus);
+    /// assert!(result.is_ok());
+    /// ```
     fn split_at_position<P, E: ParseError<Self>>(&self, predicate: P) -> IResult<Self, Self, E>
     where
         P: Fn(Self::Item) -> bool,
@@ -181,6 +258,22 @@ impl InputTakeAtPosition for TokenSlice<'_> {
         }
     }
 
+    /// Splits the token slice at the first position where the predicate returns true, requiring at least one matching token.
+    ///
+    /// Returns a tuple containing the remaining tokens after the match and the matched token as a slice. Returns an error if the input is empty or the first token does not satisfy the predicate.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_lexer::Token;
+    /// use medic_parser::TokenSlice;
+    /// use nom::error::ErrorKind;
+    ///
+    /// let tokens = [Token::new_identifier("foo"), Token::new_identifier("bar")];
+    /// let slice = TokenSlice(&tokens);
+    /// let result = slice.split_at_position1(|t| t.is_identifier(), ErrorKind::Tag);
+    /// assert!(result.is_ok());
+    /// ```
     fn split_at_position1<P, E: ParseError<Self>>(
         &self,
         predicate: P,
@@ -209,6 +302,22 @@ impl InputTakeAtPosition for TokenSlice<'_> {
         }
     }
 
+    /// Splits the token slice at the first position where the predicate returns true.
+    ///
+    /// Returns a tuple containing the remaining tokens after the split and the matched prefix. If no token satisfies the predicate, the entire slice is returned as the prefix and the remainder is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_lexer::Token;
+    /// use medic_parser::TokenSlice;
+    ///
+    /// let tokens = vec![Token::new_plus(), Token::new_minus()];
+    /// let slice = TokenSlice::new(&tokens);
+    /// let (rest, prefix) = slice.split_at_position_complete(|t| t.is_minus()).unwrap().0;
+    /// assert_eq!(prefix.len(), 1);
+    /// assert_eq!(rest.len(), 1);
+    /// ```
     fn split_at_position_complete<P, E: ParseError<Self>>(
         &self,
         predicate: P,
@@ -228,6 +337,20 @@ impl InputTakeAtPosition for TokenSlice<'_> {
         }
     }
 
+    /// Splits the token slice at the first position where the predicate returns true, requiring at least one token to match.
+    ///
+    /// Returns a tuple containing the remaining tokens after the match and the matched prefix. If no token matches or the input is empty, returns an error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_parser::TokenSlice;
+    /// use medic_lexer::{Token, TokenType};
+    /// let tokens = vec![Token::new(TokenType::Identifier, 0), Token::new(TokenType::Plus, 1)];
+    /// let slice = TokenSlice(&tokens);
+    /// let result = slice.split_at_position1_complete(|t| t.token_type == TokenType::Plus, nom::error::ErrorKind::Tag);
+    /// assert!(result.is_ok());
+    /// ```
     fn split_at_position1_complete<P, E: ParseError<Self>>(
         &self,
         predicate: P,
@@ -259,8 +382,23 @@ impl InputTakeAtPosition for TokenSlice<'_> {
     }
 }
 
-/// Helper function to take a token if it matches a predicate
-pub fn take_token_if<F>(
+/// Returns a parser that consumes and returns the next token if it satisfies the given predicate.
+///
+/// The returned parser checks the next token's type using the provided predicate. If the predicate returns `true`, the token is consumed and returned; otherwise, a parsing error with the specified `ErrorKind` is produced.
+///
+/// # Examples
+///
+/// ```
+/// use medic_lexer::{Token, TokenType};
+/// use medic_parser::{TokenSlice, take_token_if};
+/// use nom::error::ErrorKind;
+///
+/// let tokens = vec![Token::new(TokenType::Plus, 0..1)];
+/// let input = TokenSlice::new(&tokens);
+/// let parser = take_token_if(|tt| matches!(tt, TokenType::Plus), ErrorKind::Tag);
+/// let result = parser(input);
+/// assert!(result.is_ok());
+/// ```pub fn take_token_if<F>(
     predicate: F,
     err_kind: ErrorKind,
 ) -> impl Fn(TokenSlice<'_>) -> IResult<TokenSlice<'_>, Token>
@@ -280,8 +418,30 @@ where
     }
 }
 
-/// Parse a block of statements
-pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
+/// Parses a block of statements enclosed in braces and returns a `BlockNode`.
+///
+/// The function expects the input to start with a left brace (`{`), parses zero or more statements until a right brace (`}`) is encountered, and returns the collected statements as a `BlockNode`.
+///
+/// # Examples
+///
+/// ```
+/// use medic_lexer::{Token, TokenType};
+/// use medic_parser::{parse_block, TokenSlice};
+/// use medic_ast::BlockNode;
+///
+/// // Example token sequence: { let x = 1; }
+/// let tokens = vec![
+///     Token::new(TokenType::LeftBrace, 0..1),
+///     // ... tokens for a statement ...
+///     Token::new(TokenType::RightBrace, 10..11),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_block(input);
+/// assert!(result.is_ok());
+/// let (_, block) = result.unwrap();
+/// assert!(matches!(block, BlockNode { .. }));
+/// ```
+pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
     let (mut input, _) =
         take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
 
@@ -304,8 +464,21 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 }
 
 /// Get a binary operator from a token type
-/// Returns the operator and whether it's right-associative (true) or left-associative (false)
-pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bool)> {
+/// Maps a token type to its corresponding binary operator and associativity.
+///
+/// Returns a tuple containing the matching `BinaryOperator` and a boolean indicating whether the operator is right-associative (`true`) or left-associative (`false`). Returns `None` if the token type does not represent a binary operator.
+///
+/// # Examples
+///
+/// ```
+/// use medic_lexer::TokenType;
+/// use medic_ast::BinaryOperator;
+/// use medic_parser::get_binary_operator;
+///
+/// assert_eq!(get_binary_operator(&TokenType::Plus), Some((BinaryOperator::Add, false)));
+/// assert_eq!(get_binary_operator(&TokenType::DoubleStar), Some((BinaryOperator::Pow, true)));
+/// assert_eq!(get_binary_operator(&TokenType::Identifier), None);
+/// ```pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bool)> {
     match token_type {
         // Medical operators
         TokenType::Of => Some((BinaryOperator::Of, false)),
@@ -339,8 +512,19 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
 }
 
 /// Get the precedence of a binary operator
-/// Higher numbers mean higher precedence
-pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
+/// Returns the precedence level of a binary operator.
+///
+/// Higher numbers indicate higher precedence, determining the order in which operators are evaluated in expressions.
+///
+/// # Examples
+///
+/// ```
+/// use medic_ast::BinaryOperator;
+/// use parser::get_operator_precedence;
+///
+/// assert!(get_operator_precedence(&BinaryOperator::Mul) > get_operator_precedence(&BinaryOperator::Add));
+/// assert_eq!(get_operator_precedence(&BinaryOperator::Or), 0);
+/// ```pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
     match op {
         // Unit conversion (highest precedence)
         BinaryOperator::UnitConversion => 16,
@@ -395,26 +579,46 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
     }
 }
 
-/// Parse a program (a list of statements)
-pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
+/// ```pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
     let (input, statements) = many0(parse_statement)(input)?;
     Ok((input, ProgramNode { statements }))
 }
 
-/// Parse a pattern (used in match expressions)
-pub fn parse_pattern(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
+/// Parses a pattern for use in match expressions.
+///
+/// Currently unimplemented; calling this function will result in a runtime error.
+///
+/// # Examples
+///
+/// ```should_panic
+/// // This will panic because pattern parsing is not yet implemented.
+/// let tokens = TokenSlice::new(&[]);
+/// let _ = parse_pattern(tokens);
+/// ```pub fn parse_pattern(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
     // TODO: Implement pattern parsing
     todo!("Pattern parsing not implemented yet");
 }
 
-/// Parse a for statement
-pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // TODO: Implement for statement parsing
     todo!("For statement parsing not implemented yet");
 }
 
-/// Parse a match statement
-pub fn parse_match_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// Parses a match statement from the input token slice.
+///
+/// Currently unimplemented; calling this function will panic.
+///
+/// # Panics
+///
+/// Always panics with a "not implemented" message.
+///
+/// # Examples
+///
+/// ```should_panic
+/// // This will panic because match statement parsing is not implemented.
+/// let tokens = TokenSlice::new(&[]);
+/// let _ = parse_match_statement(tokens);
+/// ```pub fn parse_match_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // TODO: Implement match statement parsing
     todo!("Match statement parsing not implemented yet");
 }
