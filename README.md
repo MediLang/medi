@@ -4,7 +4,7 @@
 
 # The Medi Programming Language
 
-[Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md)
+[Website](http://medi-lang.org) | [Repository](https://github.com/MediLang/medi) | [Contributing](https://github.com/MediLang/medi/blob/main/CONTRIBUTING.md) | [Discord](https://discord.gg/JxE6dD285R)
 
 ![License](https://img.shields.io/badge/License-MIT-blue) ![Status](https://img.shields.io/badge/Status-Pre--alpha%20(Prototype)-orange) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/MediLang/medi?utm_source=oss&utm_medium=github&utm_campaign=MediLang%2Fmedi&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
@@ -180,7 +180,7 @@ Discussions on X (as of May 2025) validate Medi’s relevance:
 Medi is in pre-alpha, with a prototype under development. To contribute or follow progress:
 
 *   Clone the Repository: `git clone https://github.com/MediLang/medi.git`
-*   Join the Community: [X: @MediLangHQ](https://twitter.com/MediLangHQ) | [GitHub Discussions](https://github.com/MediLang/medi/discussions)
+*   Join the Community: [X: @MediLangHQ](https://twitter.com/MediLangHQ) | [Discord]([Discord](https://discord.gg/JxE6dD285R))
 *   Read the Docs: [medi-lang.org/docs](http://medi-lang.org/docs) (Coming Soon)
 *   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: medic, standard library, IDE, RISC-V, AI models.
 
@@ -206,8 +206,6 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 *   Optimize for big data, edge devices, and quantum computing.
 *   Launch training programs and certifications.
 *   Integrate with Epic, Cerner, and cloud platforms.
-
-
 
 ## Technical Architecture
 
@@ -276,5 +274,6 @@ MIT License. See `LICENSE` for details.
 <!-- *   **Email:** [contact@medi-lang.org](mailto:contact@medi-lang.org) -->
 *   **X:** [@MediLangHQ](https://twitter.com/MediLangHQ)
 *   **GitHub:** [github.com/MediLang/medi](https://github.com/MediLang/medi)
+*   **Discord** [Discord](https://discord.gg/JxE6dD285R)
 
 > *Join us in revolutionizing healthcare analytics with Medi!*
