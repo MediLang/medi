@@ -582,7 +582,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
         TokenType::DoubleStar => Some((BinaryOperator::Pow, true)),
         TokenType::BitAnd => Some((BinaryOperator::BitAnd, false)),
         TokenType::BitOr => Some((BinaryOperator::BitOr, false)),
-        TokenType::BitXor => Some((BinaryOperator::Pow, true)), // ^ is right-associative for exponentiation
+        TokenType::BitXor => Some((BinaryOperator::BitXor, false)), // Bitwise XOR is left-associative
         TokenType::Shl => Some((BinaryOperator::Shl, false)),
         TokenType::Shr => Some((BinaryOperator::Shr, false)),
         TokenType::EqualEqual => Some((BinaryOperator::Eq, false)),

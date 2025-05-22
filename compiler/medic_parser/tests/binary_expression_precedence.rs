@@ -94,10 +94,10 @@ fn test_operator_precedence() {
     }
 
     // Test right-associativity of exponentiation (if supported)
-    let tokens = tokenize("2 ^ 3 ^ 2");
+    let tokens = tokenize("2 ** 3 ** 2");
     let input = TokenSlice::new(&tokens);
     if let Ok((_, expr)) = parse_expression(input) {
-        // The expression should be parsed as 2 ^ (3 ^ 2), not (2 ^ 3) ^ 2
+        // The expression should be parsed as 2 ** (3 ** 2), not (2 ** 3) ** 2
         match expr {
             ExpressionNode::Binary(bin_expr) => {
                 assert_eq!(bin_expr.operator, BinaryOperator::Pow);
