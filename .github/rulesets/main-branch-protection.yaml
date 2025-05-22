@@ -1,0 +1,50 @@
+# Ruleset for protecting the main branch
+name: Main Branch Protection
+
+# Enable the ruleset
+enabled: true
+
+target: branch
+
+# Apply to main branch
+include_patterns:
+  - main
+
+# Rules configuration
+rules:
+  # Require a pull request before merging
+  - type: pull_request
+    parameters:
+      required_approving_review_count: 1
+      require_code_owner_reviews: true
+      dismiss_stale_reviews: true
+      require_last_push_approval: true
+
+  # Require status checks to pass before merging
+  - type: status_check
+    parameters:
+      required_status_checks:
+        - context: ci/cd
+      strict_required_status_checks_policy: true
+
+  # Require conversation resolution before merging
+  - type: conversation_resolution
+    parameters: {}
+
+  # Restrict who can push to the main branch
+  - type: deployment
+    parameters:
+      required_deployment_environments: []
+
+  # Prevent force pushes
+  - type: update
+    parameters: {}
+
+  # Prevent branch deletion
+  - type: deletion
+    parameters: {}
+
+# Additional settings
+bypass_actors:
+  - actor_id: 1  # GitHub App ID with bypass permissions
+    bypass_mode: always
