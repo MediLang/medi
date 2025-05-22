@@ -79,6 +79,60 @@ fn test_per_operator() {
 }
 
 #[test]
+/// Tests that nested member expressions are parsed correctly
+///
+/// Ensures that expressions like `patient.medical.records` are parsed
+/// with all segments preserved in the correct order.
+fn test_nested_member_expressions() {
+    // Test simple nested member access
+    let tokens = tokenize("patient.medical.records").unwrap();
+    let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
+    
+    // The expression should be parsed as ((patient.medical).records)
+    if let ExpressionNode::Member(outer) = &expr {
+        assert_eq!(outer.property.name, "records");
+        if let ExpressionNode::Member(inner) = &*outer.object {
+            assert_eq!(inner.property.name, "medical");
+            if let ExpressionNode::Identifier(ident) = &*inner.object {
+                assert_eq!(ident.name, "patient");
+            } else {
+                panic!("Expected identifier 'patient' at the start of member chain");
+            }
+        } else {
+            panic!("Expected inner member expression 'patient.medical'");
+        }
+    } else {
+        panic!("Expected member expression");
+    }
+    
+    // Test with more levels of nesting
+    let tokens = tokenize("hospital.patient.records.blood_pressure").unwrap();
+    let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
+    
+    // The expression should be parsed as (((hospital.patient).records).blood_pressure)
+    if let ExpressionNode::Member(outer) = &expr {
+        assert_eq!(outer.property.name, "blood_pressure");
+        if let ExpressionNode::Member(mid) = &*outer.object {
+            assert_eq!(mid.property.name, "records");
+            if let ExpressionNode::Member(inner) = &*mid.object {
+                assert_eq!(inner.property.name, "patient");
+                if let ExpressionNode::Identifier(ident) = &*inner.object {
+                    assert_eq!(ident.name, "hospital");
+                } else {
+                    panic!("Expected identifier 'hospital' at the start of member chain");
+                }
+            } else {
+                panic!("Expected inner member expression 'hospital.patient'");
+            }
+        } else {
+            panic!("Expected middle member expression 'hospital.patient.records'");
+        }
+    } else {
+        panic!("Expected member expression");
+    }
+}
+
+#[test]
 /// ```
 fn test_mixed_medical_operators() {
     // 2 of 3 doses per day should be parsed as (2 of (3 doses)) per day

@@ -203,32 +203,28 @@ pub fn parse_member_expression(
         // Consume the dot
         input = input.advance();
 
-        // Parse the member name as an identifier
-        let (new_input, member) = parse_identifier(input)?;
+        // Parse just the next identifier after the dot
+        let (new_input, ident_token) = take_token_if(
+            |t| matches!(t, TokenType::Identifier(_)),
+            ErrorKind::Tag,
+        )(input)?;
+        
+        let ident_name = if let TokenType::Identifier(name) = &ident_token.token_type {
+            name.clone()
+        } else {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                ErrorKind::Tag,
+            )));
+        };
+        
+        // Create a new member expression with the current identifier
+        expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+            object: expr,
+            property: IdentifierNode { name: ident_name },
+        }));
+        
         input = new_input;
-
-        // Handle both direct identifiers and nested member expressions
-        match member {
-            ExpressionNode::Identifier(ident) => {
-                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-                    object: expr,
-                    property: ident,
-                }));
-            }
-            ExpressionNode::Member(member_expr) => {
-                // If we have a nested member expression, chain it with the current one
-                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-                    object: expr,
-                    property: member_expr.property,
-                }));
-            }
-            _ => {
-                return Err(nom::Err::Error(nom::error::Error::new(
-                    input,
-                    ErrorKind::Tag,
-                )));
-            }
-        }
     }
 
     Ok((input, expr))

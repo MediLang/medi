@@ -81,19 +81,18 @@ pub fn parse_binary_expression(
                     break;
                 }
 
-                // For right-associative operators, use the current precedence - 1
+                // For right-associative operators, use the current precedence
                 // For left-associative, use current + 1
-                // For the 'of' operator, we want to parse the RHS with the same precedence
-                // to allow for chained operations like '2 of 3 doses'
+                // For the 'of' and 'per' operators, use the same precedence to allow chaining
                 let next_min_precedence = if is_right_assoc {
-                    precedence.saturating_sub(1)
-                } else if op == BinaryOperator::Of {
-                    // For 'of' operator, use the same precedence to allow chaining
+                    // For right-associative operators (like **), use the same precedence
+                    // This ensures proper right-associativity: 2 ** 3 ** 4 parses as 2 ** (3 ** 4)
                     precedence
-                } else if op == BinaryOperator::Per {
-                    // For 'per' operator, use the same precedence to allow chaining
+                } else if op == BinaryOperator::Of || op == BinaryOperator::Per {
+                    // For 'of' and 'per' operators, use the same precedence to allow chaining
                     precedence
                 } else {
+                    // For left-associative operators, use precedence + 1
                     precedence + 1
                 };
 
