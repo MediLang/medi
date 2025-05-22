@@ -17,8 +17,9 @@ use crate::parser::{take_token_if, LiteralNode, TokenSlice, TokenType};
 /// let tokens = vec![Token { token_type: TokenType::Integer(42), ..Default::default() }];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_literal(input);
-/// assert!(matches!(result, Ok((_, LiteralNode::Int(42))));
-/// ```pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNode> {
+/// assert!(matches!(result, Ok((_, LiteralNode::Int(42)))));
+/// ```
+pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNode> {
     if let Some(token) = input.peek() {
         match &token.token_type {
             TokenType::Integer(i) => {

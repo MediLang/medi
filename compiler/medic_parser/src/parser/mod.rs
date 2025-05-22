@@ -398,7 +398,8 @@ impl InputTakeAtPosition for TokenSlice<'_> {
 /// let parser = take_token_if(|tt| matches!(tt, TokenType::Plus), ErrorKind::Tag);
 /// let result = parser(input);
 /// assert!(result.is_ok());
-/// ```pub fn take_token_if<F>(
+/// ```
+pub fn take_token_if<F>(
     predicate: F,
     err_kind: ErrorKind,
 ) -> impl Fn(TokenSlice<'_>) -> IResult<TokenSlice<'_>, Token>
@@ -441,7 +442,7 @@ where
 /// let (_, block) = result.unwrap();
 /// assert!(matches!(block, BlockNode { .. }));
 /// ```
-pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
+pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
     let (mut input, _) =
         take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
 
@@ -478,7 +479,8 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 /// assert_eq!(get_binary_operator(&TokenType::Plus), Some((BinaryOperator::Add, false)));
 /// assert_eq!(get_binary_operator(&TokenType::DoubleStar), Some((BinaryOperator::Pow, true)));
 /// assert_eq!(get_binary_operator(&TokenType::Identifier), None);
-/// ```pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bool)> {
+/// ```
+pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bool)> {
     match token_type {
         // Medical operators
         TokenType::Of => Some((BinaryOperator::Of, false)),
@@ -524,7 +526,8 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 ///
 /// assert!(get_operator_precedence(&BinaryOperator::Mul) > get_operator_precedence(&BinaryOperator::Add));
 /// assert_eq!(get_operator_precedence(&BinaryOperator::Or), 0);
-/// ```pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
+/// ```
+pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
     match op {
         // Unit conversion (highest precedence)
         BinaryOperator::UnitConversion => 16,
@@ -579,7 +582,20 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
     }
 }
 
-/// ```pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
+/// Parses a complete program consisting of zero or more statements.
+///
+/// # Examples
+///
+/// ```
+/// use medic_parser::{parse_program, TokenSlice};
+/// use medic_ast::ProgramNode;
+///
+/// let tokens = vec![];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_program(input);
+/// assert!(result.is_ok());
+/// ```
+pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
     let (input, statements) = many0(parse_statement)(input)?;
     Ok((input, ProgramNode { statements }))
 }
@@ -594,12 +610,14 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 /// // This will panic because pattern parsing is not yet implemented.
 /// let tokens = TokenSlice::new(&[]);
 /// let _ = parse_pattern(tokens);
-/// ```pub fn parse_pattern(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
+/// ```
+pub fn parse_pattern(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
     // TODO: Implement pattern parsing
     todo!("Pattern parsing not implemented yet");
 }
 
-/// ```pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // TODO: Implement for statement parsing
     todo!("For statement parsing not implemented yet");
 }
@@ -618,7 +636,8 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 /// // This will panic because match statement parsing is not implemented.
 /// let tokens = TokenSlice::new(&[]);
 /// let _ = parse_match_statement(tokens);
-/// ```pub fn parse_match_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+pub fn parse_match_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // TODO: Implement match statement parsing
     todo!("Match statement parsing not implemented yet");
 }

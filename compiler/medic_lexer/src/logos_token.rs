@@ -77,6 +77,12 @@ pub enum LogosToken {
     #[token("false", |_| false)]
     Bool(bool),
 
+    // Medical operators (must come before Identifier to avoid shadowing)
+    #[token("of")]
+    Of,
+    #[token("per")]
+    Per,
+
     // Identifiers - support Unicode characters
     // First character: Any Unicode letter or underscore
     // Following characters: Any Unicode letter, number, or underscore
@@ -117,11 +123,7 @@ pub enum LogosToken {
     #[token("medication")]
     Medication,
 
-    // Medical operators
-    #[token("of")]
-    Of,
-    #[token("per")]
-    Per,
+    // Medical keywords
     #[token("fhir_query")]
     FhirQuery,
     #[token("query")]

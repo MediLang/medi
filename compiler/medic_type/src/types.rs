@@ -35,7 +35,8 @@ impl MediType {
     /// assert!(MediType::Int.is_numeric());
     /// assert!(MediType::Float.is_numeric());
     /// assert!(!MediType::Bool.is_numeric());
-    /// ```    pub fn is_numeric(&self) -> bool {
+    /// ```
+    pub fn is_numeric(&self) -> bool {
         matches!(self, MediType::Int | MediType::Float)
     }
 
@@ -51,7 +52,8 @@ impl MediType {
     /// assert!(MediType::Int.is_comparable_with(&MediType::Float));
     /// assert!(MediType::String.is_comparable_with(&MediType::String));
     /// assert!(!MediType::Int.is_comparable_with(&MediType::String));
-    /// ```    pub fn is_comparable_with(&self, other: &Self) -> bool {
+    /// ```
+    pub fn is_comparable_with(&self, other: &Self) -> bool {
         match (self, other) {
             // Numeric types can be compared with each other
             (MediType::Int, MediType::Int)

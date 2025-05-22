@@ -20,7 +20,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 ///
 /// assert!(is_comparison_operator(&BinaryOperator::Eq));
 /// assert!(!is_comparison_operator(&BinaryOperator::Add));
-/// ```fn is_comparison_operator(op: &BinaryOperator) -> bool {
+/// ```
+fn is_comparison_operator(op: &BinaryOperator) -> bool {
     matches!(
         op,
         BinaryOperator::Eq
@@ -50,7 +51,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 /// // Assume `tokens` is a TokenSlice representing: 2 + 3 * 4
 /// let result = parse_binary_expression(tokens, 1, false);
 /// assert!(result.is_ok());
-/// ```pub fn parse_binary_expression(
+/// ```
+pub fn parse_binary_expression(
     input: TokenSlice<'_>,
     min_precedence: u8,
     in_comparison: bool,
@@ -178,7 +180,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 /// let input = TokenSlice::new(&tokens);
 /// let (rest, expr) = parse_primary(input).unwrap();
 /// assert!(matches!(expr, ExpressionNode::Literal(_)));
-/// ```pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+/// ```
+pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // Try to parse a literal (numbers, strings, etc.)
     if let Ok((input, lit)) = super::literals::parse_literal(input) {
         return Ok((input, ExpressionNode::Literal(lit)));
@@ -224,7 +227,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 /// let input = TokenSlice(&tokens);
 /// let result = parse_expression(input);
 /// assert!(result.is_ok());
-/// ```pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+/// ```
+pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     // First, parse the left-hand side of the expression
     let (mut input, mut left) = parse_primary(input)?;
 
@@ -267,7 +271,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 /// let slice = TokenSlice::new(&tokens);
 /// let result = parse_expression_with_min_precedence(slice, 1, false);
 /// assert!(result.is_ok());
-/// ```fn parse_expression_with_min_precedence(
+/// ```
+fn parse_expression_with_min_precedence(
     input: TokenSlice<'_>,
     min_precedence: u8,
     in_comparison: bool,
@@ -299,7 +304,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 /// let (_, left) = parse_primary(slice).unwrap();
 /// let result = parse_binary_expression_with_left(slice.advance(1), left, 1, false);
 /// assert!(result.is_ok());
-/// ```fn parse_binary_expression_with_left(
+/// ```
+fn parse_binary_expression_with_left(
     input: TokenSlice<'_>,
     left: ExpressionNode,
     min_precedence: u8,
@@ -321,6 +327,12 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
                 // For right-associative operators, we need to use a lower precedence
                 // to ensure proper right-associativity
                 let next_min_precedence = if is_right_assoc {
+                    precedence.saturating_sub(1)
+                } else if op == BinaryOperator::Of {
+                    // For 'of' operator, use the same precedence to allow chaining
+                    precedence
+                } else if op == BinaryOperator::Per {
+                    // For 'per' operator, use the same precedence to allow chaining
                     precedence
                 } else {
                     precedence + 1
@@ -451,7 +463,8 @@ use super::{identifiers::parse_identifier, literals::parse_literal};
 /// let (input, left) = parse_primary(TokenSlice::new(&tokens)).unwrap();
 /// let (_, expr) = parse_binary_expression_with_min_precedence(input, left, 1, false).unwrap();
 /// // The resulting expr represents (1 + (2 * 3))
-/// ```fn parse_binary_expression_with_min_precedence(
+/// ```
+fn parse_binary_expression_with_min_precedence(
     input: TokenSlice<'_>,
     left: ExpressionNode,
     min_precedence: u8,

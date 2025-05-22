@@ -31,7 +31,14 @@ use medic_ast::ast::LetStatementNode;
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_let_statement(input);
 /// assert!(result.is_ok());
-/// ```pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+///
+/// # Arguments
+/// * `input` - A slice of tokens to parse
+///
+/// # Returns
+/// A tuple containing the remaining input and the parsed statement if successful
+pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'let' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
 
@@ -100,7 +107,14 @@ use medic_ast::ast::ReturnNode;
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_return_statement(input);
 /// assert!(result.is_ok());
-/// ```pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+///
+/// # Arguments
+/// * `input` - A slice of tokens to parse
+///
+/// # Returns
+/// A tuple containing the remaining input and the parsed return statement if successful
+pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'return' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::Return), ErrorKind::Tag)(input)?;
 
@@ -144,7 +158,14 @@ use medic_ast::ast::IfNode;
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_if_statement(input);
 /// assert!(result.is_ok());
-/// ```pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+///
+/// # Arguments
+/// * `input` - A slice of tokens to parse
+///
+/// # Returns
+/// A tuple containing the remaining input and the parsed if statement if successful
+pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'if' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
 
@@ -210,7 +231,14 @@ use medic_ast::ast::WhileNode;
 /// let tokens = tokenize("while x < 10 { x = x + 1; }");
 /// let result = parse_while_statement(&tokens);
 /// assert!(result.is_ok());
-/// ```pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+///
+/// # Arguments
+/// * `input` - A slice of tokens to parse
+///
+/// # Returns
+/// A tuple containing the remaining input and the parsed while statement if successful
+pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'while' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
 
@@ -240,7 +268,14 @@ use medic_ast::ast::WhileNode;
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_statement(input);
 /// assert!(result.is_ok());
-/// ```pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+/// ```
+///
+/// # Arguments
+/// * `input` - A slice of tokens to parse
+///
+/// # Returns
+/// A tuple containing the remaining input and the parsed statement if successful
+pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Check the first token to determine the statement type
     if let Some(token) = input.peek() {
         match token.token_type {

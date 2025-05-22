@@ -34,7 +34,6 @@ fn test_unit_conversion_precedence() {
 /// test_of_operator();
 /// ```
 fn test_of_operator() {
-fn test_of_operator() {
     // 2 of 3 doses should be parsed as (2 of 3) doses
     let tokens = tokenize("2 of 3 doses").unwrap();
     let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();

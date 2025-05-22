@@ -91,7 +91,8 @@ impl<'a> Lexer<'a> {
     /// let token = lexer.convert_token(logos_token, "let", &(0..3));
     /// assert_eq!(token.token_type, TokenType::Let);
     /// assert_eq!(token.lexeme, "let");
-    /// ```    fn convert_token(
+    /// ```
+    fn convert_token(
         &mut self,
         logos_token: LogosToken,
         lexeme: &str,

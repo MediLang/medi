@@ -27,7 +27,6 @@ impl<'a> TypeChecker<'a> {
     /// let expr = ExpressionNode::Identifier(IdentifierNode { name: "x".to_string() });
     /// assert_eq!(checker.check_expr(&expr), MediType::Int);
     /// ```
-    pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
         match expr {
             ExpressionNode::IcdCode(_)

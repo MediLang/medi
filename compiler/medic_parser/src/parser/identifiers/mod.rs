@@ -29,7 +29,8 @@ use super::expressions::parse_expression;
 /// ];
 /// let (rest, expr) = parse_identifier(tokens).unwrap();
 /// assert!(matches!(expr, ExpressionNode::Member { .. }));
-/// ```pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+/// ```
+pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     if let Some(token) = input.peek() {
         match &token.token_type {
             TokenType::Identifier(name) => {
@@ -185,7 +186,8 @@ use super::expressions::parse_expression;
 /// let (input, object) = parse_identifier(input).unwrap();
 /// let (remaining, expr) = parse_member_expression(input, object).unwrap();
 /// // expr now represents foo.bar.baz as nested member expressions
-/// ```pub fn parse_member_expression(
+/// ```
+pub fn parse_member_expression(
     input: TokenSlice<'_>,
     object: ExpressionNode,
 ) -> IResult<TokenSlice<'_>, ExpressionNode> {
@@ -205,17 +207,27 @@ use super::expressions::parse_expression;
         let (new_input, member) = parse_identifier(input)?;
         input = new_input;
 
-        // Create a new member expression node with the member as the property
-        if let ExpressionNode::Identifier(ident) = member {
-            expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-                object: expr,
-                property: ident,
-            }));
-        } else {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                ErrorKind::Tag,
-            )));
+        // Handle both direct identifiers and nested member expressions
+        match member {
+            ExpressionNode::Identifier(ident) => {
+                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+                    object: expr,
+                    property: ident,
+                }));
+            }
+            ExpressionNode::Member(member_expr) => {
+                // If we have a nested member expression, chain it with the current one
+                expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
+                    object: expr,
+                    property: member_expr.property,
+                }));
+            }
+            _ => {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )));
+            }
         }
     }
 
