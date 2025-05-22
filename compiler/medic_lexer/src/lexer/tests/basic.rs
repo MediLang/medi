@@ -38,12 +38,12 @@ fn test_lexer_float_numbers() {
             // Using a small epsilon for floating-point comparison
             let expected = 3.14;
             assert!(
-                (value - expected).abs() < 0.001,  // Using a small epsilon for comparison
+                (value - expected).abs() < 0.001, // Using a small epsilon for comparison
                 "Expected Float close to {} at position 3, got {}",
                 expected,
                 value
             )
-        },
+        }
         _ => panic!(
             "Expected Float at position 3, got {:?}",
             tokens[3].token_type
