@@ -529,8 +529,20 @@ fn parse_binary_expression_with_min_precedence(
                 )(input)?;
                 input = new_input;
 
-                // Parse the right-hand side
-                let (new_input, right) = parse_primary(input)?;
+                // Parse the right-hand side with the appropriate minimum precedence
+                // For right-associative operators, use the current precedence
+                // For left-associative, use current + 1 to ensure proper left-associativity
+                let next_min_precedence = if is_right_assoc {
+                    precedence
+                } else {
+                    precedence + 1
+                };
+
+                let (new_input, right) = parse_expression_with_min_precedence(
+                    input,
+                    next_min_precedence,
+                    _is_comparison || in_comparison,
+                )?;
                 input = new_input;
 
                 // Create the binary expression

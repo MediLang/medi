@@ -203,27 +203,56 @@ pub fn parse_member_expression(
         // Consume the dot
         input = input.advance();
 
-        // Parse just the next identifier after the dot
-        let (new_input, ident_token) = take_token_if(
-            |t| matches!(t, TokenType::Identifier(_)),
+        // Parse the next identifier or keyword after the dot
+        let (new_input, ident_name) = if let Ok((input, token)) =
+            take_token_if(|t| matches!(t, TokenType::Identifier(_)), ErrorKind::Tag)(input)
+        {
+            // Handle regular identifiers
+            if let TokenType::Identifier(name) = &token.token_type {
+                (input, name.clone())
+            } else {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )));
+            }
+        } else if let Ok((input, _)) = take_token_if(
+            |t| {
+                matches!(
+                    t,
+                    TokenType::Patient
+                        | TokenType::Observation
+                        | TokenType::Medication
+                        | TokenType::If
+                        | TokenType::Else
+                )
+            },
             ErrorKind::Tag,
-        )(input)?;
-        
-        let ident_name = if let TokenType::Identifier(name) = &ident_token.token_type {
-            name.clone()
+        )(input)
+        {
+            // Handle keywords that can be used as identifiers
+            let name = match token.token_type {
+                TokenType::Patient => "patient",
+                TokenType::Observation => "observation",
+                TokenType::Medication => "medication",
+                TokenType::If => "if",
+                TokenType::Else => "else",
+                _ => unreachable!(),
+            };
+            (input, name.to_string())
         } else {
             return Err(nom::Err::Error(nom::error::Error::new(
                 input,
                 ErrorKind::Tag,
             )));
         };
-        
+
         // Create a new member expression with the current identifier
         expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
             object: expr,
             property: IdentifierNode { name: ident_name },
         }));
-        
+
         input = new_input;
     }
 
