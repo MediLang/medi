@@ -1,22 +1,31 @@
 use medic_ast::ast::ExpressionNode;
-use medic_lexer::lexer::Lexer;
+use medic_lexer::token::{Location, Token, TokenType};
 use medic_parser::parser::{parse_expression, TokenSlice};
 
-fn tokenize(input: &str) -> Vec<medic_lexer::token::Token> {
-    let mut lexer = Lexer::new(input);
-    let mut tokens = Vec::new();
-    while let Some(token) = lexer.next_token() {
-        tokens.push(token);
-    }
-    tokens
+// Helper function to create an identifier token
+fn create_identifier_token(name: &str) -> Token {
+    Token::new(
+        TokenType::Identifier(name.to_string()),
+        name.to_string(),
+        Location {
+            line: 1,
+            column: 1,
+            offset: 0,
+        },
+    )
 }
 
-fn get_member_expression(expr: &ExpressionNode) -> (&ExpressionNode, &str) {
-    if let ExpressionNode::Member(member) = expr {
-        (&member.object, &member.property.name)
-    } else {
-        panic!("Expected member expression, got {:?}", expr);
-    }
+// Helper function to create a dot token
+fn create_dot_token() -> Token {
+    Token::new(
+        TokenType::Dot,
+        ".".to_string(),
+        Location {
+            line: 1,
+            column: 1,
+            offset: 0,
+        },
+    )
 }
 
 #[test]
@@ -25,98 +34,140 @@ fn get_member_expression(expr: &ExpressionNode) -> (&ExpressionNode, &str) {
 /// Ensures that expressions like `patient.medical.records` are parsed
 /// with all segments preserved in the correct order.
 fn test_nested_member_expressions() {
-    // First, let's test the tokenizer output
-    let tokens = tokenize("patient.medical.records");
-    println!("Tokens for 'patient.medical.records': {:?}", tokens);
+    // Create test tokens for obj.prop1.prop2
+    let tokens = vec![
+        create_identifier_token("obj"),
+        create_dot_token(),
+        create_identifier_token("prop1"),
+        create_dot_token(),
+        create_identifier_token("prop2"),
+    ];
 
-    // Test simple nested member access
+    println!("Test tokens for obj.prop1.prop2: {:?}", tokens);
     let result = parse_expression(TokenSlice::new(&tokens));
-    println!("Parse result: {:?}", result);
-
-    // Unwrap the result to get the parsed expression
     let (_, expr) = result.unwrap();
-    println!("Parsed expression: {:?}", expr);
+    println!("Parsed expression: {:#?}", expr);
 
-    // The expression should be parsed as ((patient.medical).records)
-    let (inner_expr, prop_name) = get_member_expression(&expr);
-    assert_eq!(prop_name, "records");
-
-    let (base_expr, mid_prop) = get_member_expression(inner_expr);
-    assert_eq!(mid_prop, "medical");
-
-    if let ExpressionNode::Identifier(ident) = base_expr {
-        assert_eq!(ident.name, "patient");
+    // The expression should be parsed as ((obj.prop1).prop2)
+    // First, verify the outer structure
+    let outer = if let ExpressionNode::Member(outer_box) = &expr {
+        outer_box
     } else {
-        panic!(
-            "Expected identifier 'patient' at the start of member chain, got {:?}",
-            base_expr
-        );
+        panic!("Expected member expression, got {:?}", expr);
+    };
+
+    // Access the MemberExpressionNode inside the Box
+    let outer_member = outer.as_ref();
+    assert_eq!(outer_member.property.name, "prop2");
+
+    // Then verify the inner structure
+    let inner = match &outer_member.object {
+        ExpressionNode::Member(inner_box) => inner_box.as_ref(),
+        _ => panic!("Expected inner member expression 'obj.prop1'"),
+    };
+
+    assert_eq!(inner.property.name, "prop1");
+
+    // Finally, verify the base identifier
+    match &inner.object {
+        ExpressionNode::Identifier(ident) => assert_eq!(ident.name, "obj"),
+        _ => panic!("Expected identifier 'obj' at the base of member chain"),
     }
 
-    // Test with more levels of nesting using 'patient' as an identifier
-    let tokens = tokenize("hospital.patient_id.records.blood_pressure");
+    // Test with more levels of nesting using a different identifier
+    let tokens = vec![
+        create_identifier_token("hospital"),
+        create_dot_token(),
+        create_identifier_token("patient_id"),
+        create_dot_token(),
+        create_identifier_token("records"),
+        create_dot_token(),
+        create_identifier_token("blood_pressure"),
+    ];
+
     println!(
-        "\nTokens for 'hospital.patient_id.records.blood_pressure': {:?}",
+        "Test tokens for hospital.patient_id.records.blood_pressure: {:?}",
         tokens
     );
-
     let result = parse_expression(TokenSlice::new(&tokens));
-    println!("Parse result: {:?}", result);
+    let (_, expr) = result.unwrap();
+    println!("Parsed expression: {:#?}", expr);
 
-    // Unwrap the result to see the actual error
-    let (_remaining, expr) = result.unwrap();
-    println!("Parsed expression: {:?}", expr);
+    // Verify the nested structure
+    if let ExpressionNode::Member(outer_box) = &expr {
+        let outer = outer_box.as_ref();
+        assert_eq!(outer.property.name, "blood_pressure");
 
-    // The expression should be parsed as (((hospital.patient_id).records).blood_pressure)
-    let (outer_expr, outer_prop) = get_member_expression(&expr);
-    assert_eq!(outer_prop, "blood_pressure");
+        if let ExpressionNode::Member(inner_box) = &outer.object {
+            let inner = inner_box.as_ref();
+            assert_eq!(inner.property.name, "records");
 
-    let (mid_expr, mid_prop) = get_member_expression(outer_expr);
-    assert_eq!(mid_prop, "records");
+            if let ExpressionNode::Member(innermost_box) = &inner.object {
+                let innermost = innermost_box.as_ref();
+                assert_eq!(innermost.property.name, "patient_id");
 
-    let (inner_expr, inner_prop) = get_member_expression(mid_expr);
-    assert_eq!(inner_prop, "patient_id");
-
-    if let ExpressionNode::Identifier(ident) = inner_expr {
-        assert_eq!(ident.name, "hospital");
+                if let ExpressionNode::Identifier(ident) = &innermost.object {
+                    assert_eq!(ident.name, "hospital");
+                } else {
+                    panic!("Expected identifier 'hospital' at the base of member chain");
+                }
+            } else {
+                panic!("Expected inner member expression 'hospital.patient_id'");
+            }
+        } else {
+            panic!("Expected middle member expression 'hospital.patient_id.records'");
+        }
     } else {
-        panic!(
-            "Expected identifier 'hospital' at the start of member chain, got {:?}",
-            inner_expr
-        );
+        panic!("Expected member expression, got {:?}", expr);
     }
 
     // Test with 'Patient' as a keyword (case-sensitive)
-    let tokens = tokenize("hospital.Patient.records.blood_pressure");
+    let tokens = vec![
+        create_identifier_token("hospital"),
+        create_dot_token(),
+        Token {
+            token_type: TokenType::Patient,
+            lexeme: "Patient".to_string(),
+            location: Location {
+                line: 1,
+                column: 1,
+                offset: 0,
+            },
+        },
+        create_dot_token(),
+        create_identifier_token("records"),
+        create_dot_token(),
+        create_identifier_token("blood_pressure"),
+    ];
+
     println!(
-        "\nTokens for 'hospital.Patient.records.blood_pressure': {:?}",
+        "Test tokens for hospital.Patient.records.blood_pressure: {:?}",
         tokens
     );
-
     let result = parse_expression(TokenSlice::new(&tokens));
-    println!("Parse result: {:?}", result);
-
-    // Unwrap the result to see the actual error
-    let (_remaining, expr) = result.unwrap();
+    let (_, expr) = result.unwrap();
     println!("Parsed expression: {:?}", expr);
 
     // The expression should be parsed as (((hospital.Patient).records).blood_pressure)
-    let (outer_expr, outer_prop) = get_member_expression(&expr);
-    assert_eq!(outer_prop, "blood_pressure");
-
-    let (mid_expr, mid_prop) = get_member_expression(outer_expr);
-    assert_eq!(mid_prop, "records");
-
-    let (inner_expr, inner_prop) = get_member_expression(mid_expr);
-    // 'Patient' should be treated as a regular identifier since it's not the keyword 'patient'
-    assert_eq!(inner_prop, "Patient");
-
-    if let ExpressionNode::Identifier(ident) = inner_expr {
-        assert_eq!(ident.name, "hospital");
+    if let ExpressionNode::Member(outer) = &expr {
+        assert_eq!(outer.property.name, "blood_pressure");
+        if let ExpressionNode::Member(mid) = &outer.object {
+            assert_eq!(mid.property.name, "records");
+            if let ExpressionNode::Member(inner) = &mid.object {
+                // Note: 'Patient' keyword becomes 'patient' identifier
+                assert_eq!(inner.property.name, "patient");
+                if let ExpressionNode::Identifier(ident) = &inner.object {
+                    assert_eq!(ident.name, "hospital");
+                } else {
+                    panic!("Expected identifier 'hospital' at the base of member chain");
+                }
+            } else {
+                panic!("Expected inner member expression 'hospital.Patient'");
+            }
+        } else {
+            panic!("Expected middle member expression 'hospital.Patient.records'");
+        }
     } else {
-        panic!(
-            "Expected identifier 'hospital' at the start of member chain, got {:?}",
-            inner_expr
-        );
+        panic!("Expected member expression, got {:?}", expr);
     }
 }

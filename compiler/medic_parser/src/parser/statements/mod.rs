@@ -8,7 +8,7 @@ use crate::parser::{
 
 use super::{expressions::parse_expression as parse_expr, identifiers::parse_identifier};
 
-use medic_ast::ast::LetStatementNode;
+use medic_ast::ast::{AssignmentNode, LetStatementNode};
 
 /// Parses a `let` statement from the input token stream.
 ///
@@ -17,16 +17,15 @@ use medic_ast::ast::LetStatementNode;
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::statements::parse_let_statement;
-/// use medic_lexer::token::{Token, TokenType};
-/// use medic_parser::TokenSlice;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, statements::parse_let_statement};
 ///
 /// let tokens = vec![
-///     Token::new(TokenType::Let, "let", 0),
-///     Token::new(TokenType::Identifier, "x", 1),
-///     Token::new(TokenType::Equal, "=", 2),
-///     Token::new(TokenType::IntLiteral, "42", 3),
-///     Token::new(TokenType::Semicolon, ";", 4),
+///     Token::new(TokenType::Let, "let".to_string(), Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 5, offset: 4 }),
+///     Token::new(TokenType::Equal, "=".to_string(), Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Integer(42), "42".to_string(), Location { line: 1, column: 9, offset: 8 }),
+///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 11, offset: 10 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_let_statement(input);
@@ -85,15 +84,14 @@ use medic_ast::ast::ReturnNode;
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::statements::parse_return_statement;
-/// use medic_lexer::token::{TokenType, Token};
-/// use medic_parser::TokenSlice;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, statements::parse_return_statement};
 ///
 /// // Example: return 42;
 /// let tokens = vec![
-///     Token::new(TokenType::Return, 0..6),
-///     Token::new(TokenType::IntLiteral(42), 7..9),
-///     Token::new(TokenType::Semicolon, 9..10),
+///     Token::new(TokenType::Return, "return".to_string(), Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Integer(42), "42".to_string(), Location { line: 1, column: 8, offset: 7 }),
+///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 10, offset: 9 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_return_statement(input);
@@ -101,8 +99,8 @@ use medic_ast::ast::ReturnNode;
 ///
 /// // Example: return;
 /// let tokens = vec![
-///     Token::new(TokenType::Return, 0..6),
-///     Token::new(TokenType::Semicolon, 6..7),
+///     Token::new(TokenType::Return, "return".to_string(), Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 8, offset: 7 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_return_statement(input);
@@ -145,15 +143,14 @@ use medic_ast::ast::IfNode;
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::statements::parse_if_statement;
-/// use medic_lexer::token::{TokenType, Token};
-/// use medic_parser::parser::TokenSlice;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, statements::parse_if_statement};
 ///
 /// let tokens = vec![
-///     Token::new(TokenType::If, 0..2),
-///     Token::new(TokenType::Ident("x".into()), 3..4),
-///     Token::new(TokenType::LBrace, 5..6),
-///     Token::new(TokenType::RBrace, 6..7),
+///     Token::new(TokenType::If, "if".to_string(), Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 4, offset: 3 }),
+///     Token::new(TokenType::LeftBrace, "{".to_string(), Location { line: 1, column: 6, offset: 5 }),
+///     Token::new(TokenType::RightBrace, "}".to_string(), Location { line: 1, column: 7, offset: 6 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_if_statement(input);
@@ -225,11 +222,25 @@ use medic_ast::ast::WhileNode;
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::statements::parse_while_statement;
-/// use medic_lexer::tokenize;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, statements::parse_while_statement};
 ///
-/// let tokens = tokenize("while x < 10 { x = x + 1; }");
-/// let result = parse_while_statement(&tokens);
+/// let tokens = vec![
+///     Token::new(TokenType::While, "while".to_string(), Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Less, "<".to_string(), Location { line: 1, column: 9, offset: 8 }),
+///     Token::new(TokenType::Integer(10), "10".to_string(), Location { line: 1, column: 11, offset: 10 }),
+///     Token::new(TokenType::LeftBrace, "{".to_string(), Location { line: 1, column: 13, offset: 12 }),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 15, offset: 14 }),
+///     Token::new(TokenType::Equal, "=".to_string(), Location { line: 1, column: 17, offset: 16 }),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 19, offset: 18 }),
+///     Token::new(TokenType::Plus, "+".to_string(), Location { line: 1, column: 21, offset: 20 }),
+///     Token::new(TokenType::Integer(1), "1".to_string(), Location { line: 1, column: 23, offset: 22 }),
+///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 24, offset: 23 }),
+///     Token::new(TokenType::RightBrace, "}".to_string(), Location { line: 1, column: 26, offset: 25 }),
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_while_statement(input);
 /// assert!(result.is_ok());
 /// ```
 ///
@@ -239,19 +250,62 @@ use medic_ast::ast::WhileNode;
 /// # Returns
 /// A tuple containing the remaining input and the parsed while statement if successful
 pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // Consume 'while' keyword
-    let (mut input, _) = take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
+    println!("Starting to parse while statement");
+
+    // Consume 'while' keyword and get remaining input
+    let (input, _) = take_token_if(
+        |t| {
+            println!("Checking token: {:?}", t);
+            matches!(t, TokenType::While)
+        },
+        ErrorKind::Tag,
+    )(input)?;
+
+    println!("After consuming 'while' keyword");
 
     // Parse the condition
-    let (new_input, condition) = parse_expression(input)?;
-    input = new_input;
+    println!("Parsing condition...");
+    let (input, condition) = parse_expression(input).map_err(|e| {
+        println!("Error parsing condition: {:?}", e);
+        e
+    })?;
+
+    println!("Condition parsed successfully: {:?}", condition);
 
     // Parse the body block
-    let (new_input, body) = parse_block(input)?;
+    println!("Parsing body block...");
+    let (input, body) = parse_block(input).map_err(|e| {
+        println!("Error parsing block: {:?}", e);
+        e
+    })?;
+
+    println!("Body block parsed successfully");
 
     let while_node = WhileNode { condition, body };
+    Ok((input, StatementNode::While(Box::new(while_node))))
+}
 
-    Ok((new_input, StatementNode::While(Box::new(while_node))))
+/// Parses an assignment statement (e.g., `x = 42;` or `x.y = z + 1;`).
+///
+/// Expects an l-value (identifier or member expression) followed by an equals sign and an expression.
+/// Returns a `StatementNode::Assignment` containing the target and value expressions.
+pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    // First try to parse the target (l-value)
+    let (input, target) = parse_expression(input)?;
+
+    // Check if the next token is an equals sign
+    let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
+
+    // Parse the value expression
+    let (input, value) = parse_expression(input)?;
+
+    // Consume the semicolon
+    let (input, _) = take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+
+    Ok((
+        input,
+        StatementNode::Assignment(Box::new(AssignmentNode { target, value })),
+    ))
 }
 
 /// Parses a single statement from the input token stream.
@@ -261,10 +315,16 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::statements::parse_statement;
-/// use medic_parser::lexer::{tokenize, TokenSlice};
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, statements::parse_statement};
 ///
-/// let tokens = tokenize("let x = 5;");
+/// let tokens = vec![
+///     Token::new(TokenType::Let, "let".to_string(), Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 5, offset: 4 }),
+///     Token::new(TokenType::Equal, "=".to_string(), Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Integer(5), "5".to_string(), Location { line: 1, column: 9, offset: 8 }),
+///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 10, offset: 9 }),
+/// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_statement(input);
 /// assert!(result.is_ok());
@@ -283,9 +343,13 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
             TokenType::Return => parse_return_statement(input),
             TokenType::If => parse_if_statement(input),
             TokenType::While => parse_while_statement(input),
-            // TODO: Add more statement types
             _ => {
-                // Try to parse an expression statement
+                // Try to parse an assignment statement
+                if let Ok((input, stmt)) = parse_assignment_statement(input) {
+                    return Ok((input, stmt));
+                }
+
+                // Fall back to parsing an expression statement
                 let (input, expr) = parse_expression(input)?;
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;

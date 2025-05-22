@@ -86,13 +86,17 @@ impl<'a> Lexer<'a> {
     /// # Examples
     ///
     /// ```
+    /// use medic_lexer::lexer::Lexer;
+    /// use medic_lexer::LogosToken;
+    /// use medic_lexer::token::TokenType;
+    ///
     /// let mut lexer = Lexer::new("let x = 42");
     /// let logos_token = LogosToken::Let;
     /// let token = lexer.convert_token(logos_token, "let", &(0..3));
     /// assert_eq!(token.token_type, TokenType::Let);
     /// assert_eq!(token.lexeme, "let");
     /// ```
-    fn convert_token(
+    pub fn convert_token(
         &mut self,
         logos_token: LogosToken,
         lexeme: &str,

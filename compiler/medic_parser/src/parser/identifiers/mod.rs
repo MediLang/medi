@@ -18,17 +18,20 @@ use super::expressions::parse_expression;
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::identifiers::parse_identifier;
-/// use medic_parser::lexer::{Token, TokenType};
-/// use medic_parser::parser::ExpressionNode;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{parse_identifier, TokenSlice};
+/// use medic_ast::ast::ExpressionNode;
 ///
-/// let tokens = &[
-///     Token { token_type: TokenType::Identifier("foo".to_string()), ..Default::default() },
-///     Token { token_type: TokenType::Dot, ..Default::default() },
-///     Token { token_type: TokenType::Identifier("bar".to_string()), ..Default::default() },
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens = vec![
+///     Token::new(TokenType::Identifier("foo".to_string()), "foo".to_string(), loc.clone()),
+///     Token::new(TokenType::Dot, ".".to_string(), loc.clone()),
+///     Token::new(TokenType::Identifier("bar".to_string()), "bar".to_string(), loc.clone()),
 /// ];
-/// let (rest, expr) = parse_identifier(tokens).unwrap();
+/// let slice = TokenSlice::new(&tokens);
+/// let (rest, expr) = parse_identifier(slice).unwrap();
 /// assert!(matches!(expr, ExpressionNode::Member { .. }));
+/// ```
 /// ```
 pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     if let Some(token) = input.peek() {
@@ -172,20 +175,23 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
 /// # Examples
 ///
 /// ```
-/// # use medic_parser::parser::identifiers::{parse_identifier, parse_member_expression};
-/// # use medic_parser::lexer::{Token, TokenType, TokenSlice};
-/// # use medic_parser::ast::{ExpressionNode, MemberExpressionNode};
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{parse_identifier, parse_member_expression, TokenSlice};
+/// use medic_ast::ast::ExpressionNode;
+///
+/// let loc = Location { line: 1, column: 1, offset: 0 };
 /// let tokens = vec![
-///     Token::new(TokenType::Identifier("foo".into())),
-///     Token::new(TokenType::Dot),
-///     Token::new(TokenType::Identifier("bar".into())),
-///     Token::new(TokenType::Dot),
-///     Token::new(TokenType::Identifier("baz".into())),
+///     Token::new(TokenType::Identifier("foo".to_string()), "foo".to_string(), loc.clone()),
+///     Token::new(TokenType::Dot, ".".to_string(), loc.clone()),
+///     Token::new(TokenType::Identifier("bar".to_string()), "bar".to_string(), loc.clone()),
+///     Token::new(TokenType::Dot, ".".to_string(), loc.clone()),
+///     Token::new(TokenType::Identifier("baz".to_string()), "baz".to_string(), loc.clone()),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let (input, object) = parse_identifier(input).unwrap();
 /// let (remaining, expr) = parse_member_expression(input, object).unwrap();
 /// // expr now represents foo.bar.baz as nested member expressions
+/// assert!(matches!(expr, ExpressionNode::Member { .. }));
 /// ```
 pub fn parse_member_expression(
     input: TokenSlice<'_>,
@@ -216,7 +222,7 @@ pub fn parse_member_expression(
                     ErrorKind::Tag,
                 )));
             }
-        } else if let Ok((input, _)) = take_token_if(
+        } else if let Ok((input, token)) = take_token_if(
             |t| {
                 matches!(
                     t,

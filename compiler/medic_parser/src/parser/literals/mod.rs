@@ -10,11 +10,14 @@ use crate::parser::{take_token_if, LiteralNode, TokenSlice, TokenType};
 /// # Examples
 ///
 /// ```
-/// use medic_parser::parser::literals::parse_literal;
-/// use medic_parser::lexer::{TokenSlice, Token, TokenType};
-/// use medic_parser::ast::LiteralNode;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{parse_literal, TokenSlice};
+/// use medic_ast::ast::LiteralNode;
 ///
-/// let tokens = vec![Token { token_type: TokenType::Integer(42), ..Default::default() }];
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens = vec![
+///     Token::new(TokenType::Integer(42), "42".to_string(), loc.clone())
+/// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_literal(input);
 /// assert!(matches!(result, Ok((_, LiteralNode::Int(42)))));

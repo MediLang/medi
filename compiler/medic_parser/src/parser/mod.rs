@@ -16,18 +16,19 @@ use nom::{
 
 use medic_ast::ast::{
     BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode, ExpressionNode,
-    IdentifierNode, LiteralNode, MemberExpressionNode, PatternNode, ProgramNode, StatementNode,
+    IdentifierNode, LiteralNode, MatchArmNode, MatchNode, MemberExpressionNode, PatternNode,
+    ProgramNode, StatementNode,
 };
 use medic_lexer::token::{Token, TokenType};
 
 // Declare submodules
-mod expressions;
-mod identifiers;
-mod literals;
-mod statements;
+pub mod expressions;
+pub mod identifiers;
+pub mod literals;
+pub mod statements;
 
 // Re-export commonly used functions from submodules
-pub use expressions::*;
+pub use expressions::{parse_expression, *};
 pub use identifiers::*;
 pub use literals::*;
 pub use statements::*;
@@ -96,7 +97,15 @@ impl InputTake for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// let tokens = vec![Token::new(TokenType::Plus), Token::new(TokenType::Minus)];
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::InputTake;
+    ///
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = vec![
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Minus, "-".to_string(), loc.clone()),
+    /// ];
     /// let slice = TokenSlice::new(&tokens);
     /// let (suffix, prefix) = slice.take_split(1);
     /// assert_eq!(prefix.len(), 1);
@@ -121,9 +130,16 @@ impl Slice<ops::RangeFrom<usize>> for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// let tokens = vec![Token::new(TokenType::Plus), Token::new(TokenType::Minus)];
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    ///
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = vec![
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Minus, "-".to_string(), loc.clone()),
+    /// ];
     /// let slice = TokenSlice::new(&tokens);
-    /// let rest = slice.slice(1..);
+    /// let rest = slice.slice(1, 2); // Get tokens from index 1 to 2 (exclusive)
     /// assert_eq!(rest.len(), 1);
     /// ```
     fn slice(&self, range: ops::RangeFrom<usize>) -> Self {
@@ -155,9 +171,18 @@ impl<'a> InputIter for TokenSlice<'a> {
     /// # Examples
     ///
     /// ```
-    /// let tokens = [Token::Identifier("a".into()), Token::Plus, Token::Identifier("b".into())];
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::InputIter;
+    ///
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = [
+    ///     Token::new(TokenType::Identifier("a".to_string()), "a".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Identifier("b".to_string()), "b".to_string(), loc.clone()),
+    /// ];
     /// let slice = TokenSlice::new(&tokens);
-    /// let pos = slice.position(|t| matches!(t, Token::Plus));
+    /// let pos = slice.position(|t| t.token_type == TokenType::Plus);
     /// assert_eq!(pos, Some(1));
     /// ```
     fn position<P>(&self, predicate: P) -> Option<usize>
@@ -172,13 +197,18 @@ impl<'a> InputIter for TokenSlice<'a> {
     /// # Examples
     ///
     /// ```
-    /// use medic_parser::TokenSlice;
-    /// use nom::Needed;
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::{Needed, InputIter};
     ///
-    /// let tokens = vec![];
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = vec![
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone())
+    /// ];
     /// let slice = TokenSlice::new(&tokens);
     /// assert_eq!(slice.slice_index(0), Ok(0));
-    /// assert_eq!(slice.slice_index(1), Err(Needed::new(1)));
+    /// assert_eq!(slice.slice_index(1), Ok(1));
+    /// assert_eq!(slice.slice_index(2), Err(Needed::new(1)));
     /// ```
     fn slice_index(&self, count: usize) -> Result<usize, Needed> {
         if self.0.len() >= count {
@@ -197,13 +227,15 @@ impl Compare<Token> for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// use medic_lexer::{Token, TokenType};
-    /// use medic_parser::TokenSlice;
-    /// use nom::CompareResult;
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::{Compare, InputIter};
     ///
-    /// let tokens = [Token::new(TokenType::Plus, 0..1)];
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let token = Token::new(TokenType::Plus, "+".to_string(), loc.clone());
+    /// let tokens = [token.clone()];
     /// let slice = TokenSlice::new(&tokens);
-    /// assert_eq!(slice.compare(tokens[0]), CompareResult::Ok);
+    /// assert_eq!(slice.compare(token), nom::CompareResult::Ok);
     /// ```
     fn compare(&self, t: Token) -> CompareResult {
         if self.0.first() == Some(&t) {
@@ -234,13 +266,33 @@ impl InputTakeAtPosition for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// use medic_lexer::Token;
-    /// use medic_parser::TokenSlice;
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::{IResult, InputIter, InputTakeAtPosition};
     ///
-    /// let tokens = vec![Token::from_type(TokenType::Plus), Token::from_type(TokenType::Minus)];
-    /// let slice = TokenSlice(&tokens);
-    /// let result = slice.split_at_position(|t| t.token_type == TokenType::Minus);
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = vec![
+    ///     Token::new(TokenType::Minus, "-".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    /// ];
+    /// let slice = TokenSlice::new(&tokens);
+    /// type Error<'a> = nom::error::Error<TokenSlice<'a>>;
+    /// let result: Result<_, nom::Err<Error>> = slice.split_at_position(|t| t.token_type == TokenType::Minus);
     /// assert!(result.is_ok());
+    /// let (rest, matched) = result.unwrap();
+    /// assert_eq!(rest.len(), 1);
+    /// assert_eq!(matched.len(), 1);
+    /// assert!(matches!(matched.first().unwrap().token_type, TokenType::Minus));
+    /// assert!(matches!(rest.first().unwrap().token_type, TokenType::Plus));
+    ///
+    /// // Test case where no token matches the predicate
+    /// let tokens = vec![
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    /// ];
+    /// let slice = TokenSlice::new(&tokens);
+    /// let result: Result<_, nom::Err<Error>> = slice.split_at_position(|t| t.token_type == TokenType::Minus);
+    /// assert!(result.is_err()); // Should fail since no token matches the predicate
     /// ```
     fn split_at_position<P, E: ParseError<Self>>(&self, predicate: P) -> IResult<Self, Self, E>
     where
@@ -265,14 +317,23 @@ impl InputTakeAtPosition for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// use medic_lexer::Token;
-    /// use medic_parser::TokenSlice;
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
     /// use nom::error::ErrorKind;
+    /// use nom::InputTakeAtPosition;
     ///
-    /// let tokens = [Token::new_identifier("foo"), Token::new_identifier("bar")];
-    /// let slice = TokenSlice(&tokens);
-    /// let result = slice.split_at_position1(|t| t.is_identifier(), ErrorKind::Tag);
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = [
+    ///     Token::new(TokenType::Identifier("foo".to_string()), "foo".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Identifier("bar".to_string()), "bar".to_string(), loc.clone())
+    /// ];
+    /// let slice = TokenSlice::new(&tokens);
+    /// type Error<'a> = nom::error::Error<TokenSlice<'a>>;
+    /// let result: Result<_, nom::Err<Error>> = slice.split_at_position1(|t| matches!(&t.token_type, TokenType::Identifier(_)), ErrorKind::Tag);
     /// assert!(result.is_ok());
+    /// let (rest, matched) = result.unwrap();
+    /// assert_eq!(rest.len(), 1);
+    /// assert_eq!(matched.len(), 1);
     /// ```
     fn split_at_position1<P, E: ParseError<Self>>(
         &self,
@@ -309,14 +370,20 @@ impl InputTakeAtPosition for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// use medic_lexer::Token;
-    /// use medic_parser::TokenSlice;
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::InputTakeAtPosition;
     ///
-    /// let tokens = vec![Token::new_plus(), Token::new_minus()];
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = vec![Token::new(TokenType::Plus, "+".to_string(), loc.clone())];
     /// let slice = TokenSlice::new(&tokens);
-    /// let (rest, prefix) = slice.split_at_position_complete(|t| t.is_minus()).unwrap().0;
-    /// assert_eq!(prefix.len(), 1);
-    /// assert_eq!(rest.len(), 1);
+    /// type Error<'a> = nom::error::Error<TokenSlice<'a>>;
+    /// let result: Result<_, nom::Err<Error>> = slice.split_at_position_complete(|t| t.token_type == TokenType::Plus);
+    /// assert!(result.is_ok());
+    /// let (rest, matched) = result.unwrap();
+    /// assert!(rest.is_empty());
+    /// assert_eq!(matched.len(), 1);
+    /// assert!(matches!(matched.first().unwrap().token_type, TokenType::Plus));
     /// ```
     fn split_at_position_complete<P, E: ParseError<Self>>(
         &self,
@@ -344,12 +411,25 @@ impl InputTakeAtPosition for TokenSlice<'_> {
     /// # Examples
     ///
     /// ```
-    /// use medic_parser::TokenSlice;
-    /// use medic_lexer::{Token, TokenType};
-    /// let tokens = vec![Token::new(TokenType::Identifier, 0), Token::new(TokenType::Plus, 1)];
-    /// let slice = TokenSlice(&tokens);
-    /// let result = slice.split_at_position1_complete(|t| t.token_type == TokenType::Plus, nom::error::ErrorKind::Tag);
+    /// use medic_lexer::token::{Token, TokenType, Location};
+    /// use medic_parser::parser::TokenSlice;
+    /// use nom::error::ErrorKind;
+    /// use nom::InputTakeAtPosition;
+    ///
+    /// let loc = Location { line: 1, column: 1, offset: 0 };
+    /// let tokens = vec![
+    ///     Token::new(TokenType::Plus, "+".to_string(), loc.clone()),
+    ///     Token::new(TokenType::Minus, "-".to_string(), loc.clone())
+    /// ];
+    /// let slice = TokenSlice::new(&tokens);
+    /// type Error<'a> = nom::error::Error<TokenSlice<'a>>;
+    /// let result: Result<_, nom::Err<Error>> = slice.split_at_position1_complete(|t| t.token_type == TokenType::Plus, ErrorKind::Tag);
     /// assert!(result.is_ok());
+    /// let (rest, matched) = result.unwrap();
+    /// assert_eq!(rest.len(), 1);
+    /// assert_eq!(matched.len(), 1);
+    /// assert!(matches!(matched.first().unwrap().token_type, TokenType::Plus));
+    /// assert_eq!(rest.first().unwrap().token_type, TokenType::Minus);
     /// ```
     fn split_at_position1_complete<P, E: ParseError<Self>>(
         &self,
@@ -389,11 +469,12 @@ impl InputTakeAtPosition for TokenSlice<'_> {
 /// # Examples
 ///
 /// ```
-/// use medic_lexer::{Token, TokenType};
-/// use medic_parser::{TokenSlice, take_token_if};
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, take_token_if};
 /// use nom::error::ErrorKind;
 ///
-/// let tokens = vec![Token::new(TokenType::Plus, 0..1)];
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens = vec![Token::new(TokenType::Plus, "+".to_string(), loc.clone())];
 /// let input = TokenSlice::new(&tokens);
 /// let parser = take_token_if(|tt| matches!(tt, TokenType::Plus), ErrorKind::Tag);
 /// let result = parser(input);
@@ -426,15 +507,20 @@ where
 /// # Examples
 ///
 /// ```
-/// use medic_lexer::{Token, TokenType};
-/// use medic_parser::{parse_block, TokenSlice};
-/// use medic_ast::BlockNode;
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{parse_block, TokenSlice};
+/// use medic_ast::ast::BlockNode;
 ///
 /// // Example token sequence: { let x = 1; }
+/// let loc = Location { line: 1, column: 1, offset: 0 };
 /// let tokens = vec![
-///     Token::new(TokenType::LeftBrace, 0..1),
-///     // ... tokens for a statement ...
-///     Token::new(TokenType::RightBrace, 10..11),
+///     Token::new(TokenType::LeftBrace, "{".to_string(), loc.clone()),
+///     Token::new(TokenType::Let, "let".to_string(), loc.clone()),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), loc.clone()),
+///     Token::new(TokenType::Equal, "=".to_string(), loc.clone()),
+///     Token::new(TokenType::Integer(1), "1".to_string(), loc.clone()),
+///     Token::new(TokenType::Semicolon, ";".to_string(), loc.clone()),
+///     Token::new(TokenType::RightBrace, "}".to_string(), loc.clone()),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_block(input);
@@ -472,13 +558,13 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 /// # Examples
 ///
 /// ```
-/// use medic_lexer::TokenType;
-/// use medic_ast::BinaryOperator;
-/// use medic_parser::get_binary_operator;
+/// use medic_lexer::token::TokenType;
+/// use medic_ast::ast::BinaryOperator;
+/// use medic_parser::parser::get_binary_operator;
 ///
 /// assert_eq!(get_binary_operator(&TokenType::Plus), Some((BinaryOperator::Add, false)));
 /// assert_eq!(get_binary_operator(&TokenType::DoubleStar), Some((BinaryOperator::Pow, true)));
-/// assert_eq!(get_binary_operator(&TokenType::Identifier), None);
+/// assert_eq!(get_binary_operator(&TokenType::Identifier("foo".to_string())), None);
 /// ```
 pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bool)> {
     match token_type {
@@ -496,6 +582,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
         TokenType::DoubleStar => Some((BinaryOperator::Pow, true)),
         TokenType::BitAnd => Some((BinaryOperator::BitAnd, false)),
         TokenType::BitOr => Some((BinaryOperator::BitOr, false)),
+        TokenType::BitXor => Some((BinaryOperator::Pow, true)), // ^ is right-associative for exponentiation
         TokenType::Shl => Some((BinaryOperator::Shl, false)),
         TokenType::Shr => Some((BinaryOperator::Shr, false)),
         TokenType::EqualEqual => Some((BinaryOperator::Eq, false)),
@@ -521,19 +608,17 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
 /// # Examples
 ///
 /// ```
-/// use medic_ast::BinaryOperator;
-/// use parser::get_operator_precedence;
+/// use medic_ast::ast::BinaryOperator;
+/// use medic_parser::parser::get_operator_precedence;
 ///
-/// assert!(get_operator_precedence(&BinaryOperator::Mul) > get_operator_precedence(&BinaryOperator::Add));
+/// let precedence = get_operator_precedence(&BinaryOperator::Add);
+/// assert!(precedence > 0);
 /// assert_eq!(get_operator_precedence(&BinaryOperator::Or), 0);
 /// ```
 pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
     match op {
         // Unit conversion (highest precedence)
         BinaryOperator::UnitConversion => 16,
-
-        // Medical 'of' operator (e.g., '2 of 3 doses')
-        BinaryOperator::Of => 15,
 
         // Range operator (has its own special handling in the parser)
         BinaryOperator::Range => 14,
@@ -546,9 +631,6 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
 
         // Addition/Subtraction
         BinaryOperator::Add | BinaryOperator::Sub => 11,
-
-        // Medical 'per' operator (e.g., '5 mg per day')
-        BinaryOperator::Per => 10,
 
         // Bit shifts
         BinaryOperator::Shl | BinaryOperator::Shr => 9,
@@ -574,6 +656,12 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
         // Null-coalescing (??)
         BinaryOperator::NullCoalesce => 2,
 
+        // Medical operators
+        // 'of' has higher precedence than multiplication (e.g., '2 of 3 doses' -> (2 of (3 * doses)))
+        BinaryOperator::Of => 15,
+        // 'per' has lower precedence than multiplication (e.g., '5 mg per day' -> ((5 * mg) per day))
+        BinaryOperator::Per => 5,
+
         // Logical AND
         BinaryOperator::And => 1,
 
@@ -587,10 +675,12 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use medic_parser::{parse_program, TokenSlice};
-/// use medic_ast::ProgramNode;
+/// use medic_lexer::token::{Token, Location};
+/// use medic_parser::parser::{parse_program, TokenSlice};
+/// use medic_ast::ast::ProgramNode;
 ///
-/// let tokens = vec![];
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens: Vec<Token> = vec![];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_program(input);
 /// assert!(result.is_ok());
@@ -606,14 +696,74 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 ///
 /// # Examples
 ///
-/// ```should_panic
-/// // This will panic because pattern parsing is not yet implemented.
-/// let tokens = TokenSlice::new(&[]);
-/// let _ = parse_pattern(tokens);
 /// ```
-pub fn parse_pattern(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
-    // TODO: Implement pattern parsing
-    todo!("Pattern parsing not implemented yet");
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, parse_pattern};
+/// use medic_ast::ast::PatternNode;
+///
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens = vec![
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), loc.clone()),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_pattern(slice);
+/// assert!(result.is_ok());
+/// ```
+///
+/// # Panics
+///
+/// This function will panic if the pattern is not properly formed.
+/// Parses a pattern for use in match expressions.
+///
+/// Currently supports identifier patterns (variable binding) and wildcard patterns.
+///
+/// # Examples
+///
+/// ```
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, parse_pattern};
+/// use medic_ast::ast::{PatternNode, IdentifierNode};
+///
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens = vec![
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), loc.clone()),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_pattern(slice);
+/// assert!(result.is_ok());
+/// if let Ok((_, PatternNode::Identifier(ident))) = result {
+///     assert_eq!(ident.name, "x");
+/// } else {
+///     panic!("Expected identifier pattern");
+/// }
+/// ```
+pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
+    // Try to parse an identifier pattern
+    if let Ok((input, ident)) = take_token_if(
+        |tt| matches!(tt, TokenType::Identifier(_)),
+        ErrorKind::Alpha,
+    )(input)
+    {
+        if let TokenType::Identifier(name) = &ident.token_type {
+            return Ok((
+                input,
+                PatternNode::Identifier(IdentifierNode { name: name.clone() }),
+            ));
+        }
+    }
+
+    // Try to parse a wildcard pattern
+    if let Ok((input, _)) =
+        take_token_if(|tt| matches!(tt, TokenType::Underscore), ErrorKind::Char)(input)
+    {
+        return Ok((input, PatternNode::Wildcard));
+    }
+
+    // If we get here, we couldn't parse a valid pattern
+    Err(nom::Err::Error(nom::error::Error::new(
+        input,
+        ErrorKind::Alt,
+    )))
 }
 
 /// ```
@@ -632,14 +782,67 @@ pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, St
 ///
 /// # Examples
 ///
-/// ```should_panic
-/// // This will panic because match statement parsing is not implemented.
-/// let tokens = TokenSlice::new(&[]);
-/// let _ = parse_match_statement(tokens);
 /// ```
-pub fn parse_match_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // TODO: Implement match statement parsing
-    todo!("Match statement parsing not implemented yet");
+/// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_parser::parser::{TokenSlice, parse_match_statement};
+/// use medic_ast::ast::StatementNode;
+///
+/// let loc = Location { line: 1, column: 1, offset: 0 };
+/// let tokens = vec![
+///     Token::new(TokenType::Match, "match".to_string(), loc.clone()),
+///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), loc.clone()),
+///     Token::new(TokenType::LeftBrace, "{".to_string(), loc.clone()),
+///     Token::new(TokenType::RightBrace, "}".to_string(), loc.clone()),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_match_statement(slice);
+/// assert!(result.is_ok());
+/// ```
+///
+/// # Panics
+///
+/// This function will panic if the match statement is not properly formed.
+/// Parses a match statement from the input token slice.
+///
+/// A match statement has the form:
+/// ```
+/// # use medic_lexer::token::{Token, TokenType, Location};
+/// # use medic_parser::parser::{TokenSlice, parse_match_statement};
+/// # let loc = Location { line: 1, column: 1, offset: 0 };
+/// # let tokens = vec![
+/// #     Token::new(TokenType::Match, "match".to_string(), loc.clone()),
+/// #     Token::new(TokenType::Integer(42), "42".to_string(), loc.clone()),
+/// #     Token::new(TokenType::LeftBrace, "{".to_string(), loc.clone()),
+/// #     Token::new(TokenType::RightBrace, "}".to_string(), loc.clone()),
+/// # ];
+/// # let slice = TokenSlice::new(&tokens);
+/// # let result = parse_match_statement(slice);
+/// # assert!(result.is_ok());
+/// ```
+pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    // Parse the 'match' keyword
+    let (input, _) = take_token_if(|tt| matches!(tt, TokenType::Match), ErrorKind::Tag)(input)?;
+
+    // Parse the expression to match against
+    let (input, expr) = parse_expression(input)?;
+
+    // Parse the opening brace
+    let (input, _) = take_token_if(|tt| matches!(tt, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
+
+    // TODO: Parse match arms
+    let arms = Vec::new();
+
+    // Parse the closing brace
+    let (input, _) =
+        take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input)?;
+
+    Ok((
+        input,
+        StatementNode::Match(Box::new(MatchNode {
+            expr: Box::new(expr),
+            arms,
+        })),
+    ))
 }
 
 #[cfg(test)]

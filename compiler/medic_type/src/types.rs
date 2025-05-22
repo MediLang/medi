@@ -31,7 +31,7 @@ impl MediType {
     /// # Examples
     ///
     /// ```
-    /// use crate::MediType;
+    /// use medic_type::types::MediType;
     /// assert!(MediType::Int.is_numeric());
     /// assert!(MediType::Float.is_numeric());
     /// assert!(!MediType::Bool.is_numeric());
@@ -47,7 +47,7 @@ impl MediType {
     /// # Examples
     ///
     /// ```
-    /// use medic_types::MediType;
+    /// use medic_type::types::MediType;
     ///
     /// assert!(MediType::Int.is_comparable_with(&MediType::Float));
     /// assert!(MediType::String.is_comparable_with(&MediType::String));
