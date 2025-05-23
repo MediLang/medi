@@ -250,36 +250,54 @@ use medic_ast::ast::WhileNode;
 /// # Returns
 /// A tuple containing the remaining input and the parsed while statement if successful
 pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    println!("Starting to parse while statement");
+    if cfg!(debug_assertions) {
+        log::trace!("Starting to parse while statement");
+    }
 
     // Consume 'while' keyword and get remaining input
     let (input, _) = take_token_if(
         |t| {
-            println!("Checking token: {:?}", t);
+            if cfg!(debug_assertions) {
+                log::trace!("Checking token: {:?}", t);
+            }
             matches!(t, TokenType::While)
         },
         ErrorKind::Tag,
     )(input)?;
 
-    println!("After consuming 'while' keyword");
+    if cfg!(debug_assertions) {
+        log::trace!("After consuming 'while' keyword");
+    }
 
     // Parse the condition
-    println!("Parsing condition...");
+    if cfg!(debug_assertions) {
+        log::trace!("Parsing condition...");
+    }
     let (input, condition) = parse_expression(input).map_err(|e| {
-        println!("Error parsing condition: {:?}", e);
+        if cfg!(debug_assertions) {
+            log::error!("Error parsing condition: {:?}", e);
+        }
         e
     })?;
 
-    println!("Condition parsed successfully: {:?}", condition);
+    if cfg!(debug_assertions) {
+        log::trace!("Condition parsed successfully: {:?}", condition);
+    }
 
     // Parse the body block
-    println!("Parsing body block...");
+    if cfg!(debug_assertions) {
+        log::trace!("Parsing body block...");
+    }
     let (input, body) = parse_block(input).map_err(|e| {
-        println!("Error parsing block: {:?}", e);
+        if cfg!(debug_assertions) {
+            log::error!("Error parsing block: {:?}", e);
+        }
         e
     })?;
 
-    println!("Body block parsed successfully");
+    if cfg!(debug_assertions) {
+        log::trace!("Body block parsed successfully");
+    }
 
     let while_node = WhileNode { condition, body };
     Ok((input, StatementNode::While(Box::new(while_node))))
