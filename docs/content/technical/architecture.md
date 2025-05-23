@@ -18,7 +18,7 @@ The Medi language architecture consists of several key components:
 
 Medi's compiler, named `medic` (inspired by how Rust uses `rustc`), leverages LLVM for code generation and optimization:
 
-* **Lexer & Parser**: Custom-built for healthcare-specific syntax
+* **Lexer & Parser**: Hybrid implementation combining the efficiency of Logos for tokenization with custom logic for healthcare-specific syntax and semantics
 * **Type System**: Statically typed with type inference and healthcare data types
 * **Optimizations**: Domain-specific optimizations for healthcare analytics
 * **Code Generation**: 

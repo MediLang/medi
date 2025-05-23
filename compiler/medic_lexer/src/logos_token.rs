@@ -77,6 +77,12 @@ pub enum LogosToken {
     #[token("false", |_| false)]
     Bool(bool),
 
+    // Medical operators (must come before Identifier to avoid shadowing)
+    #[token("of")]
+    Of,
+    #[token("per")]
+    Per,
+
     // Identifiers - support Unicode characters
     // First character: Any Unicode letter or underscore
     // Following characters: Any Unicode letter, number, or underscore
@@ -116,6 +122,8 @@ pub enum LogosToken {
     Observation,
     #[token("medication")]
     Medication,
+
+    // Medical keywords
     #[token("fhir_query")]
     FhirQuery,
     #[token("query")]
@@ -134,21 +142,34 @@ pub enum LogosToken {
     /// Unrecognised input
     Error,
 
-    // Operators
-    #[token("+")]
-    Plus,
-    #[token("-")]
-    Minus,
-    #[token("*")]
-    Star,
-    #[token("/")]
-    Slash,
-    #[token("%")]
-    Percent,
+    // Operators - Grouped by precedence (lowest to highest)
+    // Logical OR
+    #[token("||")]
+    Or,
+
+    // Logical NOT
+    #[token("!")]
+    Not,
+
+    // Logical AND
+    #[token("&&")]
+    And,
+
+    // Null-coalescing
+    #[token("??")]
+    QuestionQuestion,
+
+    // Elvis operator
+    #[token("?:")]
+    QuestionColon,
+
+    // Equality
     #[token("==")]
     EqualEqual,
     #[token("!=")]
     NotEqual,
+
+    // Comparison
     #[token("<")]
     Less,
     #[token("<=")]
@@ -157,12 +178,46 @@ pub enum LogosToken {
     Greater,
     #[token(">=")]
     GreaterEqual,
-    #[token("&&")]
-    And,
-    #[token("||")]
-    Or,
-    #[token("!")]
-    Not,
+
+    // Bitwise OR / Pipe
+    // We use the same token for both bitwise OR and pattern matching pipe
+    // The parser will disambiguate based on context
+    #[token("|")]
+    BitOr,
+
+    // Bitwise XOR
+    #[token("^")]
+    BitXor,
+
+    // Bitwise AND
+    #[token("&")]
+    BitAnd,
+
+    // Bit shifts
+    #[token("<<")]
+    Shl,
+    #[token(">>")]
+    Shr,
+
+    // Addition/Subtraction
+    #[token("+")]
+    Plus,
+    #[token("-")]
+    Minus,
+
+    // Multiplication/Division/Modulo
+    #[token("*")]
+    Star,
+    #[token("/")]
+    Slash,
+    #[token("%")]
+    Percent,
+
+    // Exponentiation (right-associative)
+    #[token("**")]
+    DoubleStar,
+
+    // Assignment operators
     #[token("=")]
     Equal,
     #[token("+=")]
@@ -175,6 +230,18 @@ pub enum LogosToken {
     SlashEqual,
     #[token("%=")]
     PercentEqual,
+    #[token("**=")]
+    DoubleStarAssign,
+    #[token("&=")]
+    BitAndAssign,
+    #[token("|=")]
+    BitOrAssign,
+    #[token("^=")]
+    BitXorAssign,
+    #[token("<<=")]
+    ShlAssign,
+    #[token(">>=")]
+    ShrAssign,
     // Range operators are now defined at the top with higher priority
 
     // Delimiters
@@ -198,8 +265,6 @@ pub enum LogosToken {
     Semicolon,
     #[token("->")]
     Arrow,
-    #[token("|")]
-    Pipe,
     #[token("_", priority = 1)]
     Underscore,
 

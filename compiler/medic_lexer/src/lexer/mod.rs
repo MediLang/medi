@@ -77,8 +77,26 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// Convert a LogosToken to our semantic TokenType
-    fn convert_token(
+    /// Converts a `LogosToken` and its lexeme into a semantic `Token`.
+    ///
+    /// Maps the given `LogosToken` variant and lexeme string to the corresponding `TokenType`,
+    /// handling keywords, literals, operators, delimiters, medical codes, and healthcare-specific tokens.
+    /// Also updates the lexer's position tracking to reflect the token's location in the source code.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_lexer::lexer::Lexer;
+    /// use medic_lexer::LogosToken;
+    /// use medic_lexer::token::TokenType;
+    ///
+    /// let mut lexer = Lexer::new("let x = 42");
+    /// let logos_token = LogosToken::Let;
+    /// let token = lexer.convert_token(logos_token, "let", &(0..3));
+    /// assert_eq!(token.token_type, TokenType::Let);
+    /// assert_eq!(token.lexeme, "let");
+    /// ```
+    pub fn convert_token(
         &mut self,
         logos_token: LogosToken,
         lexeme: &str,
@@ -115,7 +133,11 @@ impl<'a> Lexer<'a> {
             LogosToken::Float(f) => TokenType::Float(f),
             LogosToken::String(s) => TokenType::String(s),
             LogosToken::Bool(b) => TokenType::Bool(b),
-            LogosToken::Identifier(ident) => TokenType::Identifier(ident), // Standard keywords are already handled by LogosToken variants
+            LogosToken::Identifier(ident) => TokenType::Identifier(ident),
+
+            // Medical operators
+            LogosToken::Of => TokenType::Of,
+            LogosToken::Per => TokenType::Per,
 
             // Medical codes
             LogosToken::ICD10(code) => TokenType::ICD10(code),
@@ -144,6 +166,21 @@ impl<'a> Lexer<'a> {
             LogosToken::StarEqual => TokenType::StarEqual,
             LogosToken::SlashEqual => TokenType::SlashEqual,
             LogosToken::PercentEqual => TokenType::PercentEqual,
+            LogosToken::DoubleStar => TokenType::DoubleStar,
+            LogosToken::DoubleStarAssign => TokenType::DoubleStarAssign,
+            LogosToken::BitAnd => TokenType::BitAnd,
+            LogosToken::BitAndAssign => TokenType::BitAndAssign,
+            // Bitwise OR is used as pipe in patterns
+            LogosToken::BitOr => TokenType::Pipe,
+            LogosToken::BitOrAssign => TokenType::BitOrAssign,
+            LogosToken::BitXor => TokenType::BitXor,
+            LogosToken::BitXorAssign => TokenType::BitXorAssign,
+            LogosToken::Shl => TokenType::Shl,
+            LogosToken::ShlAssign => TokenType::ShlAssign,
+            LogosToken::Shr => TokenType::Shr,
+            LogosToken::ShrAssign => TokenType::ShrAssign,
+            LogosToken::QuestionQuestion => TokenType::QuestionQuestion,
+            LogosToken::QuestionColon => TokenType::QuestionColon,
             LogosToken::Range => TokenType::Range,
             LogosToken::RangeInclusive => TokenType::RangeInclusive,
 
@@ -159,7 +196,6 @@ impl<'a> Lexer<'a> {
             LogosToken::Colon => TokenType::Colon,
             LogosToken::Semicolon => TokenType::Semicolon,
             LogosToken::Arrow => TokenType::Arrow,
-            LogosToken::Pipe => TokenType::Pipe,
             LogosToken::Underscore => TokenType::Underscore,
 
             // Error

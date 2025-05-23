@@ -14,6 +14,24 @@ impl<'a> TypeChecker<'a> {
         TypeChecker { env }
     }
 
+    /// Infers and returns the type of a given expression node in the Medic language.
+    ///
+    /// This method analyzes the provided expression node and determines its type according to Medic's type system rules. It supports literals, identifiers, binary operations (including arithmetic, comparison, logical, medical, range, unit conversion, bitwise, and null-coalescing operators), function calls, member access on structs, and healthcare-specific query expressions. If the type cannot be determined or is unsupported, `MediType::Unknown` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use medic_ast::ast::{ExpressionNode, IdentifierNode};
+    /// use medic_env::env::TypeEnv;
+    /// use medic_type::types::MediType;
+    /// use medic_typeck::type_checker::TypeChecker;
+    ///
+    /// let mut env = TypeEnv::new();
+    /// env.insert("x".to_string(), MediType::Int);
+    /// let mut checker = TypeChecker::new(&mut env);
+    /// let expr = ExpressionNode::Identifier(IdentifierNode { name: "x".to_string() });
+    /// assert_eq!(checker.check_expr(&expr), MediType::Int);
+    /// ```
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
         match expr {
             ExpressionNode::IcdCode(_)
@@ -34,34 +52,84 @@ impl<'a> TypeChecker<'a> {
                 let left = self.check_expr(&bin.left);
                 let right = self.check_expr(&bin.right);
                 match bin.operator {
+                    // Arithmetic operators
                     BinaryOperator::Add
                     | BinaryOperator::Sub
                     | BinaryOperator::Mul
                     | BinaryOperator::Div
-                    | BinaryOperator::Mod => {
+                    | BinaryOperator::Mod
+                    | BinaryOperator::Shl
+                    | BinaryOperator::Shr => {
                         if left == MediType::Int && right == MediType::Int {
                             MediType::Int
-                        } else if (left == MediType::Int || left == MediType::Float)
-                            && (right == MediType::Int || right == MediType::Float)
-                        {
+                        } else if left.is_numeric() && right.is_numeric() {
                             MediType::Float
                         } else {
                             MediType::Unknown
                         }
                     }
+                    // Power operator (always returns float)
+                    BinaryOperator::Pow => {
+                        if left.is_numeric() && right.is_numeric() {
+                            MediType::Float
+                        } else {
+                            MediType::Unknown
+                        }
+                    }
+                    // Comparison operators
                     BinaryOperator::Eq
                     | BinaryOperator::Ne
                     | BinaryOperator::Lt
                     | BinaryOperator::Gt
                     | BinaryOperator::Le
-                    | BinaryOperator::Ge => MediType::Bool,
-                    BinaryOperator::And | BinaryOperator::Or => MediType::Bool,
+                    | BinaryOperator::Ge => {
+                        if left.is_comparable_with(&right) {
+                            MediType::Bool
+                        } else {
+                            MediType::Unknown
+                        }
+                    }
+                    // Logical operators
+                    BinaryOperator::And | BinaryOperator::Or => {
+                        if left == MediType::Bool && right == MediType::Bool {
+                            MediType::Bool
+                        } else {
+                            MediType::Unknown
+                        }
+                    }
+                    // Medical operators
+                    BinaryOperator::Of | BinaryOperator::Per => {
+                        // These operators are used for medical quantities
+                        // For now, we'll assume they return the type of the left operand
+                        // More specific type checking can be added later
+                        left
+                    }
+                    // Range operator
                     BinaryOperator::Range => {
                         if left == right {
                             MediType::Range(Box::new(left))
                         } else {
                             MediType::Unknown
                         }
+                    }
+                    // Unit conversion operator
+                    BinaryOperator::UnitConversion => {
+                        // Check if both sides are unit types that can be converted
+                        // For now, just return the right-hand type
+                        right
+                    }
+                    // Bitwise operators
+                    BinaryOperator::BitAnd | BinaryOperator::BitOr | BinaryOperator::BitXor => {
+                        if left == MediType::Int && right == MediType::Int {
+                            MediType::Int
+                        } else {
+                            MediType::Unknown
+                        }
+                    }
+                    // Null-coalescing and Elvis operators
+                    BinaryOperator::NullCoalesce | BinaryOperator::Elvis => {
+                        // Return the type of the right operand
+                        right
                     }
                 }
             }

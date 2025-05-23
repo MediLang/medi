@@ -13,7 +13,7 @@ fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
 #[cfg(test)]
 mod statements_test {
     use super::*;
-    use medic_ast::ast::StatementNode;
+    use medic_ast::ast::{ExpressionNode, LiteralNode, StatementNode};
 
     #[test]
     fn test_let_statement() {
