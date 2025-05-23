@@ -188,7 +188,7 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 
 ### Phase 1: Prototype (6-12 Months)
 
-*   Build parser and LLVM-based medic for core syntax using Rust-inspired approach.
+*   Build parser and LLVM-based `medic` compiler for core syntax using Rust-inspired approach.
 *   Implement modules: `medi.data`, `medi.compliance`, `medi.stats`, `medi.ai`.
 *   Develop a basic IDE with visual analytics and .mdi file recognition.
 *   Test with synthetic data (FHIR, VCF, IoT streams).
