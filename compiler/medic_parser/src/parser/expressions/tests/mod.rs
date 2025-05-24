@@ -76,7 +76,7 @@ mod medical_operators_test {
         let (_, expr) = parse_expression(input).unwrap();
 
         // Debug output
-        println!("Parsed expression: {:#?}", expr);
+        eprintln!("Parsed expression: {:#?}", expr);
 
         match &expr {
             ExpressionNode::Binary(bin) => {
@@ -128,7 +128,7 @@ mod medical_operators_test {
         let (_, expr) = parse_expression(input).unwrap();
 
         // Debug output
-        println!("Parsed expression: {:#?}", expr);
+        eprintln!("Parsed expression: {:#?}", expr);
 
         match &expr {
             ExpressionNode::Binary(bin) => {

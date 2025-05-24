@@ -9,10 +9,10 @@ fn test_unit_conversion_precedence() {
     let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
     
     if let ExpressionNode::Binary(bin) = &expr {
-        assert_eq!(bin.op, BinaryOperator::Mul);
+        assert_eq!(bin.operator, BinaryOperator::Mul);
         
         if let ExpressionNode::Binary(left_bin) = &*bin.left {
-            assert_eq!(left_bin.op, BinaryOperator::UnitConversion);
+            assert_eq!(left_bin.operator, BinaryOperator::UnitConversion);
             assert_eq!(left_bin.right.to_string(), "g");
         } else {
             panic!("Expected binary expression on left");
@@ -39,11 +39,11 @@ fn test_of_operator() {
     let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
     
     if let ExpressionNode::Binary(bin) = &expr {
-        assert_eq!(bin.op, BinaryOperator::Of);
+        assert_eq!(bin.operator, BinaryOperator::Of);
         assert_eq!(bin.left.to_string(), "2");
         
         if let ExpressionNode::Binary(right_bin) = &*bin.right {
-            assert_eq!(right_bin.op, BinaryOperator::Mul);
+            assert_eq!(right_bin.operator, BinaryOperator::Mul);
             assert_eq!(right_bin.left.to_string(), "3");
             assert_eq!(right_bin.right.to_string(), "doses");
         } else {
@@ -62,10 +62,10 @@ fn test_per_operator() {
     let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
     
     if let ExpressionNode::Binary(bin) = &expr {
-        assert_eq!(bin.op, BinaryOperator::Per);
+        assert_eq!(bin.operator, BinaryOperator::Per);
         
         if let ExpressionNode::Binary(left_bin) = &*bin.left {
-            assert_eq!(left_bin.op, BinaryOperator::Mul);
+            assert_eq!(left_bin.operator, BinaryOperator::Mul);
             assert_eq!(left_bin.left.to_string(), "5");
             assert_eq!(left_bin.right.to_string(), "mg");
         } else {
@@ -140,15 +140,15 @@ fn test_mixed_medical_operators() {
     let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
     
     if let ExpressionNode::Binary(outer) = &expr {
-        assert_eq!(outer.op, BinaryOperator::Per);
+        assert_eq!(outer.operator, BinaryOperator::Per);
         
         // Left side should be (2 of (3 * doses))
         if let ExpressionNode::Binary(of_expr) = &*outer.left {
-            assert_eq!(of_expr.op, BinaryOperator::Of);
+            assert_eq!(of_expr.operator, BinaryOperator::Of);
             assert_eq!(of_expr.left.to_string(), "2");
             
             if let ExpressionNode::Binary(mul_expr) = &*of_expr.right {
-                assert_eq!(mul_expr.op, BinaryOperator::Mul);
+                assert_eq!(mul_expr.operator, BinaryOperator::Mul);
                 assert_eq!(mul_expr.left.to_string(), "3");
                 assert_eq!(mul_expr.right.to_string(), "doses");
             } else {

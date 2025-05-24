@@ -26,6 +26,7 @@ pub mod expressions;
 pub mod identifiers;
 pub mod literals;
 pub mod statements;
+pub mod test_utils;
 
 // Re-export commonly used functions from submodules
 pub use expressions::{parse_expression, *};
@@ -539,9 +540,17 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
         input.peek().map(|t| &t.token_type),
         Some(TokenType::RightBrace)
     ) {
+        // Parse the statement (let each statement handle its own semicolon)
         let (new_input, stmt) = parse_statement(input)?;
         input = new_input;
         statements.push(stmt);
+
+        // Skip any extra semicolons
+        while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+            let (new_input, _) =
+                take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+            input = new_input;
+        }
     }
 
     // Consume the right brace

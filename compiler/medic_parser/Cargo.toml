@@ -8,6 +8,7 @@ medic_ast = { path = "../medic_ast" }
 medic_lexer = { path = "../medic_lexer" }
 nom = { version = "7", features = ["std"] }
 log = "0.4"
+thiserror = "2.0.12"
 
 [dev-dependencies]
 pretty_assertions = "1.4"
