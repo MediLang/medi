@@ -6,19 +6,15 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Documentation for the Medi healthcare programming language">
+        <meta name="description" content="A deep dive into implementing nested expressions and medical operators in MediLang">
       
       
-        <meta name="author" content="The Medi Team">
+        <meta name="author" content="MediLang Core Team">
       
       
-        <link rel="canonical" href="https://medi-lang.org/docs/technical/architecture/">
+        <link rel="canonical" href="https://medi-lang.org/docs/blog/nested-expressions/">
       
       
-        <link rel="prev" href="../../examples/">
-      
-      
-        <link rel="next" href="../../reference/">
       
       
       <link rel="icon" href="../../assets/images/favicon-placeholder.png">
@@ -26,7 +22,7 @@
     
     
       
-        <title>Architecture - The Medi Book</title>
+        <title>Journey to Nested Expressions: Building a Medical-Specific Language Feature - The Medi Book</title>
       
     
     
@@ -80,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#technical-architecture" class="md-skip">
+        <a href="#implementing-nested-expressions-in-medilang-a-developers-journey" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture
+              Journey to Nested Expressions: Building a Medical-Specific Language Feature
             
           </span>
         </div>
@@ -295,13 +291,11 @@
         
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../technical/architecture/" class="md-tabs__link">
           
   
   Technical Documentation
@@ -743,8 +737,6 @@
       
   
   
-    
-  
   
   
     
@@ -755,12 +747,14 @@
       
       
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -774,7 +768,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Technical Documentation
@@ -785,30 +779,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Architecture
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../technical/architecture/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -817,107 +791,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#high-level-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      High-Level Architecture
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#compiler-infrastructure" class="md-nav__link">
-    <span class="md-ellipsis">
-      Compiler Infrastructure
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#runtime-system" class="md-nav__link">
-    <span class="md-ellipsis">
-      Runtime System
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#standard-library" class="md-nav__link">
-    <span class="md-ellipsis">
-      Standard Library
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#risc-v-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      RISC-V Integration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-and-privacy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Security and Privacy
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ide-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      IDE Integration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#deployment-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Deployment Options
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-extensibility" class="md-nav__link">
-    <span class="md-ellipsis">
-      Future Extensibility
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1087,81 +960,153 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#high-level-architecture" class="md-nav__link">
+  <a href="#the-challenge" class="md-nav__link">
     <span class="md-ellipsis">
-      High-Level Architecture
+      The Challenge
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#compiler-infrastructure" class="md-nav__link">
+  <a href="#our-development-journey" class="md-nav__link">
     <span class="md-ellipsis">
-      Compiler Infrastructure
+      Our Development Journey
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Our Development Journey">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-laying-the-foundation-may-10-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 1: Laying the Foundation (May 10-11)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-building-the-core-may-12-17" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 2: Building the Core (May 12-17)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-advanced-features-may-18-24" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 3: Advanced Features (May 18-24)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#medical-specific-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      Medical-Specific Operators
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-messages-that-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Messages That Help
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-deep-dive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Technical Deep Dive
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Deep Dive">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-parser-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Parser Architecture
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing Strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-learned" class="md-nav__link">
+    <span class="md-ellipsis">
+      What We Learned
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#runtime-system" class="md-nav__link">
+  <a href="#whats-next" class="md-nav__link">
     <span class="md-ellipsis">
-      Runtime System
+      What's Next
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#standard-library" class="md-nav__link">
+  <a href="#get-involved" class="md-nav__link">
     <span class="md-ellipsis">
-      Standard Library
+      Get Involved
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#risc-v-integration" class="md-nav__link">
+  <a href="#full-development-history" class="md-nav__link">
     <span class="md-ellipsis">
-      RISC-V Integration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-and-privacy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Security and Privacy
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ide-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      IDE Integration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#deployment-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Deployment Options
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-extensibility" class="md-nav__link">
-    <span class="md-ellipsis">
-      Future Extensibility
+      Full Development History
     </span>
   </a>
   
@@ -1185,111 +1130,109 @@
   
 
 
-<h1 id="technical-architecture">Technical Architecture<a class="headerlink" href="#technical-architecture" title="Permanent link">&para;</a></h1>
-<p>Medi is built on a modern compiler infrastructure designed for healthcare-specific optimizations and features.</p>
-<h2 id="high-level-architecture">High-Level Architecture<a class="headerlink" href="#high-level-architecture" title="Permanent link">&para;</a></h2>
-<p><img alt="Medi Architecture" src="../assets/images/architecture-placeholder.png" /></p>
-<p>The Medi language architecture consists of several key components:</p>
+<h1 id="implementing-nested-expressions-in-medilang-a-developers-journey">Implementing Nested Expressions in MediLang: A Developer's Journey<a class="headerlink" href="#implementing-nested-expressions-in-medilang-a-developers-journey" title="Permanent link">&para;</a></h1>
+<p><em>This is the first in a series of posts documenting the development of MediLang, a programming language designed specifically for healthcare applications.</em></p>
+<h2 id="the-challenge">The Challenge<a class="headerlink" href="#the-challenge" title="Permanent link">&para;</a></h2>
+<p>When we started building MediLang, we knew we needed a way to express complex medical calculations in a way that felt natural to healthcare professionals. Traditional programming languages often fall short when it comes to medical-specific operations and units. Our solution? Build a language with first-class support for medical concepts.</p>
+<h2 id="our-development-journey">Our Development Journey<a class="headerlink" href="#our-development-journey" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-laying-the-foundation-may-10-11">Phase 1: Laying the Foundation (May 10-11)<a class="headerlink" href="#phase-1-laying-the-foundation-may-10-11" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>PR #1</strong>: Initial project setup and core parser infrastructure</li>
+<li><strong>PRs #3-4</strong>: Documentation and build system configuration</li>
+</ul>
+<h3 id="phase-2-building-the-core-may-12-17">Phase 2: Building the Core (May 12-17)<a class="headerlink" href="#phase-2-building-the-core-may-12-17" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>PR #5</strong>: First implementation of the recursive descent parser</li>
+<li><strong>PRs #6-8</strong>: Multiple iterations to perfect the parser implementation</li>
+<li>Added comprehensive test coverage</li>
+<li>Improved error handling and recovery</li>
+<li>Enhanced documentation and examples</li>
+</ul>
+<h3 id="phase-3-advanced-features-may-18-24">Phase 3: Advanced Features (May 18-24)<a class="headerlink" href="#phase-3-advanced-features-may-18-24" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>PRs #9-10</strong>: Implemented custom operator precedence</li>
+<li>Added support for medical operators (<code>of</code>, <code>per</code>)</li>
+<li>Detailed documentation of operator behavior</li>
+<li><strong>PR #11</strong>: Nested expressions and block statements</li>
+<li>Full support for complex nested calculations</li>
+<li>Improved syntax error messages</li>
+<li>Edge case handling and optimizations</li>
+</ul>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<h3 id="medical-specific-operators">Medical-Specific Operators<a class="headerlink" href="#medical-specific-operators" title="Permanent link">&para;</a></h3>
+<p>MediLang introduces operators that make medical calculations more intuitive:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Calculate total medication dose</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">total_medication</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="mi">500</span><span class="n">mg</span><span class="p">;</span><span class="w">  </span><span class="c1">// 1000mg total</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">// Calculate infusion rate</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">infusion_rate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="n">mL</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="mi">8</span><span class="n">hr</span><span class="p">;</span><span class="w">  </span><span class="c1">// 125 mL/hr</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1">// Complex calculation with proper precedence</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">adjusted_dose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">weight</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.5</span><span class="n">mg</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">age</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.1</span><span class="n">mg</span><span class="p">)</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">medication</span><span class="p">;</span>
+</code></pre></div>
+<h3 id="error-messages-that-help">Error Messages That Help<a class="headerlink" href="#error-messages-that-help" title="Permanent link">&para;</a></h3>
+<p>We've put significant effort into making error messages helpful and actionable:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Error: Type mismatch in expression
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  --&gt; patient.medi:12:25
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>   |
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>12 | let dose = 2 of &quot;500mg&quot;;
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>   |             ^ Expected number after &#39;of&#39;, found string
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>   |
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>   = help: Remove quotes to use a numeric literal
+</code></pre></div>
+<h2 id="technical-deep-dive">Technical Deep Dive<a class="headerlink" href="#technical-deep-dive" title="Permanent link">&para;</a></h2>
+<h3 id="the-parser-architecture">The Parser Architecture<a class="headerlink" href="#the-parser-architecture" title="Permanent link">&para;</a></h3>
+<p>Our recursive descent parser was carefully designed to handle the unique requirements of medical calculations:</p>
 <ol>
-<li><strong>Frontend</strong>: Parser, lexer, and abstract syntax tree (AST) generation</li>
-<li><strong>Middle-end</strong>: Type system, semantic analysis, and healthcare-specific optimizations</li>
-<li><strong>Backend</strong>: LLVM IR generation, optimization passes, and target code generation</li>
-<li><strong>Runtime</strong>: Standard library, memory management, and execution environment</li>
-<li><strong>IDE &amp; Tools</strong>: Development environment, debugger, and profiler</li>
+<li><strong>Operator Precedence</strong>: Custom rules for medical operators</li>
+<li><strong>Error Recovery</strong>: Graceful handling of syntax errors</li>
+<li><strong>Performance</strong>: Optimized for the most common medical calculation patterns</li>
 </ol>
-<h2 id="compiler-infrastructure">Compiler Infrastructure<a class="headerlink" href="#compiler-infrastructure" title="Permanent link">&para;</a></h2>
-<p>Medi's compiler, named <code>medic</code> (inspired by how Rust uses <code>rustc</code>), leverages LLVM for code generation and optimization:</p>
+<h3 id="testing-strategy">Testing Strategy<a class="headerlink" href="#testing-strategy" title="Permanent link">&para;</a></h3>
+<p>We implemented a comprehensive test suite covering:
+- Basic arithmetic operations
+- Nested expressions
+- Edge cases in medical calculations
+- Error conditions and recovery</p>
+<h2 id="what-we-learned">What We Learned<a class="headerlink" href="#what-we-learned" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Domain-Specific Languages Matter</strong>
+   Building operators that match medical professionals' mental models makes the language more accessible.</p>
+</li>
+<li>
+<p><strong>Error Messages Are Crucial</strong>
+   Clear, actionable error messages significantly improve the development experience.</p>
+</li>
+<li>
+<p><strong>Iterative Development Wins</strong>
+   Multiple small PRs with focused changes led to better code quality and easier reviews.</p>
+</li>
+</ol>
+<h2 id="whats-next">What's Next<a class="headerlink" href="#whats-next" title="Permanent link">&para;</a></h2>
+<p>Our roadmap includes:</p>
 <ul>
-<li><strong>Lexer &amp; Parser</strong>: Hybrid implementation combining the efficiency of Logos for tokenization with custom logic for healthcare-specific syntax and semantics</li>
-<li><strong>Type System</strong>: Statically typed with type inference and healthcare data types</li>
-<li><strong>Optimizations</strong>: Domain-specific optimizations for healthcare analytics</li>
-<li><strong>Code Generation</strong>: </li>
-<li>x86-64, ARM, and RISC-V native code</li>
-<li>WebAssembly for edge devices and browser deployment</li>
-<li>CUDA/OpenCL for GPU acceleration</li>
+<li>[ ] Pattern matching for medical data types</li>
+<li>[ ] Built-in support for common medical calculations</li>
+<li>[ ] Enhanced IDE tooling and autocompletion</li>
+<li>[ ] Standard library of medical functions</li>
 </ul>
-<h2 id="runtime-system">Runtime System<a class="headerlink" href="#runtime-system" title="Permanent link">&para;</a></h2>
-<p>The Medi runtime provides key services for healthcare applications:</p>
-<ul>
-<li><strong>Memory Management</strong>: Hybrid approach with:</li>
-<li>Low-pause garbage collection (like Go) for most operations</li>
-<li>Rust-inspired manual control (<code>scope</code>) for low-latency IoT tasks</li>
-<li><strong>Concurrency</strong>: Built-in support for:</li>
-<li>Multi-threading (OpenMP-style)</li>
-<li>Asynchronous operations (async/await)</li>
-<li>Distributed computing (MPI/Spark integration)</li>
-<li><strong>Healthcare I/O</strong>: Native parsers and generators for:</li>
-<li>FHIR, HL7, DICOM</li>
-<li>Genomic formats (FASTQ, VCF, BAM)</li>
-<li>Medical imaging (NIfTI, DICOM)</li>
-<li>Wearable data streams</li>
-</ul>
-<h2 id="standard-library">Standard Library<a class="headerlink" href="#standard-library" title="Permanent link">&para;</a></h2>
-<p>The standard library is organized into domain-specific modules:</p>
-<ul>
-<li><strong>medi.data</strong>: FHIR, HL7, DICOM, VCF parsers and generators</li>
-<li><strong>medi.privacy</strong>: Federated learning, differential privacy, encryption</li>
-<li><strong>medi.iot</strong>: Real-time streaming and edge processing</li>
-<li><strong>medi.stats</strong>: Statistical functions for trials, epidemiology, and biostatistics</li>
-<li><strong>medi.viz</strong>: Interactive visualization and dashboarding</li>
-<li><strong>medi.compliance</strong>: Regulatory frameworks and reporting</li>
-<li><strong>medi.ai</strong>: Pre-trained models for diagnostics, predictions, and NLP</li>
-<li><strong>medi.ops</strong>: Hospital operations optimization</li>
-</ul>
-<h2 id="risc-v-integration">RISC-V Integration<a class="headerlink" href="#risc-v-integration" title="Permanent link">&para;</a></h2>
-<p>Medi has special optimizations for RISC-V architecture:</p>
-<ul>
-<li><strong>Target Profiles</strong>:</li>
-<li>RV32IMAFDC for edge devices (wearables, portable diagnostics)</li>
-<li>RV64GCV for servers (with vector extensions)</li>
-<li><strong>Custom Extensions</strong>: Support for healthcare-specific instructions:</li>
-<li>Genomic alignment and processing</li>
-<li>Encryption for privacy preservation</li>
-<li>Signal processing for medical imaging/time series</li>
-<li><strong>Optimizations</strong>:</li>
-<li>Low-power operation for edge devices</li>
-<li>Vector processing for parallel analytics</li>
-<li>Custom intrinsics for healthcare operations</li>
-</ul>
-<h2 id="security-and-privacy">Security and Privacy<a class="headerlink" href="#security-and-privacy" title="Permanent link">&para;</a></h2>
-<p>Security is a foundational concern in Medi's architecture:</p>
-<ul>
-<li><strong>Memory Safety</strong>: Built-in protection against common vulnerabilities</li>
-<li><strong>Encryption</strong>: Hardware-accelerated (where available) encryption for PHI</li>
-<li><strong>Access Control</strong>: Fine-grained permissions system for data access</li>
-<li><strong>Audit Trails</strong>: Automatic logging of sensitive operations</li>
-<li><strong>Differential Privacy</strong>: Built-in mechanisms for privacy-preserving analytics</li>
-</ul>
-<h2 id="ide-integration">IDE Integration<a class="headerlink" href="#ide-integration" title="Permanent link">&para;</a></h2>
-<p>The Medi Studio IDE provides:</p>
-<ul>
-<li><strong>Visual Programming</strong>: Drag-and-drop interface for non-programmers</li>
-<li><strong>Natural Language Interface</strong>: Query and analysis using plain English</li>
-<li><strong>Code Completion</strong>: Healthcare-aware suggestions</li>
-<li><strong>Compliance Checking</strong>: Real-time validation against regulatory standards</li>
-<li><strong>Performance Profiling</strong>: Optimization recommendations for healthcare tasks</li>
-</ul>
-<h2 id="deployment-options">Deployment Options<a class="headerlink" href="#deployment-options" title="Permanent link">&para;</a></h2>
-<p>Medi supports multiple deployment scenarios:</p>
-<ul>
-<li><strong>Traditional Compilation</strong>: Native binaries for maximum performance</li>
-<li><strong>Just-in-Time (JIT)</strong>: Dynamic compilation for interactive development</li>
-<li><strong>WebAssembly</strong>: Browser and edge deployment</li>
-<li><strong>Container-based</strong>: Docker/Kubernetes packaging for cloud deployment</li>
-</ul>
-<h2 id="future-extensibility">Future Extensibility<a class="headerlink" href="#future-extensibility" title="Permanent link">&para;</a></h2>
-<p>The architecture is designed for extensibility in emerging healthcare domains:</p>
-<ul>
-<li><strong>Quantum Computing</strong>: Interface with quantum libraries (Qiskit, Cirq)</li>
-<li><strong>Neuromorphic Computing</strong>: Support for neuromorphic hardware for AI tasks</li>
-<li><strong>Specialized Accelerators</strong>: Integration with healthcare-specific hardware accelerators</li>
-</ul>
+<h2 id="get-involved">Get Involved<a class="headerlink" href="#get-involved" title="Permanent link">&para;</a></h2>
+<p>We're just getting started! Join our community:
+- Try out the <a href="https://github.com/MediLang/medi/releases">latest build</a>
+- Contribute to our <a href="https://github.com/MediLang/medi">GitHub repository</a>
+- Join the discussion in our <a href="#">Discord server</a></p>
+<h2 id="full-development-history">Full Development History<a class="headerlink" href="#full-development-history" title="Permanent link">&para;</a></h2>
+<p>For a detailed account of all changes, see our <a href="https://github.com/MediLang/medi/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
 
 
 
 
 
 
+
+  
+  
 
 
 
