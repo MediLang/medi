@@ -59,10 +59,11 @@ pub fn parse_nested_binary_expression(
 
         // For all operators, use the standard precedence climbing
         // The precedence is already handled by the min_precedence parameter
+        // Propagate in_comparison flag to prevent chained comparisons
         let (new_input, right) = parse_nested_binary_expression(
             input,
             next_min_precedence,
-            is_comparison_operator(&op),
+            in_comparison || is_comparison_operator(&op),
         )?;
 
         input = new_input;
@@ -103,6 +104,29 @@ mod tests {
                 e.code,
                 ErrorKind::Tag,
                 "Expected Tag error for chained comparison"
+            );
+        } else {
+            panic!("Expected nom::Err::Error, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn test_chained_comparison_with_expression() {
+        // Test that chained comparisons with expressions like a < b + c < d are not allowed
+        let input = "1 < 2 + 3 < 4";
+        let tokens = tokenize(input);
+        let token_slice = TokenSlice::new(&tokens);
+        let result = parse_nested_binary_expression(token_slice, 0, false);
+
+        // Should return an error for chained comparison with expression
+        assert!(result.is_err(), "Expected error for chained comparison with expression");
+
+        // Check that it's the right kind of error
+        if let Err(nom::Err::Error(e)) = result {
+            assert_eq!(
+                e.code,
+                ErrorKind::Tag,
+                "Expected Tag error for chained comparison with expression"
             );
         } else {
             panic!("Expected nom::Err::Error, got {:?}", result);
