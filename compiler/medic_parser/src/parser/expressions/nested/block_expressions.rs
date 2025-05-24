@@ -11,11 +11,23 @@ pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 
     let mut statements = Vec::new();
 
-    // Parse statements until we hit a right brace
-    while !matches!(
-        input.peek().map(|t| &t.token_type),
-        Some(TokenType::RightBrace)
-    ) {
+    // Parse statements until we hit a right brace or end of input
+    loop {
+        // Check for end of input
+        if input.is_empty() {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Eof,
+            )));
+        }
+        
+        // Check for right brace
+        if matches!(
+            input.peek().map(|t| &t.token_type),
+            Some(TokenType::RightBrace)
+        ) {
+            break;
+        }
         // Skip any leading semicolons
         while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
             let (new_input, _) =
@@ -52,6 +64,17 @@ mod tests {
     use crate::parser::test_utils::tokenize;
     use medic_ast::ast::*;
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_parse_block_expression_unterminated() {
+        let input = "{ let x = 5 "; // Missing closing brace
+        let tokens = tokenize(input);
+        let token_slice = TokenSlice::new(&tokens);
+        let result = parse_block_expression(token_slice);
+        
+        // Should return an error for unterminated block
+        assert!(result.is_err(), "Expected error for unterminated block expression");
+    }
 
     #[test]
     fn test_parse_block_expression() {
