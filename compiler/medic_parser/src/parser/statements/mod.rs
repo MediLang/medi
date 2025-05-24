@@ -323,19 +323,12 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
 /// # Errors
 /// Returns an error if the target is not a valid l-value (not an identifier or member expression).
 pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // First try to parse the target (l-value)
-    let (input, target) = parse_expression(input)?;
-
-    // Verify that the target is a valid l-value (Identifier or Member expression)
-    match &target {
-        ExpressionNode::Identifier(_) | ExpressionNode::Member(_) => { /* Valid l-value */ }
-        _ => {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                nom::error::ErrorKind::Verify,
-            )));
-        }
-    }
+    // Parse the target (l-value). We only want an identifier or member access,
+    // not the whole `= …` expression.
+    //
+    // `parse_identifier` already understands dotted member chains, so it is
+    // sufficient here and guarantees we stop *before* the `=`.
+    let (input, target) = parse_identifier(input)?;
 
     // Check if the next token is an equals sign
     let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
