@@ -42,13 +42,14 @@ theme:
 
 nav:
   - Home: index.md
+  - Blog: blog/index.md
   - Getting Started:
     - Installation: getting-started/installation.md
     - Basic Syntax: getting-started/basic-syntax.md
     - Your First Program: getting-started/your-first-program.md
   - Key Features:
-    - Feature 1: key-features/feature1.md
-    - Feature 2: key-features/feature2.md
+    - Medical Data Science: key-features/medical-data-science.md
+    - Nested Expressions: key-features/nested-expressions.md
   - Examples: examples/index.md
   - Reference: reference/index.md
   - Contributing: contributing/index.md
