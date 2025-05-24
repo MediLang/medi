@@ -199,13 +199,16 @@ pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 
     let mut statements = Vec::new();
 
-    // Parse statements until we hit a right brace
+    let mut found_brace = false;
+    
+    // Parse statements until we hit a right brace or end of input
     while !input.is_empty() {
         // Check for right brace
         if let Some(TokenType::RightBrace) = input.peek().map(|t| &t.token_type) {
             let (new_input, _) =
                 take_token_if(|t| matches!(t, TokenType::RightBrace), ErrorKind::Tag)(input)?;
             input = new_input;
+            found_brace = true;
             break;
         }
 
@@ -217,6 +220,14 @@ pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
             }
             Err(e) => return Err(e),
         }
+    }
+    
+    // Ensure we found a closing brace
+    if !found_brace {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
     }
 
     Ok((input, BlockNode { statements }))
@@ -270,5 +281,16 @@ mod tests {
     fn test_parse_primary_block_expression_fails() {
         let tokens = tokenize("{ 42 }");
         assert!(parse_primary(TokenSlice::new(&tokens)).is_err());
+    }
+    
+    #[test]
+    fn test_parse_block_expression_missing_brace() {
+        let input = "{ let x = 5 "; // Missing closing brace
+        let tokens = tokenize(input);
+        let token_slice = TokenSlice::new(&tokens);
+        let result = parse_block_expression(token_slice);
+        
+        // Should return an error about the missing closing brace
+        assert!(result.is_err(), "Expected error for missing closing brace");
     }
 }
