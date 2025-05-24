@@ -2,8 +2,11 @@
 title: "Journey to Nested Expressions: Building a Medical-Specific Language Feature"
 description: "A deep dive into implementing nested expressions and medical operators in MediLang"
 date: 2025-05-24
-author: "MediLang Core Team"
-categories: ["development", "technical"]
+authors:
+  - MediLang Core Team
+categories:
+  - Development
+  - Technical
 ---
 
 # Implementing Nested Expressions in MediLang: A Developer's Journey

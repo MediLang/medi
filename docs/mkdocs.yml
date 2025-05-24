@@ -10,6 +10,8 @@ edit_uri: edit/main/docs/
 docs_dir: content
 site_dir: site
 
+
+
 # Enable markdown extensions for better image and link handling
 markdown_extensions:
   - attr_list  # For adding attributes to markdown elements
@@ -37,6 +39,16 @@ markdown_extensions:
       emoji_generator: !!python/name:materialx.emoji.to_svg
   - pymdownx.extra
 
+# Blog configuration
+plugins:
+  - blog:
+      post_dir: blog/posts
+      post_date_format: long
+      post_excerpt_separator: "<!-- more -->"
+      post_readtime: true
+      categories: true
+      archive: true
+
 theme:
   name: material
   logo: assets/medi-logo.png
@@ -46,6 +58,16 @@ theme:
     - 404.html
   # Allow raw HTML in markdown
   unsafe: true
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - content.code.annotate
+    - content.tabs.link
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -74,44 +96,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Blog:
-    - Overview: blog/index.md
-    - Nested Expressions: blog/nested-expressions.md
-  - Getting Started:
-    - Installation: getting-started/installation.md
-    - Basic Syntax: getting-started/basic-syntax.md
-    - Your First Program: getting-started/your-first-program.md
-  - Key Features:
-    - Medical Data Science: key-features/medical-data-science.md
-    - Nested Expressions: key-features/nested-expressions.md
-  - Reference:
-    - Glossary: glossary.md
-  - Technical:
-    - File Structure: technical/file-structure.md
-  - Examples: examples/index.md
-  - Reference: reference/index.md
-  - Contributing: contributing/index.md
-  - Community: community/index.md
-  - Roadmap: roadmap/index.md
-  - Technical Documentation: technical/index.md
-
-markdown_extensions:
-  - admonition
-  - codehilite
-  - footnotes
-  - meta
-  - toc:
-      permalink: true
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
-
-nav:
-  - Home: index.md
+  - Blog: blog/index.md
   - Getting Started:
     - Overview: getting-started/index.md
     - Installation: getting-started/installation.md
