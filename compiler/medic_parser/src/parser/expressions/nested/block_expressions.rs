@@ -80,14 +80,14 @@ mod tests {
     fn test_parse_block_expression() {
         let input = "{ let x = 5; }";
         let tokens = tokenize(input);
-        println!("Tokens: {:?}", tokens);
+        eprintln!("Tokens: {:?}", tokens);
 
         let slice = TokenSlice::new(&tokens);
-        println!("Token slice: {:?}", slice);
+        eprintln!("Token slice: {:?}", slice);
 
         let result = parse_block_expression(slice);
 
-        println!("Parse result: {:?}", result);
+        eprintln!("Parse result: {:?}", result);
 
         assert!(result.is_ok(), "Expected Ok, got {:?}", result);
 
@@ -108,7 +108,7 @@ mod tests {
                 ExpressionNode::Literal(lit) => {
                     if let LiteralNode::Int(5) = lit {
                         // Success!
-                        println!("Successfully parsed block with let x = 5;");
+                        eprintln!("Successfully parsed block with let x = 5;");
                     } else {
                         panic!("Expected integer literal 5, got {:?}", lit);
                     }

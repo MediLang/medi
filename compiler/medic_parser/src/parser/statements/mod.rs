@@ -38,15 +38,15 @@ use medic_ast::ast::{AssignmentNode, LetStatementNode};
 /// # Returns
 /// A tuple containing the remaining input and the parsed statement if successful
 pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    println!("parse_let_statement: Starting with input: {:?}", input);
+    log::debug!("parse_let_statement: Starting with input: {:?}", input);
 
     // Consume 'let' keyword
     let (input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
-    println!("parse_let_statement: After consuming 'let': {:?}", input);
+    log::debug!("parse_let_statement: After consuming 'let': {:?}", input);
 
     // Parse the identifier
     let (input, ident_expr) = parse_identifier(input)?;
-    println!("parse_let_statement: After parsing identifier: {:?}", input);
+    log::debug!("parse_let_statement: After parsing identifier: {:?}", input);
 
     // Extract the identifier from the expression
     let ident = if let ExpressionNode::Identifier(ident) = ident_expr {
@@ -60,19 +60,19 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
 
     // Consume '='
     let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
-    println!("parse_let_statement: After consuming '=': {:?}", input);
+    log::debug!("parse_let_statement: After consuming '=': {:?}", input);
 
     // Parse the expression (which won't consume the semicolon)
-    println!("parse_let_statement: Before parse_expression: {:?}", input);
+    log::debug!("parse_let_statement: Before parse_expression: {:?}", input);
     let (mut input, expr) = parse_expression(input)?;
-    println!("parse_let_statement: After parse_expression: {:?}", input);
+    log::debug!("parse_let_statement: After parse_expression: {:?}", input);
 
     // Consume the semicolon if present
     if !input.0.is_empty() && matches!(input.0[0].token_type, TokenType::Semicolon) {
-        println!("Consuming semicolon after expression");
+        log::debug!("Consuming semicolon after expression");
         input = input.advance();
     } else {
-        println!("No semicolon found after expression");
+        log::error!("No semicolon found after expression");
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
             nom::error::ErrorKind::Tag,
