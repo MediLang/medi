@@ -36,11 +36,10 @@ fn test_lexer_float_numbers() {
     match tokens[3].token_type {
         TokenType::Float(value) => {
             // Using a small epsilon for floating-point comparison
-            let expected = 3.14;
+            let expected = std::f64::consts::PI;
             assert!(
                 (value - expected).abs() < 0.001, // Using a small epsilon for comparison
-                "Expected Float close to {} at position 3, got {}",
-                expected,
+                "Expected Float close to PI (3.14159...) at position 3, got {}",
                 value
             )
         }

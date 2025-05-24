@@ -38,12 +38,15 @@ use medic_ast::ast::{AssignmentNode, LetStatementNode};
 /// # Returns
 /// A tuple containing the remaining input and the parsed statement if successful
 pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    println!("parse_let_statement: Starting with input: {:?}", input);
+
     // Consume 'let' keyword
-    let (mut input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
+    let (input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
+    println!("parse_let_statement: After consuming 'let': {:?}", input);
 
     // Parse the identifier
-    let (new_input, ident_expr) = parse_identifier(input)?;
-    input = new_input;
+    let (input, ident_expr) = parse_identifier(input)?;
+    println!("parse_let_statement: After parsing identifier: {:?}", input);
 
     // Extract the identifier from the expression
     let ident = if let ExpressionNode::Identifier(ident) = ident_expr {
@@ -56,23 +59,32 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
     };
 
     // Consume '='
-    let (new_input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
-    input = new_input;
+    let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
+    println!("parse_let_statement: After consuming '=': {:?}", input);
 
-    // Parse the expression
-    let (new_input, expr) = parse_expression(input)?;
-    input = new_input;
+    // Parse the expression (which won't consume the semicolon)
+    println!("parse_let_statement: Before parse_expression: {:?}", input);
+    let (mut input, expr) = parse_expression(input)?;
+    println!("parse_let_statement: After parse_expression: {:?}", input);
 
-    // Consume ';'
-    let (new_input, _) =
-        take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+    // Consume the semicolon if present
+    if !input.0.is_empty() && matches!(input.0[0].token_type, TokenType::Semicolon) {
+        println!("Consuming semicolon after expression");
+        input = input.advance();
+    } else {
+        println!("No semicolon found after expression");
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
 
     let let_stmt = LetStatementNode {
         name: ident,
         value: expr,
     };
 
-    Ok((new_input, StatementNode::Let(Box::new(let_stmt))))
+    Ok((input, StatementNode::Let(Box::new(let_stmt))))
 }
 
 use medic_ast::ast::ReturnNode;
@@ -371,20 +383,48 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
     // Check the first token to determine the statement type
     if let Some(token) = input.peek() {
         match token.token_type {
-            TokenType::Let => parse_let_statement(input),
-            TokenType::Return => parse_return_statement(input),
+            TokenType::Let => {
+                // parse_let_statement already consumes the semicolon
+                parse_let_statement(input)
+            }
+            TokenType::Return => {
+                let (input, stmt) = parse_return_statement(input)?;
+                // Consume the semicolon if present
+                if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                    let (new_input, _) = take_token_if(
+                        |t| matches!(t, TokenType::Semicolon),
+                        ErrorKind::Tag,
+                    )(input)?;
+                    return Ok((new_input, stmt));
+                }
+                Ok((input, stmt))
+            }
             TokenType::If => parse_if_statement(input),
             TokenType::While => parse_while_statement(input),
             _ => {
                 // Try to parse an assignment statement
-                if let Ok((input, stmt)) = parse_assignment_statement(input) {
+                if let Ok((mut input, stmt)) = parse_assignment_statement(input) {
+                    // Consume the semicolon if present
+                    if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                        let (new_input, _) = take_token_if(
+                            |t| matches!(t, TokenType::Semicolon),
+                            ErrorKind::Tag,
+                        )(input)?;
+                        input = new_input;
+                    }
                     return Ok((input, stmt));
                 }
 
                 // Fall back to parsing an expression statement
-                let (input, expr) = parse_expression(input)?;
-                let (input, _) =
-                    take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+                let (mut input, expr) = parse_expression(input)?;
+                // Consume the semicolon if present
+                if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                    let (new_input, _) = take_token_if(
+                        |t| matches!(t, TokenType::Semicolon),
+                        ErrorKind::Tag,
+                    )(input)?;
+                    input = new_input;
+                }
                 Ok((input, StatementNode::Expr(expr)))
             }
         }
