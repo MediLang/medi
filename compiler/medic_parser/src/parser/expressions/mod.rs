@@ -200,15 +200,19 @@ pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     let mut statements = Vec::new();
 
     let mut found_brace = false;
-    
+
     // Parse statements until we hit a right brace or end of input
     while !input.is_empty() {
         // Skip any leading semicolons before the next statement
-        while matches!(input.peek().map(|t| &t.token_type), Some(TokenType::Semicolon)) {
-            let (new_input, _) = take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+        while matches!(
+            input.peek().map(|t| &t.token_type),
+            Some(TokenType::Semicolon)
+        ) {
+            let (new_input, _) =
+                take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
             input = new_input;
         }
-        
+
         // Check for right brace (after skipping semicolons)
         if let Some(TokenType::RightBrace) = input.peek().map(|t| &t.token_type) {
             let (new_input, _) =
@@ -223,17 +227,23 @@ pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
             Ok((new_input, stmt)) => {
                 input = new_input;
                 statements.push(stmt);
-                
+
                 // Skip any semicolons after the statement
-                while matches!(input.peek().map(|t| &t.token_type), Some(TokenType::Semicolon)) {
-                    let (next_input, _) = take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+                while matches!(
+                    input.peek().map(|t| &t.token_type),
+                    Some(TokenType::Semicolon)
+                ) {
+                    let (next_input, _) = take_token_if(
+                        |t| matches!(t, TokenType::Semicolon),
+                        ErrorKind::Tag,
+                    )(input)?;
                     input = next_input;
                 }
             }
             Err(e) => return Err(e),
         }
     }
-    
+
     // Ensure we found a closing brace
     if !found_brace {
         return Err(nom::Err::Error(nom::error::Error::new(
@@ -294,18 +304,18 @@ mod tests {
         let tokens = tokenize("{ 42 }");
         assert!(parse_primary(TokenSlice::new(&tokens)).is_err());
     }
-    
+
     #[test]
     fn test_parse_block_expression_missing_brace() {
         let input = "{ let x = 5 "; // Missing closing brace
         let tokens = tokenize(input);
         let token_slice = TokenSlice::new(&tokens);
         let result = parse_block_expression(token_slice);
-        
+
         // Should return an error about the missing closing brace
         assert!(result.is_err(), "Expected error for missing closing brace");
     }
-    
+
     #[test]
     fn test_parse_block_expression_with_stray_semicolons() {
         // Test with semicolons in various positions
@@ -314,16 +324,21 @@ mod tests {
             "{ let x = 1;; let y = 2; }",
             "{ let x = 1; ;let y = 2; }",
             "{ ;;;let x = 1;;; let y = 2;;; }",
-            "{ ; ; let x = 1; ; ; let y = 2; ; ; }"
+            "{ ; ; let x = 1; ; ; let y = 2; ; ; }",
         ];
-        
+
         for input in test_cases {
             let tokens = tokenize(input);
             let result = parse_block_expression(TokenSlice::new(&tokens));
             assert!(result.is_ok(), "Failed to parse: {}", input);
-            
+
             let (_, block) = result.unwrap();
-            assert_eq!(block.statements.len(), 2, "Incorrect number of statements in: {}", input);
+            assert_eq!(
+                block.statements.len(),
+                2,
+                "Incorrect number of statements in: {}",
+                input
+            );
         }
     }
 }

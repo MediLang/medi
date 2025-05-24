@@ -36,6 +36,7 @@ fn test_lexer_float_numbers() {
     match tokens[3].token_type {
         TokenType::Float(value) => {
             // Using exact value from input string
+            #[allow(clippy::approx_constant)]
             let expected = 3.14;
             assert!(
                 (value - expected).abs() < f64::EPSILON,

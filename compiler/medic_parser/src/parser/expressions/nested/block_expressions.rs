@@ -20,7 +20,7 @@ pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
                 nom::error::ErrorKind::Eof,
             )));
         }
-        
+
         // Check for right brace
         if matches!(
             input.peek().map(|t| &t.token_type),
@@ -71,9 +71,12 @@ mod tests {
         let tokens = tokenize(input);
         let token_slice = TokenSlice::new(&tokens);
         let result = parse_block_expression(token_slice);
-        
+
         // Should return an error for unterminated block
-        assert!(result.is_err(), "Expected error for unterminated block expression");
+        assert!(
+            result.is_err(),
+            "Expected error for unterminated block expression"
+        );
     }
 
     #[test]
