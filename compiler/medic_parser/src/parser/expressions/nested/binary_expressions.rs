@@ -5,6 +5,7 @@ use crate::parser::{
     get_binary_operator, get_operator_precedence, is_comparison_operator, BinaryExpressionNode,
     BinaryOperator, ExpressionNode, TokenSlice, TokenType,
 };
+use crate::parser::expressions::nested::error_handling::ExpressionError;
 
 /// Parses a binary expression with proper precedence and associativity handling.
 ///
@@ -75,4 +76,32 @@ pub fn parse_nested_binary_expression(
     }
 
     Ok((input, left))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::test_utils::tokenize;
+    use crate::parser::TokenSlice;
+    use nom::error::ErrorKind;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_chained_comparison_error() {
+        // Test that chained comparisons like a < b < c are not allowed
+        let input = "1 < 2 < 3";
+        let tokens = tokenize(input);
+        let token_slice = TokenSlice::new(&tokens);
+        let result = parse_nested_binary_expression(token_slice, 0, false);
+        
+        // Should return an error for chained comparison
+        assert!(result.is_err(), "Expected error for chained comparison");
+        
+        // Check that it's the right kind of error
+        if let Err(nom::Err::Error(e)) = result {
+            assert_eq!(e.code, ErrorKind::Tag, "Expected Tag error for chained comparison");
+        } else {
+            panic!("Expected nom::Err::Error, got {:?}", result);
+        }
+    }
 }
