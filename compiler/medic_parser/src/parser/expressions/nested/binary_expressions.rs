@@ -119,7 +119,10 @@ mod tests {
         let result = parse_nested_binary_expression(token_slice, 0, false);
 
         // Should return an error for chained comparison with expression
-        assert!(result.is_err(), "Expected error for chained comparison with expression");
+        assert!(
+            result.is_err(),
+            "Expected error for chained comparison with expression"
+        );
 
         // Check that it's the right kind of error
         if let Err(nom::Err::Error(e)) = result {
