@@ -10,10 +10,42 @@ edit_uri: edit/main/docs/
 docs_dir: content
 site_dir: site
 
+# Enable markdown extensions for better image and link handling
+markdown_extensions:
+  - attr_list  # For adding attributes to markdown elements
+  - md_in_html  # For using raw HTML in markdown
+  - pymdownx.superfences  # For better code block handling
+  - pymdownx.emoji  # For emoji support
+  - pymdownx.details  # For collapsible sections
+  - pymdownx.tabbed  # For tabbed content
+  - pymdownx.snippets  # For including content from other files
+  - pymdownx.arithmatex  # For math expressions
+  - pymdownx.mark  # For highlighting text
+  - pymdownx.tilde  # For strikethrough
+  - pymdownx.tasklist  # For task lists
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.extra
+
 theme:
   name: material
   logo: assets/medi-logo.png
   favicon: assets/images/favicon-placeholder.png
+  # Ensure external images are not processed
+  static_templates:
+    - 404.html
+  # Allow raw HTML in markdown
+  unsafe: true
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -42,7 +74,9 @@ theme:
 
 nav:
   - Home: index.md
-  - Blog: blog/index.md
+  - Blog:
+    - Overview: blog/index.md
+    - Nested Expressions: blog/nested-expressions.md
   - Getting Started:
     - Installation: getting-started/installation.md
     - Basic Syntax: getting-started/basic-syntax.md
@@ -50,6 +84,10 @@ nav:
   - Key Features:
     - Medical Data Science: key-features/medical-data-science.md
     - Nested Expressions: key-features/nested-expressions.md
+  - Reference:
+    - Glossary: glossary.md
+  - Technical:
+    - File Structure: technical/file-structure.md
   - Examples: examples/index.md
   - Reference: reference/index.md
   - Contributing: contributing/index.md
