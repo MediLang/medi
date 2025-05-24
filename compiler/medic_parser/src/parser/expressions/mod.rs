@@ -42,10 +42,7 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
 
                 // Parse the right-hand side with higher precedence for 'of'
                 // This ensures '2 of 3 * doses' is parsed as '2 of (3 * doses)'
-                let (new_input, _right) = parse_primary(input)?;
-
-                // Parse any remaining binary expressions with higher precedence
-                let (new_input, right) = parse_nested_binary_expression(new_input, 1, false)?;
+                let (new_input, right) = parse_nested_binary_expression(input, 1, false)?;
                 input = new_input;
 
                 // Create the 'of' expression
@@ -74,10 +71,7 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
 
                 // Parse the right-hand side with higher precedence for 'per'
                 // This ensures '5 * mg per day' is parsed as '(5 * mg) per day'
-                let (new_input, _right) = parse_primary(input)?;
-
-                // Parse any remaining binary expressions with higher precedence
-                let (new_input, right) = parse_nested_binary_expression(new_input, 1, false)?;
+                let (new_input, right) = parse_nested_binary_expression(input, 1, false)?;
                 input = new_input;
 
                 // Create the 'per' expression
