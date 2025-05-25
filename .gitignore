@@ -18,6 +18,10 @@ compiler/Cargo.lock
 # Environment variables
 .env
 
+# Virtual Environment
+venv/
+.venv/
+
 # Editor directories and files
 .idea
 .vscode

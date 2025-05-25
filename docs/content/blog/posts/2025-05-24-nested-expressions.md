@@ -7,6 +7,12 @@ authors:
 categories:
   - Development
   - Technical
+tags:
+  - programming
+  - language-design
+  - medical-computing
+  - nested-expressions
+  - technical-deep-dive
 ---
 
 # Implementing Nested Expressions in MediLang: A Developer's Journey
