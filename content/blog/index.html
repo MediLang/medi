@@ -6,32 +6,28 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A deep dive into implementing nested expressions and medical operators in MediLang">
+        <meta name="description" content="Documentation for the Medi healthcare programming language">
       
       
         <meta name="author" content="The Medi Team">
       
       
       
-        <link rel="prev" href="../../">
       
       
-        <link rel="next" href="../../../getting-started/">
-      
-      
-      <link rel="icon" href="../../../assets/images/favicon-placeholder.png">
+      <link rel="icon" href="../../assets/images/favicon-placeholder.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
-        <title>Journey to Nested Expressions: Building a Medical-Specific Language Feature - The Medi Book</title>
+        <title>Blog - The Medi Book</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.342714a4.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#implementing-nested-expressions-in-medilang-a-developers-journey" class="md-skip">
+        <a href="#blog" class="md-skip">
           Skip to content
         </a>
       
@@ -96,9 +92,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../.." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
       
-  <img src="../../../assets/medi-logo.png" alt="logo">
+  <img src="../../assets/medi-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -115,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Journey to Nested Expressions: Building a Medical-Specific Language Feature
+              Blog
             
           </span>
         </div>
@@ -228,7 +224,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -245,13 +241,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../blog/" class="md-tabs__link">
           
   
   
@@ -271,7 +265,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../getting-started/" class="md-tabs__link">
+        <a href="../../getting-started/" class="md-tabs__link">
           
   
   
@@ -291,7 +285,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../key-features/" class="md-tabs__link">
+        <a href="../../key-features/" class="md-tabs__link">
           
   
   
@@ -311,7 +305,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../examples/" class="md-tabs__link">
+        <a href="../../examples/" class="md-tabs__link">
           
   
   
@@ -331,7 +325,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../technical/architecture/" class="md-tabs__link">
+        <a href="../../technical/architecture/" class="md-tabs__link">
           
   
   
@@ -351,7 +345,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../reference/" class="md-tabs__link">
+        <a href="../../reference/" class="md-tabs__link">
           
   
   
@@ -369,7 +363,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../roadmap/" class="md-tabs__link">
+      <a href="../../roadmap/" class="md-tabs__link">
         
   
   
@@ -388,7 +382,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../contributing/" class="md-tabs__link">
+      <a href="../../contributing/" class="md-tabs__link">
         
   
   
@@ -407,7 +401,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../community/" class="md-tabs__link">
+      <a href="../../community/" class="md-tabs__link">
         
   
   
@@ -442,9 +436,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../.." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
       
-  <img src="../../../assets/medi-logo.png" alt="logo">
+  <img src="../../assets/medi-logo.png" alt="logo">
 
     </a>
     The Medi Book
@@ -471,7 +465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -490,31 +484,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
             
   
   
@@ -527,7 +518,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             Blog
@@ -541,7 +532,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../" class="md-nav__link">
+      <a href="../../blog/" class="md-nav__link">
         
   
   
@@ -561,31 +552,28 @@
                 
   
   
-    
   
   
-  
     
     
     
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
         
           
-          
         
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" checked>
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
         
           
-          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
             
   
   
@@ -598,7 +586,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_2">
             <span class="md-nav__icon md-icon"></span>
             Posts
@@ -609,32 +597,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Journey to Nested Expressions
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../blog/posts/2025-05-24-nested-expressions/" class="md-nav__link">
         
   
   
@@ -645,179 +611,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-challenge" class="md-nav__link">
-    <span class="md-ellipsis">
-      The Challenge
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#our-development-journey" class="md-nav__link">
-    <span class="md-ellipsis">
-      Our Development Journey
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Our Development Journey">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#phase-1-laying-the-foundation-may-10-11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Phase 1: Laying the Foundation (May 10-11)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-2-building-the-core-may-12-17" class="md-nav__link">
-    <span class="md-ellipsis">
-      Phase 2: Building the Core (May 12-17)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-3-advanced-features-may-18-24" class="md-nav__link">
-    <span class="md-ellipsis">
-      Phase 3: Advanced Features (May 18-24)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Features
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Key Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#medical-specific-operators" class="md-nav__link">
-    <span class="md-ellipsis">
-      Medical-Specific Operators
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#error-messages-that-help" class="md-nav__link">
-    <span class="md-ellipsis">
-      Error Messages That Help
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#technical-deep-dive" class="md-nav__link">
-    <span class="md-ellipsis">
-      Technical Deep Dive
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Technical Deep Dive">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-parser-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      The Parser Architecture
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#testing-strategy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Testing Strategy
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-we-learned" class="md-nav__link">
-    <span class="md-ellipsis">
-      What We Learned
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#whats-next" class="md-nav__link">
-    <span class="md-ellipsis">
-      What's Next
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#get-involved" class="md-nav__link">
-    <span class="md-ellipsis">
-      Get Involved
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#full-development-history" class="md-nav__link">
-    <span class="md-ellipsis">
-      Full Development History
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -890,7 +683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   
@@ -913,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/installation/" class="md-nav__link">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -936,7 +729,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/basic-syntax/" class="md-nav__link">
+      <a href="../../getting-started/basic-syntax/" class="md-nav__link">
         
   
   
@@ -959,7 +752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/first-program/" class="md-nav__link">
+      <a href="../../getting-started/first-program/" class="md-nav__link">
         
   
   
@@ -1034,7 +827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../key-features/" class="md-nav__link">
+      <a href="../../key-features/" class="md-nav__link">
         
   
   
@@ -1057,7 +850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../key-features/medical-data-science/" class="md-nav__link">
+      <a href="../../key-features/medical-data-science/" class="md-nav__link">
         
   
   
@@ -1132,7 +925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../examples/" class="md-nav__link">
+      <a href="../../examples/" class="md-nav__link">
         
   
   
@@ -1207,7 +1000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../technical/architecture/" class="md-nav__link">
+      <a href="../../technical/architecture/" class="md-nav__link">
         
   
   
@@ -1282,7 +1075,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/" class="md-nav__link">
+      <a href="../../reference/" class="md-nav__link">
         
   
   
@@ -1312,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../roadmap/" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
@@ -1334,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -1356,7 +1149,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../community/" class="md-nav__link">
+      <a href="../../community/" class="md-nav__link">
         
   
   
@@ -1391,167 +1184,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#the-challenge" class="md-nav__link">
-    <span class="md-ellipsis">
-      The Challenge
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#our-development-journey" class="md-nav__link">
-    <span class="md-ellipsis">
-      Our Development Journey
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Our Development Journey">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#phase-1-laying-the-foundation-may-10-11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Phase 1: Laying the Foundation (May 10-11)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-2-building-the-core-may-12-17" class="md-nav__link">
-    <span class="md-ellipsis">
-      Phase 2: Building the Core (May 12-17)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-3-advanced-features-may-18-24" class="md-nav__link">
-    <span class="md-ellipsis">
-      Phase 3: Advanced Features (May 18-24)
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Features
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Key Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#medical-specific-operators" class="md-nav__link">
-    <span class="md-ellipsis">
-      Medical-Specific Operators
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#error-messages-that-help" class="md-nav__link">
-    <span class="md-ellipsis">
-      Error Messages That Help
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#technical-deep-dive" class="md-nav__link">
-    <span class="md-ellipsis">
-      Technical Deep Dive
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Technical Deep Dive">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-parser-architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      The Parser Architecture
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#testing-strategy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Testing Strategy
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-we-learned" class="md-nav__link">
-    <span class="md-ellipsis">
-      What We Learned
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#whats-next" class="md-nav__link">
-    <span class="md-ellipsis">
-      What's Next
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#get-involved" class="md-nav__link">
-    <span class="md-ellipsis">
-      Get Involved
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#full-development-history" class="md-nav__link">
-    <span class="md-ellipsis">
-      Full Development History
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1569,109 +1201,13 @@
   
 
 
-<h1 id="implementing-nested-expressions-in-medilang-a-developers-journey">Implementing Nested Expressions in MediLang: A Developer's Journey</h1>
-<p><em>This is the first in a series of posts documenting the development of MediLang, a programming language designed specifically for healthcare applications.</em></p>
-<h2 id="the-challenge">The Challenge</h2>
-<p>When we started building MediLang, we knew we needed a way to express complex medical calculations in a way that felt natural to healthcare professionals. Traditional programming languages often fall short when it comes to medical-specific operations and units. Our solution? Build a language with first-class support for medical concepts.</p>
-<h2 id="our-development-journey">Our Development Journey</h2>
-<h3 id="phase-1-laying-the-foundation-may-10-11">Phase 1: Laying the Foundation (May 10-11)</h3>
-<ul>
-<li><strong>PR #1</strong>: Initial project setup and core parser infrastructure</li>
-<li><strong>PRs #3-4</strong>: Documentation and build system configuration</li>
-</ul>
-<h3 id="phase-2-building-the-core-may-12-17">Phase 2: Building the Core (May 12-17)</h3>
-<ul>
-<li><strong>PR #5</strong>: First implementation of the recursive descent parser</li>
-<li><strong>PRs #6-8</strong>: Multiple iterations to perfect the parser implementation</li>
-<li>Added comprehensive test coverage</li>
-<li>Improved error handling and recovery</li>
-<li>Enhanced documentation and examples</li>
-</ul>
-<h3 id="phase-3-advanced-features-may-18-24">Phase 3: Advanced Features (May 18-24)</h3>
-<ul>
-<li><strong>PRs #9-10</strong>: Implemented custom operator precedence</li>
-<li>Added support for medical operators (<code>of</code>, <code>per</code>)</li>
-<li>Detailed documentation of operator behavior</li>
-<li><strong>PR #11</strong>: Nested expressions and block statements</li>
-<li>Full support for complex nested calculations</li>
-<li>Improved syntax error messages</li>
-<li>Edge case handling and optimizations</li>
-</ul>
-<h2 id="key-features">Key Features</h2>
-<h3 id="medical-specific-operators">Medical-Specific Operators</h3>
-<p>MediLang introduces operators that make medical calculations more intuitive:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Calculate total medication dose</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">total_medication</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="mi">500</span><span class="n">mg</span><span class="p">;</span><span class="w">  </span><span class="c1">// 1000mg total</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">// Calculate infusion rate</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">infusion_rate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="n">mL</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="mi">8</span><span class="n">hr</span><span class="p">;</span><span class="w">  </span><span class="c1">// 125 mL/hr</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1">// Complex calculation with proper precedence</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">adjusted_dose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">weight</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">2.5</span><span class="n">mg</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">age</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">0.1</span><span class="n">mg</span><span class="p">)</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">medication</span><span class="p">;</span>
-</code></pre></div>
-<h3 id="error-messages-that-help">Error Messages That Help</h3>
-<p>We've put significant effort into making error messages helpful and actionable:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Error: Type mismatch in expression
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  --&gt; patient.medi:12:25
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>   |
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>12 | let dose = 2 of &quot;500mg&quot;;
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>   |             ^ Expected number after &#39;of&#39;, found string
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>   |
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>   = help: Remove quotes to use a numeric literal
-</code></pre></div>
-<h2 id="technical-deep-dive">Technical Deep Dive</h2>
-<h3 id="the-parser-architecture">The Parser Architecture</h3>
-<p>Our recursive descent parser was carefully designed to handle the unique requirements of medical calculations:</p>
-<ol>
-<li><strong>Operator Precedence</strong>: Custom rules for medical operators</li>
-<li><strong>Error Recovery</strong>: Graceful handling of syntax errors</li>
-<li><strong>Performance</strong>: Optimized for the most common medical calculation patterns</li>
-</ol>
-<h3 id="testing-strategy">Testing Strategy</h3>
-<p>We implemented a comprehensive test suite covering:
-- Basic arithmetic operations
-- Nested expressions
-- Edge cases in medical calculations
-- Error conditions and recovery</p>
-<h2 id="what-we-learned">What We Learned</h2>
-<ol>
-<li>
-<p><strong>Domain-Specific Languages Matter</strong>
-   Building operators that match medical professionals' mental models makes the language more accessible.</p>
-</li>
-<li>
-<p><strong>Error Messages Are Crucial</strong>
-   Clear, actionable error messages significantly improve the development experience.</p>
-</li>
-<li>
-<p><strong>Iterative Development Wins</strong>
-   Multiple small PRs with focused changes led to better code quality and easier reviews.</p>
-</li>
-</ol>
-<h2 id="whats-next">What's Next</h2>
-<p>Our roadmap includes:</p>
-<ul class="task-list">
-<li class="task-list-item"><input type="checkbox" disabled/> Pattern matching for medical data types</li>
-<li class="task-list-item"><input type="checkbox" disabled/> Built-in support for common medical calculations</li>
-<li class="task-list-item"><input type="checkbox" disabled/> Enhanced IDE tooling and autocompletion</li>
-<li class="task-list-item"><input type="checkbox" disabled/> Standard library of medical functions</li>
-</ul>
-<h2 id="get-involved">Get Involved</h2>
-<p>We're just getting started! Join our community:
-- Try out the <a href="https://github.com/MediLang/medi/releases">latest build</a>
-- Contribute to our <a href="https://github.com/MediLang/medi">GitHub repository</a>
-- Join the discussion in our <a href="#">Discord server</a></p>
-<h2 id="full-development-history">Full Development History</h2>
-<p>For a detailed account of all changes, see our <a href="https://github.com/MediLang/medi/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
+<h1 id="blog">Blog</h1>
 
 
 
 
 
 
-
-  
-  
 
 
 
@@ -1746,10 +1282,10 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
       
     
   </body>
