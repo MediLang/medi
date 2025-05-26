@@ -2,7 +2,38 @@
 name = "medic_lexer"
 version = "0.1.0"
 edition = "2021"
+description = "Lexer for the Medi programming language with support for healthcare-specific syntax"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/MediLang/medi/tree/main/compiler/medic_lexer"
+documentation = "https://docs.rs/medic_lexer"
+keywords = ["lexer", "parser", "healthcare", "programming-language"]
+categories = ["parsing", "parser-implementations"]
 
 [dependencies]
-logos = "0.14.0"
+log = { version = "0.4.20", optional = true }
+logos = { version = "0.14.0", default-features = false, features = ["export_derive"] }
+lazy_static = "1.4.0"
 
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+memory-stats = "1.0.0"  # For memory usage testing
+medic_parser = { path = "../medic_parser" }  # For parser integration tests
+tempfile = "3.9.0"  # For creating temporary files in tests
+
+[features]
+default = ["logging"]
+logging = ["log"]
+
+[lib]
+bench = false
+
+doctest = false
+
+test = true
+
+[profile.dev]
+opt-level = 1  # Faster builds with some optimization
+
+[profile.release]
+lto = true      # Enable link-time optimization
+codegen-units = 1  # Slower builds but better optimization

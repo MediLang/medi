@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::string_interner::InternedString;
+
 /// Represents a token's location in the source code
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Location {
@@ -52,18 +54,18 @@ pub enum TokenType {
     // Literals
     Integer(i64),
     Float(f64),
-    String(String),
+    String(InternedString),
     Boolean(bool),
-    DateTime(String),
+    DateTime(InternedString),
     Null,
     None, // ISO 8601 format
 
     // Healthcare-specific literals
-    PatientId(String),
-    ICD10(String),
-    LOINC(String),
-    SNOMED(String),
-    CPT(String),
+    PatientId(InternedString),
+    ICD10(InternedString),
+    LOINC(InternedString),
+    SNOMED(InternedString),
+    CPT(InternedString),
 
     // Operators - Grouped by precedence (lowest to highest)
     // Logical OR
@@ -164,31 +166,30 @@ pub enum TokenType {
     DoubleColon,
 
     // Identifiers and special tokens
-    Identifier(String),
-    Comment(String),
-    DocComment(String),
+    Identifier(InternedString),
+    Comment(InternedString),
+    DocComment(InternedString),
     Whitespace,
     Newline,
     EOF,
-
     // Error token
-    Error(String),
+    Error(InternedString),
 }
 
 /// Represents a single token in the source code
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
-    pub lexeme: String,
+    pub lexeme: InternedString,
     pub location: Location,
 }
 
 impl Token {
     /// Creates a new token
-    pub fn new(token_type: TokenType, lexeme: String, location: Location) -> Self {
+    pub fn new(token_type: TokenType, lexeme: impl Into<InternedString>, location: Location) -> Self {
         Token {
             token_type,
-            lexeme,
+            lexeme: lexeme.into(),
             location,
         }
     }
