@@ -2,7 +2,6 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use medic_lexer::{
     lexer::Lexer as OriginalLexer,
     streaming_lexer::{LexerConfig, StreamingLexer},
-    token::TokenType,
 };
 use std::fs;
 use std::path::Path;
@@ -24,7 +23,7 @@ fn load_test_file() -> String {
 
 fn generate_large_medical_script() -> String {
     let mut content = String::new();
-    
+
     // Generate a large medical script with various constructs
     for i in 0..1000 {
         content.push_str(&format!(
@@ -60,20 +59,20 @@ if bmi_{0} > 30.0 {{
             30 + (i % 50),
         ));
     }
-    
+
     content
 }
 
 fn bench_original_lexer(c: &mut Criterion) {
     let source = load_test_file();
-    
+
     c.benchmark_group("lexer")
         .throughput(Throughput::Bytes(source.len() as u64))
         .bench_function("original", |b| {
             b.iter(|| {
-                let mut lexer = OriginalLexer::new(&source);
+                let lexer = OriginalLexer::new(&source);
                 let tokens: Vec<_> = lexer.collect();
-                tokens
+                std::hint::black_box(tokens)
             })
         });
 }
@@ -83,15 +82,16 @@ fn bench_streaming_lexer(c: &mut Criterion) {
     let config = LexerConfig {
         max_buffer_size: 1024,
         include_whitespace: false,
+        include_comments: false,
     };
-    
+
     c.benchmark_group("lexer")
         .throughput(Throughput::Bytes(source.len() as u64))
         .bench_function("streaming", |b| {
             b.iter(|| {
-                let mut lexer = StreamingLexer::with_config(&source, config.clone());
+                let lexer = StreamingLexer::with_config(&source, config);
                 let tokens: Vec<_> = lexer.collect();
-                tokens
+                std::hint::black_box(tokens)
             })
         });
 }

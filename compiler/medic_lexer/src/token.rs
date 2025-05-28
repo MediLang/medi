@@ -2,194 +2,302 @@ use std::fmt;
 
 use crate::string_interner::InternedString;
 
-/// Represents a token's location in the source code
+/// Represents a token's location in the source code.
+///
+/// This struct tracks the position of a token in the source text, including
+/// line and column numbers (1-based) and the byte offset (0-based).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Location {
+    /// The 1-based line number in the source file
     pub line: usize,
+    /// The 1-based column number in the source file
     pub column: usize,
+    /// The 0-based byte offset from the start of the source
     pub offset: usize,
 }
 
-/// Represents the type of a token
+/// Represents the type of a token in the Medi programming language.
+///
+/// This enum includes all possible token types that can be produced by the lexer,
+/// including keywords, literals, operators, and punctuation.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Keywords
+    /// `module` - Defines a module
     Module,
+    /// `import` - Imports a module or item
     Import,
+    /// `fn` - Defines a function
     Fn,
+    /// `let` - Binds a value to a variable
     Let,
+    /// `const` - Defines a constant
     Const,
+    /// `type` - Defines a type alias
     Type,
+    /// `struct` - Defines a structure
     Struct,
+    /// `enum` - Defines an enumeration
     Enum,
+    /// `trait` - Defines a trait
     Trait,
+    /// `impl` - Implements functionality for a type
     Impl,
+    /// `pub` - Makes an item public
     Pub,
+    /// `priv` - Makes an item private (default)
     Priv,
+    /// `return` - Returns a value from a function
     Return,
+    /// `while` - Defines a while loop
     While,
+    /// `for` - Defines a for loop
     For,
+    /// `in` - Used in for loops and patterns
     In,
+    /// `match` - Pattern matching
     Match,
+    /// `if` - Conditional execution
     If,
+    /// `else` - Alternative execution path
     Else,
-    UnsupportedKeyword(String),
+    /// An unsupported or invalid keyword
+    UnsupportedKeyword(InternedString),
 
     // Healthcare-specific keywords
+    /// `fhir_query` - FHIR query operation
     FhirQuery,
+    /// `query` - General query operation
     Query,
+    /// `regulate` - Data regulation directive
     Regulate,
+    /// `scope` - Defines data access scope
     Scope,
+    /// `federated` - Federated data source
     Federated,
+    /// `safe` - Safety qualifier
     Safe,
+    /// `realtime` - Real-time data access
     RealTime,
+    /// `Patient` - FHIR Patient resource
     Patient,
+    /// `Observation` - FHIR Observation resource
     Observation,
+    /// `Medication` - FHIR Medication resource
     Medication,
 
     // Medical operators
+    /// `of` - Used in medical expressions (e.g., '2 of 3')
     Of,
+    /// `per` - Used in medical expressions (e.g., 'mg per day')
     Per,
 
     // Literals
+    /// Integer literal (e.g., `42`)
     Integer(i64),
+    /// Floating-point literal (e.g., `3.14`)
     Float(f64),
+    /// String literal (e.g., `"hello"`)
     String(InternedString),
+    /// Boolean literal (`true` or `false`)
     Boolean(bool),
+    /// Date/time literal in ISO 8601 format
     DateTime(InternedString),
+    /// `null` literal
     Null,
-    None, // ISO 8601 format
+    /// `none` literal (alternative to null)
+    None,
 
     // Healthcare-specific literals
+    /// Patient identifier (e.g., `PatientId("12345"))`
     PatientId(InternedString),
+    /// ICD-10 code (e.g., `ICD10("E11.65")`)
     ICD10(InternedString),
+    /// LOINC code (e.g., `LOINC("2160-0")`)
     LOINC(InternedString),
+    /// SNOMED CT code (e.g., `SNOMED("44054006")`)
     SNOMED(InternedString),
+    /// CPT code (e.g., `CPT("99213")`)
     CPT(InternedString),
 
     // Operators - Grouped by precedence (lowest to highest)
-    // Logical OR
-    Or, // ||
-
-    // Logical AND
-    And, // &&
-
-    // Equality
-    EqualEqual, // ==
-    NotEqual,   // !=
-
-    // Comparison
-    Less,         // <
-    LessEqual,    // <=
-    Greater,      // >
-    GreaterEqual, // >=
-
-    // Bitwise OR
-    BitOr, // |
-
-    // Bitwise XOR
-    BitXor, // ^
-
-    // Bitwise AND
-    BitAnd, // &
-
-    // Bit shifts
-    Shl, // <<
-    Shr, // >>
-
-    // Addition/Subtraction
-    Plus,  // +
-    Minus, // -
-
-    // Multiplication/Division/Modulo
-    Star,    // *
-    Slash,   // /
-    Percent, // %
-
-    // Exponentiation
-    DoubleStar, // **
-
-    // Range
-    Range,          // ..
-    RangeInclusive, // ..=
-
-    // Null-coalescing
-    QuestionQuestion, // ??
-
-    // Elvis operator
-    QuestionColon, // ?:
-
-    // Assignment operators
-    Equal,             // =
-    PlusEqual,         // +=
-    MinusEqual,        // -=
-    StarEqual,         // *=
-    SlashEqual,        // /=
-    PercentEqual,      // %=
-    DoubleStarAssign,  // **=
-    DoubleSlashAssign, // //=
-    BitAndAssign,      // &=
-    BitOrAssign,       // |=
-    BitXorAssign,      // ^=
-    ShlAssign,         // <<=
-    ShrAssign,         // >>=
-
-    // Other operators
-    Not,        // !
-    BitNot,     // ~
-    Pipe,       // | (used in patterns)
-    Arrow,      // ->
-    FatArrow,   // =>
-    Underscore, // _
+    /// Logical OR (`||`)
+    Or,
+    /// Logical AND (`&&`)
+    And,
+    /// Equality (`==`)
+    EqualEqual,
+    /// Inequality (`!=`)
+    NotEqual,
+    /// Less than (`<`)
+    Less,
+    /// Less than or equal (`<=`)
+    LessEqual,
+    /// Greater than (`>`)
+    Greater,
+    /// Greater than or equal (`>=`)
+    GreaterEqual,
+    /// Bitwise OR (`|`)
+    BitOr,
+    /// Bitwise XOR (`^`)
+    BitXor,
+    /// Bitwise AND (`&`)
+    BitAnd,
+    /// Left shift (`<<`)
+    Shl,
+    /// Right shift (`>>`)
+    Shr,
+    /// Addition (`+`)
+    Plus,
+    /// Subtraction (`-`)
+    Minus,
+    /// Multiplication (`*`)
+    Star,
+    /// Division (`/`)
+    Slash,
+    /// Modulo (`%`)
+    Percent,
+    /// Exponentiation (`**`)
+    DoubleStar,
+    /// Range (`..`)
+    Range,
+    /// Inclusive range (`..=`)
+    RangeInclusive,
+    /// Nullish coalescing (`??`)
+    QuestionQuestion,
+    /// Elvis operator (`?:`)
+    QuestionColon,
+    /// Assignment (`=`)
+    Equal,
+    /// Addition assignment (`+=`)
+    PlusEqual,
+    /// Subtraction assignment (`-=`)
+    MinusEqual,
+    /// Multiplication assignment (`*=`)
+    StarEqual,
+    /// Division assignment (`/=`)
+    SlashEqual,
+    /// Modulo assignment (`%=`)
+    PercentEqual,
+    /// Exponentiation assignment (`**=`)
+    DoubleStarAssign,
+    /// Integer division assignment (`//=`)
+    DoubleSlashAssign,
+    /// Bitwise AND assignment (`&=`)
+    BitAndAssign,
+    /// Bitwise OR assignment (`|=`)
+    BitOrAssign,
+    /// Bitwise XOR assignment (`^=`)
+    BitXorAssign,
+    /// Left shift assignment (`<<=`)
+    ShlAssign,
+    /// Right shift assignment (`>>=`)
+    ShrAssign,
+    /// Logical NOT (`!`)
+    Not,
+    /// Bitwise NOT (`~`)
+    BitNot,
+    /// Pattern match pipe (`|`)
+    Pipe,
+    /// Function/method return type (`->`)
+    Arrow,
+    /// Closure/pattern match arm (`=>`)
+    FatArrow,
+    /// Wildcard pattern (`_`)
+    Underscore,
 
     // Literals
-    Bool(bool),
+    // Note: Boolean literals are handled by the Boolean variant
 
-    // Error token
+    // Punctuation and delimiters
+    /// Lexer error (contains error message)
     LexerError,
-
-    // Delimiters
+    /// Left brace (`{`)
     LeftBrace,
+    /// Right brace (`}`)
     RightBrace,
+    /// Left parenthesis (`(`)
     LeftParen,
+    /// Right parenthesis (`)`)
     RightParen,
+    /// Left bracket (`[`)
     LeftBracket,
+    /// Right bracket (`]`)
     RightBracket,
+    /// Dot (`.`)
     Dot,
+    /// Comma (`,`)
     Comma,
+    /// Colon (`:`)
     Colon,
+    /// Double colon (`::`)
     ColonColon,
+    /// Semicolon (`;`)
     Semicolon,
+    /// At symbol (`@`)
     At,
+    /// Dollar sign (`$`)
     Dollar,
+    /// Backslash (`\`)
     Backslash,
+    /// Double colon (`::` - alternative to ColonColon)
     DoubleColon,
-
-    // Identifiers and special tokens
+    // Special tokens
+    /// Identifier (variable/function/type name)
     Identifier(InternedString),
+    /// Line or block comment
     Comment(InternedString),
+    /// Documentation comment
     DocComment(InternedString),
+    /// Whitespace (only included if configured)
     Whitespace,
+    /// Newline (only included if configured)
     Newline,
+    /// End of file marker
     EOF,
     // Error token
+    /// Error token with message
     Error(InternedString),
 }
 
-/// Represents a single token in the source code
+/// Represents a single token in the source code along with its location and original lexeme.
+///
+/// A token is the smallest meaningful unit of code that the parser can understand.
+/// It combines the token type with the actual text that was matched and its location
+/// in the source code for error reporting and debugging purposes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
+    /// The type of the token (e.g., keyword, identifier, literal, etc.)
     pub token_type: TokenType,
+    /// The original text that was matched to form this token
     pub lexeme: InternedString,
+    /// The location in the source code where this token appears
     pub location: Location,
 }
 
 impl Token {
-    /// Creates a new token
-    pub fn new(token_type: TokenType, lexeme: impl Into<InternedString>, location: Location) -> Self {
+    /// Creates a new token from a string that can be converted to an InternedString.
+    /// This will intern the string if it's not already interned.
+    ///
+    /// For cases where you already have an InternedString, use `from_interned` instead.
+    pub fn new<S: Into<InternedString>>(
+        token_type: TokenType,
+        lexeme: S,
+        location: Location,
+    ) -> Self {
+        Token::from_interned(token_type, lexeme.into(), location)
+    }
+
+    /// Creates a new token from an already-interned string.
+    /// This is more efficient than `new` when you already have an InternedString.
+    pub fn from_interned(
+        token_type: TokenType,
+        lexeme: InternedString,
+        location: Location,
+    ) -> Self {
         Token {
             token_type,
-            lexeme: lexeme.into(),
+            lexeme,
             location,
         }
     }
@@ -277,12 +385,10 @@ mod tests {
             column: 1,
             offset: 0,
         };
-        let token = Token::new(
-            TokenType::Identifier("test".to_string()),
-            "test".to_string(),
-            loc,
-        );
-        assert_eq!(token.lexeme, "test");
+        let test_str = "test";
+        let interned = InternedString::new(test_str);
+        let token = Token::new(TokenType::Identifier(interned.clone()), interned, loc);
+        assert_eq!(token.lexeme.as_str(), test_str);
         assert_eq!(token.location.line, 1);
     }
 
@@ -293,12 +399,12 @@ mod tests {
             column: 1,
             offset: 0,
         };
-        let token = Token::new(TokenType::Module, "module".to_string(), loc);
+        let token = Token::new(TokenType::Module, "module", loc);
         assert!(token.is_keyword());
 
         let token = Token::new(
-            TokenType::Identifier("test".to_string()),
-            "test".to_string(),
+            TokenType::Identifier(InternedString::new("test")),
+            "test",
             loc,
         );
         assert!(!token.is_keyword());
@@ -311,14 +417,10 @@ mod tests {
             column: 1,
             offset: 0,
         };
-        let token = Token::new(TokenType::FhirQuery, "fhir".to_string(), loc);
+        let token = Token::new(TokenType::FhirQuery, "fhir", loc);
         assert!(token.is_healthcare_token());
 
-        let token = Token::new(
-            TokenType::PatientId("PT123".to_string()),
-            "PT123".to_string(),
-            loc,
-        );
+        let token = Token::new(TokenType::PatientId("PT123".into()), "PT123", loc);
         assert!(token.is_healthcare_token());
     }
 }

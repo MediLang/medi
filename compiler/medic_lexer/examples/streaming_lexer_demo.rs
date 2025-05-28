@@ -1,12 +1,9 @@
 //! Example demonstrating the memory-efficient streaming lexer
-//! 
+//!
 //! This example shows how to use the streaming lexer to process large files
 //! with minimal memory usage.
 
-use medic_lexer::{
-    streaming_lexer::{LexerConfig, StreamingLexer},
-    token::TokenType,
-};
+use medic_lexer::streaming_lexer::{LexerConfig, StreamingLexer};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 
@@ -29,8 +26,9 @@ fn main() -> io::Result<()> {
     "#;
 
     let config = LexerConfig {
-        max_buffer_size: 128,  // Small buffer for demonstration
+        max_buffer_size: 128, // Small buffer for demonstration
         include_whitespace: false,
+        include_comments: true, // Include comments in the token stream
     };
 
     let mut lexer = StreamingLexer::with_config(source, config);
@@ -45,9 +43,11 @@ fn main() -> io::Result<()> {
 
     // Example 2: Process a large file in chunks
     println!("Example 2: Processing a large file in chunks");
-    
+
     // Create a test file if it doesn't exist
-    let test_file = "large_medical_script.medi";
+    let temp_dir = std::env::temp_dir();
+    let test_file = temp_dir.join("large_medical_script.medi");
+    let test_file = test_file.to_str().unwrap();
     if !std::path::Path::new(test_file).exists() {
         generate_test_file(test_file, 1000)?;
     }
@@ -61,24 +61,21 @@ fn main() -> io::Result<()> {
 /// Process a large file in chunks to demonstrate memory efficiency
 fn process_large_file(path: &str) -> io::Result<()> {
     let file = File::open(path)?;
-    let reader = BufReader::with_capacity(8192, file); // 8KB buffer
-    
-    let config = LexerConfig {
-        max_buffer_size: 1024,
-        include_whitespace: false,
-    };
-    
-    let mut lexer = StreamingLexer::with_config("", config);
+    let reader = BufReader::new(file);
+
+    let start_time = std::time::Instant::now();
     let mut token_count = 0;
     let mut line_count = 0;
-    let start_time = std::time::Instant::now();
 
     for line in reader.lines() {
         let line = line?;
         line_count += 1;
-        
-        // Process each line as a chunk
-        for token in lexer.process_chunk(&line) {
+
+        // Create a new lexer for this line
+        let lexer = StreamingLexer::new(&line);
+
+        // Process all tokens in this line
+        for _token in lexer {
             token_count += 1;
             if token_count % 1000 == 0 {
                 println!("Processed {} tokens...", token_count);
@@ -86,17 +83,15 @@ fn process_large_file(path: &str) -> io::Result<()> {
         }
     }
 
-    // Process any remaining tokens in the buffer
-    for token in lexer.finish() {
-        token_count += 1;
-    }
-
     let duration = start_time.elapsed();
     println!("\nFile processing complete!");
     println!("Lines processed: {}", line_count);
     println!("Tokens processed: {}", token_count);
     println!("Processing time: {:.2?}", duration);
-    println!("Tokens per second: {:.0}", token_count as f64 / duration.as_secs_f64());
+    println!(
+        "Tokens per second: {:.0}",
+        token_count as f64 / duration.as_secs_f64()
+    );
 
     Ok(())
 }
@@ -105,7 +100,7 @@ fn process_large_file(path: &str) -> io::Result<()> {
 fn generate_test_file(path: &str, patient_count: usize) -> io::Result<()> {
     println!("Generating test file with {} patients...", patient_count);
     let mut file = std::fs::File::create(path)?;
-    
+
     for i in 0..patient_count {
         let patient_data = format!(
             r#"// Patient data for patient {}
@@ -139,10 +134,10 @@ if bmi_{0} > 30.0 {{
             i,
             30 + (i % 50),
         );
-        
+
         file.write_all(patient_data.as_bytes())?;
     }
-    
+
     println!("Test file generated: {}", path);
     Ok(())
 }

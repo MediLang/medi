@@ -133,7 +133,7 @@ impl<'a> Lexer<'a> {
             LogosToken::Integer(i) => TokenType::Integer(i),
             LogosToken::Float(f) => TokenType::Float(f),
             LogosToken::String(s) => TokenType::String(InternedString::new(&s)),
-            LogosToken::Bool(b) => TokenType::Bool(b),
+            LogosToken::Bool(b) => TokenType::Boolean(b), // Using Boolean variant for consistency
             LogosToken::Identifier(ident) => TokenType::Identifier(InternedString::new(&ident)),
 
             // Medical operators
