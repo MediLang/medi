@@ -1,32 +1,13 @@
 use medic_ast::ast::ExpressionNode;
+use medic_lexer::string_interner::InternedString;
 use medic_lexer::token::{Location, Token, TokenType};
 use medic_parser::parser::{parse_expression, TokenSlice};
 
-// Helper function to create an identifier token
-fn create_identifier_token(name: &str) -> Token {
-    Token::new(
-        TokenType::Identifier(name.to_string()),
-        name.to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
+// Import test utilities
+mod test_utils;
+use test_utils::*;
 
-// Helper function to create a dot token
-fn create_dot_token() -> Token {
-    Token::new(
-        TokenType::Dot,
-        ".".to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
+// All token creation functions are now in test_utils.rs
 
 #[test]
 /// Tests that nested member expressions are parsed correctly
@@ -125,15 +106,15 @@ fn test_nested_member_expressions() {
     let tokens = vec![
         create_identifier_token("hospital"),
         create_dot_token(),
-        Token {
-            token_type: TokenType::Patient,
-            lexeme: "Patient".to_string(),
-            location: Location {
+        Token::new(
+            TokenType::Patient,
+            "Patient",
+            Location {
                 line: 1,
                 column: 1,
                 offset: 0,
             },
-        },
+        ),
         create_dot_token(),
         create_identifier_token("records"),
         create_dot_token(),

@@ -3,6 +3,10 @@ use medic_lexer::Lexer;
 use medic_parser::parser::expressions::parse_expression;
 use medic_parser::parser::TokenSlice;
 
+// Import test utilities
+mod test_utils;
+use test_utils::*;
+
 fn tokenize(input: &str) -> Vec<medic_lexer::token::Token> {
     Lexer::new(input).collect()
 }

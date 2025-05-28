@@ -18,14 +18,15 @@ use medic_ast::ast::{AssignmentNode, LetStatementNode};
 ///
 /// ```
 /// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, statements::parse_let_statement};
 ///
 /// let tokens = vec![
-///     Token::new(TokenType::Let, "let".to_string(), Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 5, offset: 4 }),
-///     Token::new(TokenType::Equal, "=".to_string(), Location { line: 1, column: 7, offset: 6 }),
-///     Token::new(TokenType::Integer(42), "42".to_string(), Location { line: 1, column: 9, offset: 8 }),
-///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 11, offset: 10 }),
+///     Token::new(TokenType::Let, "let", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 5, offset: 4 }),
+///     Token::new(TokenType::Equal, "=", Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Integer(42), "42", Location { line: 1, column: 9, offset: 8 }),
+///     Token::new(TokenType::Semicolon, ";", Location { line: 1, column: 11, offset: 10 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_let_statement(input);
@@ -97,13 +98,14 @@ use medic_ast::ast::ReturnNode;
 ///
 /// ```
 /// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, statements::parse_return_statement};
 ///
 /// // Example: return 42;
 /// let tokens = vec![
-///     Token::new(TokenType::Return, "return".to_string(), Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Integer(42), "42".to_string(), Location { line: 1, column: 8, offset: 7 }),
-///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 10, offset: 9 }),
+///     Token::new(TokenType::Return, "return", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Integer(42), "42", Location { line: 1, column: 8, offset: 7 }),
+///     Token::new(TokenType::Semicolon, ";", Location { line: 1, column: 10, offset: 9 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_return_statement(input);
@@ -111,8 +113,8 @@ use medic_ast::ast::ReturnNode;
 ///
 /// // Example: return;
 /// let tokens = vec![
-///     Token::new(TokenType::Return, "return".to_string(), Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 8, offset: 7 }),
+///     Token::new(TokenType::Return, "return", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Semicolon, ";", Location { line: 1, column: 8, offset: 7 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_return_statement(input);
@@ -156,13 +158,14 @@ use medic_ast::ast::IfNode;
 ///
 /// ```
 /// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, statements::parse_if_statement};
 ///
 /// let tokens = vec![
-///     Token::new(TokenType::If, "if".to_string(), Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 4, offset: 3 }),
-///     Token::new(TokenType::LeftBrace, "{".to_string(), Location { line: 1, column: 6, offset: 5 }),
-///     Token::new(TokenType::RightBrace, "}".to_string(), Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::If, "if", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 4, offset: 3 }),
+///     Token::new(TokenType::LeftBrace, "{", Location { line: 1, column: 6, offset: 5 }),
+///     Token::new(TokenType::RightBrace, "}", Location { line: 1, column: 7, offset: 6 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_if_statement(input);
@@ -235,21 +238,22 @@ use medic_ast::ast::WhileNode;
 ///
 /// ```
 /// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, statements::parse_while_statement};
 ///
 /// let tokens = vec![
-///     Token::new(TokenType::While, "while".to_string(), Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 7, offset: 6 }),
-///     Token::new(TokenType::Less, "<".to_string(), Location { line: 1, column: 9, offset: 8 }),
-///     Token::new(TokenType::Integer(10), "10".to_string(), Location { line: 1, column: 11, offset: 10 }),
-///     Token::new(TokenType::LeftBrace, "{".to_string(), Location { line: 1, column: 13, offset: 12 }),
-///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 15, offset: 14 }),
-///     Token::new(TokenType::Equal, "=".to_string(), Location { line: 1, column: 17, offset: 16 }),
-///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 19, offset: 18 }),
-///     Token::new(TokenType::Plus, "+".to_string(), Location { line: 1, column: 21, offset: 20 }),
-///     Token::new(TokenType::Integer(1), "1".to_string(), Location { line: 1, column: 23, offset: 22 }),
-///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 24, offset: 23 }),
-///     Token::new(TokenType::RightBrace, "}".to_string(), Location { line: 1, column: 26, offset: 25 }),
+///     Token::new(TokenType::While, "while", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Less, "<", Location { line: 1, column: 9, offset: 8 }),
+///     Token::new(TokenType::Integer(10), "10", Location { line: 1, column: 11, offset: 10 }),
+///     Token::new(TokenType::LeftBrace, "{", Location { line: 1, column: 13, offset: 12 }),
+///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 15, offset: 14 }),
+///     Token::new(TokenType::Equal, "=", Location { line: 1, column: 17, offset: 16 }),
+///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 19, offset: 18 }),
+///     Token::new(TokenType::Plus, "+", Location { line: 1, column: 21, offset: 20 }),
+///     Token::new(TokenType::Integer(1), "1", Location { line: 1, column: 23, offset: 22 }),
+///     Token::new(TokenType::Semicolon, ";", Location { line: 1, column: 24, offset: 23 }),
+///     Token::new(TokenType::RightBrace, "}", Location { line: 1, column: 26, offset: 25 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_while_statement(input);
@@ -353,14 +357,15 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 ///
 /// ```
 /// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, statements::parse_statement};
 ///
 /// let tokens = vec![
-///     Token::new(TokenType::Let, "let".to_string(), Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Identifier("x".to_string()), "x".to_string(), Location { line: 1, column: 5, offset: 4 }),
-///     Token::new(TokenType::Equal, "=".to_string(), Location { line: 1, column: 7, offset: 6 }),
-///     Token::new(TokenType::Integer(5), "5".to_string(), Location { line: 1, column: 9, offset: 8 }),
-///     Token::new(TokenType::Semicolon, ";".to_string(), Location { line: 1, column: 10, offset: 9 }),
+///     Token::new(TokenType::Let, "let", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 5, offset: 4 }),
+///     Token::new(TokenType::Equal, "=", Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Integer(5), "5", Location { line: 1, column: 9, offset: 8 }),
+///     Token::new(TokenType::Semicolon, ";", Location { line: 1, column: 10, offset: 9 }),
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_statement(input);

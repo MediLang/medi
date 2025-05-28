@@ -128,7 +128,10 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
 
     match input.0[0].token_type {
         // Handle literals
-        TokenType::Integer(_) | TokenType::Float(_) | TokenType::String(_) | TokenType::Bool(_) => {
+        TokenType::Integer(_)
+        | TokenType::Float(_)
+        | TokenType::String(_)
+        | TokenType::Boolean(_) => {
             let (input, lit) = parse_literal(input)?;
 
             // Check for implicit multiplication with an identifier (e.g., "3 doses" or "5 mg")
