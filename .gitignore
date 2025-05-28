@@ -38,3 +38,6 @@ venv/
 # Added by cargo
 
 /target
+
+# Proptest failure cases
+proptest-regressions/
