@@ -1,71 +1,13 @@
 use medic_ast::ast::{ExpressionNode, LiteralNode, StatementNode};
+use medic_lexer::string_interner::InternedString;
 use medic_lexer::token::{Location, Token, TokenType};
 use medic_parser::parser::{statements::parse_assignment_statement, TokenSlice};
 
-// Helper function to create an identifier token
-fn create_identifier_token(name: &str) -> Token {
-    Token::new(
-        TokenType::Identifier(name.to_string()),
-        name.to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
+// Import test utilities
+mod test_utils;
+use test_utils::*;
 
-// Helper function to create a dot token
-fn create_dot_token() -> Token {
-    Token::new(
-        TokenType::Dot,
-        ".".to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
-
-// Helper function to create an equals token
-fn create_equals_token() -> Token {
-    Token::new(
-        TokenType::Equal,
-        "=".to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
-
-// Helper function to create a semicolon token
-fn create_semicolon_token() -> Token {
-    Token::new(
-        TokenType::Semicolon,
-        ";".to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
-
-// Helper function to create an integer token
-fn create_integer_token(value: i64) -> Token {
-    Token::new(
-        TokenType::Integer(value),
-        value.to_string(),
-        Location {
-            line: 1,
-            column: 1,
-            offset: 0,
-        },
-    )
-}
+// All token creation functions are now in test_utils.rs
 
 #[test]
 fn test_valid_identifier_assignment() {
@@ -175,7 +117,7 @@ fn test_invalid_assignment_to_binary_expression() {
         create_identifier_token("x"),
         Token::new(
             TokenType::Plus,
-            "+".to_string(),
+            "+",
             Location {
                 line: 1,
                 column: 1,
