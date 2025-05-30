@@ -5,45 +5,48 @@ use medic_lexer::{
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
     chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
-    LexerConfig,
+    token::Token,
 };
 use std::io::Cursor;
 
-fn measure_original_lexer(content: &str) -> (usize, u128, u64) {
+/// Measures the performance of a lexer iterator.
+/// 
+/// # Arguments
+/// * `lexer` - An iterator that produces tokens
+/// 
+/// # Returns
+/// A tuple containing (token_count, elapsed_time_micros)
+fn measure_lexer_performance<I>(lexer: I) -> (usize, u128)
+where
+    I: Iterator<Item = Token>,
+{
     let start = Instant::now();
+    let tokens: Vec<_> = lexer.collect();
+    let elapsed = start.elapsed();
+    (tokens.len(), elapsed.as_micros())
+}
+
+/// Measures the original lexer's performance.
+fn measure_original_lexer(content: &str) -> (usize, u128) {
     let lexer = OriginalLexer::new(content);
-    let tokens: Vec<_> = lexer.collect();
-    let elapsed = start.elapsed();
-    let memory = memory_stats::memory_stats()
-        .map(|m| m.physical_mem as u64)
-        .unwrap_or(0);
-    (tokens.len(), elapsed.as_micros(), memory)
+    measure_lexer_performance(lexer)
 }
 
-fn measure_streaming_lexer(content: &str) -> (usize, u128, u64) {
-    let start = Instant::now();
+/// Measures the streaming lexer's performance.
+fn measure_streaming_lexer(content: &str) -> (usize, u128) {
     let lexer = StreamingLexer::new(content);
-    let tokens: Vec<_> = lexer.collect();
-    let elapsed = start.elapsed();
-    let memory = memory_stats::memory_stats()
-        .map(|m| m.physical_mem as u64)
-        .unwrap_or(0);
-    (tokens.len(), elapsed.as_micros(), memory)
+    measure_lexer_performance(lexer)
 }
 
-fn measure_chunked_lexer(content: &str) -> (usize, u128, u64) {
-    let start = Instant::now();
+/// Measures the chunked lexer's performance.
+fn measure_chunked_lexer(content: &str) -> (usize, u128) {
     let config = ChunkedLexerConfig::default();
     let cursor = Cursor::new(content.as_bytes());
     let lexer = ChunkedLexer::from_reader(cursor, config);
-    let tokens: Vec<_> = lexer.collect();
-    let elapsed = start.elapsed();
-    let memory = memory_stats::memory_stats()
-        .map(|m| m.physical_mem as u64)
-        .unwrap_or(0);
-    (tokens.len(), elapsed.as_micros(), memory)
+    measure_lexer_performance(lexer)
 }
 
+/// Formats bytes into a human-readable string (KB or MB)
 fn format_memory(kb: u64) -> String {
     if kb < 1024 {
         format!("{} KB", kb)
@@ -70,28 +73,24 @@ fn main() {
     let mut streaming_times = Vec::new();
     let mut chunked_times = Vec::new();
     
-    let mut original_memory = 0;
-    let mut streaming_memory = 0;
-    let mut chunked_memory = 0;
+    // Note: Memory measurements are removed as memory_stats() measures total process memory,
+    // which isn't accurate for measuring individual lexer memory usage.
     
     for i in 0..10 {
         print!("\rRunning iteration {}/10...", i + 1);
         std::io::stdout().flush().unwrap();
         
         // Benchmark original lexer
-        let (tokens, time, mem) = measure_original_lexer(&content);
+        let (tokens, time) = measure_original_lexer(&content);
         original_times.push(time);
-        original_memory = mem;
         
         // Benchmark streaming lexer
-        let (tokens, time, mem) = measure_streaming_lexer(&content);
+        let (tokens, time) = measure_streaming_lexer(&content);
         streaming_times.push(time);
-        streaming_memory = mem;
         
         // Benchmark chunked lexer
-        let (tokens, time, mem) = measure_chunked_lexer(&content);
+        let (tokens, time) = measure_chunked_lexer(&content);
         chunked_times.push(time);
-        chunked_memory = mem;
         println!("\rChunkedLexer: {} tokens in {} μs", tokens, time);
     }
     
@@ -102,23 +101,29 @@ fn main() {
         let min = *times.iter().min().unwrap();
         let max = *times.iter().max().unwrap();
         
-        let variance = times.iter()
-            .map(|&x| (x as f64 - avg).powi(2))
-            .sum::<f64>() / times.len() as f64;
-        let std_dev = variance.sqrt();
-        
-        (min, max, sum, std_dev)
-    }
     
-    let (o_min, o_max, o_sum, o_std) = calculate_stats(&original_times);
-    let (s_min, s_max, s_sum, s_std) = calculate_stats(&streaming_times);
-    let (c_min, c_max, c_sum, c_std) = calculate_stats(&chunked_times);
+    let (_, orig_avg, orig_min, orig_max) = calculate_stats(&original_times);
+    let (_, stream_avg, stream_min, stream_max) = calculate_stats(&streaming_times);
+    let (_, chunked_avg, chunked_min, chunked_max) = calculate_stats(&chunked_times);
     
-    // Print results
-    println!("\n=== Benchmark Results ===\n");
-    println!("Test File: benches/large_test_file.medi");
-    println!("File Size: {:.2} MB", content.len() as f64 / (1024.0 * 1024.0));
-    println!("Token Count: {}", original_times.len());
+    // Output results
+    println!("\n=== Benchmark Results ({} iterations) ===\n", original_times.len());
+    
+    println!("OriginalLexer (tokens: {}):", original_times.len());
+    println!("  Time: {:.2} μs (avg)", orig_avg);
+    println!("  Range: {:.2} - {:.2} μs\n", orig_min, orig_max);
+    
+    println!("StreamingLexer (tokens: {}):", streaming_times.len());
+    println!("  Time: {:.2} μs (avg)", stream_avg);
+    println!("  Range: {:.2} - {:.2} μs\n", stream_min, stream_max);
+    
+    println!("ChunkedLexer (tokens: {}):", chunked_times.len());
+    println!("  Time: {:.2} μs (avg)", chunked_avg);
+    println!("  Range: {:.2} - {:.2} μs\n", chunked_min, chunked_max);
+    
+    // Note about memory measurements
+    println!("Note: Memory measurements were removed as they reflected total process memory.");
+    println!("      For accurate memory profiling, consider using a memory profiler.");
     
     // Get system information
     let cpu_info = num_cpus::get();
