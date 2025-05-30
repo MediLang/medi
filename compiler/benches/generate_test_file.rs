@@ -15,18 +15,19 @@ fn main() {
     // Write a simple function that we'll repeat
     let function_template = r#"
 // Function to calculate BMI
-fn calculate_bmi(weight_kg: f64, height_m: f64) -> f64 {
+fn calculate_bmi(weight_kg: float, height_m: float) -> float {
     weight_kg / (height_m * height_m)
 }
 
 // Function to check blood pressure
-fn check_blood_pressure(systolic: i32, diastolic: i32) -> &str {
+fn check_blood_pressure(systolic: int, diastolic: int) -> string {
     match (systolic, diastolic) {
         (s, d) if s < 120 && d < 80 => "Normal",
         (s, d) if s < 130 && d < 80 => "Elevated",
         (s, d) if s < 140 || d < 90 => "Stage 1 Hypertension",
         _ => "Stage 2 Hypertension"
     }
+}
 }
 "#;
     

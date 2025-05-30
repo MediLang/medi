@@ -12,34 +12,44 @@ Create a file named `risk_calculator.medi` with the following content:
 // First Medi Program: Health Risk Calculator
 
 // Define our risk calculation function
-function calculate_risk_score(age, systolic_bp, diastolic_bp, is_smoker, has_diabetes) {
+fn calculate_risk_score(age: int, systolic_bp: int, diastolic_bp: int, is_smoker: bool, has_diabetes: bool) -> int {
   // Start with base score based on age
-  score = age / 10;
+  let mut score = age / 10;
   
   // Add points for blood pressure
-  if (systolic_bp >= 140 || diastolic_bp >= 90) {
+  if systolic_bp >= 140 || diastolic_bp >= 90 {
     score += 2;
-  } else if (systolic_bp >= 120 || diastolic_bp >= 80) {
+  } else if systolic_bp >= 120 || diastolic_bp >= 80 {
     score += 1;
   }
   
   // Add points for risk factors
-  if (is_smoker) score += 3;
-  if (has_diabetes) score += 2;
+  if is_smoker { score += 3; }
+  if has_diabetes { score += 2; }
   
-  return score;
+  score
+}
+
+// Define a patient record type
+record Patient {
+  name: string,
+  age: int,
+  systolic: int,
+  diastolic: int,
+  smoker: bool,
+  diabetes: bool
 }
 
 // Sample patient data
-dataset patients = [
-  {name: "Patient A", age: 45, systolic: 130, diastolic: 85, smoker: true, diabetes: false},
-  {name: "Patient B", age: 60, systolic: 145, diastolic: 95, smoker: false, diabetes: true},
-  {name: "Patient C", age: 30, systolic: 115, diastolic: 75, smoker: false, diabetes: false}
+let patients: list[Patient] = [
+  Patient{name: "Patient A", age: 45, systolic: 130, diastolic: 85, smoker: true, diabetes: false},
+  Patient{name: "Patient B", age: 60, systolic: 145, diastolic: 95, smoker: false, diabetes: true},
+  Patient{name: "Patient C", age: 30, systolic: 115, diastolic: 75, smoker: false, diabetes: false}
 ];
 
 // Calculate and display risk for each patient
-for (patient in patients) {
-  risk = calculate_risk_score(
+for patient in patients {
+  let risk = calculate_risk_score(
     patient.age,
     patient.systolic,
     patient.diastolic,
@@ -48,7 +58,8 @@ for (patient in patients) {
   );
   
   // Display result
-  print(patient.name + " risk score: " + risk);
+  println!("{} risk score: {}", patient.name, risk);
+}
   
   // Risk classification
   if (risk < 5) {

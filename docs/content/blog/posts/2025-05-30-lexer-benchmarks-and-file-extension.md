@@ -92,14 +92,36 @@ We'd love to hear about your experiences with these changes! If you have feedbac
 ```medi
 // Example Medi code with the new .medi extension
 protocol PatientData {
-  name: String
-  age: Int
-  conditions: [String]
+  name: string
+  age: int
+  conditions: list[string]
 }
 
-function analyze_patient(patient: PatientData) -> RiskScore {
+fn analyze_patient(patient: PatientData) -> RiskScore {
   // Implementation here
+  let score = 0;
+  
+  // Example: Calculate risk based on conditions
+  if patient.conditions.contains("diabetes") {
+    score += 10;
+  }
+  
+  if patient.age > 60 {
+    score += 5;
+  }
+  
+  score
 }
+
+// Example usage
+let patient = PatientData {
+  name: "John Doe",
+  age: 65,
+  conditions: ["hypertension", "diabetes"]
+};
+
+let risk = analyze_patient(patient);
+println!("Risk score: {}", risk);
 ```
 
 *Stay tuned for more updates as we continue to improve MediLang!*
