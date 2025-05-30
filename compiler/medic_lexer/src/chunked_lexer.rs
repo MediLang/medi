@@ -148,6 +148,20 @@ impl Position {
         }
     }
 
+    /// Update the position based on the processed text
+    /// This handles newlines and updates the line and column numbers accordingly
+    pub fn advance(&mut self, text: &str) {
+        for c in text.chars() {
+            if c == '\n' {
+                self.line += 1;
+                self.column = 1;
+            } else {
+                self.column += 1;
+            }
+        }
+        self.offset += text.len();
+    }
+
     /// Convert to a Location
     fn to_location(self) -> crate::token::Location {
         crate::token::Location {
@@ -156,7 +170,7 @@ impl Position {
             offset: self.offset,
         }
     }
-    
+
     /// Update the position based on the text that was just processed
     pub fn update_from_text(&mut self, text: &str) {
         for c in text.chars() {
@@ -538,7 +552,7 @@ impl ChunkedLexer {
             match token_result {
                 Ok(token) => {
                     let span = lexer.span();
-                    
+
                     // Calculate line and column based on the current position
                     let line = self.calculate_line(source, span.start);
                     let column = self.calculate_column(source, span.start);
@@ -550,10 +564,10 @@ impl ChunkedLexer {
                         converted.location.line = line;
                         converted.location.column = column;
                         converted.location.offset = offset;
-                        
+
                         tokens.push(converted);
                     }
-                    
+
                     // Update our position based on the token's text
                     let token_text = &source[span.start..span.end];
                     self.position.update_from_text(token_text);
@@ -568,31 +582,31 @@ impl ChunkedLexer {
     }
 
     /// Calculate the line number for a given position in the source
-    /// 
+    ///
     /// This function calculates the line number by counting newlines in the source
     /// up to the given position. It adds to the current line number.
     fn calculate_line(&self, source: &str, pos: usize) -> usize {
         // Count newlines in the source up to the current position
-        self.line + source[..pos].matches('\n').count()
+        self.position.line + source[..pos].matches('\n').count()
     }
-    
+
     /// Calculate the column number for a given position in the source
-    /// 
+    ///
     /// This function calculates the column number by finding the start of the current line
     /// and counting characters from there.
     fn calculate_column(&self, source: &str, pos: usize) -> usize {
         // Find the start of the current line within this chunk
         let line_start = source[..pos].rfind('\n').map(|i| i + 1).unwrap_or(0);
-        
+
         // Count characters from the start of the line to the current position
         let column = source[line_start..pos].chars().count();
-        
+
         // If we're at the start of the first line, use the current column
         // Otherwise, columns are 1-based
-        if line_start == 0 && self.column > 1 {
-            self.column + column
+        if line_start == 0 && self.position.column > 1 {
+            self.position.column + column
         } else {
-            column + 1  // +1 because columns are 1-based
+            column + 1 // +1 because columns are 1-based
         }
     }
 
@@ -1040,7 +1054,7 @@ mod tests {
                 let y = 2;
                 // A comment
                 let z = x + y;"#;
-        
+
         println!("\nInput source code with character indices:");
         for (i, c) in input.chars().enumerate() {
             if c == '\n' {
@@ -1050,7 +1064,7 @@ mod tests {
             }
         }
         println!("\n");
-        
+
         log::debug!("Input source code:");
         for (i, line) in input.lines().enumerate() {
             log::debug!("{:2}: {}", i + 1, line);
@@ -1099,24 +1113,27 @@ mod tests {
             .find(|t| matches!(t.token_type, TokenType::Plus))
             .expect("Could not find '+' token in the token stream");
 
-        println!("\nFound '+' token at line {}:{} (offset: {})", 
-                plus.location.line, 
-                plus.location.column, 
-                plus.location.offset);
+        println!(
+            "\nFound '+' token at line {}:{} (offset: {})",
+            plus.location.line, plus.location.column, plus.location.offset
+        );
 
         // Find and print the 'let z' token for context
         let let_z = tokens
             .iter()
-            .find(|t| matches!(t.token_type, TokenType::Let) && 
-                   t.lexeme.as_str() == "let" && 
-                   tokens.get(tokens.iter().position(|x| x == *t).unwrap() + 1)
-                       .map_or(false, |next| next.lexeme.as_str() == "z"))
+            .find(|t| {
+                matches!(t.token_type, TokenType::Let)
+                    && t.lexeme.as_str() == "let"
+                    && tokens
+                        .get(tokens.iter().position(|x| x == *t).unwrap() + 1)
+                        .is_some_and(|next| next.lexeme.as_str() == "z")
+            })
             .expect("Could not find 'let z' token");
 
-        println!("Found 'let z' token at line {}:{} (offset: {})", 
-                let_z.location.line, 
-                let_z.location.column, 
-                let_z.location.offset);
+        println!(
+            "Found 'let z' token at line {}:{} (offset: {})",
+            let_z.location.line, let_z.location.column, let_z.location.offset
+        );
 
         // Verify the positions are consistent with the source
         // The '+' token should be at position 93 in the input string
@@ -1127,11 +1144,13 @@ mod tests {
             "Character at position {} should be '+', found: {:?}",
             plus_pos, source_char
         );
-        
+
         // Verify the lexer's reported position for the '+' token
         // The lexer is currently reporting offset 26, which is incorrect
         // For now, we'll just log the actual position for debugging
-        println!("Note: Lexer reports '+' at offset {}, but it's actually at offset {}", 
-                plus.location.offset, plus_pos);
+        println!(
+            "Note: Lexer reports '+' at offset {}, but it's actually at offset {}",
+            plus.location.offset, plus_pos
+        );
     }
 }

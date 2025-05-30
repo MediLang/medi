@@ -4,14 +4,11 @@ use nom::IResult;
 use crate::parser::get_binary_operator;
 
 use crate::parser::{
-    take_token_if, BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, StatementNode,
-    TokenSlice, TokenType, parse_block,
+    parse_block, take_token_if, BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode,
+    StatementNode, TokenSlice, TokenType,
 };
 
-use super::{
-    identifiers::parse_identifier, literals::parse_literal,
-    statements::parse_statement,
-};
+use super::{identifiers::parse_identifier, literals::parse_literal, statements::parse_statement};
 
 // Re-export nested expressions API
 pub mod nested;
@@ -184,20 +181,23 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                 log::debug!("Parsing number literal: {:?}", input.0[0].token_type);
             }
             let (mut input, lit) = parse_literal(input)?;
-            
+
             // Check for implicit multiplication with an identifier (e.g., "5 mg")
             if !input.0.is_empty() {
                 if let TokenType::Identifier(_) = input.0[0].token_type {
                     let (new_input, right) = parse_identifier(input)?;
                     input = new_input;
-                    return Ok((input, ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                        left: ExpressionNode::Literal(lit),
-                        operator: BinaryOperator::Mul,
-                        right,
-                    }))));
+                    return Ok((
+                        input,
+                        ExpressionNode::Binary(Box::new(BinaryExpressionNode {
+                            left: ExpressionNode::Literal(lit),
+                            operator: BinaryOperator::Mul,
+                            right,
+                        })),
+                    ));
                 }
             }
-            
+
             if log::log_enabled!(log::Level::Debug) {
                 log::debug!("Successfully parsed number literal: {:?}", lit);
             }
@@ -217,22 +217,25 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         TokenType::Identifier(_) | TokenType::Dot => {
             // First parse the identifier or member expression
             let (mut input, left) = parse_identifier(input)?;
-            
+
             // Check for implicit multiplication with a following number (e.g., "doses 3")
             if !input.0.is_empty() {
                 if let TokenType::Integer(_) | TokenType::Float(_) = input.0[0].token_type {
                     let (new_input, right) = parse_primary(input)?;
                     input = new_input;
-                    return Ok((input, ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                        left,
-                        operator: BinaryOperator::Mul,
-                        right,
-                    }))));
+                    return Ok((
+                        input,
+                        ExpressionNode::Binary(Box::new(BinaryExpressionNode {
+                            left,
+                            operator: BinaryOperator::Mul,
+                            right,
+                        })),
+                    ));
                 }
             }
-            
+
             Ok((input, left))
-        },
+        }
         // Handle parenthesized expressions
         TokenType::LeftParen => {
             if log::log_enabled!(log::Level::Debug) {
@@ -327,10 +330,10 @@ pub(crate) fn is_comparison_operator(op: &BinaryOperator) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::{TokenSlice, parse_block};
+    use crate::parser::{parse_block, TokenSlice};
     use medic_ast::ast::*;
     use medic_lexer::token::Token;
-    
+
     // Helper function to tokenize a string for testing
     fn tokenize(input: &str) -> Vec<Token> {
         use medic_lexer::Lexer;
@@ -380,8 +383,11 @@ mod tests {
         // Block expressions are valid primary expressions, so this should succeed
         let tokens = tokenize("{ 42 }");
         let result = parse_primary(TokenSlice::new(&tokens));
-        assert!(result.is_ok(), "Block expressions should be valid primary expressions");
-        
+        assert!(
+            result.is_ok(),
+            "Block expressions should be valid primary expressions"
+        );
+
         // Verify the parsed block has one statement
         if let Ok((_, ExpressionNode::Statement(stmt))) = result {
             if let StatementNode::Block(block) = *stmt {
@@ -407,17 +413,16 @@ mod tests {
     fn test_parse_block_expression_with_stray_semicolons() {
         // Test with semicolons in various positions
         let test_cases = [
-            ("{ ;let x = 1; let y = 2; }", 2),  // Leading semicolon
-            ("{ let x = 1;; let y = 2; }", 2),  // Double semicolon
-            ("{ let x = 1; ;let y = 2; }", 2),  // Semicolon with space
-            ("{ ;;;let x = 1;;; let y = 2;;; }", 2),  // Multiple semicolons
-            ("{ ; ; let x = 1; ; ; let y = 2; ; ; }", 2),  // Mixed semicolons with spaces
-            ("{ ; }", 0),  // Just semicolons
-            ("{ ; ; }", 0),  // Multiple semicolons
-            ("{ let x = 1; }", 1),  // Single statement
-            ("{ let x = 1; let y = 2; }", 2),  // Multiple statements
+            ("{ ;let x = 1; let y = 2; }", 2),            // Leading semicolon
+            ("{ let x = 1;; let y = 2; }", 2),            // Double semicolon
+            ("{ let x = 1; ;let y = 2; }", 2),            // Semicolon with space
+            ("{ ;;;let x = 1;;; let y = 2;;; }", 2),      // Multiple semicolons
+            ("{ ; ; let x = 1; ; ; let y = 2; ; ; }", 2), // Mixed semicolons with spaces
+            ("{ ; }", 0),                                 // Just semicolons
+            ("{ ; ; }", 0),                               // Multiple semicolons
+            ("{ let x = 1; }", 1),                        // Single statement
+            ("{ let x = 1; let y = 2; }", 2),             // Multiple statements
         ];
-
 
         for (input, expected_count) in test_cases {
             let tokens = tokenize(input);
