@@ -36,7 +36,7 @@ fn test_numeric_literals() {
             "Expected exactly one token for input: {}",
             input
         );
-        
+
         match (&tokens[0].token_type, expected) {
             (TokenType::Float(actual), TokenType::Float(expected)) => {
                 let diff = (actual - expected).abs();
@@ -44,7 +44,9 @@ fn test_numeric_literals() {
                 assert!(
                     diff <= tolerance,
                     "Float parsing mismatch for input '{}': expected {}, got {}",
-                    input, expected, actual
+                    input,
+                    expected,
+                    actual
                 );
             }
             _ => assert_eq!(

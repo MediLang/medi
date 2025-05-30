@@ -222,7 +222,7 @@ pub struct ProgramNode {
 
 impl ExpressionNode {
     /// Creates an expression from a statement
-    /// 
+    ///
     /// If the statement is an expression statement, returns the inner expression.
     /// Otherwise, wraps the statement in a `Statement` variant.
     pub fn from_statement(stmt: StatementNode) -> Self {

@@ -187,6 +187,14 @@ impl<'a> TypeChecker<'a> {
                     _ => MediType::Unknown, // Fallback for unsupported query types
                 }
             }
+            ExpressionNode::Statement(stmt) => {
+                // For a statement expression, we need to check the type of the last expression in the statement
+                // For statements that don't produce values, we return Void
+                match **stmt {
+                    StatementNode::Expr(ref expr) => self.check_expr(expr),
+                    _ => MediType::Void, // Other statements don't produce values
+                }
+            }
         }
     }
 }

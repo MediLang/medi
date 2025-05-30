@@ -65,24 +65,27 @@ fn test_parser_integration() {
     // Verify we consumed all tokens
     if !remaining.is_empty() {
         println!("\n=== TOKEN DEBUGGING ===");
-        
+
         // Print first 5 remaining tokens
         println!("First 5 remaining tokens:");
         let slice = remaining.0;
         for (i, item) in slice.iter().take(5).enumerate() {
             println!("  {}: {:?}", i, item);
         }
-        
+
         // Print context around the first remaining token
         if !slice.is_empty() {
             let first_remaining = &slice[0];
-            println!("\nTokens around first remaining (offset: {}):", first_remaining.location.offset);
-            
+            println!(
+                "\nTokens around first remaining (offset: {}):",
+                first_remaining.location.offset
+            );
+
             // Find the position in the original tokens
             for (i, token) in tokens.iter().enumerate() {
                 let token_offset = token.location.offset;
                 let first_offset = first_remaining.location.offset;
-                
+
                 // Show tokens within 5 positions of the first remaining token
                 if token_offset + 5 >= first_offset && token_offset <= first_offset + 5 {
                     let marker = if token_offset == first_offset {
@@ -94,8 +97,11 @@ fn test_parser_integration() {
                 }
             }
         }
-        
-        panic!("Not all tokens were consumed. Remaining count: {}", slice.len());
+
+        panic!(
+            "Not all tokens were consumed. Remaining count: {}",
+            slice.len()
+        );
     }
 
     // Verify the AST structure

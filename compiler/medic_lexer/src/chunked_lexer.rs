@@ -197,8 +197,6 @@ struct PartialToken {
     partial_lexeme: StdString,
 }
 
-
-
 impl ChunkedLexer {
     /// Helper function to map string identifiers to keyword token types
     fn get_keyword(ident: &str) -> Option<TokenType> {
@@ -328,7 +326,10 @@ impl ChunkedLexer {
                     // Check if the identifier starts with a number (invalid identifier)
                     if let Some(first_char) = ident.chars().next() {
                         if first_char.is_ascii_digit() {
-                            return Some(create_error(format!("Invalid identifier: '{}' cannot start with a number", ident)));
+                            return Some(create_error(format!(
+                                "Invalid identifier: '{}' cannot start with a number",
+                                ident
+                            )));
                         }
                     }
                     create_token(TokenType::Identifier(InternedString::from(ident.as_str())))
@@ -339,24 +340,34 @@ impl ChunkedLexer {
             }
             LogosToken::Integer(n) => {
                 // Check if the lexeme is followed by letters (invalid number literal)
-                let next_char = source.get(span.end..=span.end).and_then(|s| s.chars().next());
+                let next_char = source
+                    .get(span.end..=span.end)
+                    .and_then(|s| s.chars().next());
                 if let Some(c) = next_char {
                     if c.is_alphabetic() || c == '_' {
-                        return Some(create_error(format!("Invalid number literal: '{}{}'", lexeme_str, c)));
+                        return Some(create_error(format!(
+                            "Invalid number literal: '{}{}'",
+                            lexeme_str, c
+                        )));
                     }
                 }
                 create_token(TokenType::Integer(n))
             }
             LogosToken::Float(f) => {
                 // Check if the lexeme is followed by letters (invalid number literal)
-                let next_char = source.get(span.end..=span.end).and_then(|s| s.chars().next());
+                let next_char = source
+                    .get(span.end..=span.end)
+                    .and_then(|s| s.chars().next());
                 if let Some(c) = next_char {
                     if c.is_alphabetic() || c == '_' {
-                        return Some(create_error(format!("Invalid number literal: '{}{}'", lexeme_str, c)));
+                        return Some(create_error(format!(
+                            "Invalid number literal: '{}{}'",
+                            lexeme_str, c
+                        )));
                     }
                 }
                 create_token(TokenType::Float(f))
-            },
+            }
 
             // Medical codes
             LogosToken::ICD10(code) => {
@@ -411,12 +422,11 @@ impl ChunkedLexer {
         Some(token)
     }
 
-    
     /// Process a chunk of source code and return a vector of tokens
     fn process_chunk(&mut self, source: &str) -> Result<Vec<Token>, String> {
         let mut tokens = Vec::new();
         let mut lexer = LogosToken::lexer(source);
-        
+
         // Process each token from the lexer
         while let Some(result) = lexer.next() {
             match result {
@@ -425,22 +435,22 @@ impl ChunkedLexer {
                         start: lexer.span().start,
                         end: lexer.span().end,
                     };
-                    
+
                     // Save the current position before processing the token
                     let start_position = self.position;
-                    
+
                     // Convert the Logos token to our internal token type
                     if let Some(mut converted_token) = self.convert_token(token, &span, source) {
                         // Update the token's position and advance the lexer's position
                         converted_token.location = start_position.to_location();
                         let token_text = &source[span.start..span.end];
-                        
+
                         // Push the token to the result
                         tokens.push(converted_token);
-                        
+
                         // Update the position for the next token
                         self.position.advance(token_text);
-                        
+
                         // Debug log the position after advancing
                         debug!(
                             "Processed token '{}' at {}:{}, next position: {}:{}",
@@ -451,16 +461,16 @@ impl ChunkedLexer {
                             self.position.column
                         );
                     }
-                },
+                }
                 Err(_) => {
                     return Err("Lexer error".to_string());
                 }
             }
         }
-        
+
         Ok(tokens)
     }
-    
+
     /// Create a new chunked lexer from any BufRead implementor
     pub fn from_reader<R: BufRead + 'static>(reader: R, config: ChunkedLexerConfig) -> Self {
         let chunk_size = config.chunk_size.clamp(1_024, 1_048_576); // 1KB to 1MB chunks
@@ -792,12 +802,12 @@ impl ChunkedLexer {
                 }
             }
 
-        // If we're here, we need to try reading more chunks
-        if self.eof {
-            return None;
+            // If we're here, we need to try reading more chunks
+            if self.eof {
+                return None;
+            }
         }
     }
-}
 
     /// Get the current position in the source code
     ///
@@ -1129,7 +1139,10 @@ mod tests {
             "\nChecking first 'let' token at line {}",
             let_x.location.line
         );
-        assert_eq!(let_x.location.line, 3, "First 'let' should be on line 3 (after initial newline)");
+        assert_eq!(
+            let_x.location.line, 3,
+            "First 'let' should be on line 3 (after initial newline)"
+        );
 
         let plus = tokens
             .iter()
@@ -1147,6 +1160,9 @@ mod tests {
             println!("Found 'let z' token at line {}", let_z.location.line);
         }
 
-        assert_eq!(plus.location.line, 7, "'+' token should be on line 7 (after initial newline and comment)");
+        assert_eq!(
+            plus.location.line, 7,
+            "'+' token should be on line 7 (after initial newline and comment)"
+        );
     }
 }
