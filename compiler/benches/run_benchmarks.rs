@@ -1,13 +1,13 @@
-use std::time::Instant;
-use std::error::Error;
-use std::fmt;
 use medic_lexer::{
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
-    LexerConfig,
     token::Token,
+    LexerConfig,
 };
+use std::error::Error;
+use std::fmt;
+use std::time::Instant;
 
 #[derive(Debug)]
 struct BenchmarkError {
@@ -54,7 +54,7 @@ impl BenchmarkStats {
         self.total_tokens += tokens.len();
         self.total_errors += errors;
         self.total_time_micros += time_micros;
-        
+
         self.min_tokens = self.min_tokens.min(tokens.len());
         self.max_tokens = self.max_tokens.max(tokens.len());
         self.min_time_micros = self.min_time_micros.min(time_micros);
@@ -62,15 +62,27 @@ impl BenchmarkStats {
     }
 
     fn avg_tokens(&self) -> f64 {
-        if self.iterations == 0 { 0.0 } else { self.total_tokens as f64 / self.iterations as f64 }
+        if self.iterations == 0 {
+            0.0
+        } else {
+            self.total_tokens as f64 / self.iterations as f64
+        }
     }
 
     fn avg_time_micros(&self) -> f64 {
-        if self.iterations == 0 { 0.0 } else { self.total_time_micros as f64 / self.iterations as f64 }
+        if self.iterations == 0 {
+            0.0
+        } else {
+            self.total_time_micros as f64 / self.iterations as f64
+        }
     }
 
     fn error_rate(&self) -> f64 {
-        if self.total_tokens == 0 { 0.0 } else { self.total_errors as f64 / self.total_tokens as f64 * 100.0 }
+        if self.total_tokens == 0 {
+            0.0
+        } else {
+            self.total_errors as f64 / self.total_tokens as f64 * 100.0
+        }
     }
 }
 
@@ -113,53 +125,66 @@ fn run_benchmark() -> Result<BenchmarkStats, Box<dyn Error>> {
 
     for i in 0..iterations {
         let start = Instant::now();
-        
+
         // Create lexer and collect tokens, counting any errors
         let lexer = OriginalLexer::new(&source);
         let tokens: Vec<Token> = lexer.collect();
-        
+
         // Check for lexer errors in the tokens
-        let error_count = tokens.iter()
+        let error_count = tokens
+            .iter()
             .filter(|t| matches!(t.token_type, medic_lexer::token::TokenType::Error(_)))
             .count();
-        
+
         let elapsed = start.elapsed().as_micros();
-        
+
         // Log iteration details
-        println!("Iteration {}: Lexed {} tokens ({} errors) in {} μs", 
-                 i + 1, tokens.len(), error_count, elapsed);
-        
+        println!(
+            "Iteration {}: Lexed {} tokens ({} errors) in {} μs",
+            i + 1,
+            tokens.len(),
+            error_count,
+            elapsed
+        );
+
         // Log any errors if they occurred
         if error_count > 0 {
-            eprintln!("  Warning: Found {} tokenization errors in iteration {}", error_count, i + 1);
-            
+            eprintln!(
+                "  Warning: Found {} tokenization errors in iteration {}",
+                error_count,
+                i + 1
+            );
+
             // Print the first few errors for debugging
-            let errors: Vec<_> = tokens.iter()
+            let errors: Vec<_> = tokens
+                .iter()
                 .filter(|t| matches!(t.token_type, medic_lexer::token::TokenType::Error(_)))
                 .take(3) // Limit to first 3 errors to avoid flooding output
                 .collect();
-                
+
             for token in errors {
-                eprintln!("    Error token: {:?} at line {}", 
-                         token.token_type, token.location.line);
+                eprintln!(
+                    "    Error token: {:?} at line {}",
+                    token.token_type, token.location.line
+                );
             }
-            
+
             if error_count > 3 {
                 eprintln!("    ... and {} more errors", error_count - 3);
             }
         }
-        
+
         // Update statistics
         stats.add_iteration(&tokens, elapsed, error_count);
     }
-    
+
     Ok(stats)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Running lexer benchmark...");
     println!("Test content length: {} bytes", TEST_CONTENT.len() * 100);
-    
+
     match run_benchmark() {
         Ok(stats) => {
             println!("\n=== Benchmark Results ===");
@@ -175,11 +200,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("  Min:     {}", stats.min_time_micros);
             println!("  Max:     {}", stats.max_time_micros);
             println!("  Average: {:.1}", stats.avg_time_micros());
-            println!("\nTokens per second (thousands): {:.1}", 
-                   stats.total_tokens as f64 / (stats.total_time_micros as f64 / 1_000_000.0) / 1000.0);
-            
+            println!(
+                "\nTokens per second (thousands): {:.1}",
+                stats.total_tokens as f64 / (stats.total_time_micros as f64 / 1_000_000.0) / 1000.0
+            );
+
             if stats.total_errors > 0 {
-                eprintln!("\nWarning: {} tokenization errors were detected in the benchmark", stats.total_errors);
+                eprintln!(
+                    "\nWarning: {} tokenization errors were detected in the benchmark",
+                    stats.total_errors
+                );
                 std::process::exit(1);
             }
         }
@@ -188,6 +218,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             return Err(e);
         }
     }
-    
+
     Ok(())
 }

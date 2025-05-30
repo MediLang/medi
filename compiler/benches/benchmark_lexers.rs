@@ -1,13 +1,13 @@
-use std::fs;
-use std::time::Instant;
-use std::process::Command;
-use memory_stats::memory_stats;
 use medic_lexer::{
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     LexerConfig,
 };
+use memory_stats::memory_stats;
+use std::fs;
+use std::process::Command;
+use std::time::Instant;
 
 fn main() {
     // Generate test file if it doesn't exist
@@ -17,39 +17,39 @@ fn main() {
         let content = generate_test_content(1024 * 1024); // 1MB
         fs::write(test_file, content).expect("Failed to write test file");
     }
-    
+
     // Run benchmarks
     println!("Running benchmarks...\n");
-    
+
     // Get system information
     let cpu_info = get_cpu_info();
     let mem_info = get_mem_info();
     let rust_version = get_rust_version();
-    
+
     println!("=== Test Environment ===");
     println!("CPU: {}", cpu_info);
     println!("Memory: {}", mem_info);
     println!("Rust Version: {}", rust_version);
     println!("Optimization: --release");
     println!("Measurement: Custom benchmark using std::time::Instant\n");
-    
+
     // Benchmark OriginalLexer
     println!("=== Benchmarking OriginalLexer ===");
     let original_times = benchmark_lexer("OriginalLexer", test_file, 5);
-    
+
     // Benchmark StreamingLexer
     println!("\n=== Benchmarking StreamingLexer ===");
     let streaming_times = benchmark_lexer("StreamingLexer", test_file, 5);
-    
+
     // Benchmark ChunkedLexer
     println!("\n=== Benchmarking ChunkedLexer ===");
     let chunked_times = benchmark_lexer("ChunkedLexer", test_file, 5);
-    
+
     // Print summary
     println!("\n=== Benchmark Summary ===\n");
     println!("| Lexer Type     | Min (ms) | Max (ms) | Avg (ms) | Memory (MB) |");
     println!("|----------------|----------|----------|-----------|-------------|");
-    
+
     print_results("OriginalLexer", &original_times);
     print_results("StreamingLexer", &streaming_times);
     print_results("ChunkedLexer", &chunked_times);
@@ -87,7 +87,7 @@ fn check_blood_pressure(systolic: i32, diastolic: i32) -> &str {
     }
 }
 "#;
-    
+
     let mut result = String::new();
     while result.len() < target_size {
         result.push_str(template);
@@ -96,17 +96,18 @@ fn check_blood_pressure(systolic: i32, diastolic: i32) -> &str {
     result
 }
 
+use medic_lexer::chunked_lexer::ChunkedLexerConfig;
 use std::fs::File;
 use std::io::{self, BufReader};
-use medic_lexer::chunked_lexer::ChunkedLexerConfig;
 
 fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> {
     let mut times = Vec::with_capacity(runs);
-    
+
     // Common function to print benchmark results
     fn print_run_result(run: usize, token_count: usize, elapsed: std::time::Duration) {
-        println!("  Run {}: {} tokens in {:.2}ms", 
-            run + 1, 
+        println!(
+            "  Run {}: {} tokens in {:.2}ms",
+            run + 1,
             token_count,
             elapsed.as_secs_f64() * 1000.0
         );
@@ -117,38 +118,36 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
         let token_count = match lexer_type {
             "OriginalLexer" | "StreamingLexer" => {
                 // Read file content once for OriginalLexer and StreamingLexer
-                let content = fs::read_to_string(test_file)
-                    .expect("Failed to read test file");
-                
+                let content = fs::read_to_string(test_file).expect("Failed to read test file");
+
                 let tokens: Vec<_> = match lexer_type {
-                    "OriginalLexer" => 
-                        medic_lexer::lexer::Lexer::new(&content).collect(),
-                    "StreamingLexer" => 
-                        medic_lexer::streaming_lexer::StreamingLexer::new(&content).collect(),
+                    "OriginalLexer" => medic_lexer::lexer::Lexer::new(&content).collect(),
+                    "StreamingLexer" => {
+                        medic_lexer::streaming_lexer::StreamingLexer::new(&content).collect()
+                    }
                     _ => unreachable!(),
                 };
                 tokens.len()
             }
             "ChunkedLexer" => {
                 // Use streaming approach for ChunkedLexer
-                let file = File::open(test_file)
-                    .expect("Failed to open test file");
+                let file = File::open(test_file).expect("Failed to open test file");
                 let reader = BufReader::new(file);
                 let lexer = medic_lexer::chunked_lexer::ChunkedLexer::from_reader(
                     reader,
-                    ChunkedLexerConfig::default()
+                    ChunkedLexerConfig::default(),
                 );
                 let tokens: Vec<_> = lexer.collect();
                 tokens.len()
             }
             _ => panic!("Unknown lexer type: {}", lexer_type),
         };
-        
+
         let elapsed = start.elapsed();
         times.push(elapsed.as_micros());
         print_run_result(i, token_count, elapsed);
     }
-    
+
     times
 }
 
@@ -156,7 +155,7 @@ fn print_results(lexer_type: &str, times: &[u128]) {
     let min = times.iter().min().unwrap();
     let max = times.iter().max().unwrap();
     let avg = times.iter().sum::<u128>() as f64 / times.len() as f64;
-    
+
     // Measure memory usage for the current lexer type
     let memory_mb = match memory_stats() {
         Some(stats) => stats.physical_mem as f64 / (1024.0 * 1024.0), // Convert bytes to MB
@@ -165,10 +164,11 @@ fn print_results(lexer_type: &str, times: &[u128]) {
             0.0
         }
     };
-    
-    println!("| {:<14} | {:>8.2} | {:>8.2} | {:>9.2} | {:>11.1} |", 
-        lexer_type, 
-        (*min as f64) / 1000.0, 
+
+    println!(
+        "| {:<14} | {:>8.2} | {:>8.2} | {:>9.2} | {:>11.1} |",
+        lexer_type,
+        (*min as f64) / 1000.0,
         (*max as f64) / 1000.0,
         avg / 1000.0,
         memory_mb
@@ -180,7 +180,12 @@ fn get_cpu_info() -> String {
         if let Ok(info) = fs::read_to_string("/proc/cpuinfo") {
             for line in info.lines() {
                 if line.starts_with("model name") {
-                    return line.split(':').nth(1).unwrap_or("Unknown").trim().to_string();
+                    return line
+                        .split(':')
+                        .nth(1)
+                        .unwrap_or("Unknown")
+                        .trim()
+                        .to_string();
                 }
             }
         }
@@ -210,6 +215,6 @@ fn get_rust_version() -> String {
         .arg("--version")
         .output()
         .expect("Failed to execute rustc");
-    
+
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }

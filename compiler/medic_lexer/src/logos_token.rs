@@ -12,7 +12,7 @@ pub enum LogosToken {
     #[token("..=", priority = 1000)]
     RangeInclusive,
     /// Range operator (`..`)
-    #[token("..", priority = 999)]
+    #[token("..", priority = 1000)]
     Range,
 
     // Keywords
@@ -81,7 +81,7 @@ pub enum LogosToken {
     /// Integer literal (e.g., `42`, `-10`)
     ///
     /// Matches optional negative sign followed by one or more digits.
-    /// We'll validate in the lexer that it's not followed by letters.
+    /// The lexer will validate that the number is not followed by letters.
     #[regex(r"-?[0-9]+", |lex| {
         let slice = lex.slice();
         // Only parse as negative if the minus is immediately followed by a digit
@@ -100,6 +100,8 @@ pub enum LogosToken {
     /// 2. Numbers with leading decimal (e.g., `.5`)
     /// 3. Scientific notation (e.g., `1e10`, `2.5e-3`)
     /// 4. Negative versions of the above
+    // Match floats but not numbers ending with a decimal point
+    // This ensures that '42.' is tokenized as Integer(42) and Dot
     #[regex(r"-?(?:[0-9]+\.[0-9]+(?:[eE][+-]?[0-9]+)?|\.[0-9]+(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+)", |lex| {
         let slice = lex.slice();
         // Only parse as negative if the minus is immediately followed by a digit or decimal point

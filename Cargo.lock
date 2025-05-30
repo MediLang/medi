@@ -494,6 +494,7 @@ dependencies = [
  "log",
  "logos",
  "medic_parser",
+ "pretty_assertions",
  "proptest",
  "tempfile",
 ]

@@ -1,7 +1,9 @@
 //! Test utilities for the parser tests
 
-use medic_lexer::string_interner::InternedString;
+#![allow(dead_code)]
+
 use medic_lexer::token::{Location, Token, TokenType};
+use medic_lexer::string_interner::InternedString;
 
 /// Creates a new location with default values
 fn default_location() -> Location {
@@ -17,35 +19,17 @@ fn create_token(token_type: TokenType, lexeme: &'static str) -> Token {
     Token::new(token_type, lexeme, default_location())
 }
 
-/// Creates a new identifier token with the given name
-///
-/// # Examples
-/// ```
-/// let token = create_identifier_token("x");
-/// assert!(matches!(token.token_type, TokenType::Identifier(_)));
-/// ```
+#[allow(dead_code)]
 pub fn create_identifier_token(name: &'static str) -> Token {
     create_token(TokenType::Identifier(InternedString::from(name)), name)
 }
 
-/// Creates a new dot token
-///
-/// # Examples
-/// ```
-/// let token = create_dot_token();
-/// assert!(matches!(token.token_type, TokenType::Dot));
-/// ```
+#[allow(dead_code)]
 pub fn create_dot_token() -> Token {
     create_token(TokenType::Dot, ".")
 }
 
-/// Creates a new equals token
-///
-/// # Examples
-/// ```
-/// let token = create_equals_token();
-/// assert!(matches!(token.token_type, TokenType::Equal));
-/// ```
+#[allow(dead_code)]
 pub fn create_equals_token() -> Token {
     create_token(TokenType::Equal, "=")
 }
@@ -57,6 +41,7 @@ pub fn create_equals_token() -> Token {
 /// let token = create_semicolon_token();
 /// assert!(matches!(token.token_type, TokenType::Semicolon));
 /// ```
+#[allow(dead_code)]
 pub fn create_semicolon_token() -> Token {
     create_token(TokenType::Semicolon, ";")
 }
@@ -68,6 +53,7 @@ pub fn create_semicolon_token() -> Token {
 /// let token = create_integer_token(42);
 /// assert!(matches!(token.token_type, TokenType::Integer(42)));
 /// ```
+#[allow(dead_code)]
 pub fn create_integer_token(value: i64) -> Token {
     let lexeme = value.to_string();
     let interned = InternedString::from(lexeme.as_str());
@@ -81,6 +67,7 @@ pub fn create_integer_token(value: i64) -> Token {
 /// let token = create_plus_token();
 /// assert!(matches!(token.token_type, TokenType::Plus));
 /// ```
+#[allow(dead_code)]
 pub fn create_plus_token() -> Token {
     create_token(TokenType::Plus, "+")
 }
@@ -92,6 +79,7 @@ pub fn create_plus_token() -> Token {
 /// let token = create_left_brace_token();
 /// assert!(matches!(token.token_type, TokenType::LeftBrace));
 /// ```
+#[allow(dead_code)]
 pub fn create_left_brace_token() -> Token {
     create_token(TokenType::LeftBrace, "{")
 }
@@ -103,6 +91,7 @@ pub fn create_left_brace_token() -> Token {
 /// let token = create_right_brace_token();
 /// assert!(matches!(token.token_type, TokenType::RightBrace));
 /// ```
+#[allow(dead_code)]
 pub fn create_right_brace_token() -> Token {
     create_token(TokenType::RightBrace, "}")
 }
@@ -118,6 +107,7 @@ pub fn create_right_brace_token() -> Token {
 /// let token = create_operator_token(TokenType::Plus, "+");
 /// assert!(matches!(token.token_type, TokenType::Plus));
 /// ```
+#[allow(dead_code)]
 pub fn create_operator_token(op: TokenType, lexeme: &'static str) -> Token {
     create_token(op, lexeme)
 }
@@ -133,6 +123,7 @@ pub fn create_operator_token(op: TokenType, lexeme: &'static str) -> Token {
 /// let token = create_literal_token(TokenType::Integer(42), "42");
 /// assert!(matches!(token.token_type, TokenType::Integer(42)));
 /// ```
+#[allow(dead_code)]
 pub fn create_literal_token(token_type: TokenType, lexeme: &'static str) -> Token {
     create_token(token_type, lexeme)
 }
@@ -148,6 +139,7 @@ pub fn create_literal_token(token_type: TokenType, lexeme: &'static str) -> Toke
 /// let token = create_punctuation_token(TokenType::Comma, ",");
 /// assert!(matches!(token.token_type, TokenType::Comma));
 /// ```
+#[allow(dead_code)]
 pub fn create_punctuation_token(token_type: TokenType, lexeme: &'static str) -> Token {
     create_token(token_type, lexeme)
 }

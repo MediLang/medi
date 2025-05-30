@@ -1,8 +1,8 @@
-use criterion::{criterion_group, criterion_main, Criterion, black_box, BatchSize};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use medic_lexer::{
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     LexerConfig,
 };
 use std::time::Duration;
@@ -42,12 +42,12 @@ fn main() {
 
 fn bench_original_lexer(c: &mut Criterion) {
     let source = TEST_CONTENT.repeat(100);
-    
+
     let mut group = c.benchmark_group("lexer");
     group.sample_size(10);
     group.measurement_time(Duration::from_secs(5));
     group.warm_up_time(Duration::from_secs(1));
-    
+
     group.bench_function("original_lexer", |b| {
         b.iter_batched(
             || source.clone(),
@@ -56,10 +56,10 @@ fn bench_original_lexer(c: &mut Criterion) {
                 let tokens: Vec<_> = lexer.collect();
                 black_box(tokens);
             },
-            BatchSize::SmallInput
+            BatchSize::SmallInput,
         )
     });
-    
+
     group.finish();
 }
 
