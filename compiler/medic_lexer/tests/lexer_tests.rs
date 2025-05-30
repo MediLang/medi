@@ -21,7 +21,7 @@ fn test_numeric_literals() {
     let valid_cases = [
         ("42", TokenType::Integer(42)),
         ("-123", TokenType::Integer(-123)),
-        ("3.14159", TokenType::Float(3.14159)),
+        ("3.141592653589793", TokenType::Float(std::f64::consts::PI)),
         ("1.0e10", TokenType::Float(1.0e10)),
         ("1.0e-10", TokenType::Float(1.0e-10)),
     ];
@@ -283,7 +283,7 @@ mod basic_tests {
     fn test_specific_floats() {
         let test_cases = [
             ("0.0", 0.0),
-            ("3.14159", 3.14159),
+            ("3.141592653589793", std::f64::consts::PI),
             ("-123.456", -123.456),
             ("1.0e10", 1.0e10),
             ("1.0e-10", 1.0e-10),
