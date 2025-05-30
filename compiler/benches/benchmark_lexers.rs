@@ -1,6 +1,7 @@
 use std::fs;
 use std::time::Instant;
 use std::process::Command;
+use memory_stats::memory_stats;
 use medic_lexer::{
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
@@ -157,12 +158,13 @@ fn print_results(lexer_type: &str, times: &[u128]) {
     let max = times.iter().max().unwrap();
     let avg = times.iter().sum::<u128>() as f64 / times.len() as f64;
     
-    // Approximate memory usage based on lexer type
-    let memory_mb = match lexer_type {
-        "OriginalLexer" => 25.0,
-        "StreamingLexer" => 5.0,
-        "ChunkedLexer" => 10.0,
-        _ => 0.0,
+    // Measure memory usage for the current lexer type
+    let memory_mb = match memory_stats() {
+        Some(stats) => stats.physical_mem as f64 / (1024.0 * 1024.0), // Convert bytes to MB
+        None => {
+            eprintln!("Warning: Failed to get memory statistics");
+            0.0
+        }
     };
     
     println!("| {:<14} | {:>8.2} | {:>8.2} | {:>9.2} | {:>11.1} |", 
