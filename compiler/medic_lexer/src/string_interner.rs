@@ -239,10 +239,9 @@ mod tests {
                 assert!(!first_string.0.is_empty());
 
                 // Add strings to shared collection for cross-thread verification
-                shared_strings
-                    .lock()
-                    .unwrap()
-                    .extend((0..10).map(|j| InternedString::from(format!("shared_{}_{}", i, j).as_str())));
+                shared_strings.lock().unwrap().extend(
+                    (0..10).map(|j| InternedString::from(format!("shared_{}_{}", i, j).as_str())),
+                );
 
                 // Return the first string for cross-thread verification
                 first_string

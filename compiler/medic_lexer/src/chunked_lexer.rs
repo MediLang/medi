@@ -140,7 +140,11 @@ impl Position {
     pub fn new(line: usize, column: usize, offset: usize) -> Self {
         // Ensure line is at least 1
         let line = if line == 0 { 1 } else { line };
-        Self { line, column, offset }
+        Self {
+            line,
+            column,
+            offset,
+        }
     }
 
     /// Advance the position by the given string
@@ -151,7 +155,7 @@ impl Position {
 
         // Track if we're at the start of a line
         let mut at_start_of_line = self.column == 1;
-        
+
         for c in s.chars() {
             if c == '\n' {
                 // Special case: if this is the first character and it's a newline
@@ -170,7 +174,7 @@ impl Position {
                 }
                 self.column += 1;
             }
-            
+
             // Update the offset by the number of bytes in the character
             self.offset += c.len_utf8();
         }
@@ -191,6 +195,142 @@ impl Position {
 struct PartialToken {
     /// The partial lexeme from the current chunk
     partial_lexeme: StdString,
+}
+
+/// Helper function to find invalid numeric literals in the source code
+fn find_invalid_numeric_literal(source: &str) -> Option<(usize, usize)> {
+    // Skip empty source
+    if source.is_empty() {
+        return None;
+    }
+
+    // Convert the source to a vector of characters with their positions
+    let chars: Vec<char> = source.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        let c = chars[i];
+
+        if c.is_ascii_digit() || c == '.' || c == '-' {
+            let start = source[..i].chars().map(|c| c.len_utf8()).sum();
+            let mut has_digit = c.is_ascii_digit();
+            let mut decimal_count = if c == '.' { 1 } else { 0 };
+            let mut last_was_digit = c.is_ascii_digit();
+            let mut has_exponent = false;
+            let mut j = i + 1;
+
+            // Look ahead to find the end of the potential numeric literal
+            let mut end = start + c.len_utf8();
+
+            // Limit to prevent excessive processing
+            let max_length = 128;
+            let mut iter_count = 0;
+
+            while j < chars.len() && iter_count < max_length {
+                iter_count += 1;
+                let ch = chars[j];
+
+                if ch.is_ascii_digit() {
+                    last_was_digit = true;
+                    has_digit = true;
+                    end += ch.len_utf8();
+                    j += 1;
+                } else if ch == '.' {
+                    if decimal_count > 0 || has_exponent {
+                        // Found multiple decimal points or decimal after exponent
+                        return Some((start, end + ch.len_utf8()));
+                    }
+                    decimal_count += 1;
+                    end += ch.len_utf8();
+                    last_was_digit = false;
+                    j += 1;
+                } else if ch == 'e' || ch == 'E' {
+                    if has_exponent || !last_was_digit {
+                        // Multiple exponents or no digits before exponent
+                        return Some((start, end + ch.len_utf8()));
+                    }
+                    has_exponent = true;
+                    last_was_digit = false;
+                    end += ch.len_utf8();
+                    j += 1;
+
+                    // Check for optional sign after exponent
+                    if j < chars.len() {
+                        let next_ch = chars[j];
+                        if next_ch == '+' || next_ch == '-' {
+                            end += next_ch.len_utf8();
+                            last_was_digit = false;
+                            j += 1;
+                        }
+                    }
+                } else if ch == '+' || ch == '-' {
+                    // Only valid after 'e' or 'E' and not at the end
+                    if j == 0 || !matches!(chars[j - 1], 'e' | 'E') || j + 1 >= chars.len() {
+                        break;
+                    }
+                    end += ch.len_utf8();
+                    last_was_digit = false;
+                    j += 1;
+                } else if ch.is_ascii_alphabetic() || ch == '_' {
+                    // Found a letter or underscore after a number
+                    end += ch.len_utf8();
+                    j += 1;
+
+                    // Include all alphanumeric characters and underscores in the invalid token
+                    while j < chars.len() {
+                        let next_ch = chars[j];
+                        if !(next_ch.is_ascii_alphanumeric() || next_ch == '_') {
+                            break;
+                        }
+                        end += next_ch.len_utf8();
+                        j += 1;
+                    }
+                    return Some((start, end));
+                } else {
+                    // End of the number
+                    break;
+                }
+            }
+
+            // Check if we hit the iteration limit
+            if iter_count >= max_length {
+                return Some((start, end));
+            }
+
+            // Check for invalid numbers at the end of the string
+            if has_digit {
+                let slice_end = end.min(source.len());
+                if slice_end > start {
+                    let slice = &source[start..slice_end];
+                    let ends_with_invalid = ["e", "E", "+", "-", "."]
+                        .iter()
+                        .any(|&s| slice.ends_with(s));
+
+                    if decimal_count > 1
+                        || (has_exponent && !last_was_digit)
+                        || (end > start && ends_with_invalid)
+                    {
+                        return Some((start, slice_end));
+                    }
+                }
+            } else if c == '.' && (i + 1 >= chars.len() || !chars[i + 1].is_ascii_digit()) {
+                // Handle case where we have a dot not followed by a digit
+                return Some((start, start + c.len_utf8()));
+            }
+
+            i = j; // Skip ahead to the next character after this number
+        } else {
+            i += 1;
+        }
+    }
+
+    // Check for any remaining invalid numeric literals at the end of the source
+    if !source.is_empty() && source.ends_with(['.', 'e', 'E', '+', '-']) {
+        let start = source.chars().count().saturating_sub(1);
+        return Some((start, source.len()));
+    }
+
+    None
 }
 
 impl ChunkedLexer {
@@ -233,7 +373,12 @@ impl ChunkedLexer {
     }
 
     /// Convert a Logos token to our internal token type
-    fn convert_token(&mut self, token_type: LogosToken, span: &Span, source: &str) -> Option<Token> {
+    fn convert_token(
+        &mut self,
+        token_type: LogosToken,
+        span: &Span,
+        source: &str,
+    ) -> Option<Token> {
         let lexeme_str = &source[span.start..span.end];
 
         // Debug logging for token conversion
@@ -243,7 +388,10 @@ impl ChunkedLexer {
         );
 
         // Skip whitespace and comments
-        if matches!(token_type, LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment) {
+        if matches!(
+            token_type,
+            LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment
+        ) {
             // Update position for skipped tokens
             self.position.advance(lexeme_str);
             return None;
@@ -253,11 +401,9 @@ impl ChunkedLexer {
         let lexeme = InternedString::from(lexeme_str);
         let token_position = self.position;
         let location = token_position.to_location();
-        
+
         // Helper function to create tokens with the current position
-        let create_token = |token_type| {
-            Token::new(token_type, lexeme.clone(), location)
-        };
+        let create_token = |token_type| Token::new(token_type, lexeme.clone(), location);
 
         // Helper function to create error tokens
         let create_error = |msg: String| {
@@ -268,7 +414,7 @@ impl ChunkedLexer {
                 location,
             )
         };
-        
+
         // Convert the Logos token to our token type
         let token = match token_type {
             // Keywords
@@ -315,18 +461,26 @@ impl ChunkedLexer {
                 } else {
                     create_token(TokenType::Identifier(InternedString::from(ident.as_str())))
                 }
-            },
+            }
             LogosToken::String(s) => {
                 create_token(TokenType::String(InternedString::from(s.as_str())))
-            },
+            }
             LogosToken::Integer(n) => create_token(TokenType::Integer(n)),
             LogosToken::Float(f) => create_token(TokenType::Float(f)),
 
             // Medical codes
-            LogosToken::ICD10(code) => create_token(TokenType::ICD10(InternedString::from(code.as_str()))),
-            LogosToken::LOINC(code) => create_token(TokenType::LOINC(InternedString::from(code.as_str()))),
-            LogosToken::SNOMED(code) => create_token(TokenType::SNOMED(InternedString::from(code.as_str()))),
-            LogosToken::CPT(code) => create_token(TokenType::CPT(InternedString::from(code.as_str()))),
+            LogosToken::ICD10(code) => {
+                create_token(TokenType::ICD10(InternedString::from(code.as_str())))
+            }
+            LogosToken::LOINC(code) => {
+                create_token(TokenType::LOINC(InternedString::from(code.as_str())))
+            }
+            LogosToken::SNOMED(code) => {
+                create_token(TokenType::SNOMED(InternedString::from(code.as_str())))
+            }
+            LogosToken::CPT(code) => {
+                create_token(TokenType::CPT(InternedString::from(code.as_str())))
+            }
 
             // Operators and punctuation
             LogosToken::Plus => create_token(TokenType::Plus),
@@ -356,7 +510,10 @@ impl ChunkedLexer {
             LogosToken::RightBracket => create_token(TokenType::RightBracket),
             LogosToken::Arrow => create_token(TokenType::Arrow),
             // FatArrow is not a valid LogosToken variant
-            LogosToken::Error => create_error(format!("Lexer error at {}:{}", location.line, location.column)),
+            LogosToken::Error => create_error(format!(
+                "Lexer error at {}:{}",
+                location.line, location.column
+            )),
             _ => create_error(format!("Unhandled token type: {:?}", token_type)),
         };
 
@@ -397,7 +554,7 @@ impl ChunkedLexer {
             Ok(0) => {
                 // Reached EOF
                 self.eof = true;
-                
+
                 // Handle any remaining partial token
                 if let Some(partial) = self.partial_token.take() {
                     let partial_lexeme = partial.partial_lexeme;
@@ -405,7 +562,7 @@ impl ChunkedLexer {
                         self.process_chunk(&partial_lexeme)?;
                     }
                 }
-                
+
                 // Process any remaining partial token at EOF
                 if let Some(partial) = self.partial_token.take() {
                     let source = partial.partial_lexeme;
@@ -414,14 +571,14 @@ impl ChunkedLexer {
                             .map_err(|e| format!("Error processing final partial token: {}", e))?;
                     }
                 }
-                
+
                 // Return true if there are still tokens in the buffer
                 Ok(!self.buffer.is_empty())
             }
             Ok(_bytes_read) => {
                 // Successfully read a chunk
                 self.current_chunk = chunk;
-                
+
                 // Handle any partial token from the previous chunk
                 let source = if let Some(partial) = self.partial_token.take() {
                     // Combine the partial token with the new chunk
@@ -446,31 +603,33 @@ impl ChunkedLexer {
             }
         }
     }
-    
+
     /// Process a chunk of source code and update the token buffer
-    /// 
+    ///
     /// Returns `Ok(())` on success, or an error string if tokenization fails.
     fn process_chunk(&mut self, source: &str) -> Result<(), String> {
         if source.is_empty() {
             debug!("Empty source, nothing to process");
             return Ok(());
         }
-        
+
         debug!("=== Processing chunk ({} chars) ===", source.len());
         debug!("Source: '{}'", source);
-        debug!("Current position: line={}, column={}, offset={}", 
-              self.position.line, self.position.column, self.position.offset);
-        
+        debug!(
+            "Current position: line={}, column={}, offset={}",
+            self.position.line, self.position.column, self.position.offset
+        );
+
         let mut source = source; // Make source mutable for tracking remaining input
         debug!("Initial source: '{}' (length: {})", source, source.len());
-        
+
         // Special handling for the very first chunk that starts with a newline
         if self.position.offset == 0 && source.starts_with('\n') {
             // The first line is empty, so we start at line 2
-            self.position.line = 1;  // Changed from 2 to 1
+            self.position.line = 1; // Changed from 2 to 1
             self.position.column = 1;
             self.position.offset = 1;
-            
+
             // Process the rest of the source after the newline
             if source.len() > 1 {
                 let remaining = &source[1..];
@@ -482,18 +641,18 @@ impl ChunkedLexer {
             }
             return Ok(());
         }
-        
+
         // Initialize the lexer and token storage
         let mut lexer = LogosToken::lexer(source);
         let mut tokens = Vec::new();
         let mut last_span = 0..0;
         let _has_error = false; // Track if we've encountered any errors (currently unused)
-        
+
         // Process the source to update the position
         let mut current_line = self.position.line;
         let mut current_column = self.position.column;
         let mut current_offset = self.position.offset;
-        
+
         // Count newlines and update position
         for c in source.chars() {
             if c == '\n' {
@@ -504,12 +663,52 @@ impl ChunkedLexer {
             }
             current_offset += c.len_utf8();
         }
-        
+
         // Update the position in the lexer
         self.position.line = current_line;
         self.position.column = current_column;
         self.position.offset = current_offset;
-        
+
+        // First, check if the source contains an invalid numeric literal with multiple decimal points
+        if source.matches('.').count() > 1 {
+            // Find the first numeric sequence with multiple decimal points
+            if let Some((start, end)) = find_invalid_numeric_literal(source) {
+                let invalid_token = &source[start..end];
+                let line = 1 + source[..start].matches('\n').count();
+                let column = if let Some(last_nl) = source[..start].rfind('\n') {
+                    start - last_nl
+                } else {
+                    start + 1
+                };
+
+                let error_msg = format!("Invalid numeric literal '{}'", invalid_token);
+                let error_token = Token {
+                    token_type: TokenType::Error(error_msg.as_str().into()),
+                    lexeme: invalid_token.into(),
+                    location: crate::token::Location {
+                        line,
+                        column,
+                        offset: self.position.offset + start,
+                    },
+                };
+
+                debug!("Created error token for invalid numeric literal with multiple decimal points: {:?}", error_token);
+                tokens.push(error_token);
+
+                // Skip the invalid token and continue with the rest of the source
+                if end < source.len() {
+                    source = &source[end..];
+                    lexer = LogosToken::lexer(source);
+                } else {
+                    // If we're at the end of the source, we're done
+                    if !tokens.is_empty() {
+                        self.buffer.extend(tokens);
+                    }
+                    return Ok(());
+                }
+            }
+        }
+
         // Process all tokens in the current chunk
         while let Some(token_result) = lexer.next() {
             match token_result {
@@ -517,56 +716,106 @@ impl ChunkedLexer {
                     let span = lexer.span();
                     last_span = span.clone();
                     let _lexeme_str = &source[span.start..span.end]; // Store lexeme string (currently unused)
-                    
-                    // Check if this is an integer token that might be invalid (followed by letters)
-                    if let LogosToken::Integer(_) = token {
-                        // Look at the next character after the number
-                        if span.end < source.len() {
-                            let next_char = &source[span.end..];
-                            if let Some(c) = next_char.chars().next() {
-                                if c.is_alphabetic() || c == '_' {
-                                    // This is an invalid number like "123abc" or "123_abc"
-                                    // Instead of returning an error, we'll create an error token and continue
-                                    let invalid_end = next_char.find(|c: char| c.is_whitespace() || "+*/=<>!&|^%.,;(){}[]".contains(c))
-                                        .map(|i| span.end + i)
-                                        .unwrap_or_else(|| source.len());
-                                    
-                                    let invalid_token = &source[span.start..invalid_end];
-                                    let _line = current_line + source[..span.start].matches('\n').count();
-                                    let _col = if let Some(last_nl) = source[..span.start].rfind('\n') {
-                                        span.start - last_nl
-                                    } else {
-                                        current_column + span.start
-                                    };
-                                    
-                                    // Create an error token for the invalid numeric literal
-                                    let error_msg = format!("Invalid numeric literal '{}'", invalid_token);
-                                    let error_token = Token {
-                                        token_type: TokenType::Error(error_msg.as_str().into()),
-                                        lexeme: invalid_token.into(),
-                                        location: self.position.to_location(),
-                                    };
-                                    
-                                    // Push the error token
-                                    tokens.push(error_token);
-                                    
-                                    // Update the position
-                                    self.position.advance(invalid_token);
-                                    
-                                    // Skip past the invalid token in the source
-                                    if invalid_end < source.len() {
-                                        source = &source[invalid_end..];
-                                        lexer = LogosToken::lexer(source);
-                                        continue;
-                                    } else {
-                                        // If we're at the end of the source, we're done
-                                        return Ok(());
-                                    }
+
+                    // Check if this is a numeric token that might be invalid (followed by letters or ends with a dot)
+                    if let LogosToken::Integer(_) | LogosToken::Float(_) = token {
+                        let lexeme = &source[span.start..span.end];
+
+                        // Special case: Check for multiple decimal points in the entire lexeme first
+                        if lexeme.matches('.').count() > 1 {
+                            // This handles cases like "1.2.3" where there are multiple decimal points
+                            let invalid_token = lexeme;
+                            let line = current_line + source[..span.start].matches('\n').count();
+                            let column = if let Some(last_nl) = source[..span.start].rfind('\n') {
+                                span.start - last_nl
+                            } else {
+                                span.start + 1
+                            };
+
+                            let error_msg = format!("Invalid numeric literal '{}'", invalid_token);
+                            let error_token = Token {
+                                token_type: TokenType::Error(error_msg.as_str().into()),
+                                lexeme: invalid_token.into(),
+                                location: crate::token::Location {
+                                    line,
+                                    column,
+                                    offset: self.position.offset + span.start,
+                                },
+                            };
+
+                            debug!("Created error token for invalid numeric literal with multiple decimal points: {:?}", error_token);
+                            tokens.push(error_token);
+
+                            // Update the position
+                            self.position.advance(invalid_token);
+
+                            // If there's more source to process, continue with it
+                            if span.end < source.len() {
+                                source = &source[span.end..];
+                                lexer = LogosToken::lexer(source);
+                                continue;
+                            } else {
+                                // If we're at the end of the source, we're done
+                                if !tokens.is_empty() {
+                                    self.buffer.extend(tokens);
                                 }
+                                return Ok(());
                             }
                         }
+
+                        // Handle invalid numeric literals that are followed by letters/underscore
+                        let invalid_end = source[span.start..]
+                            .find(|c: char| {
+                                c.is_whitespace() || "+*/=<>!&|^%.,;(){}\"'[]".contains(c)
+                            })
+                            .map(|i| span.start + i)
+                            .unwrap_or_else(|| source.len());
+
+                        let invalid_token = &source[span.start..invalid_end];
+
+                        // Calculate the line and column for the error
+                        let line = current_line + source[..span.start].matches('\n').count();
+                        let column = if let Some(last_nl) = source[..span.start].rfind('\n') {
+                            span.start - last_nl
+                        } else {
+                            span.start + 1
+                        };
+
+                        // Create an error token for the invalid numeric literal
+                        let error_msg = format!("Invalid numeric literal '{}'", invalid_token);
+                        let error_token = Token {
+                            token_type: TokenType::Error(error_msg.as_str().into()),
+                            lexeme: invalid_token.into(),
+                            location: crate::token::Location {
+                                line,
+                                column,
+                                offset: self.position.offset + span.start,
+                            },
+                        };
+
+                        debug!(
+                            "Created error token for invalid numeric literal: {:?}",
+                            error_token
+                        );
+                        tokens.push(error_token);
+
+                        // Update the position
+                        self.position.advance(invalid_token);
+
+                        // If there's more source to process, continue with it
+                        if invalid_end < source.len() {
+                            source = &source[invalid_end..];
+                            lexer = LogosToken::lexer(source);
+                            continue;
+                        } else {
+                            // If we're at the end of the source, we're done
+                            if !tokens.is_empty() {
+                                self.buffer.extend(tokens);
+                            }
+                            return Ok(());
+                        }
                     }
-                    
+
                     // Calculate line and column for this token
                     let line = if self.position.offset == 1 && span.start == 0 {
                         // First token after initial newline is on line 1
@@ -574,7 +823,7 @@ impl ChunkedLexer {
                     } else {
                         // Count newlines before this token in the current chunk
                         let newlines_before = source[..span.start].matches('\n').count();
-                        
+
                         // If this is the first chunk and we're at the start of the source,
                         // we're on line 1
                         if self.position.offset == 1 && newlines_before == 0 {
@@ -588,7 +837,7 @@ impl ChunkedLexer {
                             base_line + newlines_before
                         }
                     };
-                    
+
                     // Find the last newline before this token to calculate the column
                     let last_nl = source[..span.start].rfind('\n').map(|i| i + 1).unwrap_or(0);
                     let column = if last_nl == 0 {
@@ -598,13 +847,14 @@ impl ChunkedLexer {
                         // Otherwise, calculate the column from the last newline
                         span.start - last_nl + 1
                     };
-                    
+
                     // Convert the token and add it to the buffer
                     if let Some(mut converted) = self.convert_token(token, &span, source) {
                         // Set the token's position
                         converted.location.line = line;
                         converted.location.column = column;
-                        converted.location.offset = self.position.offset - (source.len() - span.start);
+                        converted.location.offset =
+                            self.position.offset - (source.len() - span.start);
                         tokens.push(converted);
                     }
                 }
@@ -612,30 +862,36 @@ impl ChunkedLexer {
                     // Get the current position in the source where the error occurred
                     let error_pos = lexer.span().start;
                     debug!("Error at position {} in chunk '{}'", error_pos, source);
-                    
+
                     // Skip past the invalid token to the next whitespace or semicolon
                     let remaining = &source[error_pos..];
                     let skip_len = remaining
                         .find(|c: char| c.is_whitespace() || c == ';' || c == '\n')
                         .unwrap_or(remaining.len());
-                    
+
                     // Handle the error by creating an error token and skipping past it
                     let error_lexeme = &source[error_pos..error_pos + skip_len];
                     let skip_len = error_lexeme.len();
-                    
-                    debug!("Error token: '{}' at position {} (skipping {} chars)", 
-                          error_lexeme, error_pos, skip_len);
-                    
+
+                    debug!(
+                        "Error token: '{}' at position {} (skipping {} chars)",
+                        error_lexeme, error_pos, skip_len
+                    );
+
                     // Special handling for invalid numeric literals (e.g., 123abc)
-                    if error_lexeme.chars().next().is_some_and(|c| c.is_ascii_digit() || c == '-') {
+                    if error_lexeme
+                        .chars()
+                        .next()
+                        .is_some_and(|c| c.is_ascii_digit() || c == '-')
+                    {
                         // Try to find the end of the invalid numeric literal
                         let mut end = 0;
                         let mut has_dot = false;
                         let mut has_e = false;
-                        
+
                         // Skip the sign if present
                         let mut i = if error_lexeme.starts_with('-') { 1 } else { 0 };
-                        
+
                         // Find the end of the invalid numeric literal
                         while i < error_lexeme.len() {
                             let c = error_lexeme.chars().nth(i).unwrap();
@@ -648,7 +904,10 @@ impl ChunkedLexer {
                                 has_e = true;
                                 i += 1;
                                 // Skip optional sign after 'e' or 'E'
-                                if i < error_lexeme.len() && (error_lexeme.chars().nth(i) == Some('+') || error_lexeme.chars().nth(i) == Some('-')) {
+                                if i < error_lexeme.len()
+                                    && (error_lexeme.chars().nth(i) == Some('+')
+                                        || error_lexeme.chars().nth(i) == Some('-'))
+                                {
                                     i += 1;
                                 }
                             } else {
@@ -656,14 +915,17 @@ impl ChunkedLexer {
                             }
                             end = i;
                         }
-                        
+
                         // If we found a valid prefix, create an error token for the invalid part
                         if end > 0 && end < error_lexeme.len() {
                             let invalid_part = &error_lexeme[..end];
                             let remaining = &error_lexeme[end..];
-                            
-                            debug!("Splitting invalid numeric literal: valid='{}', invalid='{}'", invalid_part, remaining);
-                            
+
+                            debug!(
+                                "Splitting invalid numeric literal: valid='{}', invalid='{}'",
+                                invalid_part, remaining
+                            );
+
                             // Create an error token for the invalid numeric literal
                             let error_token = Token {
                                 token_type: TokenType::Error("Invalid numeric literal".into()),
@@ -672,10 +934,10 @@ impl ChunkedLexer {
                             };
                             debug!("Pushing error token: {:?}", error_token);
                             tokens.push(error_token);
-                            
+
                             // Update the position
                             self.position.advance(invalid_part);
-                            
+
                             // Process the remaining part as a new token
                             if !remaining.is_empty() {
                                 debug!("Processing remaining part as new token: '{}'", remaining);
@@ -683,12 +945,12 @@ impl ChunkedLexer {
                                 lexer = LogosToken::lexer(source);
                                 continue;
                             }
-                            
+
                             // Continue with the next token
                             continue;
                         }
                     }
-                    
+
                     // For other types of errors, create a generic error token
                     let error_token = Token {
                         token_type: TokenType::Error("Invalid token".into()),
@@ -697,10 +959,10 @@ impl ChunkedLexer {
                     };
                     debug!("Pushing error token: {:?}", error_token);
                     tokens.push(error_token);
-                    
+
                     // Update the position
                     self.position.advance(error_lexeme);
-                    
+
                     // If we've processed all input, we're done
                     if error_pos + skip_len >= source.len() {
                         debug!("Reached end of input after error");
@@ -711,23 +973,30 @@ impl ChunkedLexer {
                         }
                         return Ok(());
                     }
-                    
+
                     // Get the remaining source after the error
                     let remaining_source = &source[error_pos + skip_len..];
-                    
+
                     // Process the remaining source as a new chunk if there is any
                     if !remaining_source.is_empty() {
-                        debug!("Processing remaining source in new chunk: '{}' (length: {})", remaining_source, remaining_source.len());
-                        
+                        debug!(
+                            "Processing remaining source in new chunk: '{}' (length: {})",
+                            remaining_source,
+                            remaining_source.len()
+                        );
+
                         // Add any tokens we've collected so far to the buffer
                         if !tokens.is_empty() {
-                            debug!("Adding {} tokens to buffer before processing remaining source", tokens.len());
+                            debug!(
+                                "Adding {} tokens to buffer before processing remaining source",
+                                tokens.len()
+                            );
                             for token in &tokens {
                                 debug!("  - Token: {:?}", token);
                             }
                             self.buffer.extend(tokens);
                         }
-                        
+
                         // Process the remaining source as a new chunk
                         return self.process_chunk(remaining_source);
                     } else {
@@ -747,29 +1016,25 @@ impl ChunkedLexer {
         }
 
         // Check if the last token might be partial (reached end of chunk but not end of input)
-        if !self.eof && !source.is_empty() && !last_span.is_empty() && last_span.end == source.len() {
+        if !self.eof && !source.is_empty() && !last_span.is_empty() && last_span.end == source.len()
+        {
             if let Some(last_token) = tokens.last() {
                 // Only treat as partial if it's a string literal that can span multiple lines
-                let can_span_lines = matches!(
-                    last_token.token_type,
-                    TokenType::String(_)
-                );
-                
+                let can_span_lines = matches!(last_token.token_type, TokenType::String(_));
+
                 if can_span_lines {
                     let partial_lexeme = source[last_span.start..].to_string();
                     trace!("Found partial token: '{}'", partial_lexeme);
-                    
+
                     // Store the partial token information to handle in the next chunk
-                    self.partial_token = Some(PartialToken {
-                        partial_lexeme,
-                    });
-                    
+                    self.partial_token = Some(PartialToken { partial_lexeme });
+
                     // Remove the partial token from the current tokens
                     tokens.pop();
                 }
             }
         }
-        
+
         // Add the tokens to the buffer
         self.buffer.extend(tokens);
         Ok(())
@@ -879,7 +1144,7 @@ impl ChunkedLexer {
                     ));
                 }
             }
-            
+
             // If we're here, we need to try reading more chunks
             if self.eof {
                 return None;
@@ -1203,32 +1468,47 @@ mod tests {
 
         println!("\nTokens found:");
         for (i, token) in tokens.iter().enumerate() {
-            println!("Token {}: {:?} at line {}:{} (offset: {})", 
-                   i, token.token_type, token.location.line, token.location.column, token.location.offset);
+            println!(
+                "Token {}: {:?} at line {}:{} (offset: {})",
+                i,
+                token.token_type,
+                token.location.line,
+                token.location.column,
+                token.location.offset
+            );
         }
 
         // Verify positions are tracked correctly
-        assert!(tokens.len() >= 11, "Expected at least 11 tokens, got {}", tokens.len());
+        assert!(
+            tokens.len() >= 11,
+            "Expected at least 11 tokens, got {}",
+            tokens.len()
+        );
 
         // Check positions of specific tokens
         let let_x = &tokens[0];
-        println!("\nChecking first 'let' token at line {}", let_x.location.line);
+        println!(
+            "\nChecking first 'let' token at line {}",
+            let_x.location.line
+        );
         assert_eq!(let_x.location.line, 2, "First 'let' should be on line 2");
 
         let plus = tokens
             .iter()
             .find(|t| matches!(t.token_type, TokenType::Plus))
             .expect("Could not find '+' token in the token stream");
-            
+
         println!("\nFound '+' token at line {}", plus.location.line);
         println!("Token details: {:?}", plus);
-        
+
         // Find and print the 'let z' token for context
-        if let Some(let_z) = tokens.iter().find(|t| matches!(t.token_type, TokenType::Let) && 
-                                                  t.location.line > 2) {
+        if let Some(let_z) = tokens
+            .iter()
+            .find(|t| matches!(t.token_type, TokenType::Let) && t.location.line > 2)
+        {
             println!("Found 'let z' token at line {}", let_z.location.line);
         }
-        
+
         assert_eq!(plus.location.line, 6, "'+' token should be on line 6");
     }
 }

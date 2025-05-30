@@ -7,7 +7,8 @@ members = [
     "medic_lexer",
     "medic_parser",
     "medic_type",
-    "medic_typeck"
+    "medic_typeck",
+    "benches"
 ]
 
 [workspace.dependencies]

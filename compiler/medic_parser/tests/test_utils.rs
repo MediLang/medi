@@ -70,7 +70,7 @@ pub fn create_semicolon_token() -> Token {
 /// ```
 pub fn create_integer_token(value: i64) -> Token {
     let lexeme = value.to_string();
-    let interned = InternedString::from(lexeme);
+    let interned = InternedString::from(lexeme.as_str());
     Token::from_interned(TokenType::Integer(value), interned, default_location())
 }
 

@@ -1,11 +1,13 @@
 use std::fs;
+use std::io::Write;
 use std::time::Instant;
 use medic_lexer::{
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     LexerConfig,
 };
+use std::io::Cursor;
 
 fn measure_original_lexer(content: &str) -> (usize, u128, u64) {
     let start = Instant::now();
@@ -13,7 +15,7 @@ fn measure_original_lexer(content: &str) -> (usize, u128, u64) {
     let tokens: Vec<_> = lexer.collect();
     let elapsed = start.elapsed();
     let memory = memory_stats::memory_stats()
-        .map(|m| m.physical_mem)
+        .map(|m| m.physical_mem as u64)
         .unwrap_or(0);
     (tokens.len(), elapsed.as_micros(), memory)
 }
@@ -24,19 +26,20 @@ fn measure_streaming_lexer(content: &str) -> (usize, u128, u64) {
     let tokens: Vec<_> = lexer.collect();
     let elapsed = start.elapsed();
     let memory = memory_stats::memory_stats()
-        .map(|m| m.physical_mem)
+        .map(|m| m.physical_mem as u64)
         .unwrap_or(0);
     (tokens.len(), elapsed.as_micros(), memory)
 }
 
-fn measure_chunked_lexer(content: &str) -> (usize, u128, u64) {
+fn measure_chunked_lexer(content: &'static str) -> (usize, u128, u64) {
     let start = Instant::now();
     let config = ChunkedLexerConfig::default();
-    let lexer = ChunkedLexer::new(content.as_bytes(), config).unwrap();
+    let cursor = Cursor::new(content.as_bytes());
+    let lexer = ChunkedLexer::from_reader(cursor, config);
     let tokens: Vec<_> = lexer.collect();
     let elapsed = start.elapsed();
     let memory = memory_stats::memory_stats()
-        .map(|m| m.physical_mem)
+        .map(|m| m.physical_mem as u64)
         .unwrap_or(0);
     (tokens.len(), elapsed.as_micros(), memory)
 }
@@ -56,11 +59,15 @@ fn main() {
     
     println!("\n=== Running Benchmarks (10 iterations each) ===\n");
     
+    // Convert content to static string slice for the chunked lexer
+    let content_clone = content.clone();
+    let static_content: &'static str = Box::leak(content_clone.into_boxed_str());
+    
     // Warm-up
     println!("Warming up...");
-    measure_original_lexer(&content);
-    measure_streaming_lexer(&content);
-    measure_chunked_lexer(&content);
+    measure_original_lexer(static_content);
+    measure_streaming_lexer(static_content);
+    measure_chunked_lexer(static_content);
     
     // Benchmark each lexer
     let mut original_times = Vec::new();
@@ -72,25 +79,21 @@ fn main() {
     let mut chunked_memory = 0;
     
     for i in 0..10 {
-        println!("\n--- Iteration {} ---", i + 1);
+        print!("\rRunning iteration {}/10...", i + 1);
+        std::io::stdout().flush().unwrap();
         
-        print!("OriginalLexer: ");
-        let (tokens, time, mem) = measure_original_lexer(&content);
+        let (_, time, mem) = measure_original_lexer(static_content);
         original_times.push(time);
         original_memory = mem;
-        println!("{} tokens in {} μs", tokens, time);
         
-        print!("StreamingLexer: ");
-        let (tokens, time, mem) = measure_streaming_lexer(&content);
+        let (_, time, mem) = measure_streaming_lexer(static_content);
         streaming_times.push(time);
         streaming_memory = mem;
-        println!("{} tokens in {} μs", tokens, time);
         
-        print!("ChunkedLexer: ");
-        let (tokens, time, mem) = measure_chunked_lexer(&content);
+        let (tokens, time, mem) = measure_chunked_lexer(static_content);
         chunked_times.push(time);
         chunked_memory = mem;
-        println!("{} tokens in {} μs", tokens, time);
+        println!("\rChunkedLexer: {} tokens in {} μs", tokens, time);
     }
     
     // Calculate statistics
@@ -119,8 +122,10 @@ fn main() {
     println!("Token Count: {}", original_times.len());
     
     // Get system information
-    let cpu_info = sys_info::cpu_num().map(|n| format!("{} cores", n)).unwrap_or_else(|_| "Unknown".to_string());
-    let mem_info = sys_info::mem_info().map(|m| format!("{:.1} GB", m.total as f64 / (1024.0 * 1024.0))).unwrap_or_else(|_| "Unknown".to_string());
+    let cpu_info = num_cpus::get();
+    let mem_info = sys_info::mem_info()
+        .map(|m| format!("{:.1} GB", m.total as f64 / (1024.0 * 1024.0)))
+        .unwrap_or_else(|_| "Unknown".to_string());
     let rust_version = std::env::var("RUSTC").unwrap_or_else(|_| "rustc (unknown)".to_string());
     
     println!("\nTest Environment:");

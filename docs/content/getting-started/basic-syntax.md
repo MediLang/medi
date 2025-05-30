@@ -4,17 +4,17 @@ Medi's syntax is designed to be intuitive for both beginners and experienced pro
 
 ## File Extension
 
-Medi source files use the `.mdi` extension:  
+Medi source files use the `.medi` extension:  
 ```
-myprogram.mdi
-patient_analysis.mdi
+myprogram.medi
+patient_analysis.medi
 ```
 
 ## Variables and Types
 
 Medi uses type inference but also supports explicit typing:
 
-```mdi
+```medi
 // Type inference
 patient_name = "John Doe";  // String
 heart_rate = 75;  // Integer
@@ -30,7 +30,7 @@ Float bmi = 22.5;
 
 Medi includes native healthcare data types:
 
-```mdi
+```medi
 // FHIR resources
 Patient john = fhir_resource("Patient", id: "P-12345");
 
@@ -45,7 +45,7 @@ TimeSeries ecg = load_series("ecg_data.csv", frequency: 250);
 
 Medi's control flow constructs are similar to Python and C-like languages:
 
-```mdi
+```medi
 // If-else statement
 if (heart_rate > 100) {
   alert("Tachycardia detected");

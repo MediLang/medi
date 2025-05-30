@@ -1,5 +1,10 @@
 use std::time::Instant;
-use medic_lexer::lexer::Lexer as OriginalLexer;
+use medic_lexer::{
+    lexer::Lexer as OriginalLexer,
+    streaming_lexer::StreamingLexer,
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
+    LexerConfig,
+};
 
 const TEST_CONTENT: &str = r#"
 // Sample patient data

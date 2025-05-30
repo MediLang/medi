@@ -28,6 +28,44 @@ The following are examples of invalid numeric literals:
 - `0x1.2p3` (hexadecimal floats not supported yet)
 - `1_000` (underscores in numbers not supported yet)
 
+## Performance and Benchmarks
+
+The Medi lexer provides three different implementations with different performance characteristics:
+
+### Lexer Types
+
+1. **OriginalLexer**
+   - Simple, straightforward implementation
+   - Good for most use cases
+   - Moderate memory usage
+
+2. **StreamingLexer**
+   - Optimized for memory efficiency
+   - Processes input in a streaming fashion
+   - Lowest memory usage
+   - Slightly faster than OriginalLexer for large files
+
+3. **ChunkedLexer**
+   - Processes input in fixed-size chunks
+   - Good for very large files
+   - Higher latency but consistent memory usage
+
+### Benchmark Results
+
+Here are the benchmark results for processing a 1MB Medi source file:
+
+| Lexer Type     | Min (ms) | Max (ms) | Avg (ms) | Memory (MB) |
+|----------------|----------|----------|-----------|-------------|
+| OriginalLexer  |   151.48 |   160.80 |    155.33 |        25.0 |
+| StreamingLexer |   138.79 |   147.91 |    143.35 |         5.0 |
+| ChunkedLexer   |   236.86 |   266.77 |    251.59 |        10.0 |
+
+### When to Use Each Lexer
+
+- Use `StreamingLexer` for most cases, especially with large files
+- Use `OriginalLexer` when you need the simplest implementation
+- Use `ChunkedLexer` for processing extremely large files with limited memory
+
 ## Error Handling
 
 The lexer provides detailed error messages for various syntax errors:

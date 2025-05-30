@@ -1,5 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion, black_box, BatchSize};
-use medic_lexer::lexer::Lexer as OriginalLexer;
+use medic_lexer::{
+    lexer::Lexer as OriginalLexer,
+    streaming_lexer::StreamingLexer,
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
+    LexerConfig,
+};
 use std::time::Duration;
 
 // Simple test content for benchmarking

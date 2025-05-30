@@ -1,7 +1,32 @@
-[[bench]]
-name = "lexer_benchmark"
-path = "lexer_benchmark.rs"
+[package]
+name = "medic_benchmarks"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "generate_test_file"
+path = "generate_test_file.rs"
+
+[[bin]]
+name = "benchmark_lexers"
+path = "benchmark_lexers.rs"
+
+[[bin]]
+name = "benchmark_large_file"
+path = "benchmark_large_file.rs"
+
+[[bin]]
+name = "run_benchmarks"
+path = "run_benchmarks.rs"
 
 [[bench]]
-name = "simple_benchmark"
-path = "simple_benchmark.rs"
+name = "lexer_simple_benchmark"
+path = "lexer_simple_benchmark.rs"
+
+[dependencies]
+medic_lexer = { path = "../medic_lexer" }
+criterion = { version = "0.5", features = ["html_reports"] }
+memory-stats = "1.2.0"
+rand = "0.8"
+num_cpus = "1.16"
+sys-info = "0.9.1"

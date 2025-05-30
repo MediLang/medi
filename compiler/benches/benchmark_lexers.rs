@@ -1,6 +1,12 @@
 use std::fs;
 use std::time::Instant;
 use std::process::Command;
+use medic_lexer::{
+    lexer::Lexer as OriginalLexer,
+    streaming_lexer::StreamingLexer,
+    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
+    LexerConfig,
+};
 
 fn main() {
     // Generate test file if it doesn't exist
@@ -90,7 +96,6 @@ fn check_blood_pressure(systolic: i32, diastolic: i32) -> &str {
 }
 
 fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> {
-    let content = fs::read_to_string(test_file).expect("Failed to read test file");
     let mut times = Vec::with_capacity(runs);
     
     for i in 0..runs {
@@ -98,6 +103,7 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
         
         match lexer_type {
             "OriginalLexer" => {
+                let content = fs::read_to_string(test_file).expect("Failed to read test file");
                 let lexer = medic_lexer::lexer::Lexer::new(&content);
                 let tokens: Vec<_> = lexer.collect();
                 let elapsed = start.elapsed();
@@ -109,6 +115,7 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
                 );
             }
             "StreamingLexer" => {
+                let content = fs::read_to_string(test_file).expect("Failed to read test file");
                 let lexer = medic_lexer::streaming_lexer::StreamingLexer::new(&content);
                 let tokens: Vec<_> = lexer.collect();
                 let elapsed = start.elapsed();
@@ -120,12 +127,15 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
                 );
             }
             "ChunkedLexer" => {
-                use std::io::Cursor;
-                let cursor = Cursor::new(content.as_bytes());
-                let lexer = medic_lexer::chunked_lexer::ChunkedLexer::new(
-                    cursor,
+                use std::fs::File;
+                use std::io::BufReader;
+                
+                let file = File::open(test_file).expect("Failed to open test file");
+                let reader = BufReader::new(file);
+                let lexer = medic_lexer::chunked_lexer::ChunkedLexer::from_reader(
+                    reader,
                     medic_lexer::chunked_lexer::ChunkedLexerConfig::default()
-                ).expect("Failed to create ChunkedLexer");
+                );
                 let tokens: Vec<_> = lexer.collect();
                 let elapsed = start.elapsed();
                 times.push(elapsed.as_micros());
@@ -135,7 +145,7 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
                     elapsed.as_secs_f64() * 1000.0
                 );
             }
-            _ => panic!("Unknown lexer type"),
+            _ => panic!("Unknown lexer type: {}", lexer_type),
         }
     }
     
