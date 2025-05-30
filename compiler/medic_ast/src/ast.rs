@@ -1,17 +1,29 @@
 // Abstract Syntax Tree (AST) definitions for the Medi language in Rust
 // This is a starting point, mapping the core node types from your TypeScript AST
 
+/// Represents an expression in the AST
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
+    /// An identifier (variable name, function name, etc.)
     Identifier(IdentifierNode),
+    /// An ICD code literal
     IcdCode(String),
+    /// A CPT code literal
     CptCode(String),
+    /// A SNOMED CT code literal
     SnomedCode(String),
+    /// A literal value (number, string, boolean, etc.)
     Literal(LiteralNode),
+    /// A binary operation (e.g., 1 + 2, x * y)
     Binary(Box<BinaryExpressionNode>),
+    /// A function call (e.g., add(1, 2))
     Call(Box<CallExpressionNode>),
+    /// A member access (e.g., object.property)
     Member(Box<MemberExpressionNode>),
+    /// A healthcare-specific query
     HealthcareQuery(Box<HealthcareQueryNode>),
+    /// A statement expression (e.g., a block expression)
+    Statement(Box<StatementNode>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -207,3 +219,16 @@ pub struct ProgramNode {
 }
 
 // Add more AST nodes as needed (statements, declarations, etc.)
+
+impl ExpressionNode {
+    /// Creates an expression from a statement
+    /// 
+    /// If the statement is an expression statement, returns the inner expression.
+    /// Otherwise, wraps the statement in a `Statement` variant.
+    pub fn from_statement(stmt: StatementNode) -> Self {
+        match stmt {
+            StatementNode::Expr(expr) => expr,
+            _ => ExpressionNode::Statement(Box::new(stmt)),
+        }
+    }
+}

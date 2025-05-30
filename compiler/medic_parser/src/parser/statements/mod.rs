@@ -39,15 +39,26 @@ use medic_ast::ast::{AssignmentNode, LetStatementNode};
 /// # Returns
 /// A tuple containing the remaining input and the parsed statement if successful
 pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    log::debug!("parse_let_statement: Starting with input: {:?}", input);
+    log::debug!("=== parse_let_statement ===");
+    log::debug!("Starting with input length: {}", input.0.len());
+    if !input.0.is_empty() {
+        log::debug!("Next token: {:?}", input.0[0].token_type);
+    }
 
     // Consume 'let' keyword
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)?;
-    log::debug!("parse_let_statement: After consuming 'let': {:?}", input);
+    let (input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)
+        .map_err(|e| {
+            log::error!("Failed to parse 'let' keyword: {:?}", e);
+            e
+        })?;
+    log::debug!("After 'let', input length: {}", input.0.len());
 
     // Parse the identifier
-    let (input, ident_expr) = parse_identifier(input)?;
-    log::debug!("parse_let_statement: After parsing identifier: {:?}", input);
+    let (input, ident_expr) = parse_identifier(input).map_err(|e| {
+        log::error!("Failed to parse identifier: {:?}", e);
+        e
+    })?;
+    log::debug!("After identifier, input length: {}", input.0.len());
 
     // Extract the identifier from the expression
     let ident = if let ExpressionNode::Identifier(ident) = ident_expr {
@@ -65,20 +76,22 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
 
     // Parse the expression (which won't consume the semicolon)
     log::debug!("parse_let_statement: Before parse_expression: {:?}", input);
-    let (mut input, expr) = parse_expression(input)?;
+    let (input, expr) = parse_expression(input)?;
     log::debug!("parse_let_statement: After parse_expression: {:?}", input);
 
     // Consume the semicolon if present
-    if !input.0.is_empty() && matches!(input.0[0].token_type, TokenType::Semicolon) {
-        log::debug!("Consuming semicolon after expression");
-        input = input.advance();
+    let input = if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+        let (new_input, _) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+        log::debug!("Consumed semicolon after let statement");
+        new_input
     } else {
-        log::error!("No semicolon found after expression");
+        log::error!("Expected semicolon after let statement");
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
-            nom::error::ErrorKind::Tag,
+            ErrorKind::Tag,
         )));
-    }
+    };
 
     let let_stmt = LetStatementNode {
         name: ident,
@@ -378,6 +391,9 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 /// # Returns
 /// A tuple containing the remaining input and the parsed statement if successful
 pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    log::debug!("=== parse_statement ===");
+    log::debug!("Next token: {:?}", input.peek().map(|t| &t.token_type));
+
     // Check the first token to determine the statement type
     if let Some(token) = input.peek() {
         match token.token_type {
@@ -427,6 +443,7 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
             }
         }
     } else {
+        log::debug!("No more tokens in parse_statement");
         Err(nom::Err::Error(nom::error::Error::new(
             input,
             ErrorKind::Tag,

@@ -431,24 +431,26 @@ impl ChunkedLexer {
                     
                     // Convert the Logos token to our internal token type
                     if let Some(mut converted_token) = self.convert_token(token, &span, source) {
-                        // Set the token's position to the saved position
+                        // Update the token's position and advance the lexer's position
                         converted_token.location = start_position.to_location();
+                        let token_text = &source[span.start..span.end];
+                        
+                        // Push the token to the result
                         tokens.push(converted_token);
+                        
+                        // Update the position for the next token
+                        self.position.advance(token_text);
+                        
+                        // Debug log the position after advancing
+                        debug!(
+                            "Processed token '{}' at {}:{}, next position: {}:{}",
+                            token_text,
+                            start_position.line,
+                            start_position.column,
+                            self.position.line,
+                            self.position.column
+                        );
                     }
-                    
-                    // Update the position for the next token
-                    let token_text = &source[span.start..span.end];
-                    self.position.advance(token_text);
-                    
-                    // Debug log the position after advancing
-                    debug!(
-                        "Processed token '{}' at {}:{}, next position: {}:{}",
-                        token_text,
-                        start_position.line,
-                        start_position.column,
-                        self.position.line,
-                        self.position.column
-                    );
                 },
                 Err(_) => {
                     return Err("Lexer error".to_string());
@@ -737,7 +739,14 @@ impl ChunkedLexer {
         // If we have tokens in the buffer, return the next one
         if let Some(token) = self.buffer.pop_front() {
             debug!("Returning buffered token: {:?}", token);
-            self.position.offset += token.lexeme.len();
+            // Update position to match the token we're about to return
+            // This ensures the position is accurate when the token is consumed
+            self.position = Position {
+                line: token.location.line,
+                column: token.location.column,
+                offset: token.location.offset,
+            };
+            self.position.advance(token.lexeme.as_str());
             return Some(token);
         }
 
@@ -753,7 +762,13 @@ impl ChunkedLexer {
                 Ok(true) => {
                     // We might have more tokens in the buffer now
                     if let Some(token) = self.buffer.pop_front() {
-                        self.position.offset += token.lexeme.len();
+                        // Update position to match the token we're about to return
+                        self.position = Position {
+                            line: token.location.line,
+                            column: token.location.column,
+                            offset: token.location.offset,
+                        };
+                        self.position.advance(token.lexeme.as_str());
                         return Some(token);
                     }
                     // If we didn't get any tokens but read_next_chunk returned true,
@@ -777,12 +792,12 @@ impl ChunkedLexer {
                 }
             }
 
-            // If we're here, we need to try reading more chunks
-            if self.eof {
-                return None;
-            }
+        // If we're here, we need to try reading more chunks
+        if self.eof {
+            return None;
         }
     }
+}
 
     /// Get the current position in the source code
     ///

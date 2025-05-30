@@ -707,7 +707,21 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
 /// assert!(result.is_ok());
 /// ```
 pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
+    log::debug!("=== Starting parse_program ===");
+    log::debug!("Initial input length: {}", input.0.len());
+
+    let original_len = input.0.len();
     let (input, statements) = many0(parse_statement)(input)?;
+
+    log::debug!("=== After parsing statements ===");
+    log::debug!("Consumed {} tokens", original_len - input.0.len());
+    log::debug!("Remaining tokens: {}", input.0.len());
+
+    if !input.0.is_empty() {
+        log::warn!("Not all tokens were consumed!");
+        log::warn!("Next token: {:?}", input.0[0]);
+    }
+
     Ok((input, ProgramNode { statements }))
 }
 

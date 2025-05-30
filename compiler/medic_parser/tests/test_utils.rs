@@ -2,8 +2,8 @@
 
 #![allow(dead_code)]
 
-use medic_lexer::token::{Location, Token, TokenType};
 use medic_lexer::string_interner::InternedString;
+use medic_lexer::token::{Location, Token, TokenType};
 
 /// Creates a new location with default values
 fn default_location() -> Location {

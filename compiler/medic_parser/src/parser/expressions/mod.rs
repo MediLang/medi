@@ -8,11 +8,14 @@ use crate::parser::{
     TokenSlice, TokenType,
 };
 
-use super::{identifiers::parse_identifier, literals::parse_literal, statements::parse_statement};
+use super::{
+    identifiers::parse_identifier, literals::parse_literal, parse_block,
+    statements::parse_statement,
+};
 
 // Re-export nested expressions API
 pub mod nested;
-pub use nested::parse_nested_binary_expression;
+pub use nested::{parse_block_expression, parse_nested_binary_expression};
 
 /// Parses an expression, which can be a binary expression, primary expression, or block expression.
 ///
@@ -21,8 +24,34 @@ pub use nested::parse_nested_binary_expression;
 /// - Binary expressions with operator precedence and associativity
 /// - Special handling for medical operators 'of' and 'per'
 pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    log::debug!("=== parse_expression ===");
+    log::debug!("Input length: {}", input.0.len());
+    if !input.0.is_empty() {
+        log::debug!("Next token: {:?}", input.0[0].token_type);
+    }
+
     // Use the precedence climbing parser for the entire expression
-    parse_nested_binary_expression(input, 0, false)
+    let result = parse_nested_binary_expression(input, 0, false);
+
+    match &result {
+        Ok((remaining, _)) => {
+            log::debug!(
+                "parse_expression success, remaining tokens: {}",
+                remaining.0.len()
+            );
+            if !remaining.0.is_empty() {
+                log::debug!(
+                    "Next token after expression: {:?}",
+                    remaining.0[0].token_type
+                );
+            }
+        }
+        Err(e) => {
+            log::error!("parse_expression failed: {:?}", e);
+        }
+    }
+
+    result
 }
 
 /// Parses a binary expression with special handling for 'of' and 'per' operators.
@@ -119,12 +148,18 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
 /// Parses a primary expression, which is an expression that can appear as an operand in other expressions.
 /// This includes literals, identifiers, parenthesized expressions, and block expressions.
 pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    log::debug!("=== parse_primary ===");
+    log::debug!("Input length: {}", input.0.len());
+
     if input.0.is_empty() {
+        log::error!("parse_primary: Empty input");
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
             ErrorKind::Tag,
         )));
     }
+
+    log::debug!("Next token: {:?}", input.0[0].token_type);
 
     match input.0[0].token_type {
         // Handle literals
@@ -132,53 +167,72 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         | TokenType::Float(_)
         | TokenType::String(_)
         | TokenType::Boolean(_) => {
+            log::debug!("Parsing literal: {:?}", input.0[0].token_type);
             let (input, lit) = parse_literal(input)?;
-
-            // Check for implicit multiplication with an identifier (e.g., "3 doses" or "5 mg")
-            if !input.0.is_empty() {
-                if let TokenType::Identifier(_) = input.0[0].token_type {
-                    let (input, right) = parse_identifier(input)?;
-                    return Ok((
-                        input,
-                        ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                            left: ExpressionNode::Literal(lit),
-                            operator: BinaryOperator::Mul,
-                            right,
-                        })),
-                    ));
-                }
-            }
-
+            log::debug!("Successfully parsed literal: {:?}", lit);
             Ok((input, ExpressionNode::Literal(lit)))
         }
         // Handle identifiers and member expressions
         TokenType::Identifier(_) | TokenType::Dot => parse_identifier(input),
         // Handle parenthesized expressions
         TokenType::LeftParen => {
-            // Consume the left parenthesis
+            log::debug!("Parsing parenthesized expression");
             let (input, _) =
-                take_token_if(|t| matches!(t, TokenType::LeftParen), ErrorKind::Tag)(input)?;
+                take_token_if(|t| matches!(t, TokenType::LeftParen), ErrorKind::Tag)(input)
+                    .map_err(|e| {
+                        log::error!("Failed to parse left parenthesis: {:?}", e);
+                        e
+                    })?;
 
-            // Parse the inner expression using parse_expression to handle binary operations
-            let (input, expr) = parse_expression(input)?;
+            let (input, expr) = parse_expression(input).map_err(|e| {
+                log::error!("Failed to parse expression inside parentheses: {:?}", e);
+                e
+            })?;
 
-            // Consume the right parenthesis
             let (input, _) =
-                take_token_if(|t| matches!(t, TokenType::RightParen), ErrorKind::Tag)(input)?;
+                take_token_if(|t| matches!(t, TokenType::RightParen), ErrorKind::Tag)(input)
+                    .map_err(|e| {
+                        log::error!("Failed to parse right parenthesis: {:?}", e);
+                        e
+                    })?;
 
-            // Return the inner expression - parse_expression will have already handled the binary operation
+            log::debug!("Successfully parsed parenthesized expression");
             Ok((input, expr))
         }
-        // Block expressions are not directly part of the expression grammar in the AST
-        // They are only allowed in statement context
-        TokenType::LeftBrace => Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        ))),
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        ))),
+        // Handle block expressions
+        TokenType::LeftBrace => {
+            log::debug!("Parsing block expression");
+            // Parse the block as a statement first
+            let (input, block) = parse_block(input).map_err(|e| {
+                log::error!("Failed to parse block: {:?}", e);
+                e
+            })?;
+
+            log::debug!(
+                "Successfully parsed block with {} statements",
+                block.statements.len()
+            );
+
+            // Create a block statement node
+            let stmt = StatementNode::Block(block);
+
+            // Convert the statement to an expression
+            // This will create an expression containing the statement
+            let expr = ExpressionNode::from_statement(stmt);
+            log::debug!("Converted block to expression: {:?}", expr);
+
+            Ok((input, expr))
+        }
+        _ => {
+            log::error!(
+                "Unexpected token in parse_primary: {:?}",
+                input.0[0].token_type
+            );
+            Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                ErrorKind::Tag,
+            )))
+        }
     }
 }
 
@@ -193,69 +247,6 @@ pub(crate) fn is_comparison_operator(op: &BinaryOperator) -> bool {
             | BinaryOperator::Gt
             | BinaryOperator::Ge
     )
-}
-
-/// Parses a block expression: `{ <statements> }`
-pub fn parse_block_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
-    let (mut input, _) =
-        take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
-
-    let mut statements = Vec::new();
-
-    let mut found_brace = false;
-
-    // Parse statements until we hit a right brace or end of input
-    while !input.is_empty() {
-        // Skip any leading semicolons before the next statement
-        while matches!(
-            input.peek().map(|t| &t.token_type),
-            Some(TokenType::Semicolon)
-        ) {
-            let (new_input, _) =
-                take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
-            input = new_input;
-        }
-
-        // Check for right brace (after skipping semicolons)
-        if let Some(TokenType::RightBrace) = input.peek().map(|t| &t.token_type) {
-            let (new_input, _) =
-                take_token_if(|t| matches!(t, TokenType::RightBrace), ErrorKind::Tag)(input)?;
-            input = new_input;
-            found_brace = true;
-            break;
-        }
-
-        // Parse a statement
-        match parse_statement(input) {
-            Ok((new_input, stmt)) => {
-                input = new_input;
-                statements.push(stmt);
-
-                // Skip any semicolons after the statement
-                while matches!(
-                    input.peek().map(|t| &t.token_type),
-                    Some(TokenType::Semicolon)
-                ) {
-                    let (next_input, _) = take_token_if(
-                        |t| matches!(t, TokenType::Semicolon),
-                        ErrorKind::Tag,
-                    )(input)?;
-                    input = next_input;
-                }
-            }
-            Err(e) => return Err(e),
-        }
-    }
-
-    // Ensure we found a closing brace
-    if !found_brace {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
-    }
-
-    Ok((input, BlockNode { statements }))
 }
 
 #[cfg(test)]
