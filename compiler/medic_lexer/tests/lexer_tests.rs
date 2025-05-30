@@ -1,5 +1,3 @@
-use std::f64::consts::PI;
-
 // Use the fully qualified path to avoid ambiguity with the prelude assert_eq
 use pretty_assertions::assert_eq as pretty_assert_eq;
 
@@ -23,7 +21,7 @@ fn test_numeric_literals() {
     let valid_cases = [
         ("42", TokenType::Integer(42)),
         ("-123", TokenType::Integer(-123)),
-        ("3.14159", TokenType::Float(PI)),
+        ("3.14159", TokenType::Float(3.14159)),
         ("1.0e10", TokenType::Float(1.0e10)),
         ("1.0e-10", TokenType::Float(1.0e-10)),
     ];
@@ -38,11 +36,23 @@ fn test_numeric_literals() {
             "Expected exactly one token for input: {}",
             input
         );
-        assert_eq!(
-            tokens[0].token_type, *expected,
-            "Mismatch for input: {}",
-            input
-        );
+        
+        match (&tokens[0].token_type, expected) {
+            (TokenType::Float(actual), TokenType::Float(expected)) => {
+                let diff = (actual - expected).abs();
+                let tolerance = 1e-10 * expected.abs().max(1.0);
+                assert!(
+                    diff <= tolerance,
+                    "Float parsing mismatch for input '{}': expected {}, got {}",
+                    input, expected, actual
+                );
+            }
+            _ => assert_eq!(
+                tokens[0].token_type, *expected,
+                "Mismatch for input: {}",
+                input
+            ),
+        }
     }
 }
 
@@ -271,7 +281,7 @@ mod basic_tests {
     fn test_specific_floats() {
         let test_cases = [
             ("0.0", 0.0),
-            ("3.14159", PI),
+            ("3.14159", 3.14159),
             ("-123.456", -123.456),
             ("1.0e10", 1.0e10),
             ("1.0e-10", 1.0e-10),

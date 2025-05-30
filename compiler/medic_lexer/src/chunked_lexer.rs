@@ -683,15 +683,18 @@ impl ChunkedLexer {
     /// This is similar to `into_tokens` but returns a `Result` that can be used
     /// with the `?` operator for better error handling.
     pub fn tokenize(mut self) -> Result<Vec<Token>, String> {
-        println!("Starting tokenization...");
+        log::info!("Starting tokenization...");
         let mut tokens = Vec::new();
         let mut token_count = 0;
 
         while let Some(token) = self.next_token() {
             token_count += 1;
-            println!(
+            log::debug!(
                 "Token #{}: {:?} (lexeme: '{}' at line {})",
-                token_count, token.token_type, token.lexeme, token.location.line
+                token_count,
+                token.token_type,
+                token.lexeme,
+                token.location.line
             );
 
             // Check for error tokens
@@ -702,7 +705,7 @@ impl ChunkedLexer {
                         token.location.line,
                         msg.as_str()
                     );
-                    println!("Found error token: {}", error_msg);
+                    log::error!("Found error token: {}", error_msg);
                     return Err(error_msg);
                 }
                 _ => {
@@ -711,7 +714,7 @@ impl ChunkedLexer {
             }
         }
 
-        println!("Tokenization completed. Processed {} tokens.", token_count);
+        log::info!("Tokenization completed. Processed {} tokens.", token_count);
         Ok(tokens)
     }
 
@@ -1070,11 +1073,10 @@ mod tests {
             let z = x + y;
         "#;
 
-        println!("Input source code:");
+        log::debug!("Input source code:");
         for (i, line) in input.lines().enumerate() {
-            println!("{:2}: {}", i + 1, line);
+            log::debug!("{:2}: {}", i + 1, line);
         }
-        println!();
 
         let cursor = Cursor::new(input);
         let config = ChunkedLexerConfig {
