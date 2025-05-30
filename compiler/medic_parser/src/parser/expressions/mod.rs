@@ -158,23 +158,31 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
 /// Parses a primary expression, which is an expression that can appear as an operand in other expressions.
 /// This includes literals, identifiers, parenthesized expressions, and block expressions.
 pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
-    log::debug!("=== parse_primary ===");
-    log::debug!("Input length: {}", input.0.len());
+    if log::log_enabled!(log::Level::Debug) {
+        log::debug!("=== parse_primary ===");
+        log::debug!("Input length: {}", input.0.len());
+    }
 
     if input.0.is_empty() {
-        log::error!("parse_primary: Empty input");
+        if log::log_enabled!(log::Level::Error) {
+            log::error!("parse_primary: Empty input");
+        }
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
             ErrorKind::Tag,
         )));
     }
 
-    log::debug!("Next token: {:?}", input.0[0].token_type);
+    if log::log_enabled!(log::Level::Debug) {
+        log::debug!("Next token: {:?}", input.0[0].token_type);
+    }
 
     match input.0[0].token_type {
         // Handle literals
         TokenType::Integer(_) | TokenType::Float(_) => {
-            log::debug!("Parsing number literal: {:?}", input.0[0].token_type);
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Parsing number literal: {:?}", input.0[0].token_type);
+            }
             let (mut input, lit) = parse_literal(input)?;
             
             // Check for implicit multiplication with an identifier (e.g., "5 mg")
@@ -190,13 +198,19 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                 }
             }
             
-            log::debug!("Successfully parsed number literal: {:?}", lit);
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Successfully parsed number literal: {:?}", lit);
+            }
             Ok((input, ExpressionNode::Literal(lit)))
         }
         TokenType::String(_) | TokenType::Boolean(_) => {
-            log::debug!("Parsing literal: {:?}", input.0[0].token_type);
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Parsing literal: {:?}", input.0[0].token_type);
+            }
             let (input, lit) = parse_literal(input)?;
-            log::debug!("Successfully parsed literal: {:?}", lit);
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Successfully parsed literal: {:?}", lit);
+            }
             Ok((input, ExpressionNode::Literal(lit)))
         }
         // Handle identifiers, member expressions, and implicit multiplication
@@ -221,16 +235,22 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         },
         // Handle parenthesized expressions
         TokenType::LeftParen => {
-            log::debug!("Parsing parenthesized expression");
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Parsing parenthesized expression");
+            }
             let (input, _) =
                 take_token_if(|t| matches!(t, TokenType::LeftParen), ErrorKind::Tag)(input)
                     .map_err(|e| {
-                        log::error!("Failed to parse left parenthesis: {:?}", e);
+                        if log::log_enabled!(log::Level::Error) {
+                            log::error!("Failed to parse left parenthesis: {:?}", e);
+                        }
                         e
                     })?;
 
             let (input, expr) = parse_expression(input).map_err(|e| {
-                log::error!("Failed to parse expression inside parentheses: {:?}", e);
+                if log::log_enabled!(log::Level::Error) {
+                    log::error!("Failed to parse expression inside parentheses: {:?}", e);
+                }
                 e
             })?;
 
@@ -246,17 +266,23 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         }
         // Handle block expressions
         TokenType::LeftBrace => {
-            log::debug!("Parsing block expression");
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Parsing block expression");
+            }
             // Parse the block as a statement first
             let (input, block) = parse_block(input).map_err(|e| {
-                log::error!("Failed to parse block: {:?}", e);
+                if log::log_enabled!(log::Level::Error) {
+                    log::error!("Failed to parse block: {:?}", e);
+                }
                 e
             })?;
 
-            log::debug!(
-                "Successfully parsed block with {} statements",
-                block.statements.len()
-            );
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!(
+                    "Successfully parsed block with {} statements",
+                    block.statements.len()
+                );
+            }
 
             // Create a block statement node
             let stmt = StatementNode::Block(block);
@@ -264,15 +290,19 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             // Convert the statement to an expression
             // This will create an expression containing the statement
             let expr = ExpressionNode::from_statement(stmt);
-            log::debug!("Converted block to expression: {:?}", expr);
+            if log::log_enabled!(log::Level::Debug) {
+                log::debug!("Converted block to expression: {:?}", expr);
+            }
 
             Ok((input, expr))
         }
         _ => {
-            log::error!(
-                "Unexpected token in parse_primary: {:?}",
-                input.0[0].token_type
-            );
+            if log::log_enabled!(log::Level::Error) {
+                log::error!(
+                    "Unexpected token in parse_primary: {:?}",
+                    input.0[0].token_type
+                );
+            }
             Err(nom::Err::Error(nom::error::Error::new(
                 input,
                 ErrorKind::Tag,
