@@ -1,6 +1,6 @@
 use medic_ast::ast::{ExpressionNode, LiteralNode, StatementNode};
-use medic_lexer::string_interner::InternedString;
-use medic_lexer::token::{Location, Token, TokenType};
+use medic_lexer::token::{Token, TokenType};
+use medic_lexer::Location;
 use medic_parser::parser::{statements::parse_assignment_statement, TokenSlice};
 
 // Import test utilities

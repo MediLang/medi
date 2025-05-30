@@ -1,8 +1,12 @@
-use env_logger;
-use medic_lexer::{
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
-    token::TokenType,
-};
+use std::f64::consts::PI;
+
+// Use the fully qualified path to avoid ambiguity with the prelude assert_eq
+use pretty_assertions::assert_eq as pretty_assert_eq;
+
+use medic_lexer::chunked_lexer::{ChunkedLexer, ChunkedLexerConfig};
+use medic_lexer::token::TokenType;
+
+#[allow(unused_imports)]
 use std::env;
 
 #[allow(dead_code)]
@@ -19,7 +23,7 @@ fn test_numeric_literals() {
     let valid_cases = [
         ("42", TokenType::Integer(42)),
         ("-123", TokenType::Integer(-123)),
-        ("3.14159", TokenType::Float(3.14159)),
+        ("3.14159", TokenType::Float(PI)),
         ("1.0e10", TokenType::Float(1.0e10)),
         ("1.0e-10", TokenType::Float(1.0e-10)),
     ];
@@ -248,13 +252,13 @@ mod basic_tests {
             let lexer = ChunkedLexer::from_reader(cursor, Default::default());
             let tokens: Vec<_> = lexer.collect();
 
-            assert_eq!(
+            pretty_assert_eq!(
                 tokens.len(),
                 1,
                 "Expected exactly one token for input: {}",
                 input
             );
-            assert_eq!(
+            pretty_assert_eq!(
                 tokens[0].token_type,
                 TokenType::Integer(*expected),
                 "Mismatch for input: {}",
@@ -267,7 +271,7 @@ mod basic_tests {
     fn test_specific_floats() {
         let test_cases = [
             ("0.0", 0.0),
-            ("3.14159", 3.14159),
+            ("3.14159", PI),
             ("-123.456", -123.456),
             ("1.0e10", 1.0e10),
             ("1.0e-10", 1.0e-10),
@@ -278,7 +282,7 @@ mod basic_tests {
             let lexer = ChunkedLexer::from_reader(cursor, Default::default());
             let tokens: Vec<_> = lexer.collect();
 
-            assert_eq!(
+            pretty_assert_eq!(
                 tokens.len(),
                 1,
                 "Expected exactly one token for input: {}",

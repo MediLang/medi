@@ -25,6 +25,7 @@ medic_parser = { path = "../medic_parser" }  # For parser integration tests
 tempfile = "3.9.0"  # For creating temporary files in tests
 env_logger = "0.11.3"  # For test logging
 proptest = "1.4.0"  # For property-based testing
+pretty_assertions = "1.4.0"  # For better test failure output
 
 [features]
 default = ["logging"]
