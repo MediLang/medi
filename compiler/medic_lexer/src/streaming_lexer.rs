@@ -217,17 +217,17 @@ impl<'a> StreamingLexer<'a> {
             }
 
             // Literals
-            LogosToken::String(_) => TokenType::String(lexeme.clone()),
+            LogosToken::String(s) => TokenType::String(InternedString::from(&s[..])),
             LogosToken::Integer(n) => TokenType::Integer(n),
             LogosToken::Float(f) => TokenType::Float(f),
             LogosToken::Bool(b) => TokenType::Boolean(b),
 
             // Identifiers and medical codes - all can reuse the same interned string
             LogosToken::Identifier(_) => TokenType::Identifier(lexeme.clone()),
-            LogosToken::ICD10(_) => TokenType::ICD10(lexeme.clone()),
-            LogosToken::LOINC(_) => TokenType::LOINC(lexeme.clone()),
-            LogosToken::SNOMED(_) => TokenType::SNOMED(lexeme.clone()),
-            LogosToken::CPT(_) => TokenType::CPT(lexeme.clone()),
+            LogosToken::ICD10(code) => TokenType::ICD10(InternedString::from(&code[..])),
+            LogosToken::LOINC(code) => TokenType::LOINC(InternedString::from(&code[..])),
+            LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::from(&code[..])),
+            LogosToken::CPT(code) => TokenType::CPT(InternedString::from(&code[..])),
 
             // Keywords
             LogosToken::Module => TokenType::Module,
@@ -251,18 +251,18 @@ impl<'a> StreamingLexer<'a> {
             LogosToken::Else => TokenType::Else,
 
             // Medical keywords (treated as identifiers)
-            LogosToken::Patient => TokenType::Identifier(InternedString::new("patient")),
-            LogosToken::Observation => TokenType::Identifier(InternedString::new("observation")),
-            LogosToken::Medication => TokenType::Identifier(InternedString::new("medication")),
-            LogosToken::FhirQuery => TokenType::Identifier(InternedString::new("fhir_query")),
-            LogosToken::Query => TokenType::Identifier(InternedString::new("query")),
-            LogosToken::Regulate => TokenType::Identifier(InternedString::new("regulate")),
-            LogosToken::Scope => TokenType::Identifier(InternedString::new("scope")),
-            LogosToken::Federated => TokenType::Identifier(InternedString::new("federated")),
-            LogosToken::Safe => TokenType::Identifier(InternedString::new("safe")),
-            LogosToken::RealTime => TokenType::Identifier(InternedString::new("real_time")),
-            LogosToken::Of => TokenType::Identifier(InternedString::new("of")),
-            LogosToken::Per => TokenType::Identifier(InternedString::new("per")),
+            LogosToken::Patient => TokenType::Identifier(InternedString::from("patient")),
+            LogosToken::Observation => TokenType::Identifier(InternedString::from("observation")),
+            LogosToken::Medication => TokenType::Identifier(InternedString::from("medication")),
+            LogosToken::FhirQuery => TokenType::Identifier(InternedString::from("fhir_query")),
+            LogosToken::Query => TokenType::Identifier(InternedString::from("query")),
+            LogosToken::Regulate => TokenType::Identifier(InternedString::from("regulate")),
+            LogosToken::Scope => TokenType::Identifier(InternedString::from("scope")),
+            LogosToken::Federated => TokenType::Identifier(InternedString::from("federated")),
+            LogosToken::Safe => TokenType::Identifier(InternedString::from("safe")),
+            LogosToken::RealTime => TokenType::Identifier(InternedString::from("real_time")),
+            LogosToken::Of => TokenType::Identifier(InternedString::from("of")),
+            LogosToken::Per => TokenType::Identifier(InternedString::from("per")),
 
             // Operators and punctuation
             LogosToken::Equal => TokenType::Equal,

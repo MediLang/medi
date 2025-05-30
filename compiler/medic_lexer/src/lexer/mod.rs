@@ -132,19 +132,19 @@ impl<'a> Lexer<'a> {
             // Literals
             LogosToken::Integer(i) => TokenType::Integer(i),
             LogosToken::Float(f) => TokenType::Float(f),
-            LogosToken::String(s) => TokenType::String(InternedString::new(&s)),
+            LogosToken::String(s) => TokenType::String(InternedString::from(&s[..])),
             LogosToken::Bool(b) => TokenType::Boolean(b), // Using Boolean variant for consistency
-            LogosToken::Identifier(ident) => TokenType::Identifier(InternedString::new(&ident)),
+            LogosToken::Identifier(ident) => TokenType::Identifier(InternedString::from(&ident[..])),
 
             // Medical operators
             LogosToken::Of => TokenType::Of,
             LogosToken::Per => TokenType::Per,
 
             // Medical codes
-            LogosToken::ICD10(code) => TokenType::ICD10(InternedString::new(&code)),
-            LogosToken::LOINC(code) => TokenType::LOINC(InternedString::new(&code)),
-            LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::new(&code)),
-            LogosToken::CPT(code) => TokenType::CPT(InternedString::new(&code)),
+            LogosToken::ICD10(code) => TokenType::ICD10(InternedString::from(&code[..])),
+            LogosToken::LOINC(code) => TokenType::LOINC(InternedString::from(&code[..])),
+            LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::from(&code[..])),
+            LogosToken::CPT(code) => TokenType::CPT(InternedString::from(&code[..])),
 
             // Operators
             LogosToken::Plus => TokenType::Plus,
@@ -223,7 +223,7 @@ impl<'a> Lexer<'a> {
         // Create and return the token
         Token {
             token_type,
-            lexeme: InternedString::new(lexeme),
+            lexeme: InternedString::from(lexeme),
             location: Location {
                 line: self.line as usize,
                 column: self.column as usize,
@@ -248,7 +248,7 @@ impl<'a> Lexer<'a> {
                     let lexeme = &self.source[span.clone()];
                     return Some(Token {
                         token_type: TokenType::LexerError,
-                        lexeme: InternedString::new(lexeme),
+                        lexeme: InternedString::from(lexeme),
                         location: self.location_from_span(&span),
                     });
                 }
@@ -269,12 +269,12 @@ impl<'a> Lexer<'a> {
         let token = match logos_token {
             LogosToken::Range => Token {
                 token_type: TokenType::Range,
-                lexeme: InternedString::new(lexeme),
+                lexeme: InternedString::from(lexeme),
                 location: self.location_from_span(&span),
             },
             LogosToken::RangeInclusive => Token {
                 token_type: TokenType::RangeInclusive,
-                lexeme: InternedString::new(lexeme),
+                lexeme: InternedString::from(lexeme),
                 location: self.location_from_span(&span),
             },
             LogosToken::Integer(_) => {
@@ -293,7 +293,7 @@ impl<'a> Lexer<'a> {
                     let range_lexeme = &self.source[range_span.clone()];
                     let range_token = Token {
                         token_type: range_type,
-                        lexeme: InternedString::new(range_lexeme),
+                        lexeme: InternedString::from(range_lexeme),
                         location: self.location_from_span(&range_span),
                     };
 

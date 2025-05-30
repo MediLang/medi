@@ -154,35 +154,35 @@ mod tests {
 
     #[test]
     fn test_string_interning() {
-        let s1 = InternedString::new("test");
-        let s2 = InternedString::new("test");
+        let s1 = InternedString::from("test");
+        let s2 = InternedString::from("test");
 
         // Both should point to the same underlying string
         assert!(Arc::ptr_eq(&s1.0, &s2.0));
 
         // Different strings should be different
-        let s3 = InternedString::new("different");
+        let s3 = InternedString::from("different");
         assert!(!Arc::ptr_eq(&s1.0, &s3.0));
     }
 
     #[test]
     fn test_empty_string() {
-        let s1 = InternedString::new("");
-        let s2 = InternedString::new("");
+        let s1 = InternedString::from("");
+        let s2 = InternedString::from("");
         assert!(Arc::ptr_eq(&s1.0, &s2.0));
         assert_eq!(s1.as_str(), "");
     }
 
     #[test]
     fn test_from_str_trait() {
-        let s1 = InternedString::new("test");
+        let s1 = InternedString::from("test");
         let s2 = InternedString::from("test");
         assert!(Arc::ptr_eq(&s1.0, &s2.0));
     }
 
     #[test]
     fn test_display_trait() {
-        let s = InternedString::new("hello world");
+        let s = InternedString::from("hello world");
         assert_eq!(format!("{}", s), "hello world");
     }
 
@@ -204,7 +204,7 @@ mod tests {
 
                 // Each thread interns the same strings
                 let strings: Vec<_> = (0..100)
-                    .map(|j| InternedString::new(&format!("string_{}", j % 10)))
+                    .map(|j| InternedString::from(format!("string_{}", j % 10).as_str()))
                     .collect();
 
                 // Verify that identical strings are interned
@@ -242,7 +242,7 @@ mod tests {
                 shared_strings
                     .lock()
                     .unwrap()
-                    .extend((0..10).map(|j| InternedString::new(&format!("shared_{}_{}", i, j))));
+                    .extend((0..10).map(|j| InternedString::from(format!("shared_{}_{}", i, j).as_str())));
 
                 // Return the first string for cross-thread verification
                 first_string

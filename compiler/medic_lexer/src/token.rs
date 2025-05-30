@@ -386,7 +386,7 @@ mod tests {
             offset: 0,
         };
         let test_str = "test";
-        let interned = InternedString::new(test_str);
+        let interned = InternedString::from(test_str);
         let token = Token::new(TokenType::Identifier(interned.clone()), interned, loc);
         assert_eq!(token.lexeme.as_str(), test_str);
         assert_eq!(token.location.line, 1);
@@ -403,7 +403,7 @@ mod tests {
         assert!(token.is_keyword());
 
         let token = Token::new(
-            TokenType::Identifier(InternedString::new("test")),
+            TokenType::Identifier(InternedString::from("test")),
             "test",
             loc,
         );

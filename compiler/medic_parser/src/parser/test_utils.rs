@@ -21,7 +21,7 @@ pub fn create_token(token_type: TokenType, lexeme: &str) -> Token {
 
 /// Creates an identifier token for testing
 pub fn create_identifier(name: &str) -> Token {
-    create_token(TokenType::Identifier(InternedString::new(name)), name)
+    create_token(TokenType::Identifier(InternedString::from(name)), name)
 }
 
 /// Creates a number token for testing
@@ -76,7 +76,7 @@ mod tests {
         use medic_lexer::string_interner::InternedString;
         let token = create_token(TokenType::Plus, "+");
         assert_eq!(token.token_type, TokenType::Plus);
-        assert_eq!(token.lexeme, InternedString::new("+"));
+        assert_eq!(token.lexeme, InternedString::from("+"));
     }
 
     #[test]
