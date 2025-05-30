@@ -782,7 +782,8 @@ impl ChunkedLexer {
                         return Some(token);
                     }
                     // If we didn't get any tokens but read_next_chunk returned true,
-                    // try reading again in case we hit a chunk boundary in the middle of a token
+                    // the loop will continue and try reading again
+                    continue;
                 }
                 Ok(false) => {
                     // No more data and no more tokens
@@ -800,11 +801,6 @@ impl ChunkedLexer {
                         self.position.to_location(),
                     ));
                 }
-            }
-
-            // If we're here, we need to try reading more chunks
-            if self.eof {
-                return None;
             }
         }
     }
