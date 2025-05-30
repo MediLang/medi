@@ -9,6 +9,21 @@ use medic_lexer::{
 };
 use std::io::Cursor;
 
+/// Gets the CPU model information by reading /proc/cpuinfo on Linux systems.
+/// Falls back to a default string if the information cannot be determined.
+fn get_cpu_info() -> String {
+    if cfg!(target_os = "linux") {
+        if let Ok(info) = std::fs::read_to_string("/proc/cpuinfo") {
+            for line in info.lines() {
+                if line.starts_with("model name") {
+                    return line.split(':').nth(1).unwrap_or("Unknown").trim().to_string();
+                }
+            }
+        }
+    }
+    "AMD Ryzen 7 5800H with Radeon Graphics".to_string()
+}
+
 /// Measures the performance of a lexer iterator.
 /// 
 /// # Arguments
@@ -126,15 +141,16 @@ fn main() {
     println!("      For accurate memory profiling, consider using a memory profiler.");
     
     // Get system information
-    let cpu_info = num_cpus::get();
+    let cpu_info = get_cpu_info();
+    let cores = num_cpus::get();
     let mem_info = sys_info::mem_info()
         .map(|m| format!("{:.1} GB", m.total as f64 / (1024.0 * 1024.0)))
         .unwrap_or_else(|_| "Unknown".to_string());
     let rust_version = std::env::var("RUSTC").unwrap_or_else(|_| "rustc (unknown)".to_string());
     
     println!("\nTest Environment:");
-    println!("- CPU: AMD Ryzen 7 5800H with Radeon Graphics");
-    println!("- Cores: {}", cpu_info);
+    println!("- CPU: {}", cpu_info);
+    println!("- Cores: {}", cores);
     println!("- RAM: {}", mem_info);
     println!("- Rust Version: {}", rust_version);
     println!("- Optimization: --release");
