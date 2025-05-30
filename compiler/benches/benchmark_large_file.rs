@@ -31,7 +31,7 @@ fn measure_streaming_lexer(content: &str) -> (usize, u128, u64) {
     (tokens.len(), elapsed.as_micros(), memory)
 }
 
-fn measure_chunked_lexer(content: &'static str) -> (usize, u128, u64) {
+fn measure_chunked_lexer(content: &str) -> (usize, u128, u64) {
     let start = Instant::now();
     let config = ChunkedLexerConfig::default();
     let cursor = Cursor::new(content.as_bytes());
@@ -59,15 +59,11 @@ fn main() {
     
     println!("\n=== Running Benchmarks (10 iterations each) ===\n");
     
-    // Convert content to static string slice for the chunked lexer
-    let content_clone = content.clone();
-    let static_content: &'static str = Box::leak(content_clone.into_boxed_str());
-    
     // Warm-up
     println!("Warming up...");
-    measure_original_lexer(static_content);
-    measure_streaming_lexer(static_content);
-    measure_chunked_lexer(static_content);
+    measure_original_lexer(&content);
+    measure_streaming_lexer(&content);
+    measure_chunked_lexer(&content);
     
     // Benchmark each lexer
     let mut original_times = Vec::new();
@@ -82,15 +78,18 @@ fn main() {
         print!("\rRunning iteration {}/10...", i + 1);
         std::io::stdout().flush().unwrap();
         
-        let (_, time, mem) = measure_original_lexer(static_content);
+        // Benchmark original lexer
+        let (tokens, time, mem) = measure_original_lexer(&content);
         original_times.push(time);
         original_memory = mem;
         
-        let (_, time, mem) = measure_streaming_lexer(static_content);
+        // Benchmark streaming lexer
+        let (tokens, time, mem) = measure_streaming_lexer(&content);
         streaming_times.push(time);
         streaming_memory = mem;
         
-        let (tokens, time, mem) = measure_chunked_lexer(static_content);
+        // Benchmark chunked lexer
+        let (tokens, time, mem) = measure_chunked_lexer(&content);
         chunked_times.push(time);
         chunked_memory = mem;
         println!("\rChunkedLexer: {} tokens in {} μs", tokens, time);
