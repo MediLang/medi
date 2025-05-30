@@ -1,0 +1,7 @@
+[[bench]]
+name = "lexer_benchmark"
+path = "lexer_benchmark.rs"
+
+[[bench]]
+name = "simple_benchmark"
+path = "simple_benchmark.rs"

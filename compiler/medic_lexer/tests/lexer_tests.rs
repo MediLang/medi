@@ -1,4 +1,14 @@
+use std::env;
+use env_logger;
 use medic_lexer::{chunked_lexer::ChunkedLexer, token::TokenType};
+
+#[allow(dead_code)]
+fn init_test_logger() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Debug)
+        .try_init();
+}
 
 #[test]
 fn test_numeric_literals() {
@@ -6,7 +16,7 @@ fn test_numeric_literals() {
     let valid_cases = [
         ("42", TokenType::Integer(42)),
         ("-123", TokenType::Integer(-123)),
-        ("3.14159", TokenType::Float(std::f64::consts::PI)),
+        ("3.14159", TokenType::Float(3.14159)),
         ("1.0e10", TokenType::Float(1.0e10)),
         ("1.0e-10", TokenType::Float(1.0e-10)),
     ];
@@ -115,43 +125,67 @@ fn test_numeric_literals_in_expressions() {
 
 #[test]
 fn test_error_recovery() {
+    // Enable debug logging for the test
+    env::set_var("RUST_LOG", "debug");
+    init_test_logger();
+    
     let source = r#"
         let x = 123abc;
         let y = 456;  // This should still be parsed correctly
         let z = 789;
     "#;
 
+    println!("=== Starting test_error_recovery ===");
+    println!("Source code:");
+    println!("{}", source);
+    
     let lexer = ChunkedLexer::from_reader(source.as_bytes(), Default::default());
     let tokens: Vec<_> = lexer.collect();
+    
+    println!("\n=== Tokens found ({} total) ===", tokens.len());
+    for (i, token) in tokens.iter().enumerate() {
+        println!("Token[{}]: {:?}", i, token);
+    }
 
     // Verify we have the expected number of tokens
     assert!(
         tokens.len() >= 10,
-        "Expected multiple tokens, got: {}",
+        "Expected at least 10 tokens, got: {}",
         tokens.len()
     );
 
     // Check that we have an error token for the invalid numeric literal
+    let has_error = tokens.iter().any(|t| matches!(&t.token_type, TokenType::Error(_)));
     assert!(
+        has_error,
+        "Expected at least one error token for invalid numeric literal. Tokens: {:?}",
         tokens
-            .iter()
-            .any(|t| matches!(&t.token_type, TokenType::Error(_))),
-        "Expected at least one error token for invalid numeric literal"
     );
+    
+    if has_error {
+        println!("\nFound error token as expected");
+    }
 
     // Check that valid code after the error is still tokenized
+    let has_456 = tokens.iter().any(|t| matches!(&t.token_type, TokenType::Integer(456)));
     assert!(
+        has_456,
+        "Expected to find valid integer literal 456 after error. Tokens: {:?}",
         tokens
-            .iter()
-            .any(|t| matches!(&t.token_type, TokenType::Integer(456))),
-        "Expected to find valid integer literal after error"
     );
+    
+    let has_789 = tokens.iter().any(|t| matches!(&t.token_type, TokenType::Integer(789)));
     assert!(
+        has_789,
+        "Expected to find valid integer literal 789 after error. Tokens: {:?}",
         tokens
-            .iter()
-            .any(|t| matches!(&t.token_type, TokenType::Integer(789))),
-        "Expected to find valid integer literal after error"
     );
+    
+    if has_456 && has_789 {
+        println!("\nFound both expected integer literals after error");
+    }
+    
+    println!("\n=== test_error_recovery passed ===");
 }
 
 // Basic test cases for the lexer
@@ -193,7 +227,7 @@ mod basic_tests {
     fn test_specific_floats() {
         let test_cases = [
             ("0.0", 0.0),
-            ("3.14159", std::f64::consts::PI),
+            ("3.14159", 3.14159),
             ("-123.456", -123.456),
             ("1.0e10", 1.0e10),
             ("1.0e-10", 1.0e-10),

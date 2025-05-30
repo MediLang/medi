@@ -51,11 +51,11 @@
 //! # }
 //! ```
 
-use log::{debug, error};
+use log::{debug, error, trace};
 use logos::{Logos, Span};
 use std::collections::VecDeque;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read};
+use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 use std::string::String as StdString;
 
@@ -109,20 +109,20 @@ pub struct ChunkedLexer {
 /// Tracks the current position in the source code
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
-    /// Current byte offset
-    offset: usize,
-    /// Current line number (1-based)
-    line: usize,
-    /// Current column number (1-based, in characters, not bytes)
-    column: usize,
+    /// The current line number (1-based)
+    pub line: usize,
+    /// The current column number (1-based)
+    pub column: usize,
+    /// The byte offset from the start of the file
+    pub offset: usize,
 }
 
 impl Default for Position {
     fn default() -> Self {
         Self {
-            offset: 0,
             line: 1,   // Start line numbers at 1
             column: 1, // Start column numbers at 1
+            offset: 0,
         }
     }
 }
@@ -132,39 +132,48 @@ use std::ops::AddAssign;
 impl AddAssign<usize> for Position {
     fn add_assign(&mut self, rhs: usize) {
         self.offset += rhs;
-        // We can't determine line/column changes from just a byte count,
-        // so we'll need to be careful when using this operator
     }
 }
 
 impl Position {
+    /// Create a new position with the given line, column, and offset
+    pub fn new(line: usize, column: usize, offset: usize) -> Self {
+        // Ensure line is at least 1
+        let line = if line == 0 { 1 } else { line };
+        Self { line, column, offset }
+    }
+
     /// Advance the position by the given string
-    fn advance(&mut self, s: &str) {
-        let mut chars = s.chars().peekable();
-        while let Some(c) = chars.next() {
-            match c {
-                '\n' => {
-                    self.line += 1;
-                    self.column = 1;
-                    // Handle \r\n
-                    if let Some('\r') = chars.peek() {
-                        chars.next();
-                    }
-                }
-                '\r' => {
-                    self.line += 1;
-                    self.column = 1;
-                    // Handle \n after \r
-                    if let Some('\n') = chars.peek() {
-                        chars.next();
-                    }
-                }
-                _ => {
-                    self.column += 1;
-                }
-            }
+    pub fn advance(&mut self, s: &str) {
+        if s.is_empty() {
+            return;
         }
-        self.offset += s.len();
+
+        // Track if we're at the start of a line
+        let mut at_start_of_line = self.column == 1;
+        
+        for c in s.chars() {
+            if c == '\n' {
+                // Special case: if this is the first character and it's a newline
+                if self.offset == 0 && self.line == 1 {
+                    self.line = 2;
+                } else if self.offset > 0 || self.line > 1 {
+                    // Only increment line if we're not at the very start of the file
+                    self.line += 1;
+                }
+                self.column = 1;
+                at_start_of_line = true;
+            } else {
+                if at_start_of_line {
+                    self.column = 1;
+                    at_start_of_line = false;
+                }
+                self.column += 1;
+            }
+            
+            // Update the offset by the number of bytes in the character
+            self.offset += c.len_utf8();
+        }
     }
 
     /// Convert to a Location
@@ -224,7 +233,7 @@ impl ChunkedLexer {
     }
 
     /// Convert a Logos token to our internal token type
-    fn convert_token(&mut self, token_type: LogosToken, span: Span, source: &str) -> Option<Token> {
+    fn convert_token(&mut self, token_type: LogosToken, span: &Span, source: &str) -> Option<Token> {
         let lexeme_str = &source[span.start..span.end];
 
         // Debug logging for token conversion
@@ -254,14 +263,11 @@ impl ChunkedLexer {
         let create_error = |msg: String| {
             error!("{}", msg);
             Token::new(
-                TokenType::Error(InternedString::from(msg)),
+                TokenType::Error(InternedString::from(msg.as_str())),
                 lexeme.clone(),
                 location,
             )
         };
-        
-        // Update position for the next token (before processing the current token)
-        self.position.advance(lexeme_str);
         
         // Convert the Logos token to our token type
         let token = match token_type {
@@ -285,9 +291,6 @@ impl ChunkedLexer {
             LogosToken::Match => create_token(TokenType::Match),
             LogosToken::If => create_token(TokenType::If),
             LogosToken::Else => create_token(TokenType::Else),
-            LogosToken::True => create_token(TokenType::Boolean(true)),
-            LogosToken::False => create_token(TokenType::Boolean(false)),
-            LogosToken::Null => create_token(TokenType::Null),
 
             // Healthcare keywords
             LogosToken::FhirQuery => create_token(TokenType::FhirQuery),
@@ -301,32 +304,29 @@ impl ChunkedLexer {
             LogosToken::Observation => create_token(TokenType::Observation),
             LogosToken::Medication => create_token(TokenType::Medication),
 
+            // Boolean literals
+            LogosToken::Bool(b) => create_token(TokenType::Boolean(b)),
+
             // Identifiers and literals
-            LogosToken::Identifier => {
+            LogosToken::Identifier(ident) => {
                 // Check if this is a keyword
-                if let Some(keyword) = Self::get_keyword(lexeme_str) {
+                if let Some(keyword) = Self::get_keyword(&ident) {
                     create_token(keyword)
                 } else {
-                    create_token(TokenType::Identifier(lexeme.clone()))
+                    create_token(TokenType::Identifier(InternedString::from(ident.as_str())))
                 }
             },
-            LogosToken::String => {
-                // Remove the surrounding quotes
-                let content = &lexeme_str[1..lexeme_str.len() - 1];
-                create_token(TokenType::String(InternedString::from(content)))
+            LogosToken::String(s) => {
+                create_token(TokenType::String(InternedString::from(s.as_str())))
             },
-            LogosToken::Integer => {
-                match lexeme_str.parse::<i64>() {
-                    Ok(value) => create_token(TokenType::Integer(value)),
-                    Err(_) => create_error(format!("Invalid integer: {}", lexeme_str)),
-                }
-            },
-            LogosToken::Float => {
-                match lexeme_str.parse::<f64>() {
-                    Ok(value) => create_token(TokenType::Float(value)),
-                    Err(_) => create_error(format!("Invalid float: {}", lexeme_str)),
-                }
-            },
+            LogosToken::Integer(n) => create_token(TokenType::Integer(n)),
+            LogosToken::Float(f) => create_token(TokenType::Float(f)),
+
+            // Medical codes
+            LogosToken::ICD10(code) => create_token(TokenType::ICD10(InternedString::from(code.as_str()))),
+            LogosToken::LOINC(code) => create_token(TokenType::LOINC(InternedString::from(code.as_str()))),
+            LogosToken::SNOMED(code) => create_token(TokenType::SNOMED(InternedString::from(code.as_str()))),
+            LogosToken::CPT(code) => create_token(TokenType::CPT(InternedString::from(code.as_str()))),
 
             // Operators and punctuation
             LogosToken::Plus => create_token(TokenType::Plus),
@@ -336,14 +336,14 @@ impl ChunkedLexer {
             LogosToken::Percent => create_token(TokenType::Percent),
             LogosToken::Equal => create_token(TokenType::Equal),
             LogosToken::EqualEqual => create_token(TokenType::EqualEqual),
-            LogosToken::Bang => create_token(TokenType::LogicalNot),
-            LogosToken::BangEqual => create_token(TokenType::NotEqual),
+            LogosToken::Not => create_token(TokenType::Not),
+            LogosToken::NotEqual => create_token(TokenType::NotEqual),
             LogosToken::Less => create_token(TokenType::Less),
             LogosToken::LessEqual => create_token(TokenType::LessEqual),
             LogosToken::Greater => create_token(TokenType::Greater),
             LogosToken::GreaterEqual => create_token(TokenType::GreaterEqual),
-            LogosToken::And => create_token(TokenType::LogicalAnd),
-            LogosToken::Or => create_token(TokenType::LogicalOr),
+            LogosToken::And => create_token(TokenType::And),
+            LogosToken::Or => create_token(TokenType::Or),
             LogosToken::Dot => create_token(TokenType::Dot),
             LogosToken::Comma => create_token(TokenType::Comma),
             LogosToken::Colon => create_token(TokenType::Colon),
@@ -355,31 +355,13 @@ impl ChunkedLexer {
             LogosToken::LeftBracket => create_token(TokenType::LeftBracket),
             LogosToken::RightBracket => create_token(TokenType::RightBracket),
             LogosToken::Arrow => create_token(TokenType::Arrow),
-            LogosToken::FatArrow => create_token(TokenType::FatArrow),
+            // FatArrow is not a valid LogosToken variant
             LogosToken::Error => create_error(format!("Lexer error at {}:{}", location.line, location.column)),
             _ => create_error(format!("Unhandled token type: {:?}", token_type)),
         };
 
         // Return the token
         Some(token)
-    }
-
-    /// Update the position based on the given token
-    fn update_position(&mut self, token: &Token) {
-        let lexeme = token.lexeme.as_str();
-        let lines: Vec<&str> = lexeme.split('\n').collect();
-
-        if lines.len() > 1 {
-            // Token spans multiple lines
-            self.position.line = token.location.line + lines.len() - 1;
-            self.position.column = lines.last().unwrap_or(&"").chars().count() + 1;
-        } else {
-            // Token is on a single line
-            self.position.column = token.location.column + lexeme.chars().count();
-        }
-
-        // Update the position's offset
-        self.position.offset = token.location.offset + lexeme.len();
     }
 
     /// Create a new chunked lexer from any BufRead implementor
@@ -391,20 +373,22 @@ impl ChunkedLexer {
             current_chunk: String::with_capacity(chunk_size * 2),
             buffer: VecDeque::with_capacity(config.max_buffer_size),
             config,
-            position: Position {
-                line: 1,
-                column: 1,
-                offset: 0,
-            },
+            position: Position::new(1, 1, 0), // Start at line 1, column 1
             eof: false,
             partial_token: None,
         }
     }
 
-    fn read_next_chunk(&mut self) -> Option<bool> {
+    /// Reads the next chunk of input and processes it into tokens.
+    ///
+    /// Returns:
+    /// - `Ok(true)` if more data might be available
+    /// - `Ok(false)` if EOF has been reached
+    /// - `Err(String)` if an error occurred during reading or tokenization
+    fn read_next_chunk(&mut self) -> Result<bool, String> {
         // If we've already reached EOF, return false
         if self.eof {
-            return Some(false);
+            return Ok(false);
         }
 
         // Read the next chunk from the source
@@ -413,66 +397,368 @@ impl ChunkedLexer {
             Ok(0) => {
                 // Reached EOF
                 self.eof = true;
-                // Process any remaining partial token
+                
+                // Handle any remaining partial token
+                if let Some(partial) = self.partial_token.take() {
+                    let partial_lexeme = partial.partial_lexeme;
+                    if !partial_lexeme.is_empty() {
+                        self.process_chunk(&partial_lexeme)?;
+                    }
+                }
+                
+                // Process any remaining partial token at EOF
                 if let Some(partial) = self.partial_token.take() {
                     let source = partial.partial_lexeme;
-                    self.process_chunk(&source);
+                    if !source.is_empty() {
+                        self.process_chunk(&source)
+                            .map_err(|e| format!("Error processing final partial token: {}", e))?;
+                    }
                 }
-                return Some(!self.buffer.is_empty());
+                
+                // Return true if there are still tokens in the buffer
+                Ok(!self.buffer.is_empty())
             }
-            Ok(_) => {
-                // Successfully read a line
+            Ok(_bytes_read) => {
+                // Successfully read a chunk
                 self.current_chunk = chunk;
+                
+                // Handle any partial token from the previous chunk
+                let source = if let Some(partial) = self.partial_token.take() {
+                    // Combine the partial token with the new chunk
+                    let combined = partial.partial_lexeme + &self.current_chunk;
+                    trace!("Combined partial token with new chunk: '{}'", &combined);
+                    combined
+                } else {
+                    self.current_chunk.clone()
+                };
+
+                // Process the current chunk
+                self.process_chunk(&source)
+                    .map_err(|e| format!("Error processing chunk: {}", e))?;
+
+                // We might have more data unless we hit EOF
+                Ok(true)
             }
             Err(e) => {
-                error!("Error reading from source: {}", e);
-                return None;
+                let err_msg = format!("Error reading from source: {}", e);
+                error!("{}", err_msg);
+                Err(err_msg)
             }
         }
-
-        // Handle any partial token from the previous chunk
-        let source = if let Some(partial) = self.partial_token.take() {
-            partial.partial_lexeme + &self.current_chunk
-        } else {
-            self.current_chunk.clone()
-        };
-
-        self.process_chunk(&source);
-
-        // Return true if we might have more data
-        Some(true)
     }
     
     /// Process a chunk of source code and update the token buffer
-    fn process_chunk(&mut self, source: &str) {
-        // Tokenize the current chunk
+    /// 
+    /// Returns `Ok(())` on success, or an error string if tokenization fails.
+    fn process_chunk(&mut self, source: &str) -> Result<(), String> {
+        if source.is_empty() {
+            debug!("Empty source, nothing to process");
+            return Ok(());
+        }
+        
+        debug!("=== Processing chunk ({} chars) ===", source.len());
+        debug!("Source: '{}'", source);
+        debug!("Current position: line={}, column={}, offset={}", 
+              self.position.line, self.position.column, self.position.offset);
+        
+        let mut source = source; // Make source mutable for tracking remaining input
+        debug!("Initial source: '{}' (length: {})", source, source.len());
+        
+        // Special handling for the very first chunk that starts with a newline
+        if self.position.offset == 0 && source.starts_with('\n') {
+            // The first line is empty, so we start at line 2
+            self.position.line = 1;  // Changed from 2 to 1
+            self.position.column = 1;
+            self.position.offset = 1;
+            
+            // Process the rest of the source after the newline
+            if source.len() > 1 {
+                let remaining = &source[1..];
+                // If there's more content after the newline, process it
+                if !remaining.is_empty() {
+                    // Process the remaining content
+                    return self.process_chunk(remaining);
+                }
+            }
+            return Ok(());
+        }
+        
+        // Initialize the lexer and token storage
         let mut lexer = LogosToken::lexer(source);
         let mut tokens = Vec::new();
-
+        let mut last_span = 0..0;
+        let _has_error = false; // Track if we've encountered any errors (currently unused)
+        
+        // Process the source to update the position
+        let mut current_line = self.position.line;
+        let mut current_column = self.position.column;
+        let mut current_offset = self.position.offset;
+        
+        // Count newlines and update position
+        for c in source.chars() {
+            if c == '\n' {
+                current_line += 1;
+                current_column = 1;
+            } else {
+                current_column += 1;
+            }
+            current_offset += c.len_utf8();
+        }
+        
+        // Update the position in the lexer
+        self.position.line = current_line;
+        self.position.column = current_column;
+        self.position.offset = current_offset;
+        
         // Process all tokens in the current chunk
         while let Some(token_result) = lexer.next() {
             match token_result {
                 Ok(token) => {
-                    if let Some(converted) = self.convert_token(token, lexer.span(), source) {
-                        // Update the position after each token
-                        self.update_position(&converted);
+                    let span = lexer.span();
+                    last_span = span.clone();
+                    let _lexeme_str = &source[span.start..span.end]; // Store lexeme string (currently unused)
+                    
+                    // Check if this is an integer token that might be invalid (followed by letters)
+                    if let LogosToken::Integer(_) = token {
+                        // Look at the next character after the number
+                        if span.end < source.len() {
+                            let next_char = &source[span.end..];
+                            if let Some(c) = next_char.chars().next() {
+                                if c.is_alphabetic() || c == '_' {
+                                    // This is an invalid number like "123abc" or "123_abc"
+                                    // Instead of returning an error, we'll create an error token and continue
+                                    let invalid_end = next_char.find(|c: char| c.is_whitespace() || "+*/=<>!&|^%.,;(){}[]".contains(c))
+                                        .map(|i| span.end + i)
+                                        .unwrap_or_else(|| source.len());
+                                    
+                                    let invalid_token = &source[span.start..invalid_end];
+                                    let _line = current_line + source[..span.start].matches('\n').count();
+                                    let _col = if let Some(last_nl) = source[..span.start].rfind('\n') {
+                                        span.start - last_nl
+                                    } else {
+                                        current_column + span.start
+                                    };
+                                    
+                                    // Create an error token for the invalid numeric literal
+                                    let error_msg = format!("Invalid numeric literal '{}'", invalid_token);
+                                    let error_token = Token {
+                                        token_type: TokenType::Error(error_msg.as_str().into()),
+                                        lexeme: invalid_token.into(),
+                                        location: self.position.to_location(),
+                                    };
+                                    
+                                    // Push the error token
+                                    tokens.push(error_token);
+                                    
+                                    // Update the position
+                                    self.position.advance(invalid_token);
+                                    
+                                    // Skip past the invalid token in the source
+                                    if invalid_end < source.len() {
+                                        source = &source[invalid_end..];
+                                        lexer = LogosToken::lexer(source);
+                                        continue;
+                                    } else {
+                                        // If we're at the end of the source, we're done
+                                        return Ok(());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Calculate line and column for this token
+                    let line = if self.position.offset == 1 && span.start == 0 {
+                        // First token after initial newline is on line 1
+                        1
+                    } else {
+                        // Count newlines before this token in the current chunk
+                        let newlines_before = source[..span.start].matches('\n').count();
+                        
+                        // If this is the first chunk and we're at the start of the source,
+                        // we're on line 1
+                        if self.position.offset == 1 && newlines_before == 0 {
+                            1
+                        } else if newlines_before == 0 {
+                            // If no newlines before this token, it's on the current line
+                            self.position.line
+                        } else {
+                            // Otherwise, it's on line 1 + number of newlines
+                            let base_line = 1;
+                            base_line + newlines_before
+                        }
+                    };
+                    
+                    // Find the last newline before this token to calculate the column
+                    let last_nl = source[..span.start].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                    let column = if last_nl == 0 {
+                        // If no newline before this token, use the span start + 1
+                        span.start + 1
+                    } else {
+                        // Otherwise, calculate the column from the last newline
+                        span.start - last_nl + 1
+                    };
+                    
+                    // Convert the token and add it to the buffer
+                    if let Some(mut converted) = self.convert_token(token, &span, source) {
+                        // Set the token's position
+                        converted.location.line = line;
+                        converted.location.column = column;
+                        converted.location.offset = self.position.offset - (source.len() - span.start);
                         tokens.push(converted);
                     }
                 }
                 Err(_) => {
-                    error!("Lexer error at position {}", lexer.span().start);
-                    return;
+                    // Get the current position in the source where the error occurred
+                    let error_pos = lexer.span().start;
+                    debug!("Error at position {} in chunk '{}'", error_pos, source);
+                    
+                    // Skip past the invalid token to the next whitespace or semicolon
+                    let remaining = &source[error_pos..];
+                    let skip_len = remaining
+                        .find(|c: char| c.is_whitespace() || c == ';' || c == '\n')
+                        .unwrap_or(remaining.len());
+                    
+                    // Handle the error by creating an error token and skipping past it
+                    let error_lexeme = &source[error_pos..error_pos + skip_len];
+                    let skip_len = error_lexeme.len();
+                    
+                    debug!("Error token: '{}' at position {} (skipping {} chars)", 
+                          error_lexeme, error_pos, skip_len);
+                    
+                    // Special handling for invalid numeric literals (e.g., 123abc)
+                    if error_lexeme.chars().next().is_some_and(|c| c.is_ascii_digit() || c == '-') {
+                        // Try to find the end of the invalid numeric literal
+                        let mut end = 0;
+                        let mut has_dot = false;
+                        let mut has_e = false;
+                        
+                        // Skip the sign if present
+                        let mut i = if error_lexeme.starts_with('-') { 1 } else { 0 };
+                        
+                        // Find the end of the invalid numeric literal
+                        while i < error_lexeme.len() {
+                            let c = error_lexeme.chars().nth(i).unwrap();
+                            if c.is_ascii_digit() {
+                                i += 1;
+                            } else if c == '.' && !has_dot && !has_e {
+                                has_dot = true;
+                                i += 1;
+                            } else if (c == 'e' || c == 'E') && !has_e {
+                                has_e = true;
+                                i += 1;
+                                // Skip optional sign after 'e' or 'E'
+                                if i < error_lexeme.len() && (error_lexeme.chars().nth(i) == Some('+') || error_lexeme.chars().nth(i) == Some('-')) {
+                                    i += 1;
+                                }
+                            } else {
+                                break;
+                            }
+                            end = i;
+                        }
+                        
+                        // If we found a valid prefix, create an error token for the invalid part
+                        if end > 0 && end < error_lexeme.len() {
+                            let invalid_part = &error_lexeme[..end];
+                            let remaining = &error_lexeme[end..];
+                            
+                            debug!("Splitting invalid numeric literal: valid='{}', invalid='{}'", invalid_part, remaining);
+                            
+                            // Create an error token for the invalid numeric literal
+                            let error_token = Token {
+                                token_type: TokenType::Error("Invalid numeric literal".into()),
+                                lexeme: invalid_part.into(),
+                                location: self.position.to_location(),
+                            };
+                            debug!("Pushing error token: {:?}", error_token);
+                            tokens.push(error_token);
+                            
+                            // Update the position
+                            self.position.advance(invalid_part);
+                            
+                            // Process the remaining part as a new token
+                            if !remaining.is_empty() {
+                                debug!("Processing remaining part as new token: '{}'", remaining);
+                                source = remaining;
+                                lexer = LogosToken::lexer(source);
+                                continue;
+                            }
+                            
+                            // Continue with the next token
+                            continue;
+                        }
+                    }
+                    
+                    // For other types of errors, create a generic error token
+                    let error_token = Token {
+                        token_type: TokenType::Error("Invalid token".into()),
+                        lexeme: error_lexeme.into(),
+                        location: self.position.to_location(),
+                    };
+                    debug!("Pushing error token: {:?}", error_token);
+                    tokens.push(error_token);
+                    
+                    // Update the position
+                    self.position.advance(error_lexeme);
+                    
+                    // If we've processed all input, we're done
+                    if error_pos + skip_len >= source.len() {
+                        debug!("Reached end of input after error");
+                        // Add any remaining tokens before breaking
+                        if !tokens.is_empty() {
+                            debug!("Adding {} tokens to buffer", tokens.len());
+                            self.buffer.extend(tokens);
+                        }
+                        return Ok(());
+                    }
+                    
+                    // Get the remaining source after the error
+                    let remaining_source = &source[error_pos + skip_len..];
+                    
+                    // Process the remaining source as a new chunk if there is any
+                    if !remaining_source.is_empty() {
+                        debug!("Processing remaining source in new chunk: '{}' (length: {})", remaining_source, remaining_source.len());
+                        
+                        // Add any tokens we've collected so far to the buffer
+                        if !tokens.is_empty() {
+                            debug!("Adding {} tokens to buffer before processing remaining source", tokens.len());
+                            for token in &tokens {
+                                debug!("  - Token: {:?}", token);
+                            }
+                            self.buffer.extend(tokens);
+                        }
+                        
+                        // Process the remaining source as a new chunk
+                        return self.process_chunk(remaining_source);
+                    } else {
+                        debug!("No more source to process after error");
+                        // Add any remaining tokens before returning
+                        if !tokens.is_empty() {
+                            debug!("Adding {} tokens to buffer", tokens.len());
+                            for token in &tokens {
+                                debug!("  - Token: {:?}", token);
+                            }
+                            self.buffer.extend(tokens);
+                        }
+                        return Ok(());
+                    }
                 }
             }
         }
 
         // Check if the last token might be partial (reached end of chunk but not end of input)
-        if !self.eof && !source.is_empty() {
-            let last_span = lexer.span();
-            if !last_span.is_empty() && last_span.end == source.len() {
-                if let Some(_last_token) = tokens.last().cloned() {
+        if !self.eof && !source.is_empty() && !last_span.is_empty() && last_span.end == source.len() {
+            if let Some(last_token) = tokens.last() {
+                // Only treat as partial if it's a string literal that can span multiple lines
+                let can_span_lines = matches!(
+                    last_token.token_type,
+                    TokenType::String(_)
+                );
+                
+                if can_span_lines {
                     let partial_lexeme = source[last_span.start..].to_string();
-
+                    trace!("Found partial token: '{}'", partial_lexeme);
+                    
                     // Store the partial token information to handle in the next chunk
                     self.partial_token = Some(PartialToken {
                         partial_lexeme,
@@ -486,6 +772,7 @@ impl ChunkedLexer {
         
         // Add the tokens to the buffer
         self.buffer.extend(tokens);
+        Ok(())
     }
 
     /// Process the entire input and return all tokens as a vector
@@ -550,78 +837,52 @@ impl ChunkedLexer {
     /// from the input, or `None` if the end of input has been reached.
     /// Returns an error token if there was an error during tokenization.
     fn next_token(&mut self) -> Option<Token> {
-        // If we have tokens in the buffer, check for invalid numeric literals
-        if self.buffer.len() >= 2 {
-            // Get references to the first two tokens without borrowing self.buffer
-            // by using indices and length checks
-            let is_invalid = {
-                if let (TokenType::Integer(_), TokenType::Identifier(_)) =
-                    (&self.buffer[0].token_type, &self.buffer[1].token_type)
-                {
-                    let first_token = &self.buffer[0];
-                    let second_token = &self.buffer[1];
-
-                    // Check if the identifier immediately follows the number without whitespace
-                    let current_end = first_token.location.offset + first_token.lexeme.len();
-                    second_token.location.offset == current_end
-                } else {
-                    false
-                }
-            };
-
-            if is_invalid {
-                // Remove the first token and get its data
-                let first_token = self.buffer.remove(0).unwrap();
-                let second_token = self.buffer.remove(0).unwrap();
-
-                // This is an invalid numeric literal like 123abc
-                let invalid_literal = format!("{}{}", first_token.lexeme, second_token.lexeme);
-                let error_msg = format!("Invalid numeric literal: {}", invalid_literal);
-
-                // Return an error token
-                return Some(Token::new(
-                    TokenType::Error(InternedString::from(error_msg.as_str())),
-                    &*invalid_literal,
-                    first_token.location,
-                ));
-            }
-        }
-
         // If we have tokens in the buffer, return the next one
         if let Some(token) = self.buffer.pop_front() {
+            debug!("Returning buffered token: {:?}", token);
             self.position.offset += token.lexeme.len();
             return Some(token);
         }
 
         // If we've reached the end of the input, return None
         if self.eof {
+            debug!("Reached EOF, no more tokens");
             return None;
         }
 
         // Otherwise, try to read more tokens
-        match self.read_next_chunk() {
-            Some(true) => {
-                // We successfully read more tokens, try to get the next one
-                self.next_token()
-            }
-            Some(false) => {
-                // No more data to read, but we might have buffered tokens
-                if !self.buffer.is_empty() {
-                    self.next_token()
-                } else {
+        loop {
+            match self.read_next_chunk() {
+                Ok(true) => {
+                    // We might have more tokens in the buffer now
+                    if let Some(token) = self.buffer.pop_front() {
+                        self.position.offset += token.lexeme.len();
+                        return Some(token);
+                    }
+                    // If we didn't get any tokens but read_next_chunk returned true,
+                    // try reading again in case we hit a chunk boundary in the middle of a token
+                }
+                Ok(false) => {
+                    // No more data and no more tokens
                     self.eof = true;
-                    None
+                    return None;
+                }
+                Err(e) => {
+                    // Error occurred
+                    error!("Error reading next chunk: {}", e);
+                    self.eof = true;
+                    // Return an error token
+                    return Some(Token::new(
+                        TokenType::Error(InternedString::from(e.as_str())),
+                        "",
+                        self.position.to_location(),
+                    ));
                 }
             }
-            None => {
-                // An error occurred while reading the next chunk
-                self.eof = true;
-                // Return an error token
-                Some(Token::new(
-                        TokenType::Error(InternedString::from("Error reading input")),
-                    "",
-                    self.position.to_location(),
-                ))
+            
+            // If we're here, we need to try reading more chunks
+            if self.eof {
+                return None;
             }
         }
     }

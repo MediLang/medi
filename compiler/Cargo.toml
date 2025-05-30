@@ -9,3 +9,15 @@ members = [
     "medic_type",
     "medic_typeck"
 ]
+
+[workspace.dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[profile.bench]
+debug = true
+lto = true
+codegen-units = 1
+
+[profile.release]
+lto = true
+codegen-units = 1

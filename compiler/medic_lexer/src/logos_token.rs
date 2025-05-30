@@ -81,7 +81,16 @@ pub enum LogosToken {
     /// Integer literal (e.g., `42`, `-10`)
     ///
     /// Matches optional negative sign followed by one or more digits.
-    #[regex(r"-?[0-9]+", |lex| lex.slice().parse().ok())]
+    /// We'll validate in the lexer that it's not followed by letters.
+    #[regex(r"-?[0-9]+", |lex| {
+        let slice = lex.slice();
+        // Only parse as negative if the minus is immediately followed by a digit
+        if !slice.starts_with('-') || (slice.len() > 1 && slice.chars().nth(1).unwrap().is_ascii_digit()) {
+            slice.parse().ok()
+        } else {
+            None
+        }
+    }, priority = 10)]
     Integer(i64),
 
     /// Floating-point literal with optional exponent
@@ -90,9 +99,18 @@ pub enum LogosToken {
     /// 1. Numbers with decimal point (e.g., `3.14`)
     /// 2. Numbers with leading decimal (e.g., `.5`)
     /// 3. Scientific notation (e.g., `1e10`, `2.5e-3`)
-    #[regex(r"[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?|\.[0-9]+([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+", |lex| {
-        lex.slice().parse().map_err(|_| ())
-    })]
+    /// 4. Negative versions of the above
+    #[regex(r"-?(?:[0-9]+\.[0-9]+(?:[eE][+-]?[0-9]+)?|\.[0-9]+(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+)", |lex| {
+        let slice = lex.slice();
+        // Only parse as negative if the minus is immediately followed by a digit or decimal point
+        if slice.starts_with('-') && slice.len() > 1 && (slice.chars().nth(1).unwrap().is_ascii_digit() || slice.chars().nth(1).unwrap() == '.') {
+            slice.parse().map_err(|_| ())
+        } else if !slice.starts_with('-') {
+            slice.parse().map_err(|_| ())
+        } else {
+            Err(())
+        }
+    }, priority = 10)]
     Float(f64),
 
     /// String literal with escaped quotes
