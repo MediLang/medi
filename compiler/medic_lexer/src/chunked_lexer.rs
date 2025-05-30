@@ -505,19 +505,11 @@ impl ChunkedLexer {
                 // Reached EOF
                 self.eof = true;
 
-                // Handle any remaining partial token
+                // Handle any remaining partial token at EOF
                 if let Some(partial) = self.partial_token.take() {
                     let partial_lexeme = partial.partial_lexeme;
                     if !partial_lexeme.is_empty() {
-                        self.process_chunk(&partial_lexeme)?;
-                    }
-                }
-
-                // Process any remaining partial token at EOF
-                if let Some(partial) = self.partial_token.take() {
-                    let source = partial.partial_lexeme;
-                    if !source.is_empty() {
-                        self.process_chunk(&source)
+                        self.process_chunk(&partial_lexeme)
                             .map_err(|e| format!("Error processing final partial token: {}", e))?;
                     }
                 }
