@@ -233,18 +233,37 @@ impl ChunkedLexer {
             token_type, lexeme_str, span
         );
 
-        // Create the token first without advancing the position
-        let lexeme = InternedString::new(lexeme_str);
-        let location = self.position.to_location();
+        // Skip whitespace and comments
+        if matches!(token_type, LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment) {
+            // Update position for skipped tokens
+            self.position.advance(lexeme_str);
+            return None;
+        }
 
+        // Create the token with the current position
+        let lexeme = InternedString::from(lexeme_str);
+        let token_position = self.position;
+        let location = token_position.to_location();
+        
         // Helper function to create tokens with the current position
         let create_token = |token_type| {
-            let token = Token::from_interned(token_type, lexeme.clone(), location);
-            debug!("Created token: {:?}", token);
-            token
+            Token::new(token_type, lexeme.clone(), location)
         };
 
-        // Map LogosToken to our internal TokenType
+        // Helper function to create error tokens
+        let create_error = |msg: String| {
+            error!("{}", msg);
+            Token::new(
+                TokenType::Error(InternedString::from(msg)),
+                lexeme.clone(),
+                location,
+            )
+        };
+        
+        // Update position for the next token (before processing the current token)
+        self.position.advance(lexeme_str);
+        
+        // Convert the Logos token to our token type
         let token = match token_type {
             // Keywords
             LogosToken::Module => create_token(TokenType::Module),
@@ -266,6 +285,9 @@ impl ChunkedLexer {
             LogosToken::Match => create_token(TokenType::Match),
             LogosToken::If => create_token(TokenType::If),
             LogosToken::Else => create_token(TokenType::Else),
+            LogosToken::True => create_token(TokenType::Boolean(true)),
+            LogosToken::False => create_token(TokenType::Boolean(false)),
+            LogosToken::Null => create_token(TokenType::Null),
 
             // Healthcare keywords
             LogosToken::FhirQuery => create_token(TokenType::FhirQuery),
@@ -279,158 +301,66 @@ impl ChunkedLexer {
             LogosToken::Observation => create_token(TokenType::Observation),
             LogosToken::Medication => create_token(TokenType::Medication),
 
-            // Identifiers
-            LogosToken::Identifier(ident) => {
+            // Identifiers and literals
+            LogosToken::Identifier => {
                 // Check if this is a keyword
-                if let Some(keyword) = Self::get_keyword(ident.as_str()) {
+                if let Some(keyword) = Self::get_keyword(lexeme_str) {
                     create_token(keyword)
                 } else {
                     create_token(TokenType::Identifier(lexeme.clone()))
                 }
-            }
-
-            // Numbers
-            LogosToken::Integer(n) => {
-                // Check if the lexeme is a valid integer (digits only)
-                if lexeme_str.chars().all(|c| c.is_ascii_digit() || c == '-') {
-                    create_token(TokenType::Integer(n))
-                } else {
-                    // Check if this is a number followed by letters (e.g., 123abc)
-                    if lexeme_str
-                        .chars()
-                        .next()
-                        .is_some_and(|c| c.is_ascii_digit() || c == '-')
-                        && lexeme_str
-                            .chars()
-                            .skip_while(|&c| c.is_ascii_digit() || c == '-')
-                            .any(|c| c.is_alphabetic())
-                    {
-                        let error_msg = format!("Invalid numeric literal: {}", lexeme_str);
-                        error!("{}", error_msg);
-                        return Some(Token::new(
-                            TokenType::Error(InternedString::new(&error_msg)),
-                            lexeme_str,
-                            location,
-                        ));
-                    } else {
-                        // Some other invalid format, but we'll let it pass as an integer
-                        // since we don't want to break existing valid cases
-                        create_token(TokenType::Integer(n))
-                    }
+            },
+            LogosToken::String => {
+                // Remove the surrounding quotes
+                let content = &lexeme_str[1..lexeme_str.len() - 1];
+                create_token(TokenType::String(InternedString::from(content)))
+            },
+            LogosToken::Integer => {
+                match lexeme_str.parse::<i64>() {
+                    Ok(value) => create_token(TokenType::Integer(value)),
+                    Err(_) => create_error(format!("Invalid integer: {}", lexeme_str)),
                 }
-            }
-            LogosToken::Float(n) => {
-                // For float literals, we've already validated the format in the regex
-                create_token(TokenType::Float(n))
-            }
-            LogosToken::Bool(b) => create_token(TokenType::Boolean(b)),
+            },
+            LogosToken::Float => {
+                match lexeme_str.parse::<f64>() {
+                    Ok(value) => create_token(TokenType::Float(value)),
+                    Err(_) => create_error(format!("Invalid float: {}", lexeme_str)),
+                }
+            },
 
-            // String literals
-            LogosToken::String(s) => create_token(TokenType::String(InternedString::new(&s))),
-
-            // Medical code identifiers
-            LogosToken::ICD10(code) => create_token(TokenType::ICD10(InternedString::new(&code))),
-            LogosToken::LOINC(code) => create_token(TokenType::LOINC(InternedString::new(&code))),
-            LogosToken::SNOMED(code) => create_token(TokenType::SNOMED(InternedString::new(&code))),
-            LogosToken::CPT(code) => create_token(TokenType::CPT(InternedString::new(&code))),
-
-            // Range operators
-            LogosToken::Range => create_token(TokenType::Range),
-            LogosToken::RangeInclusive => create_token(TokenType::RangeInclusive),
-
-            // Assignment operators
-            LogosToken::Equal => create_token(TokenType::Equal),
-            LogosToken::PlusEqual => create_token(TokenType::PlusEqual),
-            LogosToken::MinusEqual => create_token(TokenType::MinusEqual),
-            LogosToken::StarEqual => create_token(TokenType::StarEqual),
-            LogosToken::SlashEqual => create_token(TokenType::SlashEqual),
-            LogosToken::PercentEqual => create_token(TokenType::PercentEqual),
-            LogosToken::DoubleStarAssign => create_token(TokenType::DoubleStarAssign),
-            LogosToken::BitAndAssign => create_token(TokenType::BitAndAssign),
-            LogosToken::BitOrAssign => create_token(TokenType::BitOrAssign),
-            LogosToken::BitXorAssign => create_token(TokenType::BitXorAssign),
-            LogosToken::ShlAssign => create_token(TokenType::ShlAssign),
-            LogosToken::ShrAssign => create_token(TokenType::ShrAssign),
-
-            // Comparison operators
-            LogosToken::EqualEqual => create_token(TokenType::EqualEqual),
-            LogosToken::NotEqual => create_token(TokenType::NotEqual),
-            LogosToken::Less => create_token(TokenType::Less),
-            LogosToken::LessEqual => create_token(TokenType::LessEqual),
-            LogosToken::Greater => create_token(TokenType::Greater),
-            LogosToken::GreaterEqual => create_token(TokenType::GreaterEqual),
-
-            // Logical operators
-            LogosToken::And => create_token(TokenType::And),
-            LogosToken::Or => create_token(TokenType::Or),
-            LogosToken::Not => create_token(TokenType::Not),
-
-            // Bitwise operators
-            LogosToken::BitOr => create_token(TokenType::BitOr),
-            LogosToken::BitXor => create_token(TokenType::BitXor),
-            LogosToken::BitAnd => create_token(TokenType::BitAnd),
-            LogosToken::Shl => create_token(TokenType::Shl),
-            LogosToken::Shr => create_token(TokenType::Shr),
-
-            // Arithmetic operators
+            // Operators and punctuation
             LogosToken::Plus => create_token(TokenType::Plus),
             LogosToken::Minus => create_token(TokenType::Minus),
             LogosToken::Star => create_token(TokenType::Star),
             LogosToken::Slash => create_token(TokenType::Slash),
             LogosToken::Percent => create_token(TokenType::Percent),
-            LogosToken::DoubleStar => create_token(TokenType::DoubleStar),
-
-            // Null-coalescing and Elvis operators
-            LogosToken::QuestionQuestion => create_token(TokenType::QuestionQuestion),
-            LogosToken::QuestionColon => create_token(TokenType::QuestionColon),
-
-            // Delimiters
+            LogosToken::Equal => create_token(TokenType::Equal),
+            LogosToken::EqualEqual => create_token(TokenType::EqualEqual),
+            LogosToken::Bang => create_token(TokenType::LogicalNot),
+            LogosToken::BangEqual => create_token(TokenType::NotEqual),
+            LogosToken::Less => create_token(TokenType::Less),
+            LogosToken::LessEqual => create_token(TokenType::LessEqual),
+            LogosToken::Greater => create_token(TokenType::Greater),
+            LogosToken::GreaterEqual => create_token(TokenType::GreaterEqual),
+            LogosToken::And => create_token(TokenType::LogicalAnd),
+            LogosToken::Or => create_token(TokenType::LogicalOr),
+            LogosToken::Dot => create_token(TokenType::Dot),
+            LogosToken::Comma => create_token(TokenType::Comma),
+            LogosToken::Colon => create_token(TokenType::Colon),
+            LogosToken::Semicolon => create_token(TokenType::Semicolon),
             LogosToken::LeftParen => create_token(TokenType::LeftParen),
             LogosToken::RightParen => create_token(TokenType::RightParen),
             LogosToken::LeftBrace => create_token(TokenType::LeftBrace),
             LogosToken::RightBrace => create_token(TokenType::RightBrace),
             LogosToken::LeftBracket => create_token(TokenType::LeftBracket),
             LogosToken::RightBracket => create_token(TokenType::RightBracket),
-            LogosToken::Comma => create_token(TokenType::Comma),
-            LogosToken::Colon => create_token(TokenType::Colon),
-            LogosToken::Semicolon => create_token(TokenType::Semicolon),
-            LogosToken::Dot => create_token(TokenType::Dot),
-            LogosToken::Underscore => create_token(TokenType::Underscore),
             LogosToken::Arrow => create_token(TokenType::Arrow),
-
-            // Error token
-            LogosToken::Error => {
-                let error_msg = format!("Lexer error at {:?}", location);
-                error!("{}", error_msg);
-                return Some(Token::new(
-                    TokenType::Error(InternedString::new(&error_msg)),
-                    lexeme_str,
-                    location,
-                ));
-            }
-
-            // Skip whitespace and comments
-            LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment => {
-                // Skip these tokens
-                self.position.advance(lexeme_str);
-                return None;
-            }
-
-            // For any unhandled token, log a warning and return an error token
-            _ => {
-                let error_msg = format!("Unhandled token type: {:?}", token_type);
-                error!("{} at {:?}", error_msg, location);
-                self.position.advance(lexeme_str);
-                return Some(Token::new(
-                    TokenType::Error(InternedString::new(&error_msg)),
-                    lexeme_str,
-                    location,
-                ));
-            }
+            LogosToken::FatArrow => create_token(TokenType::FatArrow),
+            LogosToken::Error => create_error(format!("Lexer error at {}:{}", location.line, location.column)),
+            _ => create_error(format!("Unhandled token type: {:?}", token_type)),
         };
 
-        // Update position and return the token
-        self.position.advance(lexeme_str);
+        // Return the token
         Some(token)
     }
 
@@ -479,14 +409,19 @@ impl ChunkedLexer {
 
         // Read the next chunk from the source
         let mut chunk = String::with_capacity(self.config.chunk_size);
-        match self.source.read_to_string(&mut chunk) {
+        match self.source.read_line(&mut chunk) {
             Ok(0) => {
                 // Reached EOF
                 self.eof = true;
-                return Some(false);
+                // Process any remaining partial token
+                if let Some(partial) = self.partial_token.take() {
+                    let source = partial.partial_lexeme;
+                    self.process_chunk(&source);
+                }
+                return Some(!self.buffer.is_empty());
             }
             Ok(_) => {
-                // Successfully read a chunk
+                // Successfully read a line
                 self.current_chunk = chunk;
             }
             Err(e) => {
@@ -502,21 +437,31 @@ impl ChunkedLexer {
             self.current_chunk.clone()
         };
 
+        self.process_chunk(&source);
+
+        // Return true if we might have more data
+        Some(true)
+    }
+    
+    /// Process a chunk of source code and update the token buffer
+    fn process_chunk(&mut self, source: &str) {
         // Tokenize the current chunk
-        let mut lexer = LogosToken::lexer(&source);
+        let mut lexer = LogosToken::lexer(source);
         let mut tokens = Vec::new();
 
         // Process all tokens in the current chunk
         while let Some(token_result) = lexer.next() {
             match token_result {
                 Ok(token) => {
-                    if let Some(converted) = self.convert_token(token, lexer.span(), &source) {
+                    if let Some(converted) = self.convert_token(token, lexer.span(), source) {
+                        // Update the position after each token
+                        self.update_position(&converted);
                         tokens.push(converted);
                     }
                 }
                 Err(_) => {
                     error!("Lexer error at position {}", lexer.span().start);
-                    return None;
+                    return;
                 }
             }
         }
@@ -530,25 +475,17 @@ impl ChunkedLexer {
 
                     // Store the partial token information to handle in the next chunk
                     self.partial_token = Some(PartialToken {
-                        partial_lexeme: partial_lexeme.clone(),
+                        partial_lexeme,
                     });
-
-                    // Remove the partial token from the tokens list
+                    
+                    // Remove the partial token from the current tokens
                     tokens.pop();
                 }
             }
         }
-
-        // Update the position based on the processed tokens
-        for token in &tokens {
-            self.update_position(token);
-        }
-
-        // Add tokens to the buffer
+        
+        // Add the tokens to the buffer
         self.buffer.extend(tokens);
-
-        // Return true if we might have more data
-        Some(true)
     }
 
     /// Process the entire input and return all tokens as a vector
@@ -643,7 +580,7 @@ impl ChunkedLexer {
 
                 // Return an error token
                 return Some(Token::new(
-                    TokenType::Error(InternedString::new(&error_msg)),
+                    TokenType::Error(InternedString::from(error_msg.as_str())),
                     &*invalid_literal,
                     first_token.location,
                 ));
@@ -681,7 +618,7 @@ impl ChunkedLexer {
                 self.eof = true;
                 // Return an error token
                 Some(Token::new(
-                    TokenType::Error(InternedString::new("Error reading input")),
+                        TokenType::Error(InternedString::from("Error reading input")),
                     "",
                     self.position.to_location(),
                 ))
@@ -986,6 +923,12 @@ mod tests {
             let z = x + y;
         "#;
 
+        println!("Input source code:");
+        for (i, line) in input.lines().enumerate() {
+            println!("{:2}: {}", i + 1, line);
+        }
+        println!();
+
         let cursor = Cursor::new(input);
         let config = ChunkedLexerConfig {
             chunk_size: 16, // Small chunks to test position tracking
@@ -994,19 +937,37 @@ mod tests {
             keep_source_in_memory: true,
         };
 
-        let tokens: Vec<_> = ChunkedLexer::from_reader(cursor, config).collect();
+        let lexer = ChunkedLexer::from_reader(cursor, config);
+        let tokens: Vec<_> = lexer.collect();
+
+        println!("\nTokens found:");
+        for (i, token) in tokens.iter().enumerate() {
+            println!("Token {}: {:?} at line {}:{} (offset: {})", 
+                   i, token.token_type, token.location.line, token.location.column, token.location.offset);
+        }
 
         // Verify positions are tracked correctly
-        assert!(tokens.len() >= 11);
+        assert!(tokens.len() >= 11, "Expected at least 11 tokens, got {}", tokens.len());
 
         // Check positions of specific tokens
         let let_x = &tokens[0];
-        assert_eq!(let_x.location.line, 2);
+        println!("\nChecking first 'let' token at line {}", let_x.location.line);
+        assert_eq!(let_x.location.line, 2, "First 'let' should be on line 2");
 
         let plus = tokens
             .iter()
             .find(|t| matches!(t.token_type, TokenType::Plus))
-            .unwrap();
-        assert_eq!(plus.location.line, 6);
+            .expect("Could not find '+' token in the token stream");
+            
+        println!("\nFound '+' token at line {}", plus.location.line);
+        println!("Token details: {:?}", plus);
+        
+        // Find and print the 'let z' token for context
+        if let Some(let_z) = tokens.iter().find(|t| matches!(t.token_type, TokenType::Let) && 
+                                                  t.location.line > 2) {
+            println!("Found 'let z' token at line {}", let_z.location.line);
+        }
+        
+        assert_eq!(plus.location.line, 6, "'+' token should be on line 6");
     }
 }
