@@ -96,58 +96,57 @@ fn check_blood_pressure(systolic: i32, diastolic: i32) -> &str {
     result
 }
 
+use std::fs::File;
+use std::io::{self, BufReader};
+use medic_lexer::chunked_lexer::ChunkedLexerConfig;
+
 fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> {
     let mut times = Vec::with_capacity(runs);
     
+    // Common function to print benchmark results
+    fn print_run_result(run: usize, token_count: usize, elapsed: std::time::Duration) {
+        println!("  Run {}: {} tokens in {:.2}ms", 
+            run + 1, 
+            token_count,
+            elapsed.as_secs_f64() * 1000.0
+        );
+    }
+
     for i in 0..runs {
         let start = Instant::now();
-        
-        match lexer_type {
-            "OriginalLexer" => {
-                let content = fs::read_to_string(test_file).expect("Failed to read test file");
-                let lexer = medic_lexer::lexer::Lexer::new(&content);
-                let tokens: Vec<_> = lexer.collect();
-                let elapsed = start.elapsed();
-                times.push(elapsed.as_micros());
-                println!("  Run {}: {} tokens in {:.2}ms", 
-                    i + 1, 
-                    tokens.len(),
-                    elapsed.as_secs_f64() * 1000.0
-                );
-            }
-            "StreamingLexer" => {
-                let content = fs::read_to_string(test_file).expect("Failed to read test file");
-                let lexer = medic_lexer::streaming_lexer::StreamingLexer::new(&content);
-                let tokens: Vec<_> = lexer.collect();
-                let elapsed = start.elapsed();
-                times.push(elapsed.as_micros());
-                println!("  Run {}: {} tokens in {:.2}ms", 
-                    i + 1, 
-                    tokens.len(),
-                    elapsed.as_secs_f64() * 1000.0
-                );
+        let token_count = match lexer_type {
+            "OriginalLexer" | "StreamingLexer" => {
+                // Read file content once for OriginalLexer and StreamingLexer
+                let content = fs::read_to_string(test_file)
+                    .expect("Failed to read test file");
+                
+                let tokens: Vec<_> = match lexer_type {
+                    "OriginalLexer" => 
+                        medic_lexer::lexer::Lexer::new(&content).collect(),
+                    "StreamingLexer" => 
+                        medic_lexer::streaming_lexer::StreamingLexer::new(&content).collect(),
+                    _ => unreachable!(),
+                };
+                tokens.len()
             }
             "ChunkedLexer" => {
-                use std::fs::File;
-                use std::io::BufReader;
-                
-                let file = File::open(test_file).expect("Failed to open test file");
+                // Use streaming approach for ChunkedLexer
+                let file = File::open(test_file)
+                    .expect("Failed to open test file");
                 let reader = BufReader::new(file);
                 let lexer = medic_lexer::chunked_lexer::ChunkedLexer::from_reader(
                     reader,
-                    medic_lexer::chunked_lexer::ChunkedLexerConfig::default()
+                    ChunkedLexerConfig::default()
                 );
                 let tokens: Vec<_> = lexer.collect();
-                let elapsed = start.elapsed();
-                times.push(elapsed.as_micros());
-                println!("  Run {}: {} tokens in {:.2}ms", 
-                    i + 1, 
-                    tokens.len(),
-                    elapsed.as_secs_f64() * 1000.0
-                );
+                tokens.len()
             }
             _ => panic!("Unknown lexer type: {}", lexer_type),
-        }
+        };
+        
+        let elapsed = start.elapsed();
+        times.push(elapsed.as_micros());
+        print_run_result(i, token_count, elapsed);
     }
     
     times
