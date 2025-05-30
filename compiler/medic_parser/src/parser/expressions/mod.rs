@@ -5,17 +5,27 @@ use crate::parser::get_binary_operator;
 
 use crate::parser::{
     take_token_if, BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, StatementNode,
-    TokenSlice, TokenType,
+    TokenSlice, TokenType, parse_block,
 };
 
 use super::{
-    identifiers::parse_identifier, literals::parse_literal, parse_block,
+    identifiers::parse_identifier, literals::parse_literal,
     statements::parse_statement,
 };
 
 // Re-export nested expressions API
 pub mod nested;
-pub use nested::{parse_block_expression, parse_nested_binary_expression};
+pub use nested::parse_nested_binary_expression;
+
+// Note: Block expressions are parsed using the `parse_block` function from the parent module.
+// This is the primary and recommended way to parse block expressions. The function handles
+// all aspects of block parsing including statements, semicolons, and scoping.
+//
+// Example usage:
+// ```rust
+// let (remaining_input, block) = parse_block(input_tokens)?;
+// let expr = ExpressionNode::from_statement(StatementNode::Block(block));
+// ```
 
 /// Parses an expression, which can be a binary expression, primary expression, or block expression.
 ///
@@ -163,17 +173,52 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
 
     match input.0[0].token_type {
         // Handle literals
-        TokenType::Integer(_)
-        | TokenType::Float(_)
-        | TokenType::String(_)
-        | TokenType::Boolean(_) => {
+        TokenType::Integer(_) | TokenType::Float(_) => {
+            log::debug!("Parsing number literal: {:?}", input.0[0].token_type);
+            let (mut input, lit) = parse_literal(input)?;
+            
+            // Check for implicit multiplication with an identifier (e.g., "5 mg")
+            if !input.0.is_empty() {
+                if let TokenType::Identifier(_) = input.0[0].token_type {
+                    let (new_input, right) = parse_identifier(input)?;
+                    input = new_input;
+                    return Ok((input, ExpressionNode::Binary(Box::new(BinaryExpressionNode {
+                        left: ExpressionNode::Literal(lit),
+                        operator: BinaryOperator::Mul,
+                        right,
+                    }))));
+                }
+            }
+            
+            log::debug!("Successfully parsed number literal: {:?}", lit);
+            Ok((input, ExpressionNode::Literal(lit)))
+        }
+        TokenType::String(_) | TokenType::Boolean(_) => {
             log::debug!("Parsing literal: {:?}", input.0[0].token_type);
             let (input, lit) = parse_literal(input)?;
             log::debug!("Successfully parsed literal: {:?}", lit);
             Ok((input, ExpressionNode::Literal(lit)))
         }
-        // Handle identifiers and member expressions
-        TokenType::Identifier(_) | TokenType::Dot => parse_identifier(input),
+        // Handle identifiers, member expressions, and implicit multiplication
+        TokenType::Identifier(_) | TokenType::Dot => {
+            // First parse the identifier or member expression
+            let (mut input, left) = parse_identifier(input)?;
+            
+            // Check for implicit multiplication with a following number (e.g., "doses 3")
+            if !input.0.is_empty() {
+                if let TokenType::Integer(_) | TokenType::Float(_) = input.0[0].token_type {
+                    let (new_input, right) = parse_primary(input)?;
+                    input = new_input;
+                    return Ok((input, ExpressionNode::Binary(Box::new(BinaryExpressionNode {
+                        left,
+                        operator: BinaryOperator::Mul,
+                        right,
+                    }))));
+                }
+            }
+            
+            Ok((input, left))
+        },
         // Handle parenthesized expressions
         TokenType::LeftParen => {
             log::debug!("Parsing parenthesized expression");
@@ -252,9 +297,16 @@ pub(crate) fn is_comparison_operator(op: &BinaryOperator) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::test_utils::tokenize;
+    use crate::parser::{TokenSlice, parse_block};
     use medic_ast::ast::*;
-    use pretty_assertions::assert_eq;
+    use medic_lexer::token::Token;
+    
+    // Helper function to tokenize a string for testing
+    fn tokenize(input: &str) -> Vec<Token> {
+        use medic_lexer::Lexer;
+        let lexer = Lexer::new(input);
+        lexer.collect()
+    }
 
     #[test]
     fn test_parse_primary_literal() {
@@ -289,14 +341,27 @@ mod tests {
     #[test]
     fn test_parse_block_expression() {
         let tokens = tokenize("{ let x = 5; }");
-        let (_, block) = parse_block_expression(TokenSlice::new(&tokens)).unwrap();
+        let (_, block) = parse_block(TokenSlice::new(&tokens)).unwrap();
         assert_eq!(block.statements.len(), 1);
     }
 
     #[test]
     fn test_parse_primary_block_expression_fails() {
+        // Block expressions are valid primary expressions, so this should succeed
         let tokens = tokenize("{ 42 }");
-        assert!(parse_primary(TokenSlice::new(&tokens)).is_err());
+        let result = parse_primary(TokenSlice::new(&tokens));
+        assert!(result.is_ok(), "Block expressions should be valid primary expressions");
+        
+        // Verify the parsed block has one statement
+        if let Ok((_, ExpressionNode::Statement(stmt))) = result {
+            if let StatementNode::Block(block) = *stmt {
+                assert_eq!(block.statements.len(), 1, "Block should have one statement");
+            } else {
+                panic!("Expected block statement, got {:?}", stmt);
+            }
+        } else {
+            panic!("Expected Statement variant, got {:?}", result);
+        }
     }
 
     #[test]
@@ -304,9 +369,7 @@ mod tests {
         let input = "{ let x = 5 "; // Missing closing brace
         let tokens = tokenize(input);
         let token_slice = TokenSlice::new(&tokens);
-        let result = parse_block_expression(token_slice);
-
-        // Should return an error about the missing closing brace
+        let result = parse_block(token_slice);
         assert!(result.is_err(), "Expected error for missing closing brace");
     }
 
@@ -314,22 +377,27 @@ mod tests {
     fn test_parse_block_expression_with_stray_semicolons() {
         // Test with semicolons in various positions
         let test_cases = [
-            "{ ;let x = 1; let y = 2; }",
-            "{ let x = 1;; let y = 2; }",
-            "{ let x = 1; ;let y = 2; }",
-            "{ ;;;let x = 1;;; let y = 2;;; }",
-            "{ ; ; let x = 1; ; ; let y = 2; ; ; }",
+            ("{ ;let x = 1; let y = 2; }", 2),  // Leading semicolon
+            ("{ let x = 1;; let y = 2; }", 2),  // Double semicolon
+            ("{ let x = 1; ;let y = 2; }", 2),  // Semicolon with space
+            ("{ ;;;let x = 1;;; let y = 2;;; }", 2),  // Multiple semicolons
+            ("{ ; ; let x = 1; ; ; let y = 2; ; ; }", 2),  // Mixed semicolons with spaces
+            ("{ ; }", 0),  // Just semicolons
+            ("{ ; ; }", 0),  // Multiple semicolons
+            ("{ let x = 1; }", 1),  // Single statement
+            ("{ let x = 1; let y = 2; }", 2),  // Multiple statements
         ];
 
-        for input in test_cases {
+
+        for (input, expected_count) in test_cases {
             let tokens = tokenize(input);
-            let result = parse_block_expression(TokenSlice::new(&tokens));
+            let result = parse_block(TokenSlice::new(&tokens));
             assert!(result.is_ok(), "Failed to parse: {}", input);
 
             let (_, block) = result.unwrap();
             assert_eq!(
                 block.statements.len(),
-                2,
+                expected_count,
                 "Incorrect number of statements in: {}",
                 input
             );

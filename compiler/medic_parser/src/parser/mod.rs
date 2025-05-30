@@ -546,6 +546,13 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
 
     let mut statements = Vec::new();
 
+    // Skip any leading semicolons before the first statement
+    while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+        let (new_input, _) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+        input = new_input;
+    }
+
     // Parse statements until we hit a right brace
     while !matches!(
         input.peek().map(|t| &t.token_type),
