@@ -334,32 +334,14 @@ impl ChunkedLexer {
                 create_token(TokenType::String(InternedString::from(s.as_str())))
             }
             LogosToken::Integer(n) => {
-                // Check if the lexeme is followed by letters (invalid number literal)
-                let next_char = source
-                    .get(span.end..=span.end)
-                    .and_then(|s| s.chars().next());
-                if let Some(c) = next_char {
-                    if c.is_alphabetic() || c == '_' {
-                        return Some(create_error(format!(
-                            "Invalid number literal: '{}{}'",
-                            lexeme_str, c
-                        )));
-                    }
+                if let Some(err) = Self::validate_numeric_literal(source, span, lexeme_str) {
+                    return Some(create_error(err));
                 }
                 create_token(TokenType::Integer(n))
             }
             LogosToken::Float(f) => {
-                // Check if the lexeme is followed by letters (invalid number literal)
-                let next_char = source
-                    .get(span.end..=span.end)
-                    .and_then(|s| s.chars().next());
-                if let Some(c) = next_char {
-                    if c.is_alphabetic() || c == '_' {
-                        return Some(create_error(format!(
-                            "Invalid number literal: '{}{}'",
-                            lexeme_str, c
-                        )));
-                    }
+                if let Some(err) = Self::validate_numeric_literal(source, span, lexeme_str) {
+                    return Some(create_error(err));
                 }
                 create_token(TokenType::Float(f))
             }
@@ -841,6 +823,25 @@ impl ChunkedLexer {
     /// This method returns the number of tokens that have been lexed but not yet consumed.
     pub fn buffered_tokens(&self) -> usize {
         self.buffer.len()
+    }
+
+    /// Validates that a numeric literal is not followed by invalid characters
+    /// 
+    /// Returns `Some(error_message)` if the numeric literal is invalid, otherwise `None`
+    fn validate_numeric_literal(source: &str, span: &Span, lexeme: &str) -> Option<String> {
+        let next_char = source
+            .get(span.end..=span.end)
+            .and_then(|s| s.chars().next());
+            
+        if let Some(c) = next_char {
+            if c.is_alphabetic() || c == '_' {
+                return Some(format!(
+                    "Invalid number literal: '{}{}'",
+                    lexeme, c
+                ));
+            }
+        }
+        None
     }
 }
 
