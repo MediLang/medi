@@ -17,6 +17,11 @@ use super::{expressions::parse_expression as parse_expr, identifiers::parse_iden
 ///
 /// Expects the sequence: `let <identifier> = <expression>;`. Returns a `StatementNode::Let` containing the parsed variable name and value.
 ///
+/// # Semicolon Handling
+/// The parser will tolerate missing semicolons after let statements. If a semicolon is missing,
+/// it will log a warning but continue parsing. This is to provide a better developer experience
+/// while still encouraging proper syntax.
+///
 /// # Examples
 ///
 /// ```
@@ -24,6 +29,7 @@ use super::{expressions::parse_expression as parse_expr, identifiers::parse_iden
 /// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, statements::parse_let_statement};
 ///
+/// // With semicolon (preferred)
 /// let tokens = vec![
 ///     Token::new(TokenType::Let, "let", Location { line: 1, column: 1, offset: 0 }),
 ///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 5, offset: 4 }),
@@ -34,6 +40,18 @@ use super::{expressions::parse_expression as parse_expr, identifiers::parse_iden
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_let_statement(input);
 /// assert!(result.is_ok());
+///
+/// // Without semicolon (tolerated with warning)
+/// let tokens = vec![
+///     Token::new(TokenType::Let, "let", Location { line: 1, column: 1, offset: 0 }),
+///     Token::new(TokenType::Identifier(InternedString::from("y")), "y", Location { line: 1, column: 5, offset: 4 }),
+///     Token::new(TokenType::Equal, "=", Location { line: 1, column: 7, offset: 6 }),
+///     Token::new(TokenType::Integer(42), "42", Location { line: 1, column: 9, offset: 8 })
+///     // No semicolon here
+/// ];
+/// let input = TokenSlice::new(&tokens);
+/// let result = parse_let_statement(input);
+/// assert!(result.is_ok()); // Still succeeds despite missing semicolon
 /// ```
 ///
 /// # Arguments
