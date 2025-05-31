@@ -119,6 +119,39 @@ pub enum BinaryOperator {
     Elvis, // ?:
 }
 
+impl std::fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            BinaryOperator::Assign => write!(f, "="),
+            BinaryOperator::Or => write!(f, "||"),
+            BinaryOperator::And => write!(f, "&&"),
+            BinaryOperator::Of => write!(f, "of"),
+            BinaryOperator::Per => write!(f, "per"),
+            BinaryOperator::Eq => write!(f, "=="),
+            BinaryOperator::Ne => write!(f, "!="),
+            BinaryOperator::Lt => write!(f, "<"),
+            BinaryOperator::Le => write!(f, "<="),
+            BinaryOperator::Gt => write!(f, ">"),
+            BinaryOperator::Ge => write!(f, ">="),
+            BinaryOperator::UnitConversion => write!(f, "→"),
+            BinaryOperator::BitOr => write!(f, "|"),
+            BinaryOperator::BitXor => write!(f, "^"),
+            BinaryOperator::BitAnd => write!(f, "&"),
+            BinaryOperator::Shl => write!(f, "<<"),
+            BinaryOperator::Shr => write!(f, ">>"),
+            BinaryOperator::Add => write!(f, "+"),
+            BinaryOperator::Sub => write!(f, "-"),
+            BinaryOperator::Mul => write!(f, "*"),
+            BinaryOperator::Div => write!(f, "/"),
+            BinaryOperator::Mod => write!(f, "%"),
+            BinaryOperator::Pow => write!(f, "**"),
+            BinaryOperator::Range => write!(f, ".."),
+            BinaryOperator::NullCoalesce => write!(f, "??"),
+            BinaryOperator::Elvis => write!(f, "?:"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpressionNode {
     pub callee: ExpressionNode,
@@ -373,6 +406,39 @@ impl std::fmt::Display for StatementNode {
 impl std::fmt::Display for ExpressionNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            ExpressionNode::Identifier(ident) => write!(f, "{}", ident.name),
+            ExpressionNode::IcdCode(code) => write!(f, "ICD:{}", code),
+            ExpressionNode::CptCode(code) => write!(f, "CPT:{}", code),
+            ExpressionNode::SnomedCode(code) => write!(f, "SNOMED:{}", code),
+            ExpressionNode::Literal(lit) => write!(f, "{}", lit),
+            ExpressionNode::Binary(expr) => {
+                // Handle operator precedence and associativity if needed
+                write!(f, "({} {} {})", expr.left, expr.operator, expr.right)
+            }
+            ExpressionNode::Call(call) => {
+                write!(f, "{}", call.callee)?;
+                write!(f, "(")?;
+                for (i, arg) in call.arguments.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg)?;
+                }
+                write!(f, ")")
+            }
+            ExpressionNode::Member(member) => {
+                write!(f, "{}.{}", member.object, member.property.name)
+            }
+            ExpressionNode::HealthcareQuery(query) => {
+                write!(f, "{}(", query.query_type)?;
+                for (i, arg) in query.arguments.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg)?;
+                }
+                write!(f, ")")
+            }
             ExpressionNode::Statement(stmt) => write!(f, "{}", stmt),
             ExpressionNode::Struct(s) => {
                 write!(f, "{} {{", s.type_name)?;
@@ -384,7 +450,6 @@ impl std::fmt::Display for ExpressionNode {
                 }
                 write!(f, "}}")
             }
-            _ => todo!(),
         }
     }
 }
