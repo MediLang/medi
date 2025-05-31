@@ -24,6 +24,8 @@ pub enum ExpressionNode {
     HealthcareQuery(Box<HealthcareQueryNode>),
     /// A statement expression (e.g., a block expression)
     Statement(Box<StatementNode>),
+    /// A struct literal (e.g., `Patient { id: 1, name: "John" }`)
+    Struct(Box<StructLiteralNode>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +35,17 @@ pub enum LiteralNode {
     Float(f64),
     Bool(bool),
     String(String),
+}
+
+impl std::fmt::Display for LiteralNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            LiteralNode::Int(i) => write!(f, "{}", i),
+            LiteralNode::Float(fl) => write!(f, "{}", fl),
+            LiteralNode::Bool(b) => write!(f, "{}", b),
+            LiteralNode::String(s) => write!(f, "\"{}\"", s),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,6 +58,9 @@ pub struct BinaryExpressionNode {
 /// Binary operators in order of increasing precedence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOperator {
+    // Assignment (right-associative, lowest precedence)
+    Assign,
+    
     // Logical OR (left-associative)
     Or,
 
@@ -151,6 +167,16 @@ pub struct BlockNode {
     pub statements: Vec<StatementNode>,
 }
 
+impl std::fmt::Display for BlockNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(f, "{{")?;
+        for stmt in &self.statements {
+            writeln!(f, "    {};", stmt)?;
+        }
+        write!(f, "}}")
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfNode {
     pub condition: ExpressionNode,
@@ -184,6 +210,20 @@ pub struct ReturnNode {
 
 use std::hash::Hash;
 
+/// Represents a field in a struct literal
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructField {
+    pub name: String,
+    pub value: ExpressionNode,
+}
+
+/// Represents a struct literal expression (e.g., `Patient { id: 1, name: "John" }`)
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralNode {
+    pub type_name: String,
+    pub fields: Vec<StructField>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IdentifierNode {
     pub name: String,
@@ -205,6 +245,16 @@ pub enum PatternNode {
     Identifier(IdentifierNode), // Pattern can be an identifier
     Wildcard,                   // Represents the '_' pattern
                                 // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
+}
+
+impl std::fmt::Display for PatternNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PatternNode::Literal(lit) => write!(f, "{}", lit),
+            PatternNode::Identifier(ident) => write!(f, "{}", ident.name),
+            PatternNode::Wildcard => write!(f, "_"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -229,6 +279,71 @@ impl ExpressionNode {
         match stmt {
             StatementNode::Expr(expr) => expr,
             _ => ExpressionNode::Statement(Box::new(stmt)),
+        }
+    }
+}
+
+impl std::fmt::Display for StatementNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            StatementNode::Let(stmt) => write!(f, "let {} = {};", stmt.name.name, stmt.value),
+            StatementNode::Assignment(assign) => write!(f, "{} = {};", assign.target, assign.value),
+            StatementNode::Expr(expr) => write!(f, "{};", expr),
+            StatementNode::Block(block) => {
+                writeln!(f, "{{")?;
+                for stmt in &block.statements {
+                    writeln!(f, "    {};", stmt)?;
+                }
+                write!(f, "}}")
+            }
+            StatementNode::If(if_stmt) => {
+                write!(f, "if {} {}", if_stmt.condition, if_stmt.then_branch)?;
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    write!(f, " else {}", else_branch)?;
+                }
+                Ok(())
+            }
+            StatementNode::While(while_stmt) => {
+                write!(f, "while {} {}", while_stmt.condition, while_stmt.body)
+            }
+            StatementNode::For(for_stmt) => {
+                write!(
+                    f,
+                    "for {} in {} {}",
+                    for_stmt.var.name, for_stmt.iter, for_stmt.body
+                )
+            }
+            StatementNode::Match(match_stmt) => {
+                write!(f, "match {} {{", match_stmt.expr)?;
+                for arm in &match_stmt.arms {
+                    write!(f, " {} => {},", arm.pattern, arm.body)?;
+                }
+                write!(f, " }}")
+            }
+            StatementNode::Return(ret) => {
+                if let Some(expr) = &ret.value {
+                    write!(f, "return {};", expr)
+                } else {
+                    write!(f, "return;")
+                }
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for ExpressionNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ExpressionNode::Statement(stmt) => write!(f, "{}", stmt),
+            ExpressionNode::Struct(s) => {
+                write!(f, "{} {{", s.type_name)?;
+                for (i, field) in s.fields.iter().enumerate() {
+                    if i > 0 { write!(f, ", ")?; }
+                    write!(f, "{}: {}", field.name, field.value)?;
+                }
+                write!(f, "}}")
+            },
+            _ => todo!(),
         }
     }
 }

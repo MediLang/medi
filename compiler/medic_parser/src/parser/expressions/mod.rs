@@ -12,7 +12,10 @@ use super::{identifiers::parse_identifier, literals::parse_literal, statements::
 
 // Re-export nested expressions API
 pub mod nested;
+pub mod struct_literal;
+
 pub use nested::parse_nested_binary_expression;
+pub use struct_literal::parse_struct_literal;
 
 // Note: Block expressions are parsed using the `parse_block` function from the parent module.
 // This is the primary and recommended way to parse block expressions. The function handles
@@ -178,7 +181,13 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         // Handle literals
         TokenType::Integer(_) | TokenType::Float(_) => {
             if log::log_enabled!(log::Level::Debug) {
-                log::debug!("Parsing number literal: {:?}", input.0[0].token_type);
+                log::debug!(
+                    "Parsing number literal: {:?} at {}:{}",
+                    input.0[0].token_type,
+                    input.0[0].location.line,
+                    input.0[0].location.column
+                );
+                log::debug!("Remaining tokens: {}", input.0.len());
             }
             let (mut input, lit) = parse_literal(input)?;
 
@@ -205,7 +214,13 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         }
         TokenType::String(_) | TokenType::Boolean(_) => {
             if log::log_enabled!(log::Level::Debug) {
-                log::debug!("Parsing literal: {:?}", input.0[0].token_type);
+                log::debug!(
+                    "Parsing literal: {:?} at {}:{}",
+                    input.0[0].token_type,
+                    input.0[0].location.line,
+                    input.0[0].location.column
+                );
+                log::debug!("Remaining tokens: {}", input.0.len());
             }
             let (input, lit) = parse_literal(input)?;
             if log::log_enabled!(log::Level::Debug) {
@@ -214,7 +229,71 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             Ok((input, ExpressionNode::Literal(lit)))
         }
         // Handle identifiers, member expressions, and implicit multiplication
-        TokenType::Identifier(_) | TokenType::Dot => {
+        TokenType::Identifier(_) => {
+            log::debug!(
+                "Found identifier '{}' at {}:{}, checking for struct literal",
+                match &input.0[0].token_type {
+                    TokenType::Identifier(s) => s.to_string(),
+                    _ => "".to_string(),
+                },
+                input.0[0].location.line,
+                input.0[0].location.column
+            );
+            log::debug!("Remaining tokens: {}", input.0.len());
+            
+            // In the context of an if statement, we don't want to treat `x {}` as a struct literal
+            // Instead, we'll just parse it as an identifier and let the statement parser handle the block
+            let is_in_if_context = input.0.iter().any(|t| matches!(t.token_type, TokenType::If));
+            
+            if !is_in_if_context {
+                // Only check for struct literals if we're not in an if statement context
+                if input.0.len() > 1 {
+                    match &input.0[1].token_type {
+                        TokenType::LeftBrace => {
+                            log::debug!(
+                                "Found LeftBrace at {}:{}, parsing as struct literal",
+                                input.0[1].location.line,
+                                input.0[1].location.column
+                            );
+                            return parse_struct_literal(input);
+                        },
+                        _ => log::debug!("Next token is {:?}, not a struct literal", input.0[1].token_type)
+                    }
+                } else {
+                    log::debug!("No more tokens after identifier");
+                }
+                
+                log::debug!("Not a struct literal, parsing as regular identifier");
+                // Look ahead to see if this is a struct literal
+                if input.0.len() > 1 && matches!(input.0[1].token_type, TokenType::LeftBrace) {
+                    return parse_struct_literal(input);
+                }
+            } else {
+                log::debug!("In if statement context, not treating as struct literal");
+            }
+            
+            // Otherwise parse as identifier or member expression
+            let (mut input, left) = parse_identifier(input)?;
+
+            // Check for implicit multiplication with a following number (e.g., "doses 3")
+            if !input.0.is_empty() {
+                if let TokenType::Integer(_) | TokenType::Float(_) = input.0[0].token_type {
+                    let (new_input, right) = parse_primary(input)?;
+                    input = new_input;
+                    return Ok((
+                        input,
+                        ExpressionNode::Binary(Box::new(BinaryExpressionNode {
+                            left,
+                            operator: BinaryOperator::Mul,
+                            right,
+                        })),
+                    ));
+                }
+            }
+
+            Ok((input, left))
+        }
+        TokenType::Dot => {
             // First parse the identifier or member expression
             let (mut input, left) = parse_identifier(input)?;
 
@@ -238,6 +317,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         }
         // Handle parenthesized expressions
         TokenType::LeftParen => {
+            log::debug!("Found LeftParen, parsing parenthesized expression");
             if log::log_enabled!(log::Level::Debug) {
                 log::debug!("Parsing parenthesized expression");
             }
@@ -269,6 +349,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         }
         // Handle block expressions
         TokenType::LeftBrace => {
+            log::debug!("Found LeftBrace, parsing block expression");
             if log::log_enabled!(log::Level::Debug) {
                 log::debug!("Parsing block expression");
             }

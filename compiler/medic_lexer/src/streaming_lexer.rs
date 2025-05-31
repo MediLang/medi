@@ -185,10 +185,9 @@ impl<'a> StreamingLexer<'a> {
             } else {
                 self.position.column += 1;
             }
+            // Update offset for each character to handle multi-byte characters correctly
+            self.position.offset += c.len_utf8();
         }
-
-        // Update the offset to the start of the current token
-        self.position.offset = span.start;
     }
 
     /// Convert a Logos token to our internal Token type

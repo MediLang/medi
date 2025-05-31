@@ -503,6 +503,7 @@ dependencies = [
 name = "medic_parser"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
  "log",
  "medic_ast",
  "medic_lexer",

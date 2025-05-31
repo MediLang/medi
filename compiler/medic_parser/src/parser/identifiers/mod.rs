@@ -35,13 +35,31 @@ use super::expressions::parse_expression;
 /// ```
 /// ```
 pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    log::debug!("=== parse_identifier ===");
+    log::debug!("Input length: {}", input.0.len());
+    
     if let Some(token) = input.peek() {
+        log::debug!("Current token: {:?} at {}:{}", 
+            token.token_type, 
+            token.location.line, 
+            token.location.column
+        );
         match &token.token_type {
             TokenType::Identifier(name) => {
-                let (input, _) = take_token_if(
+                log::debug!("Parsing identifier: {}", name);
+                let result = take_token_if(
                     |t| matches!(t, TokenType::Identifier(_)),
                     ErrorKind::Tag,
-                )(input)?;
+                )(input);
+                
+                let (input, _) = match result {
+                    Ok(r) => r,
+                    Err(e) => {
+                        log::error!("Failed to parse identifier: {:?}", e);
+                        return Err(e);
+                    }
+                };
+                log::debug!("Successfully parsed identifier: {}", name);
 
                 // Check for member access
                 if let Some(next_token) = input.peek() {

@@ -158,8 +158,8 @@ impl Position {
             } else {
                 self.column += 1;
             }
+            self.offset += c.len_utf8();
         }
-        self.offset += text.len();
     }
 
     /// Convert to a Location
@@ -171,18 +171,7 @@ impl Position {
         }
     }
 
-    /// Update the position based on the text that was just processed
-    pub fn update_from_text(&mut self, text: &str) {
-        for c in text.chars() {
-            if c == '\n' {
-                self.line += 1;
-                self.column = 1;
-            } else {
-                self.column += 1;
-            }
-            self.offset += c.len_utf8();
-        }
-    }
+
 }
 
 /// Represents a token that spans multiple chunks
@@ -252,7 +241,7 @@ impl ChunkedLexer {
             LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment
         ) {
             // Update position for skipped tokens
-            self.position.update_from_text(lexeme_str);
+            self.position.advance(lexeme_str);
             return None;
         }
 
@@ -444,7 +433,7 @@ impl ChunkedLexer {
                         tokens.push(converted_token);
 
                         // Update the position for the next token
-                        self.position.update_from_text(token_text);
+                        self.position.advance(token_text);
 
                         // Debug log the position after advancing
                         debug!(
@@ -570,7 +559,7 @@ impl ChunkedLexer {
 
                     // Update our position based on the token's text
                     let token_text = &source[span.start..span.end];
-                    self.position.update_from_text(token_text);
+                    self.position.advance(token_text);
                 }
                 Err(_) => {
                     return self.handle_lexer_error(source, &mut tokens);

@@ -2,13 +2,20 @@ use nom::error::ErrorKind;
 use nom::IResult;
 
 use crate::parser::{
-    parse_block, parse_expression, take_token_if, BlockNode, ExpressionNode, StatementNode,
-    TokenSlice, TokenType,
+    parse_block, parse_expression, parse_primary, take_token_if, TokenSlice, TokenType,
 };
 
-use super::{expressions::parse_expression as parse_expr, identifiers::parse_identifier};
+use medic_ast::ast::{
+    BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode, ExpressionNode,
+    IdentifierNode, IfNode, LetStatementNode, LiteralNode, MatchArmNode, MatchNode,
+    MemberExpressionNode, PatternNode, ProgramNode, ReturnNode, StatementNode, WhileNode,
+    AssignmentNode,
+};
 
-use medic_ast::ast::{AssignmentNode, LetStatementNode};
+use super::{
+    expressions::parse_expression as parse_expr, 
+    identifiers::parse_identifier,
+};
 
 /// Parses a `let` statement from the input token stream.
 ///
@@ -41,56 +48,158 @@ use medic_ast::ast::{AssignmentNode, LetStatementNode};
 pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     log::debug!("=== parse_let_statement ===");
     log::debug!("Starting with input length: {}", input.0.len());
-    if !input.0.is_empty() {
-        log::debug!("Next token: {:?}", input.0[0].token_type);
+    
+    // Log the next few tokens for better context
+    if input.0.is_empty() {
+        log::error!("Unexpected empty input in parse_let_statement");
+        return Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Eof)));
     }
-
+    
+    log::debug!("Next tokens:");
+    for i in 0..std::cmp::min(5, input.0.len()) {
+        log::debug!("  Token {}: {:?} at {}:{}", 
+            i,
+            input.0[i].token_type,
+            input.0[i].location.line,
+            input.0[i].location.column
+        );
+    }
+    
     // Consume 'let' keyword
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input)
-        .map_err(|e| {
-            log::error!("Failed to parse 'let' keyword: {:?}", e);
-            e
-        })?;
-    log::debug!("After 'let', input length: {}", input.0.len());
+    log::debug!("Looking for 'let' keyword");
+    let (input, _) = match take_token_if(|t| matches!(t, TokenType::Let), ErrorKind::Tag)(input) {
+        Ok((input, _)) => {
+            log::debug!("Consumed 'let' keyword");
+            if !input.0.is_empty() {
+                log::debug!("After 'let', next token: {:?} at {}:{}", 
+                    input.0[0].token_type, 
+                    input.0[0].location.line, 
+                    input.0[0].location.column
+                );
+                log::debug!("Remaining tokens: {}", input.0.len());
+            } else {
+                log::error!("Unexpected end of input after 'let'");
+                return Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Eof)));
+            }
+            (input, ())
+        },
+        Err(e) => {
+            log::error!("Expected 'let' keyword: {:?}", e);
+            return Err(e);
+        }
+    };
 
     // Parse the identifier
-    let (input, ident_expr) = parse_identifier(input).map_err(|e| {
-        log::error!("Failed to parse identifier: {:?}", e);
-        e
-    })?;
-    log::debug!("After identifier, input length: {}", input.0.len());
+    log::debug!("Parsing identifier");
+    let (input, ident_expr) = match parse_identifier(input) {
+        Ok((input, ident_expr)) => {
+            log::debug!("Successfully parsed identifier");
+            if !input.0.is_empty() {
+                log::debug!("After identifier, next token: {:?} at {}:{}", 
+                    input.0[0].token_type, 
+                    input.0[0].location.line, 
+                    input.0[0].location.column
+                );
+            } else {
+                log::error!("Unexpected end of input after identifier");
+                return Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Eof)));
+            }
+            (input, ident_expr)
+        },
+        Err(e) => {
+            log::error!("Failed to parse identifier: {:?}", e);
+            return Err(e);
+        }
+    };
 
     // Extract the identifier from the expression
+    log::debug!("Extracting identifier from expression");
     let ident = if let ExpressionNode::Identifier(ident) = ident_expr {
-        ident
+        log::debug!("Extracted identifier: {}", ident.name);
+        // Create a new IdentifierNode with the same name
+        IdentifierNode { name: ident.name.clone() }
     } else {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        )));
+        log::error!(
+            "Expected identifier after 'let', got {:?} at {}:{}",
+            ident_expr,
+            input.0.get(0).map(|t| t.location.line).unwrap_or(0),
+            input.0.get(0).map(|t| t.location.column).unwrap_or(0)
+        );
+        return Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Tag)));
     };
 
     // Consume '='
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
-    log::debug!("parse_let_statement: After consuming '=': {:?}", input);
+    let (input, _) = match take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input) {
+        Ok((input, _)) => {
+            log::debug!("Consumed '='");
+            if !input.0.is_empty() {
+                log::debug!("After '=', next token: {:?} at {}:{}", 
+                    input.0[0].token_type, 
+                    input.0[0].location.line, 
+                    input.0[0].location.column
+                );
+            } else {
+                log::error!("Unexpected end of input after '='");
+                return Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Eof)));
+            }
+            (input, ())
+        },
+        Err(e) => {
+            log::error!("Failed to parse '=': {:?}", e);
+            return Err(e);
+        }
+    };
 
     // Parse the expression (which won't consume the semicolon)
-    log::debug!("parse_let_statement: Before parse_expression: {:?}", input);
-    let (input, expr) = parse_expression(input)?;
-    log::debug!("parse_let_statement: After parse_expression: {:?}", input);
+    log::debug!("Starting to parse expression");
+    let (input, expr) = match parse_expression(input) {
+        Ok((input, expr)) => {
+            log::debug!("Successfully parsed expression: {:?}", expr);
+            if !input.0.is_empty() {
+                log::debug!("After expression, next token: {:?} at {}:{}", 
+                    input.0[0].token_type, 
+                    input.0[0].location.line, 
+                    input.0[0].location.column
+                );
+            } else {
+                log::warn!("No more tokens after expression (expected semicolon)");
+            }
+            (input, expr)
+        },
+        Err(e) => {
+            log::error!("Failed to parse expression: {:?}", e);
+            return Err(e);
+        }
+    };
 
     // Consume the semicolon if present
+    log::debug!("Checking for semicolon");
     let input = if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
-        let (new_input, _) =
-            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
-        log::debug!("Consumed semicolon after let statement");
-        new_input
+        log::debug!("Found semicolon at {}:{}", 
+            input.0[0].location.line,
+            input.0[0].location.column
+        );
+        let input = input.advance();
+        log::debug!("After semicolon, remaining tokens: {}", input.0.len());
+        if !input.0.is_empty() {
+            log::debug!("Next token after semicolon: {:?} at {}:{}", 
+                input.0[0].token_type,
+                input.0[0].location.line,
+                input.0[0].location.column
+            );
+        } else {
+            log::debug!("No more tokens after semicolon");
+        }
+        input
     } else {
-        log::error!("Expected semicolon after let statement");
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        )));
+        log::warn!(
+            "No semicolon found after let statement. Next token: {:?} at {}:{}",
+            input.0.get(0).map(|t| &t.token_type),
+            input.0.get(0).map(|t| t.location.line).unwrap_or(0),
+            input.0.get(0).map(|t| t.location.column).unwrap_or(0)
+        );
+        // Don't fail if there's no semicolon, just continue
+        input
     };
 
     let let_stmt = LetStatementNode {
@@ -101,7 +210,7 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
     Ok((input, StatementNode::Let(Box::new(let_stmt))))
 }
 
-use medic_ast::ast::ReturnNode;
+// ReturnNode is already imported above
 
 /// Parses a `return` statement, optionally with a return value expression.
 ///
@@ -161,8 +270,6 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     }
 }
 
-use medic_ast::ast::IfNode;
-
 /// Parses an `if` statement, including optional `else` and `else if` clauses.
 ///
 /// This function consumes the `if` keyword, parses the condition expression, and the associated block for the `then` branch. If an `else` keyword is present, it parses either an `else if` statement recursively or an `else` block. Returns an `IfNode` wrapped in a `StatementNode::If`.
@@ -194,8 +301,21 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
     // Consume 'if' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
 
-    // Parse the condition
-    let (new_input, condition) = parse_expression(input)?;
+    // Parse the condition - first try to parse as a simple identifier
+    let (new_input, condition) = match take_token_if(|t| matches!(t, TokenType::Identifier(_)), ErrorKind::Alpha)(input) {
+        Ok((new_input, token)) => {
+            // Successfully parsed an identifier
+            if let TokenType::Identifier(name) = &token.token_type {
+                (new_input, ExpressionNode::Identifier(IdentifierNode { name: name.to_string() }))
+            } else {
+                unreachable!() // We already checked this is an identifier
+            }
+        },
+        Err(_) => {
+            // Fall back to parsing as a full expression
+            parse_expression(input)?
+        }
+    };
     input = new_input;
 
     // Parse the then block
@@ -241,7 +361,7 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
     }
 }
 
-use medic_ast::ast::WhileNode;
+// WhileNode is already imported above
 
 /// Parses a `while` statement, including its condition and body block.
 ///
@@ -279,54 +399,44 @@ use medic_ast::ast::WhileNode;
 /// # Returns
 /// A tuple containing the remaining input and the parsed while statement if successful
 pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    if cfg!(debug_assertions) {
-        log::trace!("Starting to parse while statement");
-    }
+    log::trace!("Starting to parse while statement");
 
-    // Consume 'while' keyword and get remaining input
-    let (input, _) = take_token_if(
-        |t| {
-            if cfg!(debug_assertions) {
-                log::trace!("Checking token: {:?}", t);
-            }
-            matches!(t, TokenType::While)
-        },
+    // Consume 'while' keyword
+    let (mut input, _) = take_token_if(
+        |t| matches!(t, TokenType::While),
         ErrorKind::Tag,
     )(input)?;
 
-    if cfg!(debug_assertions) {
-        log::trace!("After consuming 'while' keyword");
-    }
+    log::trace!("After consuming 'while' keyword");
 
-    // Parse the condition
-    if cfg!(debug_assertions) {
-        log::trace!("Parsing condition...");
-    }
-    let (input, condition) = parse_expression(input).map_err(|e| {
-        if cfg!(debug_assertions) {
-            log::error!("Error parsing condition: {:?}", e);
-        }
-        e
-    })?;
+    // Parse the condition (with or without parentheses)
+    log::debug!("Parsing while condition");
+    let (input, condition) = if let Ok((input, _)) = take_token_if(|t| matches!(t, TokenType::LeftParen), ErrorKind::Tag)(input) {
+        // Condition is wrapped in parentheses
+        log::debug!("Found opening parenthesis for condition");
+        let (input, condition) = parse_expression(input)?;
+        let (input, _) = take_token_if(|t| matches!(t, TokenType::RightParen), ErrorKind::Tag)(input)?;
+        log::debug!("Found closing parenthesis for condition");
+        (input, condition)
+    } else {
+        // Condition without parentheses - parse as a general expression
+        log::debug!("No parentheses found, parsing condition as expression");
+        parse_expression(input)?
+    };
+    
+    log::debug!("Successfully parsed while condition");
 
-    if cfg!(debug_assertions) {
-        log::trace!("Condition parsed successfully: {:?}", condition);
-    }
+
+    log::debug!("Condition parsed successfully: {:?}", condition);
 
     // Parse the body block
-    if cfg!(debug_assertions) {
-        log::trace!("Parsing body block...");
-    }
+    log::trace!("Parsing body block...");
     let (input, body) = parse_block(input).map_err(|e| {
-        if cfg!(debug_assertions) {
-            log::error!("Error parsing block: {:?}", e);
-        }
+        log::error!("Error parsing block: {:?}", e);
         e
     })?;
 
-    if cfg!(debug_assertions) {
-        log::trace!("Body block parsed successfully");
-    }
+    log::trace!("Body block parsed successfully");
 
     let while_node = WhileNode { condition, body };
     Ok((input, StatementNode::While(Box::new(while_node))))
@@ -387,66 +497,103 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 ///
 /// # Arguments
 /// * `input` - A slice of tokens to parse
-///
 /// # Returns
 /// A tuple containing the remaining input and the parsed statement if successful
 pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     log::debug!("=== parse_statement ===");
-    log::debug!("Next token: {:?}", input.peek().map(|t| &t.token_type));
-
-    // Check the first token to determine the statement type
-    if let Some(token) = input.peek() {
-        match token.token_type {
+    log::debug!("Input length: {}", input.0.len());
+    
+    if !input.0.is_empty() {
+        log::debug!("Next token: {:?} at {}:{}", 
+            input.0[0].token_type, 
+            input.0[0].location.line, 
+            input.0[0].location.column
+        );
+        
+        if input.0.len() > 1 {
+            log::debug!("Next 2 tokens: {:?} and {:?}", 
+                input.0[0].token_type, 
+                input.0[1].token_type
+            );
+        }
+    } else {
+        log::error!("Unexpected end of input in parse_statement");
+        return Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Tag)));
+    }
+    
+    // Try to parse different statement types based on the first token
+    let result = match input.peek() {
+        Some(token) => match &token.token_type {
             TokenType::Let => {
-                // parse_let_statement already consumes the semicolon
+                log::debug!("Found 'let' statement");
                 parse_let_statement(input)
             }
             TokenType::Return => {
-                let (input, stmt) = parse_return_statement(input)?;
-                // Consume the semicolon if present
-                if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
-                    let (new_input, _) = take_token_if(
-                        |t| matches!(t, TokenType::Semicolon),
-                        ErrorKind::Tag,
-                    )(input)?;
-                    return Ok((new_input, stmt));
-                }
-                Ok((input, stmt))
+                log::debug!("Found 'return' statement");
+                parse_return_statement(input)
             }
-            TokenType::If => parse_if_statement(input),
-            TokenType::While => parse_while_statement(input),
+            TokenType::If => {
+                log::debug!("Found 'if' statement");
+                parse_if_statement(input)
+            }
+            TokenType::While => {
+                log::debug!("Found 'while' statement");
+                parse_while_statement(input)
+            }
             _ => {
-                // Try to parse an assignment statement
-                if let Ok((mut input, stmt)) = parse_assignment_statement(input) {
-                    // Consume the semicolon if present
-                    if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
-                        let (new_input, _) = take_token_if(
-                            |t| matches!(t, TokenType::Semicolon),
-                            ErrorKind::Tag,
-                        )(input)?;
-                        input = new_input;
+                log::debug!("No statement keyword found, trying expression statement");
+                // Try to parse as an expression statement
+                match parse_expression(input) {
+                    Ok((input, expr)) => {
+                        log::debug!("Successfully parsed expression statement");
+                        // Consume the semicolon if present
+                        let input = if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                            log::debug!("Consuming semicolon after expression");
+                            input.advance()
+                        } else {
+                            log::debug!("No semicolon after expression");
+                            input
+                        };
+                        Ok((input, StatementNode::Expr(expr)))
                     }
-                    return Ok((input, stmt));
+                    Err(e) => {
+                        log::error!("Failed to parse expression: {:?}", e);
+                        Err(e)
+                    }
                 }
-
-                // Fall back to parsing an expression statement
-                let (mut input, expr) = parse_expression(input)?;
-                // Consume the semicolon if present
-                if let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
-                    let (new_input, _) = take_token_if(
-                        |t| matches!(t, TokenType::Semicolon),
-                        ErrorKind::Tag,
-                    )(input)?;
-                    input = new_input;
-                }
-                Ok((input, StatementNode::Expr(expr)))
             }
+        },
+        None => {
+            log::error!("Unexpected end of input in parse_statement");
+            Err(nom::Err::Error(nom::error::Error::new(input, ErrorKind::Eof)))
         }
-    } else {
-        log::debug!("No more tokens in parse_statement");
-        Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        )))
+    };
+    
+    // Log the result of parsing
+    match result {
+        Ok((remaining, stmt)) => {
+            log::debug!("Successfully parsed statement: {:?}", stmt);
+            log::debug!("Remaining tokens after statement: {}", remaining.0.len());
+            
+            if !remaining.0.is_empty() {
+                log::debug!("Next token after statement: {:?} at {}:{}", 
+                    remaining.0[0].token_type,
+                    remaining.0[0].location.line,
+                    remaining.0[0].location.column
+                );
+            }
+            
+            Ok((remaining, stmt))
+        },
+        Err(e) => {
+            log::error!("Failed to parse statement: {:?}", e);
+            if let nom::Err::Error(ref e) = e {
+                log::error!("Error at position: {}", e.input.0.len());
+                if !e.input.0.is_empty() {
+                    log::error!("Error token: {:?}", e.input.0[0]);
+                }
+            }
+            Err(e)
+        }
     }
 }

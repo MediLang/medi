@@ -194,6 +194,16 @@ impl<'a> TypeChecker<'a> {
                     StatementNode::Expr(ref expr) => self.check_expr(expr),
                     _ => MediType::Void, // Other statements don't produce values
                 }
+            },
+            ExpressionNode::Struct(struct_lit) => {
+                // For struct literals, we return a struct type with field types
+                // TODO: Look up the actual struct definition for more precise type checking
+                let mut fields = std::collections::HashMap::new();
+                for field in &struct_lit.fields {
+                    let field_type = self.check_expr(&field.value);
+                    fields.insert(field.name.clone(), field_type);
+                }
+                MediType::Struct(fields)
             }
         }
     }
