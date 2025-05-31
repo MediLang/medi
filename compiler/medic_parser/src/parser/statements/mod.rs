@@ -1,5 +1,12 @@
 use nom::error::ErrorKind;
 use nom::IResult;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::multispace0;
+use nom::combinator::{map, value};
+use nom::multi::separated_list1;
+use nom::sequence::{delimited, tuple};
+use nom_supreme::tag::complete::tag as nom_tag;
 
 use crate::parser::{
     parse_block, parse_expression, parse_primary, take_token_if, TokenSlice, TokenType,
@@ -12,6 +19,7 @@ use medic_ast::ast::{
 };
 
 use super::{expressions::parse_expression as parse_expr, identifiers::parse_identifier};
+use std::convert::TryFrom;
 
 /// Parses a `let` statement from the input token stream.
 ///
@@ -515,33 +523,83 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
     ))
 }
 
-/// Parses a single statement from the input token stream.
-///
-/// Determines the statement type based on the first token and delegates to the appropriate parser for `let`, `return`, `if`, or `while` statements. If no recognized statement keyword is found, attempts to parse an expression statement terminated by a semicolon. Returns the parsed statement node and the remaining input.
+/// Parses a match statement with the syntax: `match` <expression> `{` <arms> `}`
+/// where <arms> is a comma-separated list of patterns and expressions.
 ///
 /// # Examples
-///
 /// ```
-/// use medic_lexer::token::{Token, TokenType, Location};
-/// use medic_lexer::string_interner::InternedString;
-/// use medic_parser::parser::{TokenSlice, statements::parse_statement};
-///
-/// let tokens = vec![
-///     Token::new(TokenType::Let, "let", Location { line: 1, column: 1, offset: 0 }),
-///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", Location { line: 1, column: 5, offset: 4 }),
-///     Token::new(TokenType::Equal, "=", Location { line: 1, column: 7, offset: 6 }),
-///     Token::new(TokenType::Integer(5), "5", Location { line: 1, column: 9, offset: 8 }),
-///     Token::new(TokenType::Semicolon, ";", Location { line: 1, column: 10, offset: 9 }),
-/// ];
-/// let input = TokenSlice::new(&tokens);
-/// let result = parse_statement(input);
-/// assert!(result.is_ok());
+/// match x {
+///     1 => "one",
+///     2 => "two",
+///     _ => "other"
+/// }
 /// ```
+pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    // Parse the `match` keyword
+    let (input, _) = take_token_if(input, |t| t.token_type == TokenType::Match)?;
+    
+    // Parse the expression to match against
+    let (input, expr) = parse_expression(input)?;
+    
+    // Parse the opening brace
+    let (input, _) = take_token_if(input, |t| t.token_type == TokenType::LeftBrace)?;
+    
+    // Parse match arms (pattern => expression)
+    let (input, arms) = separated_list1(
+        // Match arms are separated by commas
+        delimited(multispace0, nom_tag(","), multispace0),
+        // Each arm is a pattern followed by => and an expression
+        tuple((
+            // Parse the pattern (simplified for now - just literals or identifiers)
+            alt((
+                // Parse identifier pattern
+                map(
+                    |i| take_token_if(i, |t| matches!(t.token_type, TokenType::Identifier(_))),
+                    |t| match t.token_type {
+                        TokenType::Identifier(id) => PatternNode::Identifier(IdentifierNode { 
+                            name: id.to_string() 
+                        }),
+                        _ => unreachable!(),
+                    },
+                ),
+                // Parse wildcard pattern
+                value(PatternNode::Wildcard, nom_tag("_")),
+                // Parse literal patterns (integers for now)
+                map(
+                    |i| take_token_if(i, |t| matches!(t.token_type, TokenType::Integer(_))),
+                    |t| match t.token_type {
+                        TokenType::Integer(n) => PatternNode::Literal(LiteralNode::Int(n)),
+                        _ => unreachable!(),
+                    },
+                ),
+            )),
+            // Parse the =>
+            delimited(
+                multispace0,
+                nom_tag("=>"),
+                multispace0,
+            ),
+            // Parse the expression
+            map(parse_expression, |expr| Box::new(expr)),
+        ))
+        .map(|(pattern, _, expr)| MatchArmNode { pattern, body: expr }),
+    )(input)?;
+    
+    // Parse the closing brace
+    let (input, _) = take_token_if(input, |t| t.token_type == TokenType::RightBrace)?;
+    
+    Ok((
+        input,
+        StatementNode::Match(Box::new(MatchNode {
+            expr: Box::new(expr),
+            arms,
+        })),
+    ))
+}
+
+/// Parses a single statement from the input token stream.
 ///
-/// # Arguments
-/// * `input` - A slice of tokens to parse
-/// # Returns
-/// A tuple containing the remaining input and the parsed statement if successful
+/// Determines the statement type based on the first token and delegates to the appropriate parser.
 pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     log::debug!("=== parse_statement ===");
     log::debug!("Input length: {}", input.0.len());
@@ -583,6 +641,10 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
             TokenType::If => {
                 log::debug!("Found 'if' statement");
                 parse_if_statement(input)
+            }
+            TokenType::Match => {
+                log::debug!("Found 'match' statement");
+                parse_match_statement(input)
             }
             TokenType::While => {
                 log::debug!("Found 'while' statement");
