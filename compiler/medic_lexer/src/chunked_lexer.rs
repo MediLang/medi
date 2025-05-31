@@ -482,9 +482,9 @@ impl ChunkedLexer {
             return Ok(false);
         }
 
-        // Read the next chunk from the source
-        let mut chunk = String::with_capacity(self.config.chunk_size);
-        let source = match self.source.read_line(&mut chunk) {
+        // Read the next chunk from the source as raw bytes
+        let mut buffer = vec![0u8; self.config.chunk_size];
+        let source = match self.source.read(&mut buffer) {
             Ok(0) => {
                 // Reached EOF
                 self.eof = true;
@@ -501,9 +501,10 @@ impl ChunkedLexer {
                 // Return true if there are still tokens in the buffer
                 return Ok(!self.buffer.is_empty());
             }
-            Ok(_bytes_read) => {
-                // Successfully read a chunk
-                self.current_chunk = chunk;
+            Ok(bytes_read) => {
+                // Convert bytes to string, replacing any invalid UTF-8 sequences with the replacement character
+                let chunk = String::from_utf8_lossy(&buffer[..bytes_read]).into_owned();
+                self.current_chunk = chunk.clone();
 
                 // Handle any partial token from the previous chunk
                 if let Some(partial) = self.partial_token.take() {
@@ -512,7 +513,7 @@ impl ChunkedLexer {
                     trace!("Combined partial token with new chunk: '{}'", &combined);
                     combined
                 } else {
-                    self.current_chunk.clone()
+                    chunk
                 }
             }
             Err(e) => {
@@ -708,7 +709,6 @@ impl ChunkedLexer {
                 column: token.location.column,
                 offset: token.location.offset,
             };
-            self.position.advance(token.lexeme.as_str());
             return Some(token);
         }
 
@@ -730,7 +730,6 @@ impl ChunkedLexer {
                             column: token.location.column,
                             offset: token.location.offset,
                         };
-                        self.position.advance(token.lexeme.as_str());
                         return Some(token);
                     }
                     // If we didn't get any tokens but read_next_chunk returned true,
