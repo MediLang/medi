@@ -131,6 +131,12 @@ impl<'a> TypeChecker<'a> {
                         // Return the type of the right operand
                         right
                     }
+                    // Assignment operator
+                    BinaryOperator::Assign => {
+                        // The type of an assignment is the type of the right-hand side
+                        // Note: We might want to add type checking that left is assignable here
+                        right
+                    }
                 }
             }
             ExpressionNode::Call(call) => {
@@ -194,7 +200,7 @@ impl<'a> TypeChecker<'a> {
                     StatementNode::Expr(ref expr) => self.check_expr(expr),
                     _ => MediType::Void, // Other statements don't produce values
                 }
-            },
+            }
             ExpressionNode::Struct(struct_lit) => {
                 // For struct literals, we return a struct type with field types
                 // TODO: Look up the actual struct definition for more precise type checking

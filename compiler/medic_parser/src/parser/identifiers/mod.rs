@@ -37,21 +37,20 @@ use super::expressions::parse_expression;
 pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
     log::debug!("=== parse_identifier ===");
     log::debug!("Input length: {}", input.0.len());
-    
+
     if let Some(token) = input.peek() {
-        log::debug!("Current token: {:?} at {}:{}", 
-            token.token_type, 
-            token.location.line, 
+        log::debug!(
+            "Current token: {:?} at {}:{}",
+            token.token_type,
+            token.location.line,
             token.location.column
         );
         match &token.token_type {
             TokenType::Identifier(name) => {
                 log::debug!("Parsing identifier: {}", name);
-                let result = take_token_if(
-                    |t| matches!(t, TokenType::Identifier(_)),
-                    ErrorKind::Tag,
-                )(input);
-                
+                let result =
+                    take_token_if(|t| matches!(t, TokenType::Identifier(_)), ErrorKind::Tag)(input);
+
                 let (input, _) = match result {
                     Ok(r) => r,
                     Err(e) => {

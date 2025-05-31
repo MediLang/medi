@@ -60,7 +60,7 @@ pub struct BinaryExpressionNode {
 pub enum BinaryOperator {
     // Assignment (right-associative, lowest precedence)
     Assign,
-    
+
     // Logical OR (left-associative)
     Or,
 
@@ -338,11 +338,13 @@ impl std::fmt::Display for ExpressionNode {
             ExpressionNode::Struct(s) => {
                 write!(f, "{} {{", s.type_name)?;
                 for (i, field) in s.fields.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}: {}", field.name, field.value)?;
                 }
                 write!(f, "}}")
-            },
+            }
             _ => todo!(),
         }
     }

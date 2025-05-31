@@ -600,7 +600,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
     match token_type {
         // Assignment operator (right-associative, lowest precedence)
         TokenType::Equal => Some((BinaryOperator::Assign, true)),
-        
+
         // Medical operators
         TokenType::Of => Some((BinaryOperator::Of, false)),
         TokenType::Per => Some((BinaryOperator::Per, false)),
@@ -652,7 +652,7 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
     match op {
         // Assignment has the lowest precedence (right-associative)
         BinaryOperator::Assign => 0,
-        
+
         // Unit conversion (highest precedence)
         BinaryOperator::UnitConversion => 16,
 
@@ -724,30 +724,32 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
 pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
     log::debug!("=== parse_program ===");
     log::debug!("Initial tokens: {}", input.0.len());
-    
+
     if !input.0.is_empty() {
-        log::debug!("First token: {:?} at {}:{}", 
-            input.0[0].token_type, 
-            input.0[0].location.line, 
+        log::debug!(
+            "First token: {:?} at {}:{}",
+            input.0[0].token_type,
+            input.0[0].location.line,
             input.0[0].location.column
         );
     }
-    
+
     // Parse zero or more statements
     let result = many0(parse_statement)(input);
-    
+
     match &result {
         Ok((remaining, statements)) => {
             log::debug!("Successfully parsed {} statements", statements.len());
             log::debug!("Remaining tokens: {}", remaining.0.len());
-            
+
             if !remaining.0.is_empty() {
                 log::warn!("=== UNPARSED TOKENS ===");
                 for (i, token) in remaining.0.iter().take(5).enumerate() {
-                    log::warn!("  {}: {:?} ({}:{})", 
-                        i, 
-                        token.token_type, 
-                        token.location.line, 
+                    log::warn!(
+                        "  {}: {:?} ({}:{})",
+                        i,
+                        token.token_type,
+                        token.location.line,
                         token.location.column
                     );
                 }
@@ -755,12 +757,12 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
                     log::warn!("  ... and {} more", remaining.0.len() - 5);
                 }
             }
-            
+
             // Log the parsed statements for debugging
             for (i, stmt) in statements.iter().enumerate() {
                 log::debug!("Statement {}: {:?}", i, stmt);
             }
-        },
+        }
         Err(e) => {
             log::error!("Failed to parse program: {:?}", e);
             if let Err(nom::Err::Error(e)) = &result {
@@ -768,7 +770,7 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
             }
         }
     }
-    
+
     result.map(|(input, statements)| (input, ProgramNode { statements }))
 }
 
@@ -909,22 +911,29 @@ pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, St
 /// ```
 pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     debug!("Starting parse_match_statement with input: {:?}", input);
-    
+
     // Parse the 'match' keyword
-    debug!("Starting to parse match statement. Input length: {}", input.0.len());
-    let (input, _) = match take_token_if(|tt| matches!(tt, TokenType::Match), ErrorKind::Tag)(input) {
+    debug!(
+        "Starting to parse match statement. Input length: {}",
+        input.0.len()
+    );
+    let (input, _) = match take_token_if(|tt| matches!(tt, TokenType::Match), ErrorKind::Tag)(input)
+    {
         Ok(result) => {
             debug!("Successfully parsed 'match' keyword");
             result
-        },
+        }
         Err(e) => {
             debug!("Failed to parse 'match' keyword: {:?}", e);
             return Err(e);
         }
     };
-    
-    debug!("After 'match' keyword, remaining input length: {}", input.0.len());
-    
+
+    debug!(
+        "After 'match' keyword, remaining input length: {}",
+        input.0.len()
+    );
+
     // Ensure there's at least one token after 'match'
     if input.0.is_empty() {
         debug!("Unexpected end of input after 'match' keyword");
@@ -945,18 +954,21 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
                 debug!("Found identifier: {:?}", token);
                 (
                     input.advance(),
-                    ExpressionNode::Identifier(IdentifierNode::new(ident))
+                    ExpressionNode::Identifier(IdentifierNode::new(ident)),
                 )
-            },
+            }
             TokenType::Integer(n) => {
                 debug!("Found integer literal: {:?}", token);
                 (
                     input.advance(),
-                    ExpressionNode::Literal(LiteralNode::Int(*n))
+                    ExpressionNode::Literal(LiteralNode::Int(*n)),
                 )
-            },
+            }
             _ => {
-                debug!("Expected identifier or integer after 'match' keyword, found: {:?}", token);
+                debug!(
+                    "Expected identifier or integer after 'match' keyword, found: {:?}",
+                    token
+                );
                 return Err(nom::Err::Error(nom::error::Error::new(
                     input,
                     nom::error::ErrorKind::Tag,
@@ -971,89 +983,103 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
             )));
         }
     };
-    
-    
+
     debug!("Successfully parsed match expression: {:?}", expr);
-    debug!("Remaining input after expression: {:?}", input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>());
+    debug!(
+        "Remaining input after expression: {:?}",
+        input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
+    );
 
     // Parse the opening brace
-    debug!("Looking for opening brace. Next token: {:?}", input.0.first().map(|t| &t.token_type));
-    let result = take_token_if(
-        |tt| matches!(tt, TokenType::LeftBrace), 
-        ErrorKind::Tag
-    )(input);
-    
+    debug!(
+        "Looking for opening brace. Next token: {:?}",
+        input.0.first().map(|t| &t.token_type)
+    );
+    let result = take_token_if(|tt| matches!(tt, TokenType::LeftBrace), ErrorKind::Tag)(input);
+
     let (input, _) = match result {
         Ok((rest, _)) => {
             debug!("Successfully parsed opening brace");
-            debug!("Remaining after opening brace: {:?}", rest.0.iter().map(|t| &t.token_type).collect::<Vec<_>>());
+            debug!(
+                "Remaining after opening brace: {:?}",
+                rest.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
+            );
             (rest, ())
-        },
+        }
         Err(e) => {
-            debug!("Failed to parse opening brace. Expected '{{', found: {:?}", 
-                  input.0.first().map(|t| &t.token_type));
+            debug!(
+                "Failed to parse opening brace. Expected '{{', found: {:?}",
+                input.0.first().map(|t| &t.token_type)
+            );
             return Err(e);
         }
     };
 
     // Check for empty match block first
-    debug!("Checking for empty match block. Next token: {:?}", input.0.first().map(|t| &t.token_type));
+    debug!(
+        "Checking for empty match block. Next token: {:?}",
+        input.0.first().map(|t| &t.token_type)
+    );
     let (input, arms) = match take_token_if(
-        |tt| matches!(tt, TokenType::RightBrace), 
-        ErrorKind::Tag
-    )(input) {
+        |tt| matches!(tt, TokenType::RightBrace),
+        ErrorKind::Tag,
+    )(input)
+    {
         Ok((input, _)) => {
             debug!("Found empty match block");
-            debug!("Remaining after empty match block: {:?}", input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>());
+            debug!(
+                "Remaining after empty match block: {:?}",
+                input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
+            );
             (input, Vec::new())
-        },
+        }
         Err(e) => {
             debug!("No empty match block found: {:?}", e);
             // Parse match arms
             let mut arms = Vec::new();
             let mut input = input;
-            
+
             // Parse match arms until we hit a closing brace
             loop {
                 // Try to parse a pattern
                 let (new_input, pattern) = parse_pattern(input)?;
                 input = new_input;
-                
+
                 // Parse the arrow
-                let (new_input, _) = take_token_if(
-                    |tt| matches!(tt, TokenType::FatArrow), 
-                    ErrorKind::Tag
-                )(input)?;
+                let (new_input, _) =
+                    take_token_if(|tt| matches!(tt, TokenType::FatArrow), ErrorKind::Tag)(input)?;
                 input = new_input;
-                
+
                 // Parse the expression
                 let (new_input, expr) = parse_expression(input)?;
                 input = new_input;
-                
+
                 // Add the arm
                 arms.push(MatchArmNode {
                     pattern,
                     body: Box::new(expr),
                 });
-                
+
                 // Check for comma (optional before the last arm)
-                input = match take_token_if(|tt| matches!(tt, TokenType::Comma), ErrorKind::Tag)(input) {
-                    Ok((input, _)) => input,
-                    Err(_) => break, // No more arms
-                };
-                
+                input =
+                    match take_token_if(|tt| matches!(tt, TokenType::Comma), ErrorKind::Tag)(input)
+                    {
+                        Ok((input, _)) => input,
+                        Err(_) => break, // No more arms
+                    };
+
                 // Check for closing brace after comma
-                if let Ok((new_input, _)) = 
-                    take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input) 
+                if let Ok((new_input, _)) =
+                    take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input)
                 {
                     input = new_input;
                     break;
                 }
             }
-            
+
             // Parse the final closing brace if not already consumed
-            let input = if let Ok((input, _)) = 
-                take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input) 
+            let input = if let Ok((input, _)) =
+                take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input)
             {
                 input
             } else {
@@ -1062,7 +1088,7 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
                     ErrorKind::Tag,
                 )));
             };
-            
+
             (input, arms)
         }
     };

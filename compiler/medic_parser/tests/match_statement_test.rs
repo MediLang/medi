@@ -1,10 +1,10 @@
-use std::env;
-use medic_lexer::token::{Token, TokenType};
-use medic_lexer::token::TokenType::*;
-use medic_lexer::token::Location;
-use medic_lexer::string_interner::InternedString;
-use medic_parser::parser::{TokenSlice, parse_match_statement};
 use medic_ast::ast::StatementNode;
+use medic_lexer::string_interner::InternedString;
+use medic_lexer::token::Location;
+use medic_lexer::token::Token;
+use medic_lexer::token::TokenType::*;
+use medic_parser::parser::{parse_match_statement, TokenSlice};
+use std::env;
 
 // Simple logger for tests
 struct TestLogger;
@@ -30,35 +30,42 @@ fn test_parse_empty_match_statement() {
     // Initialize our test logger
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
-    
+
     println!("Starting test_parse_empty_match_statement");
-    
-    let loc = Location { line: 1, column: 1, offset: 0 };
+
+    let loc = Location {
+        line: 1,
+        column: 1,
+        offset: 0,
+    };
     let tokens = vec![
-        Token::new(Match, "match", loc.clone()),
-        Token::new(Identifier(InternedString::from("x")), "x", loc.clone()),
-        Token::new(LeftBrace, "{", loc.clone()),
-        Token::new(RightBrace, "}", loc.clone()),
+        Token::new(Match, "match", loc),
+        Token::new(Identifier(InternedString::from("x")), "x", loc),
+        Token::new(LeftBrace, "{", loc),
+        Token::new(RightBrace, "}", loc),
     ];
-    
+
     // Print the token stream for debugging
     println!("Token stream:");
     for (i, token) in tokens.iter().enumerate() {
         println!("  {}: {:?}", i, token.token_type);
     }
-    
+
     let slice = TokenSlice::new(&tokens);
     println!("Testing parse_match_statement...");
     let result = parse_match_statement(slice);
-    
+
     match &result {
         Ok((remaining, stmt)) => {
             println!("Parse successful!");
             println!("  Remaining tokens: {}", remaining.0.len());
             println!("  Statement: {:?}", stmt);
             assert!(remaining.is_empty(), "Expected no remaining tokens");
-            assert!(matches!(stmt, StatementNode::Match(_)), "Expected Match statement");
-        },
+            assert!(
+                matches!(stmt, StatementNode::Match(_)),
+                "Expected Match statement"
+            );
+        }
         Err(e) => {
             println!("Parse failed: {:?}", e);
             panic!("Parse failed: {:?}", e);

@@ -240,11 +240,14 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                 input.0[0].location.column
             );
             log::debug!("Remaining tokens: {}", input.0.len());
-            
+
             // In the context of an if statement, we don't want to treat `x {}` as a struct literal
             // Instead, we'll just parse it as an identifier and let the statement parser handle the block
-            let is_in_if_context = input.0.iter().any(|t| matches!(t.token_type, TokenType::If));
-            
+            let is_in_if_context = input
+                .0
+                .iter()
+                .any(|t| matches!(t.token_type, TokenType::If));
+
             if !is_in_if_context {
                 // Only check for struct literals if we're not in an if statement context
                 if input.0.len() > 1 {
@@ -256,13 +259,16 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                                 input.0[1].location.column
                             );
                             return parse_struct_literal(input);
-                        },
-                        _ => log::debug!("Next token is {:?}, not a struct literal", input.0[1].token_type)
+                        }
+                        _ => log::debug!(
+                            "Next token is {:?}, not a struct literal",
+                            input.0[1].token_type
+                        ),
                     }
                 } else {
                     log::debug!("No more tokens after identifier");
                 }
-                
+
                 log::debug!("Not a struct literal, parsing as regular identifier");
                 // Look ahead to see if this is a struct literal
                 if input.0.len() > 1 && matches!(input.0[1].token_type, TokenType::LeftBrace) {
@@ -271,7 +277,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             } else {
                 log::debug!("In if statement context, not treating as struct literal");
             }
-            
+
             // Otherwise parse as identifier or member expression
             let (mut input, left) = parse_identifier(input)?;
 

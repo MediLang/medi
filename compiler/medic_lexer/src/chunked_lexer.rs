@@ -170,8 +170,6 @@ impl Position {
             offset: self.offset,
         }
     }
-
-
 }
 
 /// Represents a token that spans multiple chunks

@@ -80,7 +80,10 @@ mod medical_operators_test {
         eprintln!("Parsed expression: {:#?}", expr);
 
         // The 'doses' token should still be in the remaining tokens
-        assert!(!remaining.is_empty(), "Expected 'doses' token to remain unparsed");
+        assert!(
+            !remaining.is_empty(),
+            "Expected 'doses' token to remain unparsed"
+        );
         assert_eq!(remaining.0[0].lexeme, "doses");
 
         match &expr {
