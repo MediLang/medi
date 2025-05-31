@@ -4,86 +4,127 @@ Medi's syntax is designed to be intuitive for both beginners and experienced pro
 
 ## File Extension
 
-Medi source files use the `.mdi` extension:  
+Medi source files use the `.medi` extension:  
 ```
-myprogram.mdi
-patient_analysis.mdi
+myprogram.medi
+patient_analysis.medi
 ```
 
 ## Variables and Types
 
-Medi uses type inference but also supports explicit typing:
+Medi uses type inference but also supports explicit typing. Variables are declared with `let` and can be made mutable with `mut`:
 
-```mdi
-// Type inference
-patient_name = "John Doe";  // String
-heart_rate = 75;  // Integer
-temperature = 98.6;  // Float
+```medi
+// Type inference with let
+let patient_name = "John Doe";  // string
+let heart_rate = 75;           // int
+let temperature = 98.6;        // float
+let is_critical = false;       // bool
 
-// Explicit typing
-String patient_id = "P-12345";
-Integer bp_systolic = 120;
-Float bmi = 22.5;
+// Explicit type annotations
+let patient_id: string = "P-12345";
+let bp_systolic: int = 120;
+let bmi: float = 22.5;
+
+// Mutable variables
+let mut count = 0;
+count += 1;  // This works because count is mutable
+
+// Constants (must be explicitly typed)
+const MAX_HEART_RATE: int = 220;
+const PI: float = 3.14159;
 ```
 
 ## Healthcare Data Types
 
-Medi includes native healthcare data types:
+Medi includes native support for healthcare data types and integrates with healthcare standards:
 
-```mdi
-// FHIR resources
-Patient john = fhir_resource("Patient", id: "P-12345");
+```medi
+// FHIR resources (automatically mapped to Medi types)
+let patient = fhir::Patient.get("P-12345");
+let observations = fhir::Observation.search(patient: patient.id, category: "vital-signs");
+
+// Working with medical records
+let record = MedicalRecord {
+  id: "MR-45678",
+  patient: patient,
+  conditions: ["Type 2 Diabetes", "Hypertension"],
+  medications: [
+    Medication { name: "Metformin", dosage: "500mg", frequency: "BID" },
+    Medication { name: "Lisinopril", dosage: "10mg", frequency: "Daily" }
+  ]
+};
 
 // Genomic data
-VCF variants = load_vcf("sample.vcf");
+let variants = vcf::load("sample.vcf");
+let pathogenic_variants = variants.filter(|v| v.clinical_significance == "Pathogenic");
 
-// Time series (for vital signs)
-TimeSeries ecg = load_series("ecg_data.csv", frequency: 250);
+// Time series data (for vital signs, ECGs, etc.)
+let ecg = timeseries::from_csv("ecg_data.csv")?;
+let heart_rate_variability = ecg.calculate_hrv();
+
+// Medical imaging
+let mri = dicom::load("brain_scan.dcm")?;
+let tumor_volume = mri.segment_tumor().calculate_volume();
+
+// Working with medical codes
+let icd10 = icd10::from_code("E11.65");  // Type 2 diabetes with hyperglycemia
+let snomed = snomed::from_code("44054006");  // Diabetes mellitus
 ```
 
 ## Control Flow
 
-Medi's control flow constructs are similar to Python and C-like languages:
+Medi's control flow constructs are similar to Rust and other C-like languages:
 
-```mdi
+```medi
 // If-else statement
-if (heart_rate > 100) {
+if heart_rate > 100 {
   alert("Tachycardia detected");
-} else if (heart_rate < 60) {
+} else if heart_rate < 60 {
   alert("Bradycardia detected");
 } else {
   log("Normal heart rate");
 }
 
-// For loop
-for (patient in patients) {
+// For loop with pattern matching
+for patient in patients {
   calculate_risk_score(patient);
 }
 
 // While loop
-while (monitoring_active) {
+while monitoring_active {
   read_vitals();
-  sleep(1000);  // milliseconds
+  std::thread::sleep(std::time::Duration::from_millis(1000));
+}
+
+// Match expression (like switch/case but more powerful)
+match patient_status {
+  "critical" => {
+    alert_doctor();
+    increase_monitoring();
+  },
+  "stable" => log("Patient is stable"),
+  _ => log("Unknown status"),
 }
 ```
 
 ## Functions
 
-Functions are declared with the `function` keyword:
+Functions are declared with the `fn` keyword:
 
 ```medi
 // Basic function
-function calculate_bmi(weight_kg, height_m) {
-  return weight_kg / (height_m * height_m);
+fn calculate_bmi(weight_kg, height_m) {
+  weight_kg / (height_m * height_m)
 }
 
 // Function with explicit types
-function Boolean is_hypertensive(Integer systolic, Integer diastolic) {
-  return systolic >= 140 || diastolic >= 90;
+fn is_hypertensive(systolic: int, diastolic: int) -> bool {
+  systolic >= 140 || diastolic >= 90
 }
 
 // With default parameters
-function administer_medication(String med_id, Float dose, String route = "oral") {
+fn administer_medication(med_id: string, dose: float, route: string = "oral") {
   // Implementation
 }
 ```

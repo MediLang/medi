@@ -106,7 +106,7 @@ Medi supports a wide range of healthcare domains, with modular modules:
 *   Clean, modern syntax with explicit visibility modifiers (`pub` keyword).
 *   Module system with a single-file approach for better organization and maintainability.
 *   Expression-oriented programming with powerful pattern matching.
-*   Uses `.mdi` file extension for source files, following industry-standard practices.
+*   Uses `.medi` file extension for source files, following industry-standard practices.
 
 ## Performance and RISC-V
 
@@ -190,7 +190,7 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 
 *   Build parser and LLVM-based `medic` compiler for core syntax using Rust-inspired approach.
 *   Implement modules: `medi.data`, `medi.compliance`, `medi.stats`, `medi.ai`.
-*   Develop a basic IDE with visual analytics and .mdi file recognition.
+*   Develop a basic IDE with visual analytics and .medi file recognition.
 *   Test with synthetic data (FHIR, VCF, IoT streams).
 *   Target RISC-V (RV32) for IoT prototype.
 

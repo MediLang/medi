@@ -5,7 +5,7 @@
 # Priority: low
 # Description: Create a basic IDE with visual analytics capabilities, syntax highlighting, and code completion for Medi.
 # Details:
-Develop a basic Integrated Development Environment (IDE) for Medi with visual analytics capabilities, support for `.mdi` file recognition, syntax highlighting, and basic code completion. Create a prototype of the visual programming interface.
+Develop a basic Integrated Development Environment (IDE) for Medi with visual analytics capabilities, support for `.medi` file recognition, syntax highlighting, and basic code completion. Create a prototype of the visual programming interface.
 
 Key components:
 1. Text editor with syntax highlighting for Medi

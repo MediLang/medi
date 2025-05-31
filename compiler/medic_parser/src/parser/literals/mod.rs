@@ -11,12 +11,13 @@ use crate::parser::{take_token_if, LiteralNode, TokenSlice, TokenType};
 ///
 /// ```
 /// use medic_lexer::token::{Token, TokenType, Location};
+/// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{parse_literal, TokenSlice};
 /// use medic_ast::ast::LiteralNode;
 ///
 /// let loc = Location { line: 1, column: 1, offset: 0 };
 /// let tokens = vec![
-///     Token::new(TokenType::Integer(42), "42".to_string(), loc.clone())
+///     Token::new(TokenType::Integer(42), "42", loc.clone())
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_literal(input);
@@ -38,11 +39,11 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNo
             TokenType::String(s) => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::String(_)), ErrorKind::Tag)(input)?;
-                Ok((input, LiteralNode::String(s.clone())))
+                Ok((input, LiteralNode::String(s.to_string())))
             }
-            TokenType::Bool(b) => {
+            TokenType::Boolean(b) => {
                 let (input, _) =
-                    take_token_if(|t| matches!(t, TokenType::Bool(_)), ErrorKind::Tag)(input)?;
+                    take_token_if(|t| matches!(t, TokenType::Boolean(_)), ErrorKind::Tag)(input)?;
                 Ok((input, LiteralNode::Bool(*b)))
             }
             _ => Err(nom::Err::Error(nom::error::Error::new(

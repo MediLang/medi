@@ -12,3 +12,4 @@ thiserror = "2.0.12"
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+env_logger = "0.11"

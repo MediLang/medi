@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Lexer Benchmarks and File Extension Standardization (2025-05-30)
+- **Added**
+  - Comprehensive benchmarking suite for lexer performance
+  - Documentation for lexer performance characteristics and usage guidelines
+  - Support for `.medi` file extension as the standard for Medi source files
+- **Changed**
+  - Updated all documentation and examples to use `.medi` extension
+  - Refactored lexer benchmarks to handle large files more efficiently
+- **Fixed**
+  - Memory usage in chunked lexer implementation
+  - File handling in benchmark utilities
+
 ### PR #11: Nested Expressions & Statements (2025-05-24)
 - **Added**
   - Support for complex nested binary and block expressions
