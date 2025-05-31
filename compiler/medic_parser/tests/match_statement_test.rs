@@ -12,26 +12,16 @@ use medic_lexer::token::Location;
 use medic_lexer::token::Token;
 use medic_lexer::token::TokenType::*;
 use medic_parser::parser::{parse_match_statement, TokenSlice};
-use std::env;
+use std::sync::Once;
 
-// Simple logger for tests
-struct TestLogger;
+// Initialize the logger only once for all tests
+static INIT: Once = Once::new();
 
-impl log::Log for TestLogger {
-    fn enabled(&self, _metadata: &log::Metadata) -> bool {
-        true
-    }
-
-    fn log(&self, record: &log::Record) {
-        if env::var("RUST_LOG").is_ok() {
-            println!("{} - {}", record.level(), record.args());
-        }
-    }
-
-    fn flush(&self) {}
+fn setup_test_logger() {
+    INIT.call_once(|| {
+        let _ = env_logger::builder().is_test(true).try_init();
+    });
 }
-
-static LOGGER: TestLogger = TestLogger;
 
 fn create_loc(line: u32, column: u32) -> Location {
     Location {
@@ -39,11 +29,6 @@ fn create_loc(line: u32, column: u32) -> Location {
         column: column as usize,
         offset: 0,
     }
-}
-
-fn setup_test_logger() {
-    let _ = log::set_logger(&LOGGER);
-    log::set_max_level(log::LevelFilter::Debug);
 }
 
 #[test]
