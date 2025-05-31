@@ -24,129 +24,246 @@ pub struct Location {
 #[derive(Debug, Clone)]
 pub enum TokenType {
     // Keywords
+    /// `module` keyword - declares a module
     Module,
+    /// `import` keyword - imports items from another module
     Import,
+    /// `fn` keyword - declares a function
     Fn,
+    /// `let` keyword - declares a mutable variable
     Let,
+    /// `const` keyword - declares a compile-time constant
     Const,
+    /// `type` keyword - declares a type alias
     Type,
+    /// `struct` keyword - declares a structure
     Struct,
+    /// `enum` keyword - declares an enumeration
     Enum,
+    /// `trait` keyword - declares a trait
     Trait,
+    /// `impl` keyword - implements functionality for a type
     Impl,
+    /// `pub` keyword - marks an item as public
     Pub,
+    /// `priv` keyword - marks an item as private
     Priv,
+    /// `return` keyword - returns a value from a function
     Return,
+    /// `while` keyword - starts a while loop
     While,
+    /// `for` keyword - starts a for loop
     For,
+    /// `in` keyword - used in for loops and pattern matching
     In,
+    /// `match` keyword - starts a match expression
     Match,
+    /// `if` keyword - starts an if expression
     If,
+    /// `else` keyword - starts an else clause
     Else,
+    /// `loop` keyword - starts an infinite loop
     Loop,
+    /// `break` keyword - exits a loop
     Break,
+    /// `continue` keyword - continues to the next iteration of a loop
     Continue,
+    /// `true` boolean literal
     True,
+    /// `false` boolean literal
     False,
+    /// `nil` literal - represents a null or empty value
     Nil,
-    
+
     // Operators
+    /// `+` operator - addition or unary plus
     Plus,
+    /// `+=` operator - addition assignment
     PlusEqual,
+    /// `-` operator - subtraction or unary minus
     Minus,
+    /// `-=` operator - subtraction assignment
     MinusEqual,
+    /// `*` operator - multiplication
     Star,
+    /// `*=` operator - multiplication assignment
     StarEqual,
+    /// `/` operator - division
     Slash,
+    /// `/=` operator - division assignment
     SlashEqual,
+    /// `%` operator - remainder
     Percent,
+    /// `%=` operator - remainder assignment
     PercentEqual,
+    /// `=` operator - assignment
     Equal,
+    /// `==` operator - equality comparison
     EqualEqual,
+    /// `!` operator - logical NOT
     Not,
+    /// `!=` operator - inequality comparison
     NotEqual,
+    /// `<` operator - less than
     Less,
+    /// `<=` operator - less than or equal to
     LessEqual,
+    /// `>` operator - greater than
     Greater,
+    /// `>=` operator - greater than or equal to
     GreaterEqual,
+    /// `&` operator - bitwise AND
     And,
+    /// `&&` operator - logical AND
     AndAnd,
+    /// `|` operator - bitwise OR
     Or,
+    /// `||` operator - logical OR
     OrOr,
+    /// `&` operator - bitwise AND
     BitAnd,
+    /// `&=` operator - bitwise AND assignment
     BitAndAssign,
+    /// `|` operator - bitwise OR
     BitOr,
+    /// `|=` operator - bitwise OR assignment
     BitOrAssign,
+    /// `^` operator - bitwise XOR
     BitXor,
+    /// `^=` operator - bitwise XOR assignment
     BitXorAssign,
+    /// `!` operator - bitwise NOT
     BitNot,
+    /// `<<` operator - left shift
     Shl,
+    /// `<<=` operator - left shift assignment
     ShlAssign,
+    /// `>>` operator - right shift
     Shr,
+    /// `>>=` operator - right shift assignment
     ShrAssign,
+    /// `**` operator - exponentiation
     DoubleStar,
+    /// `**=` operator - exponentiation assignment
     DoubleStarAssign,
+    /// `of` operator - used in type expressions
     Of,
+    /// `per` operator - used in unit expressions
     Per,
-    
+
     // Punctuation
+    /// `.` operator - member access
     Dot,
+    /// `..` operator - range (exclusive)
     DotDot,
+    /// `...` operator - range (inclusive, deprecated)
     DotDotDot,
+    /// `..=` operator - range (inclusive)
     DotDotEq,
+    /// `,` - separates items
     Comma,
+    /// `:` - type annotation
     Colon,
+    /// `::` - path separator
     ColonColon,
+    /// `;` - statement terminator
     Semicolon,
+    /// `(` - left parenthesis
     LeftParen,
+    /// `)` - right parenthesis
     RightParen,
+    /// `{` - left brace
     LeftBrace,
+    /// `}` - right brace
     RightBrace,
+    /// `[` - left bracket
     LeftBracket,
+    /// `]` - right bracket
     RightBracket,
+    /// `->` - function return type
     Arrow,
+    /// `=>` - match arm separator
     FatArrow,
+    /// `_` - wildcard pattern
     Underscore,
+    /// `@` - pattern binding
     At,
+    /// `#` - attribute
     Pound,
+    /// `$` - macro metavariable
     Dollar,
+    /// `?` - error propagation
     Question,
+    /// `??` - nullish coalescing
     QuestionQuestion,
+    /// `?:` - elvis operator
     QuestionColon,
+    /// `!` - macro or never type
     Bang,
+    /// `|` - pattern separator
     Pipe,
+    /// `..` - range pattern
     Range,
+    /// `..=` - inclusive range pattern
     RangeInclusive,
-    
+
     // Healthcare-specific tokens
+    /// `fhir_query` - FHIR query expression
     FhirQuery,
+    /// `query` - general query expression
     Query,
+    /// `regulate` - regulation expression
     Regulate,
+    /// `scope` - scope definition
     Scope,
+    /// `federated` - federated query
     Federated,
+    /// `safe` - safe call operator
     Safe,
+    /// `realtime` - real-time data access
     RealTime,
+    /// `patient` - patient context
     Patient,
+    /// `observation` - clinical observation
     Observation,
+    /// `medication` - medication reference
     Medication,
-    
+
     // Literals and identifiers
+    /// ICD-10 code literal
     ICD10(InternedString),
+    /// LOINC code literal
     LOINC(InternedString),
+    /// SNOMED CT code literal
     SNOMED(InternedString),
+    /// CPT code literal
     CPT(InternedString),
+    /// Identifier (variable/function name)
     Identifier(InternedString),
+    /// String literal
     String(InternedString),
+    /// Character literal
     Char(char),
+    /// Byte literal
     Byte(u8),
+    /// Byte string literal
     ByteString(InternedString),
+    /// Integer literal
     Integer(i64),
+    /// Floating-point literal
     Float(f64),
+    /// Boolean literal
     Boolean(bool),
+    /// Error token with message
     Error(InternedString),
+    /// Comment
     Comment(InternedString),
+    /// Lexer error
     LexerError,
-    Whitespace,ive 
+    /// Whitespace (usually discarded)
+    Whitespace,
+    /// I've (contraction, used in natural language processing)
+    Ive,
 }
 
 impl PartialEq for TokenType {
@@ -178,7 +295,7 @@ impl PartialEq for TokenType {
             (TokenType::True, TokenType::True) => true,
             (TokenType::False, TokenType::False) => true,
             (TokenType::Nil, TokenType::Nil) => true,
-            
+
             // Operators
             (TokenType::Plus, TokenType::Plus) => true,
             (TokenType::PlusEqual, TokenType::PlusEqual) => true,
@@ -217,7 +334,7 @@ impl PartialEq for TokenType {
             (TokenType::DoubleStarAssign, TokenType::DoubleStarAssign) => true,
             (TokenType::Of, TokenType::Of) => true,
             (TokenType::Per, TokenType::Per) => true,
-            
+
             // Punctuation
             (TokenType::Dot, TokenType::Dot) => true,
             (TokenType::DotDot, TokenType::DotDot) => true,
@@ -246,7 +363,7 @@ impl PartialEq for TokenType {
             (TokenType::Pipe, TokenType::Pipe) => true,
             (TokenType::Range, TokenType::Range) => true,
             (TokenType::RangeInclusive, TokenType::RangeInclusive) => true,
-            
+
             // Healthcare-specific tokens
             (TokenType::FhirQuery, TokenType::FhirQuery) => true,
             (TokenType::Query, TokenType::Query) => true,
@@ -258,7 +375,7 @@ impl PartialEq for TokenType {
             (TokenType::Patient, TokenType::Patient) => true,
             (TokenType::Observation, TokenType::Observation) => true,
             (TokenType::Medication, TokenType::Medication) => true,
-            
+
             // Literals and identifiers with data
             (TokenType::ICD10(a), TokenType::ICD10(b)) => a == b,
             (TokenType::LOINC(a), TokenType::LOINC(b)) => a == b,
@@ -276,7 +393,7 @@ impl PartialEq for TokenType {
             (TokenType::Comment(a), TokenType::Comment(b)) => a == b,
             (TokenType::LexerError, TokenType::LexerError) => true,
             (TokenType::Whitespace, TokenType::Whitespace) => true,
-            
+
             _ => false,
         }
     }
@@ -288,9 +405,15 @@ impl Hash for TokenType {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
-            TokenType::ICD10(s) | TokenType::LOINC(s) | TokenType::SNOMED(s) | TokenType::CPT(s) |
-            TokenType::Identifier(s) | TokenType::String(s) | TokenType::ByteString(s) | 
-            TokenType::Error(s) | TokenType::Comment(s) => {
+            TokenType::ICD10(s)
+            | TokenType::LOINC(s)
+            | TokenType::SNOMED(s)
+            | TokenType::CPT(s)
+            | TokenType::Identifier(s)
+            | TokenType::String(s)
+            | TokenType::ByteString(s)
+            | TokenType::Error(s)
+            | TokenType::Comment(s) => {
                 s.hash(state);
             }
             TokenType::Char(c) => c.hash(state),
@@ -304,7 +427,7 @@ impl Hash for TokenType {
 }
 
 /// Represents a token in the source code, including its type, lexeme, and location.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     /// The type of the token
     pub token_type: TokenType,
@@ -317,7 +440,11 @@ pub struct Token {
 impl Token {
     /// Creates a new token from a string that can be converted to an InternedString.
     /// This will intern the string if it's not already interned.
-    pub fn new<S: Into<InternedString>>(token_type: TokenType, lexeme: S, location: Location) -> Self {
+    pub fn new<S: Into<InternedString>>(
+        token_type: TokenType,
+        lexeme: S,
+        location: Location,
+    ) -> Self {
         Self {
             token_type,
             lexeme: lexeme.into(),
@@ -327,7 +454,11 @@ impl Token {
 
     /// Creates a new token from an already-interned string.
     /// This is more efficient than `new` when you already have an InternedString.
-    pub fn from_interned(token_type: TokenType, lexeme: InternedString, location: Location) -> Self {
+    pub fn from_interned(
+        token_type: TokenType,
+        lexeme: InternedString,
+        location: Location,
+    ) -> Self {
         Self {
             token_type,
             lexeme,

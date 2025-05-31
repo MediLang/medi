@@ -135,17 +135,23 @@ impl<'a> TypeChecker<'a> {
                     BinaryOperator::Assign => {
                         // The type of an assignment is the type of the right-hand side
                         // First check if the left-hand side is a valid lvalue (Identifier or Member)
-                        match &binary_expr.left {
-                            ExpressionNode::Identifier(_) | 
-                            ExpressionNode::Member(_) => {}
-                            _ => {
-                                // Not a valid lvalue
-                                // TODO: Report a type error here
-                                log::error!("Left side of assignment must be an identifier or member expression");
-                                return MediType::Error;
+                        if let ExpressionNode::Binary(bin_expr) = expr {
+                            match &bin_expr.left {
+                                ExpressionNode::Identifier(_) | ExpressionNode::Member(_) => {}
+                                _ => {
+                                    // Not a valid lvalue
+                                    log::error!("Left side of assignment must be an identifier or member expression");
+                                    return MediType::Unknown;
+                                }
                             }
+                        } else {
+                            // This should never happen for a binary expression with assign operator
+                            log::error!(
+                                "Internal error: Expected binary expression for assignment"
+                            );
+                            return MediType::Unknown;
                         }
-                        
+
                         // TODO: Check if the types are compatible
                         // For now, just return the right-hand type
                         right

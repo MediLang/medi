@@ -1,12 +1,9 @@
-use nom::error::ErrorKind;
-use nom::IResult;
 use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::character::complete::multispace0;
-use nom::combinator::{map, value};
+use nom::combinator::{map, recognize, value};
+use nom::error::ErrorKind;
 use nom::multi::separated_list1;
-use nom::sequence::{delimited, tuple};
-use nom_supreme::tag::complete::tag as nom_tag;
+use nom::sequence::{delimited, preceded, tuple};
+use nom::IResult;
 
 use crate::parser::{
     parse_block, parse_expression, parse_primary, take_token_if, TokenSlice, TokenType,
@@ -536,58 +533,88 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 /// ```
 pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Parse the `match` keyword
-    let (input, _) = take_token_if(input, |t| t.token_type == TokenType::Match)?;
-    
+    let (input, _) = take_token_if(|tt| *tt == TokenType::Match, ErrorKind::Tag)(input)?;
+
     // Parse the expression to match against
     let (input, expr) = parse_expression(input)?;
-    
+
     // Parse the opening brace
-    let (input, _) = take_token_if(input, |t| t.token_type == TokenType::LeftBrace)?;
-    
-    // Parse match arms (pattern => expression)
-    let (input, arms) = separated_list1(
-        // Match arms are separated by commas
-        delimited(multispace0, nom_tag(","), multispace0),
-        // Each arm is a pattern followed by => and an expression
-        tuple((
-            // Parse the pattern (simplified for now - just literals or identifiers)
-            alt((
-                // Parse identifier pattern
-                map(
-                    |i| take_token_if(i, |t| matches!(t.token_type, TokenType::Identifier(_))),
-                    |t| match t.token_type {
-                        TokenType::Identifier(id) => PatternNode::Identifier(IdentifierNode { 
-                            name: id.to_string() 
-                        }),
-                        _ => unreachable!(),
-                    },
+    let (input, _) = take_token_if(|tt| *tt == TokenType::LeftBrace, ErrorKind::Tag)(input)?;
+
+    let mut input = input;
+    let mut arms = Vec::new();
+
+    // Keep parsing arms until we hit the closing brace
+    while !input.0.is_empty() {
+        // Check for closing brace
+        if let Some((first, _)) = input.0.split_first() {
+            if first.token_type == TokenType::RightBrace {
+                input = input.advance();
+                break;
+            }
+        }
+
+        // Parse pattern
+        let (next_input, pattern) = if let Some((token, rest)) = input.0.split_first() {
+            match &token.token_type {
+                TokenType::Underscore => (TokenSlice(rest), PatternNode::Wildcard),
+                TokenType::Identifier(id) => (
+                    TokenSlice(rest),
+                    PatternNode::Identifier(IdentifierNode {
+                        name: id.to_string(),
+                    }),
                 ),
-                // Parse wildcard pattern
-                value(PatternNode::Wildcard, nom_tag("_")),
-                // Parse literal patterns (integers for now)
-                map(
-                    |i| take_token_if(i, |t| matches!(t.token_type, TokenType::Integer(_))),
-                    |t| match t.token_type {
-                        TokenType::Integer(n) => PatternNode::Literal(LiteralNode::Int(n)),
-                        _ => unreachable!(),
-                    },
-                ),
-            )),
-            // Parse the =>
-            delimited(
-                multispace0,
-                nom_tag("=>"),
-                multispace0,
-            ),
-            // Parse the expression
-            map(parse_expression, |expr| Box::new(expr)),
-        ))
-        .map(|(pattern, _, expr)| MatchArmNode { pattern, body: expr }),
-    )(input)?;
-    
-    // Parse the closing brace
-    let (input, _) = take_token_if(input, |t| t.token_type == TokenType::RightBrace)?;
-    
+                TokenType::Integer(n) => {
+                    (TokenSlice(rest), PatternNode::Literal(LiteralNode::Int(*n)))
+                }
+                _ => {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        ErrorKind::Tag,
+                    )))
+                }
+            }
+        } else {
+            break;
+        };
+
+        // Parse =>
+        let (next_input, _) =
+            take_token_if(|tt| *tt == TokenType::FatArrow, ErrorKind::Tag)(next_input)?;
+
+        // Parse expression
+        let (next_input, expr) = parse_expression(next_input)?;
+
+        // Add the arm
+        arms.push(MatchArmNode {
+            pattern,
+            body: Box::new(expr),
+        });
+
+        // Check for comma or closing brace
+        if let Some((token, rest)) = next_input.0.split_first() {
+            match token.token_type {
+                TokenType::Comma => {
+                    input = TokenSlice(rest);
+                }
+                TokenType::RightBrace => {
+                    input = TokenSlice(rest);
+                    break; // Exit the loop after consuming the closing brace
+                }
+                _ => {
+                    // No comma or closing brace, but we'll continue to the next arm
+                    // This allows for optional trailing commas
+                    input = next_input;
+                }
+            }
+        } else {
+            input = next_input;
+        }
+    }
+
+    // We've already consumed the closing brace in the loop, so just return the input
+    let input = TokenSlice(input.0);
+
     Ok((
         input,
         StatementNode::Match(Box::new(MatchNode {

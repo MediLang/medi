@@ -202,20 +202,20 @@ pub struct BlockNode {
 
 impl BlockNode {
     /// Formats the block with the specified indentation level.
-    /// 
+    ///
     /// # Arguments
     /// * `f` - The formatter to write to
     /// * `indent_level` - The current indentation level (number of indents, not spaces)
     /// * `indent_size` - Number of spaces per indentation level (default: 4)
     pub fn fmt_indented(
-        &self, 
+        &self,
         f: &mut std::fmt::Formatter,
         indent_level: usize,
-        indent_size: usize
+        indent_size: usize,
     ) -> std::fmt::Result {
         let indent = " ".repeat(indent_level * indent_size);
         let stmt_indent = " ".repeat((indent_level + 1) * indent_size);
-        
+
         writeln!(f, "{}{{", indent)?;
         for stmt in &self.statements {
             // Handle nested blocks by passing increased indentation
@@ -232,7 +232,7 @@ impl BlockNode {
 
 impl std::fmt::Display for BlockNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        self.fmt_indented(f, 0, 4)  // Default to 4-space indentation, starting at level 0
+        self.fmt_indented(f, 0, 4) // Default to 4-space indentation, starting at level 0
     }
 }
 
@@ -303,9 +303,10 @@ pub enum PatternNode {
     Literal(LiteralNode),       // Pattern can be a literal
     Identifier(IdentifierNode), // Pattern can be an identifier
     Wildcard,                   // Represents the '_' pattern
-    Variant {                    // Represents a variant pattern like Some(x)
-        name: String,           // The variant name (e.g., "Some")
-        inner: Box<PatternNode>  // The inner pattern (e.g., the x in Some(x))
+    Variant {
+        // Represents a variant pattern like Some(x)
+        name: String,            // The variant name (e.g., "Some")
+        inner: Box<PatternNode>, // The inner pattern (e.g., the x in Some(x))
     },
     // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
 }
@@ -362,16 +363,11 @@ impl std::fmt::Display for StatementNode {
                 write!(f, "if {} ", if_stmt.condition)?;
                 // Use fmt_indented for the then branch with base indentation
                 if_stmt.then_branch.fmt_indented(f, 0, 4)?;
-                
+
                 if let Some(else_branch) = &if_stmt.else_branch {
                     write!(f, " else ")?;
-                    if let StatementNode::Block(_) = **else_branch {
-                        // If it's a block, use fmt_indented with base indentation
-                        else_branch.fmt(f)?;
-                    } else {
-                        // For single-line else, just format it directly
-                        write!(f, "{}", else_branch)?;
-                    }
+                    // Format the else branch directly without trying to match on its type
+                    else_branch.fmt(f)?;
                 }
                 Ok(())
             }

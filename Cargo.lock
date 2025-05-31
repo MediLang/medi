@@ -520,6 +520,7 @@ version = "0.1.0"
 name = "medic_typeck"
 version = "0.1.0"
 dependencies = [
+ "log",
  "medic_ast",
  "medic_env",
  "medic_type",

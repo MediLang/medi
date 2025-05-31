@@ -814,7 +814,7 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 /// use medic_ast::ast::{PatternNode, IdentifierNode, LiteralNode};
 ///
 /// let loc = Location { line: 1, column: 1, offset: 0 };
-/// 
+///
 /// // Test identifier pattern
 /// let tokens = vec![
 ///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", loc.clone()),
@@ -853,35 +853,41 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 /// ```
 pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
     // Try to parse a parenthesized pattern first
-    if let Ok((input, _)) = take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Char)(input) {
+    if let Ok((input, _)) =
+        take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Char)(input)
+    {
         let (input, pattern) = parse_pattern(input)?;
-        let (input, _) = take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Char)(input)?;
+        let (input, _) =
+            take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Char)(input)?;
         return Ok((input, pattern));
     }
-    
+
     // Try to parse a variant pattern like Some(x)
     if let Ok((input, variant)) = take_token_if(
         |tt| matches!(tt, TokenType::Identifier(_)),
         ErrorKind::Alpha,
-    )(input) {
+    )(input)
+    {
         if let TokenType::Identifier(variant_name) = &variant.token_type {
             // Check if the next token is an opening parenthesis
-            if let Ok((input, _)) = take_token_if(
-                |tt| matches!(tt, TokenType::LeftParen), 
-                ErrorKind::Char
-            )(input) {
+            if let Ok((input, _)) =
+                take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Char)(input)
+            {
                 // Parse the inner pattern
                 let (input, inner_pattern) = parse_pattern(input)?;
                 let (input, _) = take_token_if(
-                    |tt| matches!(tt, TokenType::RightParen), 
-                    ErrorKind::Char
+                    |tt| matches!(tt, TokenType::RightParen),
+                    ErrorKind::Char,
                 )(input)?;
-                
+
                 // Create a variant pattern
-                return Ok((input, PatternNode::Variant {
-                    name: variant_name.to_string(),
-                    inner: Box::new(inner_pattern),
-                }));
+                return Ok((
+                    input,
+                    PatternNode::Variant {
+                        name: variant_name.to_string(),
+                        inner: Box::new(inner_pattern),
+                    },
+                ));
             } else {
                 // It's just a simple identifier pattern
                 return Ok((
@@ -926,7 +932,10 @@ pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNo
             }
             TokenType::String(s) => {
                 let input = input.advance();
-                return Ok((input, PatternNode::Literal(LiteralNode::String(s.to_string()))));
+                return Ok((
+                    input,
+                    PatternNode::Literal(LiteralNode::String(s.to_string())),
+                ));
             }
             TokenType::Boolean(b) => {
                 let input = input.advance();
@@ -1080,77 +1089,76 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
         "Checking for empty match block. Next token: {:?}",
         input.0.first().map(|t| &t.token_type)
     );
-    let (input, arms) = match take_token_if(
-        |tt| matches!(tt, TokenType::RightBrace),
-        ErrorKind::Tag,
-    )(input)
-    {
-        Ok((input, _)) => {
-            debug!("Found empty match block");
-            debug!(
-                "Remaining after empty match block: {:?}",
-                input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
-            );
-            (input, Vec::new())
-        }
-        Err(e) => {
-            debug!("No empty match block found: {:?}", e);
-            // Parse match arms
-            let mut arms = Vec::new();
-            let mut input = input;
+    let (input, arms) =
+        match take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input) {
+            Ok((input, _)) => {
+                debug!("Found empty match block");
+                debug!(
+                    "Remaining after empty match block: {:?}",
+                    input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
+                );
+                (input, Vec::new())
+            }
+            Err(e) => {
+                debug!("No empty match block found: {:?}", e);
+                // Parse match arms
+                let mut arms = Vec::new();
+                let mut input = input;
 
-            // Parse match arms until we hit a closing brace
-            loop {
-                // Try to parse a pattern
-                let (new_input, pattern) = parse_pattern(input)?;
-                input = new_input;
+                // Parse match arms until we hit a closing brace
+                loop {
+                    // Try to parse a pattern
+                    let (new_input, pattern) = parse_pattern(input)?;
+                    input = new_input;
 
-                // Parse the arrow
-                let (new_input, _) =
-                    take_token_if(|tt| matches!(tt, TokenType::FatArrow), ErrorKind::Tag)(input)?;
-                input = new_input;
+                    // Parse the arrow
+                    let (new_input, _) = take_token_if(
+                        |tt| matches!(tt, TokenType::FatArrow),
+                        ErrorKind::Tag,
+                    )(input)?;
+                    input = new_input;
 
-                // Parse the expression
-                let (new_input, expr) = parse_expression(input)?;
-                input = new_input;
+                    // Parse the expression
+                    let (new_input, expr) = parse_expression(input)?;
+                    input = new_input;
 
-                // Add the arm
-                arms.push(MatchArmNode {
-                    pattern,
-                    body: Box::new(expr),
-                });
+                    // Add the arm
+                    arms.push(MatchArmNode {
+                        pattern,
+                        body: Box::new(expr),
+                    });
 
-                // Check for closing brace first
-                if let Ok((new_input, _)) =
+                    // Check for closing brace first
+                    if let Ok((new_input, _)) = take_token_if(
+                        |tt| matches!(tt, TokenType::RightBrace),
+                        ErrorKind::Tag,
+                    )(input)
+                    {
+                        input = new_input;
+                        break;
+                    }
+
+                    // If no closing brace, expect a comma before the next arm
+                    let (new_input, _) =
+                        take_token_if(|tt| matches!(tt, TokenType::Comma), ErrorKind::Tag)(input)?;
+                    input = new_input;
+                }
+
+                // Parse the final closing brace if not already consumed
+                let input = if let Ok((input, _)) =
                     take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input)
                 {
-                    input = new_input;
-                    break;
-                }
-                
-                // If no closing brace, expect a comma before the next arm
-                let (new_input, _) = take_token_if(
-                    |tt| matches!(tt, TokenType::Comma), 
-                    ErrorKind::Tag
-                )(input)?;
-                input = new_input;
+                    input
+                } else {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        ErrorKind::Tag,
+                    )));
+                };
+
+                (input, arms)
             }
-
-            // Parse the final closing brace if not already consumed
-            let input = if let Ok((input, _)) =
-                take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input)
-            {
-                input
-            } else {
-                return Err(nom::Err::Error(nom::error::Error::new(
-                    input,
-                    ErrorKind::Tag,
-                )));
-            };
-
-            (input, arms)
-        }
-    };
+        };
 
     Ok((
         input,
