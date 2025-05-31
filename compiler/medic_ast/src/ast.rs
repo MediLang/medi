@@ -167,13 +167,39 @@ pub struct BlockNode {
     pub statements: Vec<StatementNode>,
 }
 
+impl BlockNode {
+    /// Formats the block with the specified indentation level.
+    /// 
+    /// # Arguments
+    /// * `f` - The formatter to write to
+    /// * `indent_level` - The current indentation level (number of indents, not spaces)
+    /// * `indent_size` - Number of spaces per indentation level (default: 4)
+    pub fn fmt_indented(
+        &self, 
+        f: &mut std::fmt::Formatter,
+        indent_level: usize,
+        indent_size: usize
+    ) -> std::fmt::Result {
+        let indent = " ".repeat(indent_level * indent_size);
+        let stmt_indent = " ".repeat((indent_level + 1) * indent_size);
+        
+        writeln!(f, "{}{{", indent)?;
+        for stmt in &self.statements {
+            // Handle nested blocks by passing increased indentation
+            if let StatementNode::Block(block) = stmt {
+                block.fmt_indented(f, indent_level + 1, indent_size)?;
+            } else {
+                write!(f, "{}{};", stmt_indent, stmt)?;
+            }
+            writeln!(f)?;
+        }
+        write!(f, "{}}}", indent)
+    }
+}
+
 impl std::fmt::Display for BlockNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        writeln!(f, "{{")?;
-        for stmt in &self.statements {
-            writeln!(f, "    {};", stmt)?;
-        }
-        write!(f, "}}")
+        self.fmt_indented(f, 0, 4)  // Default to 4-space indentation, starting at level 0
     }
 }
 
@@ -295,28 +321,36 @@ impl std::fmt::Display for StatementNode {
             StatementNode::Assignment(assign) => write!(f, "{} = {};", assign.target, assign.value),
             StatementNode::Expr(expr) => write!(f, "{};", expr),
             StatementNode::Block(block) => {
-                writeln!(f, "{{")?;
-                for stmt in &block.statements {
-                    writeln!(f, "    {};", stmt)?;
-                }
-                write!(f, "}}")
+                // Use the indentation-aware formatting for blocks
+                // Start with 1 level of indentation since this is inside a statement
+                block.fmt_indented(f, 1, 4)
             }
             StatementNode::If(if_stmt) => {
-                write!(f, "if {} {}", if_stmt.condition, if_stmt.then_branch)?;
+                write!(f, "if {} ", if_stmt.condition)?;
+                // Use fmt_indented for the then branch with base indentation
+                if_stmt.then_branch.fmt_indented(f, 0, 4)?;
+                
                 if let Some(else_branch) = &if_stmt.else_branch {
-                    write!(f, " else {}", else_branch)?;
+                    write!(f, " else ")?;
+                    if let StatementNode::Block(_) = **else_branch {
+                        // If it's a block, use fmt_indented with base indentation
+                        else_branch.fmt(f)?;
+                    } else {
+                        // For single-line else, just format it directly
+                        write!(f, "{}", else_branch)?;
+                    }
                 }
                 Ok(())
             }
             StatementNode::While(while_stmt) => {
-                write!(f, "while {} {}", while_stmt.condition, while_stmt.body)
+                write!(f, "while {} ", while_stmt.condition)?;
+                // Use fmt_indented for the loop body with base indentation
+                while_stmt.body.fmt_indented(f, 0, 4)
             }
             StatementNode::For(for_stmt) => {
-                write!(
-                    f,
-                    "for {} in {} {}",
-                    for_stmt.var.name, for_stmt.iter, for_stmt.body
-                )
+                write!(f, "for {} in {} ", for_stmt.var.name, for_stmt.iter)?;
+                // Use fmt_indented for the loop body with base indentation
+                for_stmt.body.fmt_indented(f, 0, 4)
             }
             StatementNode::Match(match_stmt) => {
                 write!(f, "match {} {{", match_stmt.expr)?;
