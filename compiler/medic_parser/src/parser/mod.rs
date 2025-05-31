@@ -800,7 +800,10 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 /// This function will panic if the pattern is not properly formed.
 /// Parses a pattern for use in match expressions.
 ///
-/// Currently supports identifier patterns (variable binding) and wildcard patterns.
+/// Supports the following patterns:
+/// - Identifier patterns (variable binding): `x`, `value`
+/// - Wildcard pattern: `_`
+/// - Literal patterns: `42`, `"hello"`, `true`, `false`
 ///
 /// # Examples
 ///
@@ -808,22 +811,89 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 /// use medic_lexer::token::{Token, TokenType, Location};
 /// use medic_lexer::string_interner::InternedString;
 /// use medic_parser::parser::{TokenSlice, parse_pattern};
-/// use medic_ast::ast::{PatternNode, IdentifierNode};
+/// use medic_ast::ast::{PatternNode, IdentifierNode, LiteralNode};
 ///
 /// let loc = Location { line: 1, column: 1, offset: 0 };
+/// 
+/// // Test identifier pattern
 /// let tokens = vec![
 ///     Token::new(TokenType::Identifier(InternedString::from("x")), "x", loc.clone()),
 /// ];
 /// let slice = TokenSlice::new(&tokens);
 /// let result = parse_pattern(slice);
-/// assert!(result.is_ok());
-/// if let Ok((_, PatternNode::Identifier(ident))) = result {
-///     assert_eq!(ident.name, "x");
+/// assert!(matches!(result, Ok((_, PatternNode::Identifier(_)))));
+///
+/// // Test wildcard pattern
+/// let tokens = vec![
+///     Token::new(TokenType::Underscore, "_", loc.clone()),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_pattern(slice);
+/// assert!(matches!(result, Ok((_, PatternNode::Wildcard))));
+///
+/// // Test integer literal pattern
+/// let tokens = vec![
+///     Token::new(TokenType::Integer(42), "42", loc.clone()),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_pattern(slice);
+/// assert!(matches!(result, Ok((_, PatternNode::Literal(LiteralNode::Int(42))))));
+///
+/// // Test string literal pattern
+/// let tokens = vec![
+///     Token::new(TokenType::String(InternedString::from("hello")), "\"hello\"", loc.clone()),
+/// ];
+/// let slice = TokenSlice::new(&tokens);
+/// let result = parse_pattern(slice);
+/// if let Ok((_, PatternNode::Literal(LiteralNode::String(s)))) = result {
+///     assert_eq!(s, "hello");
 /// } else {
-///     panic!("Expected identifier pattern");
+///     panic!("Expected string literal pattern");
 /// }
 /// ```
 pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> {
+    // Try to parse a parenthesized pattern first
+    if let Ok((input, _)) = take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Char)(input) {
+        let (input, pattern) = parse_pattern(input)?;
+        let (input, _) = take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Char)(input)?;
+        return Ok((input, pattern));
+    }
+    
+    // Try to parse a variant pattern like Some(x)
+    if let Ok((input, variant)) = take_token_if(
+        |tt| matches!(tt, TokenType::Identifier(_)),
+        ErrorKind::Alpha,
+    )(input) {
+        if let TokenType::Identifier(variant_name) = &variant.token_type {
+            // Check if the next token is an opening parenthesis
+            if let Ok((input, _)) = take_token_if(
+                |tt| matches!(tt, TokenType::LeftParen), 
+                ErrorKind::Char
+            )(input) {
+                // Parse the inner pattern
+                let (input, inner_pattern) = parse_pattern(input)?;
+                let (input, _) = take_token_if(
+                    |tt| matches!(tt, TokenType::RightParen), 
+                    ErrorKind::Char
+                )(input)?;
+                
+                // Create a variant pattern
+                return Ok((input, PatternNode::Variant {
+                    name: variant_name.to_string(),
+                    inner: Box::new(inner_pattern),
+                }));
+            } else {
+                // It's just a simple identifier pattern
+                return Ok((
+                    input,
+                    PatternNode::Identifier(IdentifierNode {
+                        name: variant_name.to_string(),
+                    }),
+                ));
+            }
+        }
+    }
+
     // Try to parse an identifier pattern
     if let Ok((input, ident)) = take_token_if(
         |tt| matches!(tt, TokenType::Identifier(_)),
@@ -845,6 +915,25 @@ pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNo
         take_token_if(|tt| matches!(tt, TokenType::Underscore), ErrorKind::Char)(input)
     {
         return Ok((input, PatternNode::Wildcard));
+    }
+
+    // Try to parse a literal pattern
+    if !input.0.is_empty() {
+        match &input.0[0].token_type {
+            TokenType::Integer(n) => {
+                let input = input.advance();
+                return Ok((input, PatternNode::Literal(LiteralNode::Int(*n))));
+            }
+            TokenType::String(s) => {
+                let input = input.advance();
+                return Ok((input, PatternNode::Literal(LiteralNode::String(s.to_string()))));
+            }
+            TokenType::Boolean(b) => {
+                let input = input.advance();
+                return Ok((input, PatternNode::Literal(LiteralNode::Bool(*b))));
+            }
+            _ => {}
+        }
     }
 
     // If we get here, we couldn't parse a valid pattern

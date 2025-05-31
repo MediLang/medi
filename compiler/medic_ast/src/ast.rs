@@ -244,7 +244,11 @@ pub enum PatternNode {
     Literal(LiteralNode),       // Pattern can be a literal
     Identifier(IdentifierNode), // Pattern can be an identifier
     Wildcard,                   // Represents the '_' pattern
-                                // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
+    Variant {                    // Represents a variant pattern like Some(x)
+        name: String,           // The variant name (e.g., "Some")
+        inner: Box<PatternNode>  // The inner pattern (e.g., the x in Some(x))
+    },
+    // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
 }
 
 impl std::fmt::Display for PatternNode {
@@ -253,6 +257,7 @@ impl std::fmt::Display for PatternNode {
             PatternNode::Literal(lit) => write!(f, "{}", lit),
             PatternNode::Identifier(ident) => write!(f, "{}", ident.name),
             PatternNode::Wildcard => write!(f, "_"),
+            PatternNode::Variant { name, inner } => write!(f, "{}({})", name, inner),
         }
     }
 }
