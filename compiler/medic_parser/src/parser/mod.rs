@@ -1032,44 +1032,15 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
         )));
     }
 
-    // Parse the expression to match against
-    let (input, expr) = match input.0.first() {
-        Some(token) => match &token.token_type {
-            TokenType::Identifier(_) => {
-                let ident = match &token.token_type {
-                    TokenType::Identifier(s) => s.to_string(),
-                    _ => unreachable!(),
-                };
-                debug!("Found identifier: {:?}", token);
-                (
-                    input.advance(),
-                    ExpressionNode::Identifier(IdentifierNode::new(ident)),
-                )
-            }
-            TokenType::Integer(n) => {
-                debug!("Found integer literal: {:?}", token);
-                (
-                    input.advance(),
-                    ExpressionNode::Literal(LiteralNode::Int(*n)),
-                )
-            }
-            _ => {
-                debug!(
-                    "Expected identifier or integer after 'match' keyword, found: {:?}",
-                    token
-                );
-                return Err(nom::Err::Error(nom::error::Error::new(
-                    input,
-                    nom::error::ErrorKind::Tag,
-                )));
-            }
-        },
-        None => {
-            debug!("Unexpected end of input after 'match' keyword");
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                nom::error::ErrorKind::Eof,
-            )));
+    // Parse the expression to match against using parse_expression to allow any valid expression
+    let (input, expr) = match parse_expression(input) {
+        Ok(result) => {
+            debug!("Successfully parsed match expression: {:?}", result.1);
+            result
+        }
+        Err(e) => {
+            debug!("Failed to parse expression after 'match' keyword: {:?}", e);
+            return Err(e);
         }
     };
 
@@ -1149,21 +1120,20 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
                     body: Box::new(expr),
                 });
 
-                // Check for comma (optional before the last arm)
-                input =
-                    match take_token_if(|tt| matches!(tt, TokenType::Comma), ErrorKind::Tag)(input)
-                    {
-                        Ok((input, _)) => input,
-                        Err(_) => break, // No more arms
-                    };
-
-                // Check for closing brace after comma
+                // Check for closing brace first
                 if let Ok((new_input, _)) =
                     take_token_if(|tt| matches!(tt, TokenType::RightBrace), ErrorKind::Tag)(input)
                 {
                     input = new_input;
                     break;
                 }
+                
+                // If no closing brace, expect a comma before the next arm
+                let (new_input, _) = take_token_if(
+                    |tt| matches!(tt, TokenType::Comma), 
+                    ErrorKind::Tag
+                )(input)?;
+                input = new_input;
             }
 
             // Parse the final closing brace if not already consumed
