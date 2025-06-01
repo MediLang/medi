@@ -112,12 +112,8 @@ pub enum TokenType {
     Greater,
     /// `>=` operator - greater than or equal to
     GreaterEqual,
-    /// `&` operator - bitwise AND
-    And,
     /// `&&` operator - logical AND
     AndAnd,
-    /// `|` operator - bitwise OR
-    Or,
     /// `||` operator - logical OR
     OrOr,
     /// `&` operator - bitwise AND
@@ -315,9 +311,7 @@ impl PartialEq for TokenType {
             (TokenType::LessEqual, TokenType::LessEqual) => true,
             (TokenType::Greater, TokenType::Greater) => true,
             (TokenType::GreaterEqual, TokenType::GreaterEqual) => true,
-            (TokenType::And, TokenType::And) => true,
             (TokenType::AndAnd, TokenType::AndAnd) => true,
-            (TokenType::Or, TokenType::Or) => true,
             (TokenType::OrOr, TokenType::OrOr) => true,
             (TokenType::BitAnd, TokenType::BitAnd) => true,
             (TokenType::BitAndAssign, TokenType::BitAndAssign) => true,

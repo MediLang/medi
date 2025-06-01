@@ -265,8 +265,8 @@ impl<'a> StreamingLexer<'a> {
 
             // Operators and punctuation
             LogosToken::Equal => TokenType::Equal,
-            LogosToken::Or => TokenType::Or,
-            LogosToken::And => TokenType::And,
+            LogosToken::Or => TokenType::BitOr,
+            LogosToken::And => TokenType::BitAnd,
             LogosToken::Not => TokenType::Not,
             LogosToken::EqualEqual => TokenType::EqualEqual,
             LogosToken::NotEqual => TokenType::NotEqual,

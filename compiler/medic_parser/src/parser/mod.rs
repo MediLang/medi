@@ -627,8 +627,8 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
         TokenType::QuestionQuestion => Some((BinaryOperator::NullCoalesce, true)),
         TokenType::QuestionColon => Some((BinaryOperator::Elvis, true)),
         TokenType::Range => Some((BinaryOperator::Range, false)),
-        TokenType::And => Some((BinaryOperator::And, false)),
-        TokenType::Or => Some((BinaryOperator::Or, false)),
+        TokenType::AndAnd => Some((BinaryOperator::And, false)),
+        TokenType::OrOr => Some((BinaryOperator::Or, false)),
         _ => None,
     }
 }
