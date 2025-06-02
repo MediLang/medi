@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::string_interner::InternedString;
 use crate::token::TokenType;
 
 #[test]
@@ -10,7 +11,10 @@ fn test_lexer_basic() {
 
     assert_eq!(tokens.len(), 5);
     assert_eq!(tokens[0].token_type, TokenType::Let);
-    assert_eq!(tokens[1].token_type, TokenType::Identifier("x".to_string()));
+    assert_eq!(
+        tokens[1].token_type,
+        TokenType::Identifier(InternedString::from("x"))
+    );
     assert_eq!(tokens[2].token_type, TokenType::Equal);
     assert_eq!(tokens[3].token_type, TokenType::Integer(42));
     assert_eq!(tokens[4].token_type, TokenType::Semicolon);
@@ -191,9 +195,21 @@ fn test_lexer_range_operator() {
     );
 
     // Verify the lexemes
-    assert_eq!(tokens[0].lexeme, "1", "Expected lexeme '1' at position 0");
-    assert_eq!(tokens[1].lexeme, "..", "Expected lexeme '..' at position 1");
-    assert_eq!(tokens[2].lexeme, "10", "Expected lexeme '10' at position 2");
+    assert_eq!(
+        tokens[0].lexeme,
+        InternedString::from("1"),
+        "Expected lexeme '1' at position 0"
+    );
+    assert_eq!(
+        tokens[1].lexeme,
+        InternedString::from(".."),
+        "Expected lexeme '..' at position 1"
+    );
+    assert_eq!(
+        tokens[2].lexeme,
+        InternedString::from("10"),
+        "Expected lexeme '10' at position 2"
+    );
 
     // Also test with spaces around the range operator
     let input_with_spaces = "1 .. 10";

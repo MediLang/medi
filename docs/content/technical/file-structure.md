@@ -4,22 +4,22 @@ Medi follows a Rust-inspired approach to code organization, providing clean stru
 
 ## File Extensions
 
-Medi source code files use the `.mdi` extension:
+Medi source code files use the `.medi` extension:
 
 ```
-patient_analysis.mdi
-data_pipeline.mdi
-clinical_trial.mdi
+patient_analysis.medi
+data_pipeline.medi
+clinical_trial.medi
 ```
 
 ## Module System
 
 ### Single File Modules
 
-Each `.mdi` file is a module, containing related functionality. By default, all items (functions, types, etc.) are private to the module unless explicitly marked public:
+Each `.medi` file is a module, containing related functionality. By default, all items (functions, types, etc.) are private to the module unless explicitly marked public:
 
-```mdi
-// my_module.mdi
+```medi
+// my_module.medi
 pub fn analyze_vitals(heart_rate: Integer, blood_pressure: Tuple<Integer, Integer>) {
     // This function is accessible from other modules
     // because it's marked with 'pub'
@@ -39,8 +39,8 @@ fn is_tachycardia(heart_rate: Integer) -> Boolean {
 
 You can import other modules with the `use` keyword:
 
-```mdi
-// main.mdi
+```medi
+// main.medi
 use vitals;
 use patient::records;
 
@@ -56,21 +56,21 @@ For larger projects, you can organize code in directories:
 
 ```
 project/
-├── main.mdi         # Main entry point
+├── main.medi         # Main entry point
 ├── vitals/
-│   ├── mod.mdi      # Makes directory a module and re-exports items
-│   ├── analysis.mdi # Analysis functions
-│   └── alerts.mdi   # Alert management
+│   ├── mod.medi      # Makes directory a module and re-exports items
+│   ├── analysis.medi # Analysis functions
+│   └── alerts.medi   # Alert management
 └── patient/
-    ├── mod.mdi
-    ├── records.mdi  # Patient record handling
-    └── search.mdi   # Patient search functionality
+    ├── mod.medi
+    ├── records.medi  # Patient record handling
+    └── search.medi   # Patient search functionality
 ```
 
-The `mod.mdi` file declares and re-exports submodules:
+The `mod.medi` file declares and re-exports submodules:
 
-```mdi
-// vitals/mod.mdi
+```medi
+// vitals/mod.medi
 pub mod analysis;
 pub mod alerts;
 
@@ -95,7 +95,7 @@ This is particularly important for healthcare applications where encapsulation h
 
 2. **Privacy by default**: Keep implementation details private and only expose necessary APIs.
 
-3. **Re-export for convenience**: Use `mod.mdi` files to re-export common items for easier imports.
+3. **Re-export for convenience**: Use `mod.medi` files to re-export common items for easier imports.
 
 4. **Consistent naming**: Use snake_case for filenames and functions, PascalCase for types.
 

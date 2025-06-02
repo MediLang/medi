@@ -1,17 +1,31 @@
 // Abstract Syntax Tree (AST) definitions for the Medi language in Rust
 // This is a starting point, mapping the core node types from your TypeScript AST
 
+/// Represents an expression in the AST
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
+    /// An identifier (variable name, function name, etc.)
     Identifier(IdentifierNode),
+    /// An ICD code literal
     IcdCode(String),
+    /// A CPT code literal
     CptCode(String),
+    /// A SNOMED CT code literal
     SnomedCode(String),
+    /// A literal value (number, string, boolean, etc.)
     Literal(LiteralNode),
+    /// A binary operation (e.g., 1 + 2, x * y)
     Binary(Box<BinaryExpressionNode>),
+    /// A function call (e.g., add(1, 2))
     Call(Box<CallExpressionNode>),
+    /// A member access (e.g., object.property)
     Member(Box<MemberExpressionNode>),
+    /// A healthcare-specific query
     HealthcareQuery(Box<HealthcareQueryNode>),
+    /// A statement expression (e.g., a block expression)
+    Statement(Box<StatementNode>),
+    /// A struct literal (e.g., `Patient { id: 1, name: "John" }`)
+    Struct(Box<StructLiteralNode>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -21,6 +35,17 @@ pub enum LiteralNode {
     Float(f64),
     Bool(bool),
     String(String),
+}
+
+impl std::fmt::Display for LiteralNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            LiteralNode::Int(i) => write!(f, "{}", i),
+            LiteralNode::Float(fl) => write!(f, "{}", fl),
+            LiteralNode::Bool(b) => write!(f, "{}", b),
+            LiteralNode::String(s) => write!(f, "\"{}\"", s),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +58,9 @@ pub struct BinaryExpressionNode {
 /// Binary operators in order of increasing precedence
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOperator {
+    // Assignment (right-associative, lowest precedence)
+    Assign,
+
     // Logical OR (left-associative)
     Or,
 
@@ -91,6 +119,39 @@ pub enum BinaryOperator {
     Elvis, // ?:
 }
 
+impl std::fmt::Display for BinaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            BinaryOperator::Assign => write!(f, "="),
+            BinaryOperator::Or => write!(f, "||"),
+            BinaryOperator::And => write!(f, "&&"),
+            BinaryOperator::Of => write!(f, "of"),
+            BinaryOperator::Per => write!(f, "per"),
+            BinaryOperator::Eq => write!(f, "=="),
+            BinaryOperator::Ne => write!(f, "!="),
+            BinaryOperator::Lt => write!(f, "<"),
+            BinaryOperator::Le => write!(f, "<="),
+            BinaryOperator::Gt => write!(f, ">"),
+            BinaryOperator::Ge => write!(f, ">="),
+            BinaryOperator::UnitConversion => write!(f, "→"),
+            BinaryOperator::BitOr => write!(f, "|"),
+            BinaryOperator::BitXor => write!(f, "^"),
+            BinaryOperator::BitAnd => write!(f, "&"),
+            BinaryOperator::Shl => write!(f, "<<"),
+            BinaryOperator::Shr => write!(f, ">>"),
+            BinaryOperator::Add => write!(f, "+"),
+            BinaryOperator::Sub => write!(f, "-"),
+            BinaryOperator::Mul => write!(f, "*"),
+            BinaryOperator::Div => write!(f, "/"),
+            BinaryOperator::Mod => write!(f, "%"),
+            BinaryOperator::Pow => write!(f, "**"),
+            BinaryOperator::Range => write!(f, ".."),
+            BinaryOperator::NullCoalesce => write!(f, "??"),
+            BinaryOperator::Elvis => write!(f, "?:"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpressionNode {
     pub callee: ExpressionNode,
@@ -139,6 +200,42 @@ pub struct BlockNode {
     pub statements: Vec<StatementNode>,
 }
 
+impl BlockNode {
+    /// Formats the block with the specified indentation level.
+    ///
+    /// # Arguments
+    /// * `f` - The formatter to write to
+    /// * `indent_level` - The current indentation level (number of indents, not spaces)
+    /// * `indent_size` - Number of spaces per indentation level (default: 4)
+    pub fn fmt_indented(
+        &self,
+        f: &mut std::fmt::Formatter,
+        indent_level: usize,
+        indent_size: usize,
+    ) -> std::fmt::Result {
+        let indent = " ".repeat(indent_level * indent_size);
+        let stmt_indent = " ".repeat((indent_level + 1) * indent_size);
+
+        writeln!(f, "{}{{", indent)?;
+        for stmt in &self.statements {
+            // Handle nested blocks by passing increased indentation
+            if let StatementNode::Block(block) = stmt {
+                block.fmt_indented(f, indent_level + 1, indent_size)?;
+            } else {
+                write!(f, "{}{};", stmt_indent, stmt)?;
+            }
+            writeln!(f)?;
+        }
+        write!(f, "{}}}", indent)
+    }
+}
+
+impl std::fmt::Display for BlockNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.fmt_indented(f, 0, 4) // Default to 4-space indentation, starting at level 0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfNode {
     pub condition: ExpressionNode,
@@ -172,6 +269,20 @@ pub struct ReturnNode {
 
 use std::hash::Hash;
 
+/// Represents a field in a struct literal
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructField {
+    pub name: String,
+    pub value: ExpressionNode,
+}
+
+/// Represents a struct literal expression (e.g., `Patient { id: 1, name: "John" }`)
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructLiteralNode {
+    pub type_name: String,
+    pub fields: Vec<StructField>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IdentifierNode {
     pub name: String,
@@ -192,7 +303,23 @@ pub enum PatternNode {
     Literal(LiteralNode),       // Pattern can be a literal
     Identifier(IdentifierNode), // Pattern can be an identifier
     Wildcard,                   // Represents the '_' pattern
-                                // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
+    Variant {
+        // Represents a variant pattern like Some(x)
+        name: String,            // The variant name (e.g., "Some")
+        inner: Box<PatternNode>, // The inner pattern (e.g., the x in Some(x))
+    },
+    // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
+}
+
+impl std::fmt::Display for PatternNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PatternNode::Literal(lit) => write!(f, "{}", lit),
+            PatternNode::Identifier(ident) => write!(f, "{}", ident.name),
+            PatternNode::Wildcard => write!(f, "_"),
+            PatternNode::Variant { name, inner } => write!(f, "{}({})", name, inner),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -207,3 +334,118 @@ pub struct ProgramNode {
 }
 
 // Add more AST nodes as needed (statements, declarations, etc.)
+
+impl ExpressionNode {
+    /// Creates an expression from a statement
+    ///
+    /// If the statement is an expression statement, returns the inner expression.
+    /// Otherwise, wraps the statement in a `Statement` variant.
+    pub fn from_statement(stmt: StatementNode) -> Self {
+        match stmt {
+            StatementNode::Expr(expr) => expr,
+            _ => ExpressionNode::Statement(Box::new(stmt)),
+        }
+    }
+}
+
+impl std::fmt::Display for StatementNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            StatementNode::Let(stmt) => write!(f, "let {} = {};", stmt.name.name, stmt.value),
+            StatementNode::Assignment(assign) => write!(f, "{} = {};", assign.target, assign.value),
+            StatementNode::Expr(expr) => write!(f, "{};", expr),
+            StatementNode::Block(block) => {
+                // Use the indentation-aware formatting for blocks
+                // Start with 1 level of indentation since this is inside a statement
+                block.fmt_indented(f, 1, 4)
+            }
+            StatementNode::If(if_stmt) => {
+                write!(f, "if {} ", if_stmt.condition)?;
+                // Use fmt_indented for the then branch with base indentation
+                if_stmt.then_branch.fmt_indented(f, 0, 4)?;
+
+                if let Some(else_branch) = &if_stmt.else_branch {
+                    write!(f, " else ")?;
+                    // Format the else branch directly without trying to match on its type
+                    else_branch.fmt(f)?;
+                }
+                Ok(())
+            }
+            StatementNode::While(while_stmt) => {
+                write!(f, "while {} ", while_stmt.condition)?;
+                // Use fmt_indented for the loop body with base indentation
+                while_stmt.body.fmt_indented(f, 0, 4)
+            }
+            StatementNode::For(for_stmt) => {
+                write!(f, "for {} in {} ", for_stmt.var.name, for_stmt.iter)?;
+                // Use fmt_indented for the loop body with base indentation
+                for_stmt.body.fmt_indented(f, 0, 4)
+            }
+            StatementNode::Match(match_stmt) => {
+                write!(f, "match {} {{", match_stmt.expr)?;
+                for arm in &match_stmt.arms {
+                    write!(f, " {} => {},", arm.pattern, arm.body)?;
+                }
+                write!(f, " }}")
+            }
+            StatementNode::Return(ret) => {
+                if let Some(expr) = &ret.value {
+                    write!(f, "return {};", expr)
+                } else {
+                    write!(f, "return;")
+                }
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for ExpressionNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ExpressionNode::Identifier(ident) => write!(f, "{}", ident.name),
+            ExpressionNode::IcdCode(code) => write!(f, "ICD:{}", code),
+            ExpressionNode::CptCode(code) => write!(f, "CPT:{}", code),
+            ExpressionNode::SnomedCode(code) => write!(f, "SNOMED:{}", code),
+            ExpressionNode::Literal(lit) => write!(f, "{}", lit),
+            ExpressionNode::Binary(expr) => {
+                // Handle operator precedence and associativity if needed
+                write!(f, "({} {} {})", expr.left, expr.operator, expr.right)
+            }
+            ExpressionNode::Call(call) => {
+                write!(f, "{}", call.callee)?;
+                write!(f, "(")?;
+                for (i, arg) in call.arguments.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg)?;
+                }
+                write!(f, ")")
+            }
+            ExpressionNode::Member(member) => {
+                write!(f, "{}.{}", member.object, member.property.name)
+            }
+            ExpressionNode::HealthcareQuery(query) => {
+                write!(f, "{}(", query.query_type)?;
+                for (i, arg) in query.arguments.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg)?;
+                }
+                write!(f, ")")
+            }
+            ExpressionNode::Statement(stmt) => write!(f, "{}", stmt),
+            ExpressionNode::Struct(s) => {
+                write!(f, "{} {{", s.type_name)?;
+                for (i, field) in s.fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", field.name, field.value)?;
+                }
+                write!(f, "}}")
+            }
+        }
+    }
+}

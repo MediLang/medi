@@ -7,4 +7,5 @@ edition = "2021"
 medic_type = { path = "../medic_type" }
 medic_ast = { path = "../medic_ast" }
 medic_env = { path = "../medic_env" }
+log = "0.4"
 

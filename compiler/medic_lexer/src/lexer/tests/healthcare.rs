@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::string_interner::InternedString;
 use crate::token::TokenType;
 
 #[test]
@@ -32,19 +33,19 @@ fn test_lexer_medical_codes() {
     assert_eq!(tokens.len(), 4);
     assert_eq!(
         tokens[0].token_type,
-        TokenType::ICD10("ICD10:E11.65".to_string())
+        TokenType::ICD10(InternedString::from("ICD10:E11.65"))
     );
     assert_eq!(
         tokens[1].token_type,
-        TokenType::LOINC("LOINC:12345-6".to_string())
+        TokenType::LOINC(InternedString::from("LOINC:12345-6"))
     );
     assert_eq!(
         tokens[2].token_type,
-        TokenType::SNOMED("SNOMED:1234567890".to_string())
+        TokenType::SNOMED(InternedString::from("SNOMED:1234567890"))
     );
     assert_eq!(
         tokens[3].token_type,
-        TokenType::CPT("CPT:99213".to_string())
+        TokenType::CPT(InternedString::from("CPT:99213"))
     );
 }
 
@@ -61,6 +62,6 @@ fn test_lexer_healthcare() {
     assert_eq!(tokens[2].token_type, TokenType::FhirQuery);
     assert_eq!(
         tokens[3].token_type,
-        TokenType::ICD10("ICD10:A01.1".to_string())
+        TokenType::ICD10(InternedString::from("ICD10:A01.1"))
     );
 }

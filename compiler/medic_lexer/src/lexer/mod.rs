@@ -5,6 +5,7 @@ use logos::Logos;
 use std::collections::VecDeque;
 use std::ops::Range;
 
+use crate::string_interner::InternedString;
 use crate::token::{Location, Token, TokenType};
 use crate::LogosToken;
 
@@ -131,19 +132,21 @@ impl<'a> Lexer<'a> {
             // Literals
             LogosToken::Integer(i) => TokenType::Integer(i),
             LogosToken::Float(f) => TokenType::Float(f),
-            LogosToken::String(s) => TokenType::String(s),
-            LogosToken::Bool(b) => TokenType::Bool(b),
-            LogosToken::Identifier(ident) => TokenType::Identifier(ident),
+            LogosToken::String(s) => TokenType::String(InternedString::from(&s[..])),
+            LogosToken::Bool(b) => TokenType::Boolean(b), // Using Boolean variant for consistency
+            LogosToken::Identifier(ident) => {
+                TokenType::Identifier(InternedString::from(&ident[..]))
+            }
 
             // Medical operators
             LogosToken::Of => TokenType::Of,
             LogosToken::Per => TokenType::Per,
 
             // Medical codes
-            LogosToken::ICD10(code) => TokenType::ICD10(code),
-            LogosToken::LOINC(code) => TokenType::LOINC(code),
-            LogosToken::SNOMED(code) => TokenType::SNOMED(code),
-            LogosToken::CPT(code) => TokenType::CPT(code),
+            LogosToken::ICD10(code) => TokenType::ICD10(InternedString::from(&code[..])),
+            LogosToken::LOINC(code) => TokenType::LOINC(InternedString::from(&code[..])),
+            LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::from(&code[..])),
+            LogosToken::CPT(code) => TokenType::CPT(InternedString::from(&code[..])),
 
             // Operators
             LogosToken::Plus => TokenType::Plus,
@@ -222,7 +225,7 @@ impl<'a> Lexer<'a> {
         // Create and return the token
         Token {
             token_type,
-            lexeme: lexeme.to_string(),
+            lexeme: InternedString::from(lexeme),
             location: Location {
                 line: self.line as usize,
                 column: self.column as usize,
@@ -240,75 +243,64 @@ impl<'a> Lexer<'a> {
 
         // Get the next token from Logos
         let (logos_token, span) = loop {
-            let token = match self.inner.next()? {
-                Ok(t) => t,
+            match self.inner.next()? {
+                Ok(token) => {
+                    // Skip whitespace and comments
+                    if !matches!(
+                        &token,
+                        LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment
+                    ) {
+                        break (token, self.inner.span());
+                    }
+                }
                 Err(_) => {
                     let span = self.inner.span();
                     let lexeme = &self.source[span.clone()];
                     return Some(Token {
                         token_type: TokenType::LexerError,
-                        lexeme: lexeme.to_string(),
+                        lexeme: InternedString::from(lexeme),
                         location: self.location_from_span(&span),
                     });
                 }
-            };
-
-            // Skip whitespace and comments
-            if !matches!(
-                &token,
-                LogosToken::Whitespace | LogosToken::LineComment | LogosToken::BlockComment
-            ) {
-                break (token, self.inner.span());
             }
         };
 
         let lexeme = &self.source[span.clone()];
 
-        // Convert the token
-        let token = match logos_token {
-            LogosToken::Range => Token {
-                token_type: TokenType::Range,
-                lexeme: lexeme.to_string(),
-                location: self.location_from_span(&span),
-            },
-            LogosToken::RangeInclusive => Token {
-                token_type: TokenType::RangeInclusive,
-                lexeme: lexeme.to_string(),
-                location: self.location_from_span(&span),
-            },
-            LogosToken::Integer(_) => {
-                // Check if this is followed by a range operator
-                let remaining = &self.source[span.end..];
-                if remaining.starts_with("..") {
-                    // Check for inclusive range
-                    let (range_type, range_len) = if remaining.starts_with("..=") {
-                        (TokenType::RangeInclusive, 3)
-                    } else {
-                        (TokenType::Range, 2)
-                    };
+        // Handle range operators after integer literals
+        if let LogosToken::Integer(_) = logos_token {
+            // Check if this is followed by a range operator
+            let remaining = &self.source[span.end..];
+            if remaining.starts_with("..") {
+                // Check for inclusive range
+                let (range_type, range_len) = if remaining.starts_with("..=") {
+                    (TokenType::RangeInclusive, 3)
+                } else {
+                    (TokenType::Range, 2)
+                };
 
-                    // Create range token
-                    let range_span = span.end..(span.end + range_len);
-                    let range_lexeme = &self.source[range_span.clone()];
-                    let range_token = Token {
-                        token_type: range_type,
-                        lexeme: range_lexeme.to_string(),
-                        location: self.location_from_span(&range_span),
-                    };
+                // Create range token
+                let range_span = span.end..(span.end + range_len);
+                let range_lexeme = &self.source[range_span.clone()];
+                let range_token = Token {
+                    token_type: range_type,
+                    lexeme: InternedString::from(range_lexeme),
+                    location: self.location_from_span(&range_span),
+                };
 
-                    // Queue the range token
-                    self.pending_tokens.push_back(range_token);
+                // Queue the range token for the next call
+                self.pending_tokens.push_back(range_token);
 
-                    // Update the inner lexer's position by bumping the characters
-                    self.inner.bump(range_len);
+                // Update the inner lexer's position by consuming the range operator
+                // This is crucial to prevent infinite loops
+                for _ in 0..range_len {
+                    self.inner.bump(1);
                 }
-
-                // Return the integer token
-                self.convert_token(logos_token, lexeme, &span)
             }
-            _ => self.convert_token(logos_token, lexeme, &span),
-        };
+        }
 
+        // Convert and return the current token
+        let token = self.convert_token(logos_token, lexeme, &span);
         Some(token)
     }
 }

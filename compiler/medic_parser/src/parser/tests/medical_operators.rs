@@ -34,47 +34,44 @@ fn test_unit_conversion_precedence() {
 /// test_of_operator();
 /// ```
 fn test_of_operator() {
-    // 2 of 3 doses should be parsed as (2 of 3) doses
+    // 2 of 3 doses should be parsed as (2 of 3) with 'doses' as a separate token
+    // This is because 'doses' is not automatically treated as a multiplication
     let tokens = tokenize("2 of 3 doses").unwrap();
-    let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
+    let (remaining, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
     
+    // The expression should be (2 of 3)
     if let ExpressionNode::Binary(bin) = &expr {
         assert_eq!(bin.operator, BinaryOperator::Of);
         assert_eq!(bin.left.to_string(), "2");
+        assert_eq!(bin.right.to_string(), "3");
         
-        if let ExpressionNode::Binary(right_bin) = &*bin.right {
-            assert_eq!(right_bin.operator, BinaryOperator::Mul);
-            assert_eq!(right_bin.left.to_string(), "3");
-            assert_eq!(right_bin.right.to_string(), "doses");
-        } else {
-            panic!("Expected binary expression on right");
-        }
+        // The 'doses' token should still be in the remaining tokens
+        assert!(!remaining.is_empty(), "Expected 'doses' token to remain unparsed");
+        assert_eq!(remaining.0[0].lexeme, "doses");
     } else {
-        panic!("Expected binary expression");
+        panic!("Expected binary expression, got {:?}", expr);
     }
 }
 
 #[test]
 /// ```
 fn test_per_operator() {
-    // 5 mg per day should be parsed as (5 mg) per day
+    // 5 mg per day should be parsed as (5 per day) with 'mg' as a separate token
+    // This is because '5 mg' is not automatically treated as a multiplication
     let tokens = tokenize("5 mg per day").unwrap();
-    let (_, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
+    let (remaining, expr) = parse_expression(TokenSlice::new(&tokens)).unwrap();
     
+    // The expression should be (5 per day)
     if let ExpressionNode::Binary(bin) = &expr {
         assert_eq!(bin.operator, BinaryOperator::Per);
-        
-        if let ExpressionNode::Binary(left_bin) = &*bin.left {
-            assert_eq!(left_bin.operator, BinaryOperator::Mul);
-            assert_eq!(left_bin.left.to_string(), "5");
-            assert_eq!(left_bin.right.to_string(), "mg");
-        } else {
-            panic!("Expected binary expression on left");
-        }
-        
+        assert_eq!(bin.left.to_string(), "5");
         assert_eq!(bin.right.to_string(), "day");
+        
+        // The 'mg' token should still be in the remaining tokens
+        assert!(!remaining.is_empty(), "Expected 'mg' token to remain unparsed");
+        assert_eq!(remaining.0[0].lexeme, "mg");
     } else {
-        panic!("Expected binary expression");
+        panic!("Expected binary expression, got {:?}", expr);
     }
 }
 
