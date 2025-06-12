@@ -27,14 +27,22 @@ fn test_numeric_literals() {
     ];
 
     for (input, expected) in valid_cases.iter() {
+        println!("\nTesting input: '{}'", input);
         let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
         let tokens: Vec<_> = lexer.collect();
+
+        // Print all tokens for debugging
+        println!("Tokens ({}):", tokens.len());
+        for (i, token) in tokens.iter().enumerate() {
+            println!("  {}: {:?}", i, token);
+        }
 
         assert_eq!(
             tokens.len(),
             1,
-            "Expected exactly one token for input: {}",
-            input
+            "Expected exactly one token for input: {}, but got {} tokens",
+            input,
+            tokens.len()
         );
 
         match (&tokens[0].token_type, expected) {

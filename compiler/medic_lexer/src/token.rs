@@ -244,8 +244,10 @@ pub enum TokenType {
     Byte(u8),
     /// Byte string literal
     ByteString(InternedString),
-    /// Integer literal
+    /// Integer literal (e.g., `42`)
     Integer(i64),
+    /// Negative integer literal (e.g., `-42`)
+    NegativeInteger(i64),
     /// Floating-point literal
     Float(f64),
     /// Boolean literal
@@ -381,6 +383,7 @@ impl PartialEq for TokenType {
             (TokenType::Byte(a), TokenType::Byte(b)) => a == b,
             (TokenType::ByteString(a), TokenType::ByteString(b)) => a == b,
             (TokenType::Integer(a), TokenType::Integer(b)) => a == b,
+            (TokenType::NegativeInteger(a), TokenType::NegativeInteger(b)) => a == b,
             (TokenType::Float(a), TokenType::Float(b)) => a == b,
             (TokenType::Boolean(a), TokenType::Boolean(b)) => a == b,
             (TokenType::Error(a), TokenType::Error(b)) => a == b,
@@ -413,6 +416,7 @@ impl Hash for TokenType {
             TokenType::Char(c) => c.hash(state),
             TokenType::Byte(b) => b.hash(state),
             TokenType::Integer(n) => n.hash(state),
+            TokenType::NegativeInteger(n) => n.hash(state),
             TokenType::Float(f) => f.to_bits().hash(state),
             TokenType::Boolean(b) => b.hash(state),
             _ => {} // All other variants have no associated data

@@ -12,7 +12,13 @@ pub enum LogosToken {
     #[token("..=", priority = 1000)]
     RangeInclusive,
     /// Range operator (`..`)
-    #[token("..", priority = 1000)]
+    ///
+    /// This has higher priority than float literals to ensure that `1..10` is tokenized as `1`, `..`, `10`
+    /// rather than `1.`, `.10`
+    ///
+    /// Note: We use a lower priority than the inclusive range operator (`..=`) to ensure that
+    /// `1..=10` is tokenized as `1`, `..=`, `10` rather than `1`, `..`, `=`, `10`
+    #[token("..", priority = 40)] // Higher than both Integer and Float
     Range,
 
     // Keywords
@@ -75,44 +81,156 @@ pub enum LogosToken {
     Else,
 
     /// Member access operator (`.`)
-    #[token(".")]
+    ///
+    /// This has a higher priority than the float regex to ensure that integers followed by a dot
+    /// are tokenized as separate tokens (e.g., `42.` becomes `[Integer(42), Dot]`).
+    #[token(".", priority = 150)]
     Dot,
 
-    /// Integer literal (e.g., `42`, `-10`)
+    // Note: We can't use negative lookahead in the regex pattern because it's not supported by the logos crate
+    // Instead, we'll handle this case in the token processing logic
+    // This is a placeholder variant that won't be used directly
+    #[doc(hidden)]
+    IntegerWithTrailingDot(i64),
+
+    /// Positive integer literal (e.g., `42`)
     ///
-    /// Matches optional negative sign followed by one or more digits.
-    /// The lexer will validate that the number is not followed by letters.
-    #[regex(r"-?[0-9]+", |lex| {
+    /// Matches one or more digits that are not part of a negative number.
+    /// The lexer will validate that the number is not followed by invalid characters (like letters).
+    #[regex(r"[0-9]+", |lex| {
+        use log::debug;
         let slice = lex.slice();
-        // Only parse as negative if the minus is immediately followed by a digit
-        if !slice.starts_with('-') || (slice.len() > 1 && slice.chars().nth(1).unwrap().is_ascii_digit()) {
-            slice.parse().ok()
-        } else {
-            None
+
+        // Don't match if this is part of a negative number
+        if lex.span().start > 0 {
+            let prev_char = &lex.source()[lex.span().start - 1..lex.span().start];
+            if prev_char == "-" {
+                debug!("POSITIVE INTEGER PARSING - Skipping negative number part: {}", slice);
+                return None;
+            }
         }
-    }, priority = 10)]
+
+        debug!("POSITIVE INTEGER PARSING - Raw slice: '{}' at span {:?}", slice, lex.span());
+
+        // Check if the number is followed by an identifier character (letter or underscore)
+        // which would make it an invalid numeric literal
+        if let Some(next_char) = lex.remainder().chars().next() {
+            if next_char.is_alphabetic() || next_char == '_' {
+                debug!("POSITIVE INTEGER PARSING - Invalid numeric literal: {} followed by identifier character", slice);
+                return None;
+            }
+
+            // Check if this is a range operator (.. or ..=)
+            let next_next_char = lex.remainder().chars().nth(1);
+
+            if next_next_char == Some('.') || next_next_char == Some('=') {
+                // It's a range operator, so this is an integer
+                debug!("POSITIVE INTEGER PARSING - Integer before range operator: {}", slice);
+                return slice.parse().ok();
+            }
+
+
+            // If the next character is a dot, this is an integer followed by a dot
+            // We'll return the integer and let the dot be matched as a separate token
+            if next_char == '.' {
+                debug!("POSITIVE INTEGER PARSING - Integer with trailing dot: {}", slice);
+                return slice.parse().ok();
+            }
+        }
+
+        // For any other case, it's a valid positive integer
+        debug!("POSITIVE INTEGER PARSING - Parsing positive integer: {}", slice);
+        match slice.parse::<i64>() {
+            Ok(n) => {
+                debug!("POSITIVE INTEGER PARSING - Successfully parsed: {}", n);
+                Some(n)
+            },
+            Err(e) => {
+                debug!("POSITIVE INTEGER PARSING - Failed to parse '{}' as i64: {:?}", slice, e);
+                None
+            }
+        }
+    }, priority = 100)]
     Integer(i64),
+
+    /// Negative integer literal (e.g., `-42`)
+    ///
+    /// Matches a minus sign followed by one or more digits.
+    /// The lexer will validate that the number is not followed by invalid characters.
+    ///
+    /// This has higher priority than the Integer variant to ensure negative numbers
+    /// are properly tokenized as a single token.
+    #[regex(r"-[0-9]+", |lex| {
+        use log::debug;
+        let slice = lex.slice();
+        let span = lex.span();
+
+        debug!("NEGATIVE INTEGER PARSING - Raw slice: '{}' at span {:?}", slice, span);
+        debug!("NEGATIVE INTEGER PARSING - Full source: '{:?}'", lex.source());
+        debug!("NEGATIVE INTEGER PARSING - Remainder: '{:?}'", lex.remainder());
+
+        // Parse the entire string as i64 (including the minus sign)
+        match slice.parse::<i64>() {
+            Ok(value) => {
+                debug!("NEGATIVE INTEGER PARSING - Successfully parsed value: {}", value);
+                debug!("NEGATIVE INTEGER PARSING - Bytes: {:?}", slice.as_bytes());
+
+                // Return the parsed value (should be negative)
+                Some(value)
+            },
+            Err(e) => {
+                debug!("NEGATIVE INTEGER PARSING - Failed to parse '{}' as i64: {:?}", slice, e);
+                debug!("NEGATIVE INTEGER PARSING - Bytes that failed to parse: {:?}", slice.as_bytes());
+                None
+            }
+        }
+    }, priority = 200)]
+    // Higher priority than Integer to ensure negative numbers are matched first
+    NegativeInteger(i64),
 
     /// Floating-point literal with optional exponent
     ///
     /// Matches:
-    /// 1. Numbers with decimal point (e.g., `3.14`)
+    /// 1. Numbers with decimal point and fractional part (e.g., `3.14`)
     /// 2. Numbers with leading decimal (e.g., `.5`)
     /// 3. Scientific notation (e.g., `1e10`, `2.5e-3`)
-    /// 4. Negative versions of the above
-    // Match floats but not numbers ending with a decimal point
-    // This ensures that '42.' is tokenized as Integer(42) and Dot
-    #[regex(r"-?(?:[0-9]+\.[0-9]+(?:[eE][+-]?[0-9]+)?|\.[0-9]+(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+)", |lex| {
+    ///
+    /// This does NOT match:
+    /// - Numbers followed by a dot that's part of a range operator (e.g., `1..`)
+    /// - Integers followed by a dot (e.g., `42.` should be tokenized as `42` and `.`)
+    /// - Just a single dot (e.g., `.` should be a Dot token)
+    #[regex(r"-?(?:(?:[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?)|(?:\.[0-9]+(?:[eE][+-]?[0-9]+)?)|(?:[0-9]+[eE][+-]?[0-9]+))", |lex| {
         let slice = lex.slice();
-        // Only parse as negative if the minus is immediately followed by a digit or decimal point
-        if slice.starts_with('-') && slice.len() > 1 && (slice.chars().nth(1).unwrap().is_ascii_digit() || slice.chars().nth(1).unwrap() == '.') {
-            slice.parse().map_err(|_| ())
-        } else if !slice.starts_with('-') {
-            slice.parse().map_err(|_| ())
-        } else {
-            Err(())
+
+        // For negative numbers, ensure the minus is followed by a digit or decimal point
+        if let Some(rest) = slice.strip_prefix('-') {
+            if rest.is_empty() {
+                return Err(());
+            }
+            let next_char = rest.chars().next().unwrap();
+            if !next_char.is_ascii_digit() && next_char != '.' {
+                return Err(());
+            }
+            // If we have a negative number, make sure it's not being split
+            if !rest.starts_with(|c: char| c.is_ascii_digit() || c == '.') {
+                return Err(());
+            }
         }
-    }, priority = 10)]
+
+        // Don't match if this is just a dot (e.g., ".")
+        if slice == "." {
+            return Err(());
+        }
+
+        // Don't match if this is an integer followed by a dot (e.g., "42.")
+        if slice.ends_with('.') && !slice[..slice.len()-1].contains('.') &&
+           !slice[..slice.len()-1].contains('e') && !slice[..slice.len()-1].contains('E') {
+            return Err(());
+        }
+
+        // Parse the float value
+        slice.parse().map_err(|_| ())
+    }, priority = 20)] // Lower priority than Integer to prefer integers when possible
     Float(f64),
 
     /// String literal with escaped quotes
@@ -291,6 +409,8 @@ pub enum LogosToken {
     #[token("+")]
     Plus,
     /// Subtraction operator (`-`)
+    ///
+    /// This is used for the subtraction operator. Negative numbers are handled by the Integer token.
     #[token("-")]
     Minus,
 
