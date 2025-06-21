@@ -199,9 +199,10 @@ pub enum LogosToken {
     /// - Numbers followed by a dot that's part of a range operator (e.g., `1..`)
     /// - Integers followed by a dot (e.g., `42.` should be tokenized as `42` and `.`)
     /// - Just a single dot (e.g., `.` should be a Dot token)
-    #[regex(r"-?(?:(?:[0-9]+\.[0-9]*(?:[eE][+-]?[0-9]+)?)|(?:\.[0-9]+(?:[eE][+-]?[0-9]+)?)|(?:[0-9]+[eE][+-]?[0-9]+))", |lex| {
+    /// - Numbers with a trailing dot (e.g., `42.` should be tokenized as `42` and `.`)
+    #[regex(r"-?(?:(?:[0-9]+\.[0-9]+(?:[eE][+-]?[0-9]+)?)|(?:\.[0-9]+(?:[eE][+-]?[0-9]+)?)|(?:[0-9]+[eE][+-]?[0-9]+))", |lex| {
         let slice = lex.slice();
-
+        
         // For negative numbers, ensure the minus is followed by a digit or decimal point
         if let Some(rest) = slice.strip_prefix('-') {
             if rest.is_empty() {
@@ -219,12 +220,6 @@ pub enum LogosToken {
 
         // Don't match if this is just a dot (e.g., ".")
         if slice == "." {
-            return Err(());
-        }
-
-        // Don't match if this is an integer followed by a dot (e.g., "42.")
-        if slice.ends_with('.') && !slice[..slice.len()-1].contains('.') &&
-           !slice[..slice.len()-1].contains('e') && !slice[..slice.len()-1].contains('E') {
             return Err(());
         }
 
@@ -255,6 +250,11 @@ pub enum LogosToken {
     /// `per` operator (e.g., 'mg per day')
     #[token("per")]
     Per,
+
+    /// Underscore (`_`) - used for wildcard patterns
+    /// This must come before the Identifier pattern to ensure it takes precedence
+    #[token("_", priority = 100)]
+    Underscore,
 
     /// Identifier for variables, functions, and types
     ///
@@ -500,9 +500,11 @@ pub enum LogosToken {
     /// Arrow (`->`)
     #[token("->")]
     Arrow,
-    /// Underscore (`_`)
-    #[token("_", priority = 1)]
-    Underscore,
+    
+    /// Fat arrow (`=>`)
+    #[token("=>")]
+    FatArrow,
+    // Underscore token moved to before the Identifier pattern for proper precedence
 
     // Whitespace and comments (skipped)
     /// Whitespace (spaces, tabs, newlines)

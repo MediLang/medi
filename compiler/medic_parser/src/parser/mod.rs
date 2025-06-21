@@ -80,6 +80,19 @@ impl<'a> TokenSlice<'a> {
             TokenSlice(&self.0[1..])
         }
     }
+    
+    /// Skip any whitespace tokens at the beginning of the slice
+    /// Returns a new TokenSlice with leading whitespace tokens removed
+    pub fn skip_whitespace(&self) -> TokenSlice<'a> {
+        let mut idx = 0;
+        while idx < self.0.len() {
+            match self.0[idx].token_type {
+                TokenType::Whitespace => idx += 1,
+                _ => break,
+            }
+        }
+        TokenSlice(&self.0[idx..])
+    }
 }
 
 impl InputLength for TokenSlice<'_> {
@@ -1167,6 +1180,19 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
             arms,
         })),
     ))
+}
+
+/// Returns `true` if the given operator is a comparison operator (`==`, `!=`, `<`, `<=`, `>`, or `>=`).
+pub(crate) fn is_comparison_operator(op: &BinaryOperator) -> bool {
+    matches!(
+        op,
+        BinaryOperator::Eq
+            | BinaryOperator::Ne
+            | BinaryOperator::Lt
+            | BinaryOperator::Le
+            | BinaryOperator::Gt
+            | BinaryOperator::Ge
+    )
 }
 
 #[cfg(test)]

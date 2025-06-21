@@ -202,6 +202,7 @@ impl<'a> Lexer<'a> {
             LogosToken::Semicolon => TokenType::Semicolon,
             LogosToken::Arrow => TokenType::Arrow,
             LogosToken::Underscore => TokenType::Underscore,
+            LogosToken::FatArrow => TokenType::FatArrow,
 
             // Error
             LogosToken::Error => TokenType::LexerError,

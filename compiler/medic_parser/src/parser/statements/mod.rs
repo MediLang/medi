@@ -344,27 +344,8 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
     // Consume 'if' keyword
     let (mut input, _) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
 
-    // Parse the condition - first try to parse as a simple identifier
-    let (new_input, condition) =
-        match take_token_if(|t| matches!(t, TokenType::Identifier(_)), ErrorKind::Alpha)(input) {
-            Ok((new_input, token)) => {
-                // Successfully parsed an identifier
-                if let TokenType::Identifier(name) = &token.token_type {
-                    (
-                        new_input,
-                        ExpressionNode::Identifier(IdentifierNode {
-                            name: name.to_string(),
-                        }),
-                    )
-                } else {
-                    unreachable!() // We already checked this is an identifier
-                }
-            }
-            Err(_) => {
-                // Fall back to parsing as a full expression
-                parse_expression(input)?
-            }
-        };
+    // Parse the condition as a full expression
+    let (new_input, condition) = parse_expression(input)?;
     input = new_input;
 
     // Parse the then block
@@ -507,39 +488,113 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 
     // Check if the next token is an equals sign
     let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
-
-    // Parse the value expression
+    
+    // Parse the expression after the equals sign
+    let input = input.skip_whitespace();
     let (input, value) = parse_expression(input)?;
-
-    // Consume the semicolon
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
-
-    Ok((
-        input,
-        StatementNode::Assignment(Box::new(AssignmentNode { target, value })),
-    ))
+    
+    // Convert the target to an ExpressionNode::Identifier
+    let target_expr = match target {
+        ExpressionNode::Identifier(ident) => ident,
+        _ => return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            ErrorKind::Tag,
+        ))),
+    };
+    
+    // Create and return the assignment node
+    let assignment = StatementNode::Assignment(Box::new(AssignmentNode {
+        target: ExpressionNode::Identifier(target_expr),
+        value,
+    }));
+    
+    Ok((input, assignment))
 }
-
-/// Parses a match statement with the syntax: `match` <expression> `{` <arms> `}`
 /// where <arms> is a comma-separated list of patterns and expressions.
 ///
 /// # Examples
 /// ```
+/// // Full syntax
 /// match x {
 ///     1 => "one",
 ///     2 => "two",
 ///     _ => "other"
 /// }
+///
+/// // Concise syntax
+/// x {
+///     1 => "one",
+///     2 => "two",
+///     _ => "other"
+/// }
 /// ```
-pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // Parse the `match` keyword
-    let (input, _) = take_token_if(|tt| *tt == TokenType::Match, ErrorKind::Tag)(input)?;
+pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    log::debug!("=== parse_match_statement ===");
+    log::debug!("Input length: {}", input.0.len());
 
-    // Parse the expression to match against
-    let (input, expr) = parse_expression(input)?;
+    // Check if this is a match statement or concise match syntax
+    let (mut input, expr) = if let TokenType::Match = input.0[0].token_type {
+        // Full match syntax: match <expr> { ... }
+        log::debug!("Parsing full match syntax");
+        let input = input.advance(); // Consume 'match' keyword
+        let input = input.skip_whitespace();
+        
+        // Parse the expression before the left brace
+        let expr_end = input.0.iter().position(|t| t.token_type == TokenType::LeftBrace)
+            .unwrap_or_else(|| {
+                log::error!("Could not find opening brace in match expression");
+                input.0.len()
+            });
+            
+        if expr_end == 0 {
+            log::error!("Expected expression before opening brace in match statement");
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                ErrorKind::Tag,
+            )));
+        }
+        
+        let (expr_input, rest) = input.0.split_at(expr_end);
+        let (_, expr) = super::expressions::parse_expression(TokenSlice(expr_input))?;
+        (TokenSlice(rest), expr)
+    } else if input.0.len() > 1 && input.0[1].token_type == TokenType::LeftBrace {
+        // Concise syntax: <ident> { ... }
+        log::debug!("Parsing concise match syntax");
+        
+        // For concise syntax, the expression is just the identifier
+        if let TokenType::Identifier(id) = &input.0[0].token_type {
+            log::debug!("Found identifier: {}", id);
+            let expr = ExpressionNode::Identifier(IdentifierNode { name: id.to_string() });
+            // Return the input with the identifier and left brace consumed
+            (TokenSlice(&input.0[2..]), expr)
+        } else {
+            log::error!("Expected identifier in concise match syntax, got: {:?}", input.0[0].token_type);
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                ErrorKind::Tag,
+            )));
+        }
+    } else {
+        log::error!("Expected 'match' keyword or concise match syntax, got: {:?}", input.0[0].token_type);
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            ErrorKind::Tag,
+        )));
+    };
 
-    // Parse the opening brace
-    let (input, _) = take_token_if(|tt| *tt == TokenType::LeftBrace, ErrorKind::Tag)(input)?;
+    log::debug!("Parsed match expression: {:?}", expr);
+    let input = input.skip_whitespace();
+
+    // Parse opening brace
+    let (input, _) = take_token_if(|tt| *tt == TokenType::LeftBrace, ErrorKind::Tag)(input)
+        .map_err(|e| {
+            log::error!("Failed to find opening brace: {:?}", e);
+            log::error!("Next token: {:?}", input.0.first().map(|t| &t.token_type));
+            e
+        })?;
+    
+    log::debug!("Found opening brace, remaining tokens: {}", input.0.len());
+    log::debug!("Starting to parse match arms...");
 
     let mut input = input;
     let mut arms = Vec::new();
@@ -555,65 +610,179 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
         }
 
         // Parse pattern
-        let (next_input, pattern) = if let Some((token, rest)) = input.0.split_first() {
-            match &token.token_type {
-                TokenType::Underscore => (TokenSlice(rest), PatternNode::Wildcard),
-                TokenType::Identifier(id) => (
-                    TokenSlice(rest),
-                    PatternNode::Identifier(IdentifierNode {
-                        name: id.to_string(),
-                    }),
-                ),
-                TokenType::Integer(n) => {
-                    (TokenSlice(rest), PatternNode::Literal(LiteralNode::Int(*n)))
+        log::debug!("Parsing match arm pattern at token: {:?}", input.0[0]);
+        let (mut next_input, pattern) = match input.0.split_first() {
+            Some((token, rest)) => {
+                match &token.token_type {
+                    TokenType::Underscore => {
+                        log::debug!("Found wildcard pattern");
+                        (TokenSlice(rest), PatternNode::Wildcard)
+                    },
+                    TokenType::Identifier(id) => {
+                        // Check if this is a variant pattern (e.g., Some(x))
+                        if rest.first().map_or(false, |t| t.token_type == TokenType::LeftParen) {
+                            // This is a variant pattern like Some(x)
+                            log::debug!("Found variant pattern: {}", id);
+                            let variant_name = id.to_string();
+                            let inner_rest = &rest[1..]; // Skip the identifier and left paren
+                            
+                            // Parse the inner pattern
+                            if let Some((inner_token, inner_rest)) = inner_rest.split_first() {
+                                match &inner_token.token_type {
+                                    TokenType::Identifier(inner_id) => {
+                                        // Handle simple identifier inside the variant
+                                        let inner_pattern = PatternNode::Identifier(IdentifierNode {
+                                            name: inner_id.to_string(),
+                                        });
+                                        
+                                        // Skip to the closing parenthesis
+                                        if let Some((close_paren, rest_after_paren)) = inner_rest.split_first() {
+                                            if close_paren.token_type == TokenType::RightParen {
+                                                (
+                                                    TokenSlice(rest_after_paren),
+                                                    PatternNode::Variant {
+                                                        name: variant_name,
+                                                        inner: Box::new(inner_pattern),
+                                                    },
+                                                )
+                                            } else {
+                                                log::error!("Expected closing parenthesis after variant pattern, got: {:?}", close_paren.token_type);
+                                                return Err(nom::Err::Error(nom::error::Error::new(
+                                                    input,
+                                                    ErrorKind::Tag,
+                                                )));
+                                            }
+                                        } else {
+                                            log::error!("Unexpected end of input after variant pattern");
+                                            return Err(nom::Err::Error(nom::error::Error::new(
+                                                input,
+                                                ErrorKind::Eof,
+                                            )));
+                                        }
+                                    },
+                                    _ => {
+                                        log::error!("Expected identifier inside variant pattern, got: {:?}", inner_token.token_type);
+                                        return Err(nom::Err::Error(nom::error::Error::new(
+                                            input,
+                                            ErrorKind::Tag,
+                                        )));
+                                    }
+                                }
+                            } else {
+                                log::error!("Unexpected end of input after variant pattern");
+                                return Err(nom::Err::Error(nom::error::Error::new(
+                                    input,
+                                    ErrorKind::Eof,
+                                )));
+                            }
+                        } else {
+                            // This is a simple identifier pattern
+                            log::debug!("Found identifier pattern: {}", id);
+                            (
+                                TokenSlice(rest),
+                                PatternNode::Identifier(IdentifierNode {
+                                    name: id.to_string(),
+                                }),
+                            )
+                        }
+                    },
+                    TokenType::Integer(n) => {
+                        log::debug!("Found integer literal pattern: {}", n);
+                        (TokenSlice(rest), PatternNode::Literal(LiteralNode::Int(*n)))
+                    },
+                    _ => {
+                        log::error!("Unexpected token in pattern: {:?}", token.token_type);
+                        return Err(nom::Err::Error(nom::error::Error::new(
+                            input,
+                            ErrorKind::Tag,
+                        )));
+                    }
                 }
-                _ => {
-                    return Err(nom::Err::Error(nom::error::Error::new(
-                        input,
-                        ErrorKind::Tag,
-                    )))
-                }
+            },
+            None => {
+                log::error!("Unexpected end of input while parsing pattern");
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Eof,
+                )));
             }
-        } else {
-            break;
         };
 
-        // Parse =>
-        let (next_input, _) =
-            take_token_if(|tt| *tt == TokenType::FatArrow, ErrorKind::Tag)(next_input)?;
+        // Parse the fat arrow
+        log::debug!("Looking for fat arrow after pattern");
+        let next_input = match take_token_if(|tt| *tt == TokenType::FatArrow, ErrorKind::Tag)(next_input) {
+            Ok((input, _)) => {
+                log::debug!("Found fat arrow");
+                input
+            },
+            Err(e) => {
+                log::error!("Failed to find fat arrow: {:?}", e);
+                log::error!("Next token: {:?}", next_input.0.first().map(|t| &t.token_type));
+                return Err(e);
+            }
+        };
 
-        // Parse expression
-        let (next_input, expr) = parse_expression(next_input)?;
+        // Parse the expression
+        log::debug!("Parsing expression for match arm");
+        let (mut after_expr, body) = match parse_expression(next_input) {
+            Ok(result) => result,
+            Err(e) => {
+                log::error!("Failed to parse expression in match arm: {:?}", e);
+                log::error!("Next token: {:?}", next_input.0.first().map(|t| &t.token_type));
+                return Err(e);
+            }
+        };
 
-        // Add the arm
+        // Add the arm to the list
+        log::debug!("Adding match arm with pattern: {:?}", pattern);
         arms.push(MatchArmNode {
             pattern,
-            body: Box::new(expr),
+            body: Box::new(body),
         });
 
         // Check for comma or closing brace
-        if let Some((token, rest)) = next_input.0.split_first() {
-            match token.token_type {
+        if let Some((first, rest)) = after_expr.0.split_first() {
+            match first.token_type {
                 TokenType::Comma => {
-                    input = TokenSlice(rest);
+                    // Skip the comma and continue with the next arm
+                    after_expr = TokenSlice(rest);
+                    log::debug!("Skipping comma between match arms");
                 }
                 TokenType::RightBrace => {
-                    input = TokenSlice(rest);
-                    break; // Exit the loop after consuming the closing brace
+                    // Found the closing brace, we're done
+                    after_expr = TokenSlice(rest);
+                    input = after_expr;
+                    break;
                 }
                 _ => {
-                    // No comma or closing brace, but we'll continue to the next arm
-                    // This allows for optional trailing commas
-                    input = next_input;
+                    log::error!("Expected comma or closing brace after match arm, got: {:?}", first.token_type);
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        after_expr,
+                        ErrorKind::Tag,
+                    )));
                 }
             }
         } else {
-            input = next_input;
+            // End of input, but we still need a closing brace
+            log::error!("Unexpected end of input, expected comma or closing brace");
+            return Err(nom::Err::Error(nom::error::Error::new(
+                after_expr,
+                ErrorKind::Eof,
+            )));
         }
+        
+        // Update input for the next iteration
+        input = after_expr;
     }
 
     // We've already consumed the closing brace in the loop, so just return the input
     let input = TokenSlice(input.0);
+    
+    log::debug!("Successfully parsed match statement with {} arms", arms.len());
+    log::debug!("Remaining input length: {}", input.0.len());
+    if !input.0.is_empty() {
+        log::debug!("Next token after match: {:?}", input.0[0].token_type);
+    }
 
     Ok((
         input,
@@ -639,12 +808,11 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
             input.0[0].location.column
         );
 
-        if input.0.len() > 1 {
-            log::debug!(
-                "Next 2 tokens: {:?} and {:?}",
-                input.0[0].token_type,
-                input.0[1].token_type
-            );
+        // Log more tokens for better context
+        let num_tokens = input.0.len().min(5);
+        log::debug!("Next {} tokens:", num_tokens);
+        for i in 0..num_tokens {
+            log::debug!("  {}: {:?}", i, input.0[i].token_type);
         }
     } else {
         log::error!("Unexpected end of input in parse_statement");
@@ -656,48 +824,99 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
 
     // Try to parse different statement types based on the first token
     let result = match input.peek() {
-        Some(token) => match &token.token_type {
-            TokenType::Let => {
-                log::debug!("Found 'let' statement");
-                parse_let_statement(input)
+        Some(token) => {
+            log::debug!("parse_statement: Processing token: {:?} at {}:{} ", 
+                token.token_type, token.location.line, token.location.column);
+            
+            // First, check for match statement (either full or concise syntax)
+            match &token.token_type {
+                TokenType::Match => {
+                    log::debug!("Found 'match' statement");
+                    let result = parse_match_statement(input);
+                    log::debug!("parse_match_statement (full) result: {:?}", result);
+                    return result;
+                }
+                TokenType::Identifier(_) if input.0.len() > 1 && matches!(input.0[1].token_type, TokenType::LeftBrace) => {
+                    log::debug!("Found concise match syntax, parsing as match statement");
+                    let result = parse_match_statement(input);
+                    log::debug!("parse_match_statement (concise) result: {:?}", result);
+                    return result;
+                }
+                _ => {}
             }
-            TokenType::Return => {
-                log::debug!("Found 'return' statement");
-                parse_return_statement(input)
-            }
-            TokenType::If => {
-                log::debug!("Found 'if' statement");
-                parse_if_statement(input)
-            }
-            TokenType::Match => {
-                log::debug!("Found 'match' statement");
-                parse_match_statement(input)
-            }
-            TokenType::While => {
-                log::debug!("Found 'while' statement");
-                parse_while_statement(input)
-            }
-            _ => {
-                log::debug!("No statement keyword found, trying expression statement");
-                // Try to parse as an expression statement
-                match parse_expression(input) {
-                    Ok((input, expr)) => {
-                        log::debug!("Successfully parsed expression statement");
-                        // Consume the semicolon if present
-                        let input = if let Some(TokenType::Semicolon) =
-                            input.peek().map(|t| &t.token_type)
-                        {
-                            log::debug!("Consuming semicolon after expression");
-                            input.advance()
-                        } else {
-                            log::debug!("No semicolon after expression");
-                            input
-                        };
-                        Ok((input, StatementNode::Expr(expr)))
+            
+            match &token.token_type {
+                TokenType::Let => {
+                    log::debug!("Found 'let' statement");
+                    parse_let_statement(input)
+                }
+                TokenType::Return => {
+                    log::debug!("Found 'return' statement");
+                    parse_return_statement(input)
+                }
+                TokenType::If => {
+                    log::debug!("Found 'if' statement");
+                    parse_if_statement(input)
+                }
+                TokenType::Match => {
+                    log::debug!("Found 'match' statement");
+                    let result = parse_match_statement(input);
+                    log::debug!("parse_match_statement (full) result: {:?}", result);
+                    result
+                }
+                TokenType::While => {
+                    log::debug!("Found 'while' statement");
+                    parse_while_statement(input)
+                }
+                _ => {
+                    log::debug!("No statement keyword found, checking for concise match syntax");
+                    
+                    // Check for concise match syntax: <ident> { ... }
+                    if input.0.len() > 1 {
+                        if let TokenType::Identifier(_) = input.0[0].token_type {
+                            if let TokenType::LeftBrace = input.0[1].token_type {
+                                log::debug!("Found concise match syntax, parsing as match statement");
+                                return parse_match_statement(input);
+                            }
+                        }
                     }
-                    Err(e) => {
-                        log::error!("Failed to parse expression: {:?}", e);
-                        Err(e)
+                    
+                    log::debug!("No concise match syntax found, trying expression statement");
+                    // Log the next few tokens for better debugging
+                    log::debug!("Next tokens in parse_statement (expression case):");
+                    for (i, t) in input.0.iter().take(5).enumerate() {
+                        log::debug!("  {}: {:?} at {}:{}", i, t.token_type, t.location.line, t.location.column);
+                    }
+                    
+                    // Try to parse as an expression statement
+                    match parse_expression(input) {
+                        Ok((input, expr)) => {
+                            log::debug!("Successfully parsed expression statement");
+                            // Consume the semicolon if present
+                            let input = if let Some(TokenType::Semicolon) =
+                                input.peek().map(|t| &t.token_type)
+                            {
+                                log::debug!("Consuming semicolon after expression");
+                                input.advance()
+                            } else {
+                                log::debug!("No semicolon after expression");
+                                input
+                            };
+                            Ok((input, StatementNode::Expr(expr)))
+                        }
+                        Err(e) => {
+                            log::error!("Failed to parse expression: {:?}", e);
+                            if let nom::Err::Error(ref err) = e {
+                                log::error!("Error at position: {}", err.input.0.len());
+                                if !err.input.0.is_empty() {
+                                    log::error!("Error token: {:?} at {}:{}", 
+                                        err.input.0[0].token_type,
+                                        err.input.0[0].location.line,
+                                        err.input.0[0].location.column);
+                                }
+                            }
+                            Err(e)
+                        }
                     }
                 }
             }
