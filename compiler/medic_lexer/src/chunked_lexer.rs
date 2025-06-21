@@ -137,7 +137,11 @@ impl AddAssign<usize> for Position {
 
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "line {}, column {}, offset {}", self.line, self.column, self.offset)
+        write!(
+            f,
+            "line {}, column {}, offset {}",
+            self.line, self.column, self.offset
+        )
     }
 }
 
@@ -273,7 +277,7 @@ impl ChunkedLexer {
             "Converting token: {:?} with lexeme: '{}' at {:?} (source: '{}')",
             token_type, lexeme_str, span, source
         );
-        
+
         // Special debug for string tokens
         if let LogosToken::String(s) = &token_type {
             debug!("Found string token with content: '{}'", s);
@@ -370,8 +374,11 @@ impl ChunkedLexer {
                 create_token(TokenType::Error(InternedString::from("Invalid token")))
             }
             LogosToken::String(s) => {
-                debug!("Creating string token with content: '{}' (original: '{}')", s, lexeme_str);
-                
+                debug!(
+                    "Creating string token with content: '{}' (original: '{}')",
+                    s, lexeme_str
+                );
+
                 // Process escape sequences in the string
                 let processed = s
                     .replace("\\\"", "\"")
@@ -379,7 +386,7 @@ impl ChunkedLexer {
                     .replace("\\n", "\n")
                     .replace("\\r", "\r")
                     .replace("\\t", "\t");
-                
+
                 debug!("Processed string after escape sequences: '{}'", processed);
                 let interned = InternedString::from(processed.as_str());
                 debug!("Created interned string: {:?}", interned);
@@ -532,7 +539,10 @@ impl ChunkedLexer {
         }
 
         // Read the next chunk from the source as raw bytes
-        debug!("Reading next chunk of size {} bytes", self.config.chunk_size);
+        debug!(
+            "Reading next chunk of size {} bytes",
+            self.config.chunk_size
+        );
         let mut buffer = vec![0u8; self.config.chunk_size];
         let bytes_read = match self.source.read(&mut buffer) {
             Ok(0) => {
@@ -543,7 +553,10 @@ impl ChunkedLexer {
                 // Handle any remaining partial token at EOF
                 if let Some(partial) = self.partial_token.take() {
                     let partial_lexeme = partial.partial_lexeme;
-                    debug!("Processing final partial token at EOF: '{}'", partial_lexeme);
+                    debug!(
+                        "Processing final partial token at EOF: '{}'",
+                        partial_lexeme
+                    );
                     if !partial_lexeme.is_empty() {
                         let tokens = self.tokenize_source(&partial_lexeme, true, false)?;
                         debug!("Generated {} tokens from final partial token", tokens.len());
@@ -554,7 +567,11 @@ impl ChunkedLexer {
                 }
 
                 let has_tokens = !self.buffer.is_empty();
-                debug!("EOF reached, returning {}. Buffer has {} tokens", has_tokens, self.buffer.len());
+                debug!(
+                    "EOF reached, returning {}. Buffer has {} tokens",
+                    has_tokens,
+                    self.buffer.len()
+                );
                 return Ok(has_tokens);
             }
             Ok(bytes_read) => bytes_read,
@@ -572,14 +589,17 @@ impl ChunkedLexer {
 
         // Handle any partial token from the previous chunk
         let (source, skip_first_token) = if let Some(partial) = &self.partial_token {
-            debug!("Found partial token from previous chunk: '{}' ({} bytes)", 
-                  partial.partial_lexeme, partial.partial_lexeme.len());
-            
+            debug!(
+                "Found partial token from previous chunk: '{}' ({} bytes)",
+                partial.partial_lexeme,
+                partial.partial_lexeme.len()
+            );
+
             // Check if the partial token is an unclosed string
-            let is_unclosed_string = partial.partial_lexeme.starts_with('"') && 
-                                   !partial.partial_lexeme.ends_with('"') &&
-                                   partial.partial_lexeme.chars().filter(|&c| c == '"').count() % 2 == 1;
-            
+            let is_unclosed_string = partial.partial_lexeme.starts_with('"')
+                && !partial.partial_lexeme.ends_with('"')
+                && partial.partial_lexeme.chars().filter(|&c| c == '"').count() % 2 == 1;
+
             // Combine the partial token with the new chunk
             let combined = if is_unclosed_string {
                 // For unclosed strings, combine directly without adding anything in between
@@ -588,15 +608,15 @@ impl ChunkedLexer {
                 // For other partial tokens, just concatenate them
                 partial.partial_lexeme.clone() + &chunk
             };
-            
+
             debug!(
                 "Combined partial token with new chunk: '{}' + '{}' = '{}' ({} bytes)",
-                &partial.partial_lexeme, 
-                &chunk, 
+                &partial.partial_lexeme,
+                &chunk,
                 &combined,
                 combined.len()
             );
-            
+
             self.partial_token = None;
             (combined, true)
         } else {
@@ -604,10 +624,18 @@ impl ChunkedLexer {
         };
 
         // Process the chunk and handle any errors
-        debug!("Processing chunk of size {} bytes: '{}'", source.len(), source);
+        debug!(
+            "Processing chunk of size {} bytes: '{}'",
+            source.len(),
+            source
+        );
         let tokens = self.tokenize_source(&source, false, skip_first_token)?;
-        debug!("Generated {} tokens from chunk: {:?}", tokens.len(), tokens.iter().map(|t| &t.lexeme).collect::<Vec<_>>());
-        
+        debug!(
+            "Generated {} tokens from chunk: {:?}",
+            tokens.len(),
+            tokens.iter().map(|t| &t.lexeme).collect::<Vec<_>>()
+        );
+
         if tokens.is_empty() {
             debug!("No tokens generated from chunk, this might be a problem");
         }
@@ -633,7 +661,9 @@ impl ChunkedLexer {
                 // Case 1: Identifier or number that might be cut off
                 if last_char.is_alphanumeric() || last_char == '_' {
                     // Only if the chunk doesn't end with whitespace or common delimiters
-                    if !source.ends_with(|c: char| c.is_whitespace() || c == ';' || c == '{' || c == '}') {
+                    if !source
+                        .ends_with(|c: char| c.is_whitespace() || c == ';' || c == '{' || c == '}')
+                    {
                         // Look for the start of what might be a partial identifier/number
                         for (i, c) in source.char_indices().rev() {
                             if c.is_alphanumeric() || c == '_' {
@@ -654,19 +684,19 @@ impl ChunkedLexer {
                 // Case 2: String literal that might be cut off
                 else if source.contains('"') {
                     debug!("Checking for unclosed strings in chunk");
-                    
+
                     // Track if we're inside a string and the position of the last quote
                     let mut in_string = false;
                     let mut quote_pos = 0;
                     let mut escape = false;
-                    
+
                     // Find the last unclosed string in the chunk
                     for (i, c) in source.char_indices() {
                         if c == '\\' && !escape {
                             escape = true;
                             continue;
                         }
-                        
+
                         if c == '"' && !escape {
                             in_string = !in_string;
                             if in_string {
@@ -678,18 +708,18 @@ impl ChunkedLexer {
                                 debug!("Found closing quote at position {}", i);
                             }
                         }
-                        
+
                         if escape {
                             escape = false;
                         }
-                        
+
                         // Update the position to account for the partial token
                         if self.position.offset >= quote_pos {
                             self.position.offset -= quote_pos;
                         } else {
                             self.position.offset = 0;
                         }
-                        
+
                         return Ok(true);
                     }
                 }
@@ -698,18 +728,20 @@ impl ChunkedLexer {
             // Handle partial tokens from the first case (identifiers/numbers)
             if should_save_partial && partial_start < source.len() {
                 let potential_partial = &source[partial_start..];
-                
+
                 // Only treat as partial token if we're not at the end of a line
                 // and the partial is more than just whitespace
-                if !potential_partial.trim().is_empty() 
+                if !potential_partial.trim().is_empty()
                     && potential_partial != "\n"
                     && !potential_partial.ends_with(';') // Don't treat semicolon as partial
                     && !potential_partial.ends_with('}') // Don't treat closing brace as partial
-                    && !potential_partial.ends_with('{') // Don't treat opening brace as partial
+                    && !potential_partial.ends_with('{')
+                // Don't treat opening brace as partial
                 {
                     // Only treat as partial if it's not a complete statement
                     let trimmed = potential_partial.trim();
-                    if !trimmed.ends_with(';') && !trimmed.ends_with('}') && !trimmed.ends_with('{') {
+                    if !trimmed.ends_with(';') && !trimmed.ends_with('}') && !trimmed.ends_with('{')
+                    {
                         debug!(
                             "Found potential partial token at chunk boundary: '{}'",
                             potential_partial
@@ -722,13 +754,14 @@ impl ChunkedLexer {
                         });
 
                         // Don't clear the buffer for small chunks, as it might be a complete statement
-                        if potential_partial.len() > 10 {  // Only clear buffer for larger potential partials
+                        if potential_partial.len() > 10 {
+                            // Only clear buffer for larger potential partials
                             debug!(
                                 "Clearing buffer of {} tokens due to partial token",
                                 self.buffer.len()
                             );
                             self.buffer.clear();
-                            
+
                             // Update the position to account for the partial token we're carrying over
                             if self.position.offset >= potential_partial.len() {
                                 self.position.offset -= potential_partial.len();
@@ -736,7 +769,7 @@ impl ChunkedLexer {
                                 self.position.offset = 0;
                             }
                         }
-                        
+
                         return Ok(true);
                     } else {
                         debug!("Ignoring complete statement at chunk boundary");
@@ -773,11 +806,16 @@ impl ChunkedLexer {
             .filter_level(log::LevelFilter::Debug)
             .try_init();
         debug!("\n\n===== tokenize_source called =====");
-        debug!("Source length: {}, is_final: {}, skip_first_token: {}", 
-              source.len(), is_final, skip_first_token);
-        
+        debug!(
+            "Source length: {}, is_final: {}, skip_first_token: {}",
+            source.len(),
+            is_final,
+            skip_first_token
+        );
+
         // Log the source with visible whitespace for debugging
-        let debug_source = source.chars()
+        let debug_source = source
+            .chars()
             .map(|c| match c {
                 '\n' => "\\n".to_string(),
                 '\r' => "\\r".to_string(),
@@ -787,7 +825,7 @@ impl ChunkedLexer {
             })
             .collect::<String>();
         debug!("Source (escaped): {}", debug_source);
-        
+
         // Log line numbers for the source
         debug!("Source lines ({}):", source.lines().count());
         for (i, line) in source.lines().enumerate() {
@@ -802,7 +840,7 @@ impl ChunkedLexer {
             skip_first_token
         );
         debug!("Current position: {:?}", self.position);
-        
+
         // Print source with visible newlines and control characters
         debug!("Source content (with escape sequences):");
         let escaped_source = source
@@ -818,7 +856,7 @@ impl ChunkedLexer {
             })
             .collect::<String>();
         debug!("{}", escaped_source);
-        
+
         // Print the source with line numbers for debugging
         debug!("\nSource with line numbers:");
         for (i, line) in source.lines().enumerate() {
@@ -831,23 +869,27 @@ impl ChunkedLexer {
         let mut current_line = self.position.line;
         let mut current_column = self.position.column;
         let mut last_span_end = 0;
-        
+
         // Track string state for better error recovery
         let mut in_string = self.partial_token.is_some();
         let mut string_start = 0;
         let mut escape = false;
         let mut string_buffer = if in_string {
             let partial = self.partial_token.take().unwrap();
-            debug!("Continuing from partial token: '{}' (start_pos: {})", 
-                  partial.partial_lexeme, partial.start_position);
+            debug!(
+                "Continuing from partial token: '{}' (start_pos: {})",
+                partial.partial_lexeme, partial.start_position
+            );
             partial.partial_lexeme
         } else {
             String::new()
         };
-        
-        debug!("Initial string state - in_string: {}, buffer: '{}', position: {:?}", 
-              in_string, string_buffer, self.position);
-              
+
+        debug!(
+            "Initial string state - in_string: {}, buffer: '{}', position: {:?}",
+            in_string, string_buffer, self.position
+        );
+
         // Log the current partial token state
         if let Some(partial) = &self.partial_token {
             debug!("Starting with partial token: {:?}", partial);
@@ -863,14 +905,14 @@ impl ChunkedLexer {
         // Process all tokens in the current chunk
         let mut is_first_token = true;
         let mut token_result;
-        
+
         loop {
             // Get the next token from the lexer
             token_result = match lexer.next() {
                 Some(result) => result,
-                None => break,  // No more tokens
+                None => break, // No more tokens
             };
-            
+
             // Skip the first token if it's the result of combining with a partial token
             if skip_first_token && is_first_token {
                 debug!(
@@ -886,36 +928,53 @@ impl ChunkedLexer {
                 Ok(token) => {
                     let span = lexer.span();
                     let token_text = &source[span.start..span.end];
-                    
+
                     // Handle string literals and track string state
                     match &token {
                         LogosToken::String(s) => {
                             debug!("Found complete string literal: '{}' (span: {:?})", s, span);
                             debug!("  Token text: '{}'", token_text);
-                            debug!("  Current buffer: '{}', in_string: {}", string_buffer, in_string);
-                            
+                            debug!(
+                                "  Current buffer: '{}', in_string: {}",
+                                string_buffer, in_string
+                            );
+
                             if !in_string {
                                 // This is the start of a new string
                                 in_string = true;
                                 string_start = span.start;
                                 string_buffer.clear();
                                 debug!("Found start of string at position {}", string_start);
-                                
+
                                 // If this is a complete string (has both quotes), process it
                                 if s.starts_with('"') && s.ends_with('"') && s.len() > 1 {
                                     in_string = false;
-                                    let content = s[1..s.len()-1].to_string();
-                                    debug!("Found complete string: '{}' (len: {})", content, content.len());
-                                    
-                                    if let Some(converted) = self.convert_token(LogosToken::String(content), &span, source) {
-                                        debug!("  Converted complete string token: {:?}", converted);
+                                    let content = s[1..s.len() - 1].to_string();
+                                    debug!(
+                                        "Found complete string: '{}' (len: {})",
+                                        content,
+                                        content.len()
+                                    );
+
+                                    if let Some(converted) = self.convert_token(
+                                        LogosToken::String(content),
+                                        &span,
+                                        source,
+                                    ) {
+                                        debug!(
+                                            "  Converted complete string token: {:?}",
+                                            converted
+                                        );
                                         tokens.push(converted);
                                     }
                                     string_buffer.clear();
                                 } else if s.starts_with('"') {
                                     // Start of a string that might continue in the next chunk
                                     string_buffer.push_str(s);
-                                    debug!("Started string with partial content: '{}'", string_buffer);
+                                    debug!(
+                                        "Started string with partial content: '{}'",
+                                        string_buffer
+                                    );
                                 }
                             } else {
                                 // This is the end of a string or a continuation
@@ -923,30 +982,42 @@ impl ChunkedLexer {
                                     // This is the end of a string
                                     in_string = false;
                                     debug!("Found end of string at position {}", span.end);
-                                    
+
                                     // Combine with any buffered string content
-                                    let s = &s[..s.len()-1]; // Remove closing quote
+                                    let s = &s[..s.len() - 1]; // Remove closing quote
                                     let content = if !string_buffer.is_empty() {
                                         format!("{}{}", string_buffer, s)
                                     } else {
                                         s.to_string()
                                     };
-                                    
-                                    debug!("Created string token from parts: '{}' (len: {})", content, content.len());
-                                    
+
+                                    debug!(
+                                        "Created string token from parts: '{}' (len: {})",
+                                        content,
+                                        content.len()
+                                    );
+
                                     // Convert the string token and add it to the results
-                                    if let Some(converted) = self.convert_token(LogosToken::String(content), &span, source) {
+                                    if let Some(converted) = self.convert_token(
+                                        LogosToken::String(content),
+                                        &span,
+                                        source,
+                                    ) {
                                         debug!("  Converted token: {:?}", converted);
                                         tokens.push(converted);
                                     } else {
                                         debug!("Failed to convert string token");
                                     }
-                                    
+
                                     string_buffer.clear();
                                 } else {
                                     // Middle of a string, add to buffer
                                     string_buffer.push_str(s);
-                                    debug!("Continuing string, buffer now: '{}' (len: {})", string_buffer, string_buffer.len());
+                                    debug!(
+                                        "Continuing string, buffer now: '{}' (len: {})",
+                                        string_buffer,
+                                        string_buffer.len()
+                                    );
                                 }
                             }
                             escape = false;
@@ -959,15 +1030,18 @@ impl ChunkedLexer {
                                 // We're in a string but got a non-string token, which means we might have
                                 // a string that spans chunks or has invalid syntax
                                 debug!("Found non-string token while inside string: {:?}", token);
-                                
+
                                 // Look for the closing quote in the remaining source
                                 let remaining = &source[span.start..];
                                 let mut found_close = false;
                                 let mut pos = 0;
                                 let mut in_escape = false;
-                                
-                                debug!("Looking for closing quote in remaining source: '{}'", remaining);
-                                
+
+                                debug!(
+                                    "Looking for closing quote in remaining source: '{}'",
+                                    remaining
+                                );
+
                                 // Check if we have a partial string from previous chunk
                                 if !string_buffer.is_empty() && string_buffer.starts_with('"') {
                                     // We're continuing a string from previous chunk
@@ -977,14 +1051,18 @@ impl ChunkedLexer {
                                             in_escape = true;
                                             continue;
                                         }
-                                        
+
                                         if c == '"' && !in_escape {
                                             found_close = true;
                                             pos = i + 1; // Position after the closing quote
-                                            debug!("Found closing quote at position {} (relative: {})", span.start + pos, pos);
+                                            debug!(
+                                                "Found closing quote at position {} (relative: {})",
+                                                span.start + pos,
+                                                pos
+                                            );
                                             break;
                                         }
-                                        
+
                                         if in_escape {
                                             in_escape = false;
                                         }
@@ -992,13 +1070,13 @@ impl ChunkedLexer {
                                 } else {
                                     // Look for both opening and closing quotes
                                     let mut quote_pos = None;
-                                    
+
                                     for (i, c) in remaining.char_indices() {
                                         if c == '\\' && !in_escape {
                                             in_escape = true;
                                             continue;
                                         }
-                                        
+
                                         if c == '"' && !in_escape {
                                             if let Some(start) = quote_pos {
                                                 // Found closing quote
@@ -1011,51 +1089,69 @@ impl ChunkedLexer {
                                                 quote_pos = Some(i);
                                             }
                                         }
-                                        
+
                                         if in_escape {
                                             in_escape = false;
                                         }
                                     }
                                 }
-                                
+
                                 if found_close {
                                     // We found the closing quote, create a string token for the full string
                                     debug!("=== FOUND CLOSING QUOTE ===");
                                     debug!("Position: {} (relative: {})", span.start + pos, pos);
                                     debug!("Current string buffer: '{}'", string_buffer);
-                                    
+
                                     let (content, content_len) = if !string_buffer.is_empty() {
                                         // Combine with buffered partial string
                                         let remaining_part = &source[..span.start + pos];
-                                        let combined = if string_buffer.ends_with('\'') && remaining_part.starts_with('"') {
+                                        let combined = if string_buffer.ends_with('\'')
+                                            && remaining_part.starts_with('"')
+                                        {
                                             // Handle case where quote was escaped in previous chunk
-                                            format!("{}{}", &string_buffer[..string_buffer.len()-1], &remaining_part[1..])
+                                            format!(
+                                                "{}{}",
+                                                &string_buffer[..string_buffer.len() - 1],
+                                                &remaining_part[1..]
+                                            )
                                         } else {
                                             format!("{}{}", string_buffer, remaining_part)
                                         };
-                                        
+
                                         debug!("Combined string from buffer and chunk: '{}' (buffer: '{}' + source: '{}')", 
                                             combined, string_buffer, remaining_part);
-                                        
+
                                         // Extract just the content between quotes if needed
-                                        let content = if combined.starts_with('"') && combined.ends_with('"') {
-                                            let inner = combined[1..combined.len()-1].to_string();
-                                            debug!("Extracted inner string: '{}' (from: '{}')", inner, combined);
+                                        let content = if combined.starts_with('"')
+                                            && combined.ends_with('"')
+                                        {
+                                            let inner = combined[1..combined.len() - 1].to_string();
+                                            debug!(
+                                                "Extracted inner string: '{}' (from: '{}')",
+                                                inner, combined
+                                            );
                                             inner
                                         } else {
                                             debug!("No surrounding quotes to remove, using as is");
                                             combined.clone()
                                         };
-                                        
+
                                         (content, combined.len())
                                     } else {
-                                        let content = source[string_start..span.start + pos].to_string();
+                                        let content =
+                                            source[string_start..span.start + pos].to_string();
                                         debug!("No buffer, using source content: '{}' (start: {}, end: {})", 
                                             content, string_start, span.start + pos);
-                                            
-                                        let content = if content.starts_with('"') && content.ends_with('"') && content.len() > 1 {
-                                            let inner = content[1..content.len()-1].to_string();
-                                            debug!("Extracted inner string: '{}' (from: '{}')", inner, content);
+
+                                        let content = if content.starts_with('"')
+                                            && content.ends_with('"')
+                                            && content.len() > 1
+                                        {
+                                            let inner = content[1..content.len() - 1].to_string();
+                                            debug!(
+                                                "Extracted inner string: '{}' (from: '{}')",
+                                                inner, content
+                                            );
                                             inner
                                         } else {
                                             debug!("No surrounding quotes to remove, using as is");
@@ -1063,22 +1159,32 @@ impl ChunkedLexer {
                                         };
                                         (content, pos)
                                     };
-                                    
-                                    debug!("Created string token from split string: '{}' (len: {})", content, content_len);
-                                    
+
+                                    debug!(
+                                        "Created string token from split string: '{}' (len: {})",
+                                        content, content_len
+                                    );
+
                                     // Convert the string token and add it to the results
                                     // Create a proper span for the string token
                                     let full_span = string_start..span.start + pos;
                                     debug!("Creating string token from combined parts: '{}' (span: {:?})", content, full_span);
                                     let content_clone = content.clone();
-                                    if let Some(converted) = self.convert_token(LogosToken::String(content), &full_span, source) {
+                                    if let Some(converted) = self.convert_token(
+                                        LogosToken::String(content),
+                                        &full_span,
+                                        source,
+                                    ) {
                                         tokens.push(converted);
                                     } else {
-                                        debug!("Failed to convert string token: '{}'", content_clone);
+                                        debug!(
+                                            "Failed to convert string token: '{}'",
+                                            content_clone
+                                        );
                                     }
-                                    
+
                                     last_span_end = span.start + pos;
-                                    
+
                                     // Skip the processed string content in the lexer
                                     lexer.bump(pos);
                                     continue;
@@ -1089,14 +1195,18 @@ impl ChunkedLexer {
                                     } else {
                                         source[string_start..].to_string()
                                     };
-                                    
+
                                     debug!("Unclosed string detected, saving as partial token (start={}, len={}): '{}'", 
                                           string_start, partial.len(), partial);
-                                    
+
                                     if is_final {
-                                        debug!("Final chunk, creating error token for unclosed string");
+                                        debug!(
+                                            "Final chunk, creating error token for unclosed string"
+                                        );
                                         tokens.push(Token::new(
-                                            TokenType::Error(InternedString::from("Unclosed string literal")),
+                                            TokenType::Error(InternedString::from(
+                                                "Unclosed string literal",
+                                            )),
                                             InternedString::from(partial.as_str()),
                                             crate::token::Location {
                                                 line: current_line,
@@ -1113,7 +1223,7 @@ impl ChunkedLexer {
                                             column: current_column,
                                             offset: start_offset + string_start,
                                         };
-                                        
+
                                         self.partial_token = Some(PartialToken {
                                             partial_lexeme: partial,
                                             start_position: start_pos,
@@ -1130,27 +1240,31 @@ impl ChunkedLexer {
                                 // Check if this token starts a string
                                 let mut in_token_string = false;
                                 let mut token_escape = false;
-                                
+
                                 for c in token_text.chars() {
                                     if c == '\\' && !token_escape {
                                         token_escape = true;
                                         continue;
                                     }
-                                    
+
                                     if c == '"' && !token_escape {
                                         in_token_string = !in_token_string;
                                         if in_token_string {
                                             // Found opening quote
                                             in_string = true;
-                                            string_start = span.start + token_text.find('"').unwrap();
-                                            debug!("Found opening quote at position {}", string_start);
+                                            string_start =
+                                                span.start + token_text.find('"').unwrap();
+                                            debug!(
+                                                "Found opening quote at position {}",
+                                                string_start
+                                            );
                                         } else {
                                             // Found closing quote
                                             in_string = false;
                                             debug!("Found closing quote");
                                         }
                                     }
-                                    
+
                                     if token_escape {
                                         token_escape = false;
                                     }
@@ -1171,24 +1285,30 @@ impl ChunkedLexer {
                             } else {
                                 current_column += 1;
                             }
-                            
+
                             // Check for string delimiters in skipped text
                             if c == '\\' && !escape {
                                 escape = true;
                                 continue;
                             }
-                            
+
                             if c == '"' && !escape {
                                 in_string = !in_string;
                                 if in_string {
                                     // Found opening quote in skipped text
-                                    string_start = last_span_end + skipped_text[..=skipped_text.find('"').unwrap()].chars().count();
-                                    debug!("Found opening quote in skipped text at position {}", string_start);
+                                    string_start = last_span_end
+                                        + skipped_text[..=skipped_text.find('"').unwrap()]
+                                            .chars()
+                                            .count();
+                                    debug!(
+                                        "Found opening quote in skipped text at position {}",
+                                        string_start
+                                    );
                                 } else {
                                     debug!("Found closing quote in skipped text");
                                 }
                             }
-                            
+
                             if escape {
                                 escape = false;
                             }
@@ -1257,14 +1377,14 @@ impl ChunkedLexer {
                 Err(_) => {
                     // If we encounter an error, check if we're in the middle of a string or identifier
                     let remaining = &source[last_span_end..];
-                    
+
                     // Check if we're in a string by scanning the remaining text
                     let mut in_string_check = in_string;
                     let mut escape_check = escape;
                     let mut string_start_check = string_start;
                     let mut is_identifier = false;
                     let mut identifier_start = 0;
-                    
+
                     // Check if we're in the middle of an identifier
                     if !in_string && !remaining.is_empty() {
                         let first_char = remaining.chars().next().unwrap();
@@ -1273,18 +1393,18 @@ impl ChunkedLexer {
                             identifier_start = last_span_end;
                         }
                     }
-                    
+
                     for (i, c) in remaining.char_indices() {
                         if in_string_check {
                             if c == '\\' && !escape_check {
                                 escape_check = true;
                                 continue;
                             }
-                            
+
                             if c == '"' && !escape_check {
                                 in_string_check = false;
                             }
-                            
+
                             if escape_check {
                                 escape_check = false;
                             }
@@ -1294,7 +1414,7 @@ impl ChunkedLexer {
                             }
                         }
                     }
-                    
+
                     // If we're in a string or identifier and it's not the final chunk, save the partial token
                     if (in_string_check || is_identifier) && !is_final {
                         let partial = if in_string_check {
@@ -1319,19 +1439,21 @@ impl ChunkedLexer {
                                 is_identifier: true,
                             }
                         };
-                        
+
                         // Save the partial token for the next chunk
                         self.partial_token = Some(partial);
-                        debug!("Saved partial token: '{}' (string: {}, identifier: {})", 
-                              remaining, in_string_check, is_identifier);
+                        debug!(
+                            "Saved partial token: '{}' (string: {}, identifier: {})",
+                            remaining, in_string_check, is_identifier
+                        );
                         break;
                     } else {
                         // For final chunks, try to recover by skipping invalid characters
                         debug!("Encountered invalid token at position {}", last_span_end);
-                        
+
                         if let Some(c) = remaining.chars().next() {
                             last_span_end += c.len_utf8();
-                            
+
                             // Update position for the skipped character
                             if c == '\n' {
                                 current_line += 1;
@@ -1341,7 +1463,7 @@ impl ChunkedLexer {
                             } else {
                                 current_column += 1;
                             }
-                            
+
                             continue;
                         } else {
                             break;
@@ -1701,8 +1823,8 @@ impl Iterator for ChunkedLexer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
     use std::io::Cursor;
+    use std::io::Write;
     use tempfile::NamedTempFile;
 
     /// Helper function to create a temporary file with the given content
@@ -1940,23 +2062,25 @@ mod tests {
         // Enable debug logging for this test
         std::env::set_var("RUST_LOG", "debug");
         let _ = env_logger::builder().is_test(true).try_init();
-        
+
         // Define test cases with different string literal patterns
-        let test_cases = vec![("simple", "Hello, world!"),
-                            ("empty", ""),
-                            ("with_escapes", "Line 1\nLine 2\nLine 3"),
-                            ("with_quotes", "Contains \"quoted\" text"),
-                            ("with_backslashes", "C:\\\\path\\\\to\\\\file"),
-                            ("unicode", "こんにちは世界")];
-        
+        let test_cases = vec![
+            ("simple", "Hello, world!"),
+            ("empty", ""),
+            ("with_escapes", "Line 1\nLine 2\nLine 3"),
+            ("with_quotes", "Contains \"quoted\" text"),
+            ("with_backslashes", "C:\\\\path\\\\to\\\\file"),
+            ("unicode", "こんにちは世界"),
+        ];
+
         // Create input with all test cases
         // Build the test input string
-        let input: String = test_cases.iter()
+        let input: String = test_cases
+            .iter()
             .enumerate()
             .map(|(i, (_, s))| format!("let s{} = \"{}\";", i, s.replace('"', "\\\"")))
             .collect::<Vec<_>>()
             .join("\n");
-
 
         // Create a cursor for the input
         let cursor = Cursor::new(input);
@@ -1965,16 +2089,19 @@ mod tests {
         let config = ChunkedLexerConfig {
             chunk_size,
             max_buffer_size: 20,
-            include_whitespace: true,  // Include whitespace for better position tracking
+            include_whitespace: true, // Include whitespace for better position tracking
             keep_source_in_memory: true,
         };
 
         let lexer = ChunkedLexer::from_reader(cursor, config);
         let tokens: Vec<_> = lexer.collect();
-        
+
         debug!("\n=== All tokens ({} total) ===", tokens.len());
         for (i, token) in tokens.iter().enumerate() {
-            debug!("{}: {:?} '{}' (pos: {})", i, token.token_type, token.lexeme, token.location.offset);
+            debug!(
+                "{}: {:?} '{}' (pos: {})",
+                i, token.token_type, token.lexeme, token.location.offset
+            );
         }
 
         // Extract string literals from tokens
@@ -1983,7 +2110,12 @@ mod tests {
             .enumerate()
             .filter_map(|(i, t)| {
                 if let TokenType::String(s) = &t.token_type {
-                    debug!("Found string token at position {}: '{}' (len: {})", i, s, s.len());
+                    debug!(
+                        "Found string token at position {}: '{}' (len: {})",
+                        i,
+                        s,
+                        s.len()
+                    );
                     Some((i, s.as_str()))
                 } else {
                     None
@@ -1992,16 +2124,16 @@ mod tests {
             .collect();
 
         debug!("Found {} string literals", string_tokens.len());
-        
+
         // Verify we have the expected number of string literals
         assert_eq!(
-            string_tokens.len(), 
+            string_tokens.len(),
             test_cases.len(),
             "Expected {} string literals, found {}",
             test_cases.len(),
             string_tokens.len()
         );
-        
+
         // Verify each string literal matches the expected value
         for (i, (name, expected)) in test_cases.iter().enumerate() {
             let (token_idx, actual) = &string_tokens[i];
@@ -2016,7 +2148,7 @@ mod tests {
     #[test]
     fn test_chunked_lexer_invalid_token() {
         use std::io::Cursor;
-        
+
         std::env::set_var("RUST_LOG", "debug");
         let _ = env_logger::builder().is_test(true).try_init();
 
@@ -2069,7 +2201,6 @@ mod tests {
         );
     }
 
-    
     #[test]
     fn test_chunked_lexer_position_tracking() {
         use std::io::Cursor;
@@ -2184,7 +2315,8 @@ mod tests {
 
         println!("\nLast statement tokens ({}):", last_statement_tokens.len());
         for (i, token) in last_statement_tokens.iter().enumerate() {
-            println!("{}: {:?} '{}' at {}:{}", 
+            println!(
+                "{}: {:?} '{}' at {}:{}",
                 i, token.token_type, token.lexeme, token.location.line, token.location.column
             );
         }
@@ -2209,7 +2341,11 @@ mod tests {
         );
 
         // Verify the tokens match our expectations
-        for (i, (actual, expected)) in last_statement_tokens.iter().zip(expected_tokens.iter()).enumerate() {
+        for (i, (actual, expected)) in last_statement_tokens
+            .iter()
+            .zip(expected_tokens.iter())
+            .enumerate()
+        {
             println!(
                 "Token {}: {:?} '{}' (expected: {:?} '{}')",
                 i, actual.token_type, actual.lexeme, expected.0, expected.1

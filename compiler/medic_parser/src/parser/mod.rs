@@ -80,7 +80,7 @@ impl<'a> TokenSlice<'a> {
             TokenSlice(&self.0[1..])
         }
     }
-    
+
     /// Skip any whitespace tokens at the beginning of the slice
     /// Returns a new TokenSlice with leading whitespace tokens removed
     pub fn skip_whitespace(&self) -> TokenSlice<'a> {

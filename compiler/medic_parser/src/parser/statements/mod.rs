@@ -488,26 +488,28 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 
     // Check if the next token is an equals sign
     let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
-    
+
     // Parse the expression after the equals sign
     let input = input.skip_whitespace();
     let (input, value) = parse_expression(input)?;
-    
+
     // Convert the target to an ExpressionNode::Identifier
     let target_expr = match target {
         ExpressionNode::Identifier(ident) => ident,
-        _ => return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        ))),
+        _ => {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                ErrorKind::Tag,
+            )))
+        }
     };
-    
+
     // Create and return the assignment node
     let assignment = StatementNode::Assignment(Box::new(AssignmentNode {
         target: ExpressionNode::Identifier(target_expr),
         value,
     }));
-    
+
     Ok((input, assignment))
 }
 /// where <arms> is a comma-separated list of patterns and expressions.
@@ -528,7 +530,9 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 ///     _ => "other"
 /// }
 /// ```
-pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+pub(crate) fn parse_match_statement(
+    input: TokenSlice<'_>,
+) -> IResult<TokenSlice<'_>, StatementNode> {
     log::debug!("=== parse_match_statement ===");
     log::debug!("Input length: {}", input.0.len());
 
@@ -538,14 +542,17 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
         log::debug!("Parsing full match syntax");
         let input = input.advance(); // Consume 'match' keyword
         let input = input.skip_whitespace();
-        
+
         // Parse the expression before the left brace
-        let expr_end = input.0.iter().position(|t| t.token_type == TokenType::LeftBrace)
+        let expr_end = input
+            .0
+            .iter()
+            .position(|t| t.token_type == TokenType::LeftBrace)
             .unwrap_or_else(|| {
                 log::error!("Could not find opening brace in match expression");
                 input.0.len()
             });
-            
+
         if expr_end == 0 {
             log::error!("Expected expression before opening brace in match statement");
             return Err(nom::Err::Error(nom::error::Error::new(
@@ -553,29 +560,37 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                 ErrorKind::Tag,
             )));
         }
-        
+
         let (expr_input, rest) = input.0.split_at(expr_end);
         let (_, expr) = super::expressions::parse_expression(TokenSlice(expr_input))?;
         (TokenSlice(rest), expr)
     } else if input.0.len() > 1 && input.0[1].token_type == TokenType::LeftBrace {
         // Concise syntax: <ident> { ... }
         log::debug!("Parsing concise match syntax");
-        
+
         // For concise syntax, the expression is just the identifier
         if let TokenType::Identifier(id) = &input.0[0].token_type {
             log::debug!("Found identifier: {}", id);
-            let expr = ExpressionNode::Identifier(IdentifierNode { name: id.to_string() });
+            let expr = ExpressionNode::Identifier(IdentifierNode {
+                name: id.to_string(),
+            });
             // Return the input with the identifier and left brace consumed
             (TokenSlice(&input.0[2..]), expr)
         } else {
-            log::error!("Expected identifier in concise match syntax, got: {:?}", input.0[0].token_type);
+            log::error!(
+                "Expected identifier in concise match syntax, got: {:?}",
+                input.0[0].token_type
+            );
             return Err(nom::Err::Error(nom::error::Error::new(
                 input,
                 ErrorKind::Tag,
             )));
         }
     } else {
-        log::error!("Expected 'match' keyword or concise match syntax, got: {:?}", input.0[0].token_type);
+        log::error!(
+            "Expected 'match' keyword or concise match syntax, got: {:?}",
+            input.0[0].token_type
+        );
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
             ErrorKind::Tag,
@@ -592,7 +607,7 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
             log::error!("Next token: {:?}", input.0.first().map(|t| &t.token_type));
             e
         })?;
-    
+
     log::debug!("Found opening brace, remaining tokens: {}", input.0.len());
     log::debug!("Starting to parse match arms...");
 
@@ -617,26 +632,32 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                     TokenType::Underscore => {
                         log::debug!("Found wildcard pattern");
                         (TokenSlice(rest), PatternNode::Wildcard)
-                    },
+                    }
                     TokenType::Identifier(id) => {
                         // Check if this is a variant pattern (e.g., Some(x))
-                        if rest.first().map_or(false, |t| t.token_type == TokenType::LeftParen) {
+                        if rest
+                            .first()
+                            .map_or(false, |t| t.token_type == TokenType::LeftParen)
+                        {
                             // This is a variant pattern like Some(x)
                             log::debug!("Found variant pattern: {}", id);
                             let variant_name = id.to_string();
                             let inner_rest = &rest[1..]; // Skip the identifier and left paren
-                            
+
                             // Parse the inner pattern
                             if let Some((inner_token, inner_rest)) = inner_rest.split_first() {
                                 match &inner_token.token_type {
                                     TokenType::Identifier(inner_id) => {
                                         // Handle simple identifier inside the variant
-                                        let inner_pattern = PatternNode::Identifier(IdentifierNode {
-                                            name: inner_id.to_string(),
-                                        });
-                                        
+                                        let inner_pattern =
+                                            PatternNode::Identifier(IdentifierNode {
+                                                name: inner_id.to_string(),
+                                            });
+
                                         // Skip to the closing parenthesis
-                                        if let Some((close_paren, rest_after_paren)) = inner_rest.split_first() {
+                                        if let Some((close_paren, rest_after_paren)) =
+                                            inner_rest.split_first()
+                                        {
                                             if close_paren.token_type == TokenType::RightParen {
                                                 (
                                                     TokenSlice(rest_after_paren),
@@ -647,21 +668,25 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                                                 )
                                             } else {
                                                 log::error!("Expected closing parenthesis after variant pattern, got: {:?}", close_paren.token_type);
-                                                return Err(nom::Err::Error(nom::error::Error::new(
-                                                    input,
-                                                    ErrorKind::Tag,
-                                                )));
+                                                return Err(nom::Err::Error(
+                                                    nom::error::Error::new(input, ErrorKind::Tag),
+                                                ));
                                             }
                                         } else {
-                                            log::error!("Unexpected end of input after variant pattern");
+                                            log::error!(
+                                                "Unexpected end of input after variant pattern"
+                                            );
                                             return Err(nom::Err::Error(nom::error::Error::new(
                                                 input,
                                                 ErrorKind::Eof,
                                             )));
                                         }
-                                    },
+                                    }
                                     _ => {
-                                        log::error!("Expected identifier inside variant pattern, got: {:?}", inner_token.token_type);
+                                        log::error!(
+                                            "Expected identifier inside variant pattern, got: {:?}",
+                                            inner_token.token_type
+                                        );
                                         return Err(nom::Err::Error(nom::error::Error::new(
                                             input,
                                             ErrorKind::Tag,
@@ -685,11 +710,11 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                                 }),
                             )
                         }
-                    },
+                    }
                     TokenType::Integer(n) => {
                         log::debug!("Found integer literal pattern: {}", n);
                         (TokenSlice(rest), PatternNode::Literal(LiteralNode::Int(*n)))
-                    },
+                    }
                     _ => {
                         log::error!("Unexpected token in pattern: {:?}", token.token_type);
                         return Err(nom::Err::Error(nom::error::Error::new(
@@ -698,7 +723,7 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                         )));
                     }
                 }
-            },
+            }
             None => {
                 log::error!("Unexpected end of input while parsing pattern");
                 return Err(nom::Err::Error(nom::error::Error::new(
@@ -710,17 +735,21 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
 
         // Parse the fat arrow
         log::debug!("Looking for fat arrow after pattern");
-        let next_input = match take_token_if(|tt| *tt == TokenType::FatArrow, ErrorKind::Tag)(next_input) {
-            Ok((input, _)) => {
-                log::debug!("Found fat arrow");
-                input
-            },
-            Err(e) => {
-                log::error!("Failed to find fat arrow: {:?}", e);
-                log::error!("Next token: {:?}", next_input.0.first().map(|t| &t.token_type));
-                return Err(e);
-            }
-        };
+        let next_input =
+            match take_token_if(|tt| *tt == TokenType::FatArrow, ErrorKind::Tag)(next_input) {
+                Ok((input, _)) => {
+                    log::debug!("Found fat arrow");
+                    input
+                }
+                Err(e) => {
+                    log::error!("Failed to find fat arrow: {:?}", e);
+                    log::error!(
+                        "Next token: {:?}",
+                        next_input.0.first().map(|t| &t.token_type)
+                    );
+                    return Err(e);
+                }
+            };
 
         // Parse the expression
         log::debug!("Parsing expression for match arm");
@@ -728,7 +757,10 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
             Ok(result) => result,
             Err(e) => {
                 log::error!("Failed to parse expression in match arm: {:?}", e);
-                log::error!("Next token: {:?}", next_input.0.first().map(|t| &t.token_type));
+                log::error!(
+                    "Next token: {:?}",
+                    next_input.0.first().map(|t| &t.token_type)
+                );
                 return Err(e);
             }
         };
@@ -755,7 +787,10 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                     break;
                 }
                 _ => {
-                    log::error!("Expected comma or closing brace after match arm, got: {:?}", first.token_type);
+                    log::error!(
+                        "Expected comma or closing brace after match arm, got: {:?}",
+                        first.token_type
+                    );
                     return Err(nom::Err::Error(nom::error::Error::new(
                         after_expr,
                         ErrorKind::Tag,
@@ -770,15 +805,18 @@ pub(crate) fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice
                 ErrorKind::Eof,
             )));
         }
-        
+
         // Update input for the next iteration
         input = after_expr;
     }
 
     // We've already consumed the closing brace in the loop, so just return the input
     let input = TokenSlice(input.0);
-    
-    log::debug!("Successfully parsed match statement with {} arms", arms.len());
+
+    log::debug!(
+        "Successfully parsed match statement with {} arms",
+        arms.len()
+    );
     log::debug!("Remaining input length: {}", input.0.len());
     if !input.0.is_empty() {
         log::debug!("Next token after match: {:?}", input.0[0].token_type);
@@ -825,9 +863,13 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
     // Try to parse different statement types based on the first token
     let result = match input.peek() {
         Some(token) => {
-            log::debug!("parse_statement: Processing token: {:?} at {}:{} ", 
-                token.token_type, token.location.line, token.location.column);
-            
+            log::debug!(
+                "parse_statement: Processing token: {:?} at {}:{} ",
+                token.token_type,
+                token.location.line,
+                token.location.column
+            );
+
             // First, check for match statement (either full or concise syntax)
             match &token.token_type {
                 TokenType::Match => {
@@ -836,7 +878,10 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                     log::debug!("parse_match_statement (full) result: {:?}", result);
                     return result;
                 }
-                TokenType::Identifier(_) if input.0.len() > 1 && matches!(input.0[1].token_type, TokenType::LeftBrace) => {
+                TokenType::Identifier(_)
+                    if input.0.len() > 1
+                        && matches!(input.0[1].token_type, TokenType::LeftBrace) =>
+                {
                     log::debug!("Found concise match syntax, parsing as match statement");
                     let result = parse_match_statement(input);
                     log::debug!("parse_match_statement (concise) result: {:?}", result);
@@ -844,7 +889,7 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                 }
                 _ => {}
             }
-            
+
             match &token.token_type {
                 TokenType::Let => {
                     log::debug!("Found 'let' statement");
@@ -870,24 +915,32 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                 }
                 _ => {
                     log::debug!("No statement keyword found, checking for concise match syntax");
-                    
+
                     // Check for concise match syntax: <ident> { ... }
                     if input.0.len() > 1 {
                         if let TokenType::Identifier(_) = input.0[0].token_type {
                             if let TokenType::LeftBrace = input.0[1].token_type {
-                                log::debug!("Found concise match syntax, parsing as match statement");
+                                log::debug!(
+                                    "Found concise match syntax, parsing as match statement"
+                                );
                                 return parse_match_statement(input);
                             }
                         }
                     }
-                    
+
                     log::debug!("No concise match syntax found, trying expression statement");
                     // Log the next few tokens for better debugging
                     log::debug!("Next tokens in parse_statement (expression case):");
                     for (i, t) in input.0.iter().take(5).enumerate() {
-                        log::debug!("  {}: {:?} at {}:{}", i, t.token_type, t.location.line, t.location.column);
+                        log::debug!(
+                            "  {}: {:?} at {}:{}",
+                            i,
+                            t.token_type,
+                            t.location.line,
+                            t.location.column
+                        );
                     }
-                    
+
                     // Try to parse as an expression statement
                     match parse_expression(input) {
                         Ok((input, expr)) => {
@@ -909,10 +962,12 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                             if let nom::Err::Error(ref err) = e {
                                 log::error!("Error at position: {}", err.input.0.len());
                                 if !err.input.0.is_empty() {
-                                    log::error!("Error token: {:?} at {}:{}", 
+                                    log::error!(
+                                        "Error token: {:?} at {}:{}",
                                         err.input.0[0].token_type,
                                         err.input.0[0].location.line,
-                                        err.input.0[0].location.column);
+                                        err.input.0[0].location.column
+                                    );
                                 }
                             }
                             Err(e)
@@ -920,7 +975,7 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                     }
                 }
             }
-        },
+        }
         None => {
             log::error!("Unexpected end of input in parse_statement");
             Err(nom::Err::Error(nom::error::Error::new(

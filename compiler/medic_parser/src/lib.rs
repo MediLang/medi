@@ -2,13 +2,13 @@ pub mod parser;
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Once;
-    use log::LevelFilter;
     use env_logger::Builder;
+    use log::LevelFilter;
     use std::io::Write;
-    
+    use std::sync::Once;
+
     static INIT: Once = Once::new();
-    
+
     /// Initialize the logger for tests
     pub fn init_test_logger() {
         INIT.call_once(|| {

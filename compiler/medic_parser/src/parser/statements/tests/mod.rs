@@ -23,8 +23,8 @@ fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
 #[cfg(test)]
 mod statements_test {
     use super::*;
-    use medic_ast::ast::{ExpressionNode, LiteralNode, StatementNode};
     use crate::tests::init_test_logger;
+    use medic_ast::ast::{ExpressionNode, LiteralNode, StatementNode};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -55,34 +55,40 @@ mod statements_test {
     fn test_parse_match_statement_with_various_expressions() {
         init_test_logger();
         use medic_ast::ast::{ExpressionNode, LiteralNode, PatternNode};
-        
+
         log::info!("Starting test_parse_match_statement_with_various_expressions");
 
         // Test with identifier
         let input = "match x { 1 => 1, _ => 0 }";
         let (token_slice, tokens) = str_to_token_slice(input);
-        
+
         // Print the tokens for debugging
         println!("Tokens:");
         for (i, token) in tokens.iter().enumerate() {
             println!("  {}: {:?}", i, token.token_type);
         }
-        
+
         let result = parse_statement(token_slice);
-        assert!(result.is_ok(), "Failed to parse match statement with identifier");
-        
+        assert!(
+            result.is_ok(),
+            "Failed to parse match statement with identifier"
+        );
+
         // Verify AST structure for identifier match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
             // Verify the matched expression is an identifier
             if let ExpressionNode::Identifier(ident) = &*match_stmt.expr {
                 assert_eq!(ident.name, "x");
             } else {
-                panic!("Expected identifier 'x' as match expression, got {:?}", match_stmt.expr);
+                panic!(
+                    "Expected identifier 'x' as match expression, got {:?}",
+                    match_stmt.expr
+                );
             }
-            
+
             // Verify the match arms
             assert_eq!(match_stmt.arms.len(), 2, "Expected 2 match arms");
-            
+
             // First arm: 1 => 1
             if let PatternNode::Literal(lit) = &match_stmt.arms[0].pattern {
                 if let LiteralNode::Int(1) = lit {
@@ -93,7 +99,7 @@ mod statements_test {
             } else {
                 panic!("Expected literal pattern in first arm");
             }
-            
+
             // Second arm: _ => 0 (wildcard pattern)
             if let PatternNode::Wildcard = match_stmt.arms[1].pattern {
                 if let ExpressionNode::Literal(LiteralNode::Int(0)) = *match_stmt.arms[1].body {
@@ -112,14 +118,20 @@ mod statements_test {
         let input = "match 42 { 1 => 1, _ => 0 }";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let result = parse_statement(token_slice);
-        assert!(result.is_ok(), "Failed to parse match statement with literal");
-        
+        assert!(
+            result.is_ok(),
+            "Failed to parse match statement with literal"
+        );
+
         // Verify AST structure for literal match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
             if let ExpressionNode::Literal(LiteralNode::Int(42)) = &*match_stmt.expr {
                 // Literal matches 42
             } else {
-                panic!("Expected literal 42 as match expression, got {:?}", match_stmt.expr);
+                panic!(
+                    "Expected literal 42 as match expression, got {:?}",
+                    match_stmt.expr
+                );
             }
         } else {
             panic!("Expected Match statement");
@@ -129,8 +141,11 @@ mod statements_test {
         let input = "match x + 1 { 1 => 1, _ => 0 }";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let result = parse_statement(token_slice);
-        assert!(result.is_ok(), "Failed to parse match statement with binary expression");
-        
+        assert!(
+            result.is_ok(),
+            "Failed to parse match statement with binary expression"
+        );
+
         // Verify AST structure for binary expression match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
             if let ExpressionNode::Binary(bin_expr) = match_stmt.expr.as_ref() {
@@ -146,7 +161,10 @@ mod statements_test {
                     panic!("Expected 1 as right operand of binary expression");
                 }
             } else {
-                panic!("Expected binary expression as match expression, got {:?}", match_stmt.expr);
+                panic!(
+                    "Expected binary expression as match expression, got {:?}",
+                    match_stmt.expr
+                );
             }
         } else {
             panic!("Expected Match statement");
@@ -156,8 +174,11 @@ mod statements_test {
         let input = "match some_function() { 1 => 1, _ => 0 }";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let result = parse_statement(token_slice);
-        assert!(result.is_ok(), "Failed to parse match statement with function call");
-        
+        assert!(
+            result.is_ok(),
+            "Failed to parse match statement with function call"
+        );
+
         // Verify AST structure for function call match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
             if let ExpressionNode::Call(call_expr) = match_stmt.expr.as_ref() {
@@ -166,9 +187,15 @@ mod statements_test {
                 } else {
                     panic!("Expected 'some_function' as callee");
                 }
-                assert!(call_expr.arguments.is_empty(), "Expected no arguments in function call");
+                assert!(
+                    call_expr.arguments.is_empty(),
+                    "Expected no arguments in function call"
+                );
             } else {
-                panic!("Expected function call as match expression, got {:?}", match_stmt.expr);
+                panic!(
+                    "Expected function call as match expression, got {:?}",
+                    match_stmt.expr
+                );
             }
         } else {
             panic!("Expected Match statement");
@@ -178,8 +205,11 @@ mod statements_test {
         let input = "match some_object.property { 1 => 1, _ => 0 }";
         let (token_slice, _tokens) = str_to_token_slice(input);
         let result = parse_statement(token_slice);
-        assert!(result.is_ok(), "Failed to parse match statement with member expression");
-        
+        assert!(
+            result.is_ok(),
+            "Failed to parse match statement with member expression"
+        );
+
         // Verify AST structure for member expression match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
             if let ExpressionNode::Member(member_expr) = match_stmt.expr.as_ref() {
@@ -190,7 +220,10 @@ mod statements_test {
                 }
                 assert_eq!(member_expr.property.name, "property");
             } else {
-                panic!("Expected member expression as match expression, got {:?}", match_stmt.expr);
+                panic!(
+                    "Expected member expression as match expression, got {:?}",
+                    match_stmt.expr
+                );
             }
         } else {
             panic!("Expected Match statement");
@@ -202,30 +235,27 @@ mod statements_test {
         // Enable logging for the test
         std::env::set_var("RUST_LOG", "debug");
         env_logger::init();
-        
+
         // Test with a simple expression first to verify basic functionality
         let input = "match x { 1 => 1, _ => 0 }";
         let (token_slice, tokens) = str_to_token_slice(input);
-        
+
         // Print the tokens for debugging
         println!("Tokens:");
         for (i, token) in tokens.iter().enumerate() {
             println!("  {}: {:?}", i, token);
         }
-        
+
         let result = parse_statement(token_slice);
-        
+
         // Print detailed error information if parsing failed
         if let Err(e) = &result {
             println!("Parse error: {:?}", e);
         }
-        
+
         // First, verify parsing succeeded
-        assert!(
-            result.is_ok(),
-            "Failed to parse basic match statement"
-        );
-        
+        assert!(result.is_ok(), "Failed to parse basic match statement");
+
         // Then verify the AST structure
         let (_remaining_tokens, statement) = result.unwrap();
         if let StatementNode::Match(match_stmt) = statement {
@@ -233,12 +263,15 @@ mod statements_test {
             if let ExpressionNode::Identifier(ident) = &*match_stmt.expr {
                 assert_eq!(ident.name, "x");
             } else {
-                panic!("Expected identifier 'x' as match expression, got {:?}", match_stmt.expr);
+                panic!(
+                    "Expected identifier 'x' as match expression, got {:?}",
+                    match_stmt.expr
+                );
             }
-            
+
             // Verify the match arms
             assert_eq!(match_stmt.arms.len(), 2, "Expected 2 match arms");
-            
+
             // First arm: 1 => 1
             if let PatternNode::Literal(lit) = &match_stmt.arms[0].pattern {
                 if let LiteralNode::Int(1) = lit {
@@ -249,7 +282,7 @@ mod statements_test {
             } else {
                 panic!("Expected literal pattern in first arm");
             }
-            
+
             // Second arm: _ => 0 (wildcard pattern)
             if let PatternNode::Wildcard = match_stmt.arms[1].pattern {
                 // Pattern is wildcard (_)

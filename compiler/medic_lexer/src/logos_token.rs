@@ -202,7 +202,7 @@ pub enum LogosToken {
     /// - Numbers with a trailing dot (e.g., `42.` should be tokenized as `42` and `.`)
     #[regex(r"-?(?:(?:[0-9]+\.[0-9]+(?:[eE][+-]?[0-9]+)?)|(?:\.[0-9]+(?:[eE][+-]?[0-9]+)?)|(?:[0-9]+[eE][+-]?[0-9]+))", |lex| {
         let slice = lex.slice();
-        
+
         // For negative numbers, ensure the minus is followed by a digit or decimal point
         if let Some(rest) = slice.strip_prefix('-') {
             if rest.is_empty() {
@@ -500,7 +500,7 @@ pub enum LogosToken {
     /// Arrow (`->`)
     #[token("->")]
     Arrow,
-    
+
     /// Fat arrow (`=>`)
     #[token("=>")]
     FatArrow,
