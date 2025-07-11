@@ -32,11 +32,12 @@ venv/
 # OS specific
 .DS_Store
 
-
 # Added by cargo
-
 /target
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# Proptest failure cases
+proptest-regressions/

@@ -78,7 +78,7 @@ Phase 1 focuses on building the foundational components of the Medi programming 
 
 #### Basic IDE
 - Visual analytics capabilities
-- Support for `.mdi` file recognition
+- Support for `.medi` file recognition
 - Syntax highlighting and basic code completion
 - Prototype of visual programming interface
 

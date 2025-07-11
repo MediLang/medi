@@ -1,11 +1,7 @@
 use medic_ast::ast::{BinaryOperator, ExpressionNode, LiteralNode};
-use medic_lexer::Lexer;
 use medic_parser::parser::expressions::parse_expression;
+use medic_parser::parser::test_utils::tokenize;
 use medic_parser::parser::TokenSlice;
-
-fn tokenize(input: &str) -> Vec<medic_lexer::token::Token> {
-    Lexer::new(input).collect()
-}
 
 #[test]
 fn test_operator_precedence() {

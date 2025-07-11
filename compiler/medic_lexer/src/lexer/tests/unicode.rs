@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::string_interner::InternedString;
 use crate::token::TokenType;
 
 #[test]
@@ -85,9 +86,11 @@ fn test_lexer_unicode_identifiers() {
     match &tokens[1].token_type {
         TokenType::Identifier(ident) => {
             assert_eq!(
-                ident, expected_ident,
-                "Expected identifier '{}', got '{}'",
-                expected_ident, ident
+                ident.as_str(),
+                expected_ident,
+                "Expected identifier '{}', got '{:?}'",
+                expected_ident,
+                ident.as_str()
             );
         }
         _ => panic!("Expected identifier token, got {:?}", tokens[1].token_type),
@@ -112,9 +115,11 @@ fn test_lexer_unicode_identifiers() {
     match &tokens[3].token_type {
         TokenType::String(s) => {
             assert_eq!(
-                s, expected_str,
-                "Expected string '{}', got '{}'",
-                expected_str, s
+                s.as_str(),
+                expected_str,
+                "Expected string '{}', got '{:?}'",
+                expected_str,
+                s.as_str()
             );
         }
         _ => panic!("Expected string token, got {:?}", tokens[3].token_type),
@@ -136,19 +141,19 @@ fn test_lexer_unicode_strings() {
     assert_eq!(tokens.len(), 4);
     assert_eq!(
         tokens[0].token_type,
-        TokenType::String("Hello, 世界!".to_string())
+        TokenType::String(InternedString::from("Hello, 世界!"))
     );
     assert_eq!(
         tokens[1].token_type,
-        TokenType::String("Привет, мир!".to_string())
+        TokenType::String(InternedString::from("Привет, мир!"))
     );
     assert_eq!(
         tokens[2].token_type,
-        TokenType::String("مرحبا بالعالم!".to_string())
+        TokenType::String(InternedString::from("مرحبا بالعالم!"))
     );
     assert_eq!(
         tokens[3].token_type,
-        TokenType::String("नमस्ते दुनिया!".to_string())
+        TokenType::String(InternedString::from("नमस्ते दुनिया!"))
     );
 }
 
@@ -169,7 +174,10 @@ fn test_lexer_unicode_comments() {
     // Includes semicolon token
     assert_eq!(tokens.len(), 5);
     assert_eq!(tokens[0].token_type, TokenType::Let);
-    assert_eq!(tokens[1].token_type, TokenType::Identifier("x".to_string()));
+    assert_eq!(
+        tokens[1].token_type,
+        TokenType::Identifier(InternedString::from("x"))
+    );
     assert_eq!(tokens[2].token_type, TokenType::Equal);
     assert_eq!(tokens[3].token_type, TokenType::Integer(42));
     assert_eq!(tokens[4].token_type, TokenType::Semicolon);

@@ -131,6 +131,31 @@ impl<'a> TypeChecker<'a> {
                         // Return the type of the right operand
                         right
                     }
+                    // Assignment operator
+                    BinaryOperator::Assign => {
+                        // The type of an assignment is the type of the right-hand side
+                        // First check if the left-hand side is a valid lvalue (Identifier or Member)
+                        if let ExpressionNode::Binary(bin_expr) = expr {
+                            match &bin_expr.left {
+                                ExpressionNode::Identifier(_) | ExpressionNode::Member(_) => {}
+                                _ => {
+                                    // Not a valid lvalue
+                                    log::error!("Left side of assignment must be an identifier or member expression");
+                                    return MediType::Unknown;
+                                }
+                            }
+                        } else {
+                            // This should never happen for a binary expression with assign operator
+                            log::error!(
+                                "Internal error: Expected binary expression for assignment"
+                            );
+                            return MediType::Unknown;
+                        }
+
+                        // TODO: Check if the types are compatible
+                        // For now, just return the right-hand type
+                        right
+                    }
                 }
             }
             ExpressionNode::Call(call) => {
@@ -186,6 +211,24 @@ impl<'a> TypeChecker<'a> {
                     ]))),
                     _ => MediType::Unknown, // Fallback for unsupported query types
                 }
+            }
+            ExpressionNode::Statement(stmt) => {
+                // For a statement expression, we need to check the type of the last expression in the statement
+                // For statements that don't produce values, we return Void
+                match **stmt {
+                    StatementNode::Expr(ref expr) => self.check_expr(expr),
+                    _ => MediType::Void, // Other statements don't produce values
+                }
+            }
+            ExpressionNode::Struct(struct_lit) => {
+                // For struct literals, we return a struct type with field types
+                // TODO: Look up the actual struct definition for more precise type checking
+                let mut fields = std::collections::HashMap::new();
+                for field in &struct_lit.fields {
+                    let field_type = self.check_expr(&field.value);
+                    fields.insert(field.name.clone(), field_type);
+                }
+                MediType::Struct(fields)
             }
         }
     }
