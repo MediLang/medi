@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon-placeholder.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
     
     
       
@@ -1425,69 +1425,110 @@
 <h1 id="medi-basic-syntax">Medi Basic Syntax</h1>
 <p>Medi's syntax is designed to be intuitive for both beginners and experienced programmers, with special attention to healthcare domain needs. Medi follows a Rust-inspired approach with clean, modern syntax while maintaining healthcare-specific features.</p>
 <h2 id="file-extension">File Extension</h2>
-<p>Medi source files use the <code>.mdi</code> extension:<br />
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myprogram.mdi
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>patient_analysis.mdi
+<p>Medi source files use the <code>.medi</code> extension:<br />
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>myprogram.medi
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>patient_analysis.medi
 </code></pre></div></p>
 <h2 id="variables-and-types">Variables and Types</h2>
-<p>Medi uses type inference but also supports explicit typing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// Type inference
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>patient_name = &quot;John Doe&quot;;  // String
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>heart_rate = 75;  // Integer
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>temperature = 98.6;  // Float
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>// Explicit typing
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>String patient_id = &quot;P-12345&quot;;
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>Integer bp_systolic = 120;
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>Float bmi = 22.5;
+<p>Medi uses type inference but also supports explicit typing. Variables are declared with <code>let</code> and can be made mutable with <code>mut</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// Type inference with let
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>let patient_name = &quot;John Doe&quot;;  // string
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>let heart_rate = 75;           // int
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>let temperature = 98.6;        // float
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>let is_critical = false;       // bool
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>// Explicit type annotations
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>let patient_id: string = &quot;P-12345&quot;;
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>let bp_systolic: int = 120;
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>let bmi: float = 22.5;
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>// Mutable variables
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>let mut count = 0;
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>count += 1;  // This works because count is mutable
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>// Constants (must be explicitly typed)
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>const MAX_HEART_RATE: int = 220;
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>const PI: float = 3.14159;
 </code></pre></div>
 <h2 id="healthcare-data-types">Healthcare Data Types</h2>
-<p>Medi includes native healthcare data types:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>// FHIR resources
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Patient john = fhir_resource(&quot;Patient&quot;, id: &quot;P-12345&quot;);
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>// Genomic data
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>VCF variants = load_vcf(&quot;sample.vcf&quot;);
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>// Time series (for vital signs)
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>TimeSeries ecg = load_series(&quot;ecg_data.csv&quot;, frequency: 250);
+<p>Medi includes native support for healthcare data types and integrates with healthcare standards:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>// FHIR resources (automatically mapped to Medi types)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>let patient = fhir::Patient.get(&quot;P-12345&quot;);
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>let observations = fhir::Observation.search(patient: patient.id, category: &quot;vital-signs&quot;);
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>// Working with medical records
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>let record = MedicalRecord {
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  id: &quot;MR-45678&quot;,
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  patient: patient,
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  conditions: [&quot;Type 2 Diabetes&quot;, &quot;Hypertension&quot;],
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  medications: [
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    Medication { name: &quot;Metformin&quot;, dosage: &quot;500mg&quot;, frequency: &quot;BID&quot; },
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    Medication { name: &quot;Lisinopril&quot;, dosage: &quot;10mg&quot;, frequency: &quot;Daily&quot; }
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  ]
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>};
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>// Genomic data
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>let variants = vcf::load(&quot;sample.vcf&quot;);
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>let pathogenic_variants = variants.filter(|v| v.clinical_significance == &quot;Pathogenic&quot;);
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>// Time series data (for vital signs, ECGs, etc.)
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>let ecg = timeseries::from_csv(&quot;ecg_data.csv&quot;)?;
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>let heart_rate_variability = ecg.calculate_hrv();
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>// Medical imaging
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>let mri = dicom::load(&quot;brain_scan.dcm&quot;)?;
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>let tumor_volume = mri.segment_tumor().calculate_volume();
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>// Working with medical codes
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>let icd10 = icd10::from_code(&quot;E11.65&quot;);  // Type 2 diabetes with hyperglycemia
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>let snomed = snomed::from_code(&quot;44054006&quot;);  // Diabetes mellitus
 </code></pre></div>
 <h2 id="control-flow">Control Flow</h2>
-<p>Medi's control flow constructs are similar to Python and C-like languages:</p>
+<p>Medi's control flow constructs are similar to Rust and other C-like languages:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>// If-else statement
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>if (heart_rate &gt; 100) {
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>if heart_rate &gt; 100 {
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  alert(&quot;Tachycardia detected&quot;);
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>} else if (heart_rate &lt; 60) {
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>} else if heart_rate &lt; 60 {
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  alert(&quot;Bradycardia detected&quot;);
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>} else {
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  log(&quot;Normal heart rate&quot;);
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>}
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>// For loop
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>for (patient in patients) {
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>// For loop with pattern matching
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>for patient in patients {
 <a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  calculate_risk_score(patient);
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>}
 <a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
 <a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>// While loop
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>while (monitoring_active) {
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>while monitoring_active {
 <a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>  read_vitals();
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>  sleep(1000);  // milliseconds
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>  std::thread::sleep(std::time::Duration::from_millis(1000));
 <a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>}
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>// Match expression (like switch/case but more powerful)
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>match patient_status {
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>  &quot;critical&quot; =&gt; {
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    alert_doctor();
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    increase_monitoring();
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>  },
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>  &quot;stable&quot; =&gt; log(&quot;Patient is stable&quot;),
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>  _ =&gt; log(&quot;Unknown status&quot;),
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>}
 </code></pre></div>
 <h2 id="functions">Functions</h2>
-<p>Functions are declared with the <code>function</code> keyword:</p>
+<p>Functions are declared with the <code>fn</code> keyword:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>// Basic function
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>function calculate_bmi(weight_kg, height_m) {
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  return weight_kg / (height_m * height_m);
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>fn calculate_bmi(weight_kg, height_m) {
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  weight_kg / (height_m * height_m)
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>}
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>// Function with explicit types
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>function Boolean is_hypertensive(Integer systolic, Integer diastolic) {
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>  return systolic &gt;= 140 || diastolic &gt;= 90;
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>fn is_hypertensive(systolic: int, diastolic: int) -&gt; bool {
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>  systolic &gt;= 140 || diastolic &gt;= 90
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>}
 <a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
 <a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>// With default parameters
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>function administer_medication(String med_id, Float dose, String route = &quot;oral&quot;) {
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>fn administer_medication(med_id: string, dose: float, route: string = &quot;oral&quot;) {
 <a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>  // Implementation
 <a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>}
 </code></pre></div>
@@ -1620,7 +1661,7 @@
       <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
       
     
   </body>

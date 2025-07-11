@@ -20,7 +20,7 @@
     
     
       
-        <title>Blog - The Medi Book</title>
+        <title>Lexer and Tokenization - The Medi Book</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#blog" class="md-skip">
+        <a href="#lexer-and-tokenization" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Blog
+              Lexer and Tokenization
             
           </span>
         </div>
@@ -345,7 +345,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   
@@ -1075,7 +1075,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -1184,6 +1184,158 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#numeric-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Numeric Literals
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Numeric Literals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#integer-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integer Literals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floating-point-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Floating-Point Literals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invalid-numeric-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      Invalid Numeric Literals
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-and-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance and Benchmarks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance and Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lexer-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lexer Types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benchmark-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Benchmark Results
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-each-lexer" class="md-nav__link">
+    <span class="md-ellipsis">
+      When to Use Each Lexer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#invalid-numeric-literals_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Invalid Numeric Literals
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Recovery
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-error-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Error Messages
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#token-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Token Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1201,7 +1353,141 @@
   
 
 
-<h1 id="blog">Blog</h1>
+<h1 id="lexer-and-tokenization">Lexer and Tokenization</h1>
+<p>This document describes the lexical analysis phase of the Medi programming language, including token types, numeric literals, and error handling.</p>
+<h2 id="numeric-literals">Numeric Literals</h2>
+<p>Medi supports the following numeric literal formats:</p>
+<h3 id="integer-literals">Integer Literals</h3>
+<ul>
+<li>Decimal integers: <code>42</code>, <code>-123</code>, <code>0</code></li>
+<li>Binary literals (prefix <code>0b</code>): <code>0b1010</code> (10 in decimal)</li>
+<li>Octal literals (prefix <code>0o</code>): <code>0o755</code> (493 in decimal)</li>
+<li>Hexadecimal literals (prefix <code>0x</code>): <code>0xFF</code> (255 in decimal)</li>
+</ul>
+<h3 id="floating-point-literals">Floating-Point Literals</h3>
+<ul>
+<li>Standard notation: <code>3.14159</code>, <code>-0.001</code></li>
+<li>Scientific notation: <code>6.022e23</code>, <code>1.6e-19</code></li>
+<li>With explicit positive exponent: <code>1.0e+10</code></li>
+</ul>
+<h3 id="invalid-numeric-literals">Invalid Numeric Literals</h3>
+<p>The following are examples of invalid numeric literals:</p>
+<ul>
+<li><code>123abc</code> (letters immediately following digits without a separator)</li>
+<li><code>1.2.3</code> (multiple decimal points)</li>
+<li><code>0x1.2p3</code> (hexadecimal floats not supported yet)</li>
+<li><code>1_000</code> (underscores in numbers not supported yet)</li>
+</ul>
+<h2 id="performance-and-benchmarks">Performance and Benchmarks</h2>
+<p>The Medi lexer provides three different implementations with different performance characteristics:</p>
+<h3 id="lexer-types">Lexer Types</h3>
+<ol>
+<li><strong>OriginalLexer</strong></li>
+<li>Simple, straightforward implementation</li>
+<li>Good for most use cases</li>
+<li>
+<p>Moderate memory usage</p>
+</li>
+<li>
+<p><strong>StreamingLexer</strong></p>
+</li>
+<li>Optimized for memory efficiency</li>
+<li>Processes input in a streaming fashion</li>
+<li>Lowest memory usage</li>
+<li>
+<p>Slightly faster than OriginalLexer for large files</p>
+</li>
+<li>
+<p><strong>ChunkedLexer</strong></p>
+</li>
+<li>Processes input in fixed-size chunks</li>
+<li>Good for very large files</li>
+<li>Higher latency but consistent memory usage</li>
+</ol>
+<h3 id="benchmark-results">Benchmark Results</h3>
+<p>Here are the benchmark results for processing a 1MB Medi source file:</p>
+<table>
+<thead>
+<tr>
+<th>Lexer Type</th>
+<th>Min (ms)</th>
+<th>Max (ms)</th>
+<th>Avg (ms)</th>
+<th>Memory (MB)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OriginalLexer</td>
+<td>151.48</td>
+<td>160.80</td>
+<td>155.33</td>
+<td>25.0</td>
+</tr>
+<tr>
+<td>StreamingLexer</td>
+<td>138.79</td>
+<td>147.91</td>
+<td>143.35</td>
+<td>5.0</td>
+</tr>
+<tr>
+<td>ChunkedLexer</td>
+<td>236.86</td>
+<td>266.77</td>
+<td>251.59</td>
+<td>10.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="when-to-use-each-lexer">When to Use Each Lexer</h3>
+<ul>
+<li>Use <code>StreamingLexer</code> for most cases, especially with large files</li>
+<li>Use <code>OriginalLexer</code> when you need the simplest implementation</li>
+<li>Use <code>ChunkedLexer</code> for processing extremely large files with limited memory</li>
+</ul>
+<h2 id="error-handling">Error Handling</h2>
+<p>The lexer provides detailed error messages for various syntax errors:</p>
+<h3 id="invalid-numeric-literals_1">Invalid Numeric Literals</h3>
+<p>When an invalid numeric literal is encountered, the lexer will generate an error message indicating the invalid token and its location:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Error: Invalid numeric literal: 123abc
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  --&gt; example.medi:5:10
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>   |
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> 5 | let x = 123abc;
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   |          ^^^^^^ Invalid numeric literal
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   |
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   = help: Numeric literals cannot be directly followed by letters
+</code></pre></div>
+<h3 id="error-recovery">Error Recovery</h3>
+<p>The lexer implements basic error recovery by:
+1. Emitting an error token with a descriptive message
+2. Continuing to tokenize the remaining input
+3. Providing the line and column numbers for error location</p>
+<h3 id="common-error-messages">Common Error Messages</h3>
+<ul>
+<li><code>Invalid numeric literal: &lt;token&gt;</code> - When a number is followed by invalid characters</li>
+<li><code>Unterminated string literal</code> - When a string is not properly closed</li>
+<li><code>Unrecognized token: &lt;char&gt;</code> - When encountering an unexpected character</li>
+<li><code>Unterminated block comment</code> - When a block comment is not properly closed</li>
+</ul>
+<h2 id="token-types">Token Types</h2>
+<p>The lexer recognizes the following token categories:</p>
+<ul>
+<li><strong>Keywords</strong>: Language reserved words like <code>let</code>, <code>fn</code>, <code>if</code>, etc.</li>
+<li><strong>Identifiers</strong>: Variable and function names</li>
+<li><strong>Literals</strong>: Numbers, strings, booleans, etc.</li>
+<li><strong>Operators</strong>: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, etc.</li>
+<li><strong>Delimiters</strong>: <code>(</code>, <code>)</code>, <code>{</code>, <code>}</code>, <code>,</code>, <code>;</code>, etc.</li>
+<li><strong>Whitespace</strong>: Spaces, tabs, newlines</li>
+<li><strong>Comments</strong>: Both line (<code>//</code>) and block (<code>/* */</code>) comments</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li>Always separate numbers from identifiers with whitespace</li>
+<li>Use consistent numeric literal formats throughout your code</li>
+<li>Pay attention to error messages for quick debugging</li>
+<li>Use comments to document non-obvious numeric literals</li>
+</ol>
 
 
 

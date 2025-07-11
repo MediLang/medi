@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon-placeholder.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
     
     
       
@@ -1340,64 +1340,75 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>// First Medi Program: Health Risk Calculator
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>// Define our risk calculation function
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>function calculate_risk_score(age, systolic_bp, diastolic_bp, is_smoker, has_diabetes) {
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>fn calculate_risk_score(age: int, systolic_bp: int, diastolic_bp: int, is_smoker: bool, has_diabetes: bool) -&gt; int {
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  // Start with base score based on age
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  score = age / 10;
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  let mut score = age / 10;
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  // Add points for blood pressure
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  if (systolic_bp &gt;= 140 || diastolic_bp &gt;= 90) {
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  if systolic_bp &gt;= 140 || diastolic_bp &gt;= 90 {
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    score += 2;
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  } else if (systolic_bp &gt;= 120 || diastolic_bp &gt;= 80) {
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  } else if systolic_bp &gt;= 120 || diastolic_bp &gt;= 80 {
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    score += 1;
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>  }
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  // Add points for risk factors
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  if (is_smoker) score += 3;
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  if (has_diabetes) score += 2;
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  if is_smoker { score += 3; }
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  if has_diabetes { score += 2; }
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  return score;
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  score
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>}
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>// Sample patient data
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>dataset patients = [
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>  {name: &quot;Patient A&quot;, age: 45, systolic: 130, diastolic: 85, smoker: true, diabetes: false},
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>  {name: &quot;Patient B&quot;, age: 60, systolic: 145, diastolic: 95, smoker: false, diabetes: true},
-<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>  {name: &quot;Patient C&quot;, age: 30, systolic: 115, diastolic: 75, smoker: false, diabetes: false}
-<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>];
-<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>
-<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>// Calculate and display risk for each patient
-<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>for (patient in patients) {
-<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>  risk = calculate_risk_score(
-<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    patient.age,
-<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>    patient.systolic,
-<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    patient.diastolic,
-<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>    patient.smoker,
-<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>    patient.diabetes
-<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>  );
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>// Define a patient record type
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>record Patient {
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>  name: string,
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>  age: int,
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>  systolic: int,
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>  diastolic: int,
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>  smoker: bool,
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>  diabetes: bool
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>}
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>// Sample patient data
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>let patients: list[Patient] = [
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>  Patient{name: &quot;Patient A&quot;, age: 45, systolic: 130, diastolic: 85, smoker: true, diabetes: false},
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>  Patient{name: &quot;Patient B&quot;, age: 60, systolic: 145, diastolic: 95, smoker: false, diabetes: true},
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>  Patient{name: &quot;Patient C&quot;, age: 30, systolic: 115, diastolic: 75, smoker: false, diabetes: false}
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>];
 <a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>  // Display result
-<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>  print(patient.name + &quot; risk score: &quot; + risk);
-<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>
-<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>  // Risk classification
-<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>  if (risk &lt; 5) {
-<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>    print(&quot;  Status: Low Risk&quot;);
-<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>  } else if (risk &lt; 10) {
-<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>    print(&quot;  Status: Moderate Risk&quot;);
-<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>  } else {
-<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>    print(&quot;  Status: High Risk&quot;);
-<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>  }
-<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>}
-<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>
-<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>// Visualize results
-<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>visualize {
-<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>  plot_bar(
-<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>    data: patients,
-<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>    x: &quot;name&quot;,
-<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>    y: (p) =&gt; calculate_risk_score(p.age, p.systolic, p.diastolic, p.smoker, p.diabetes),
-<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>    title: &quot;Patient Risk Scores&quot;,
-<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>    y_label: &quot;Risk Score&quot;
-<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>  );
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>// Calculate and display risk for each patient
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>for patient in patients {
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>  let risk = calculate_risk_score(
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>    patient.age,
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>    patient.systolic,
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>    patient.diastolic,
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>    patient.smoker,
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>    patient.diabetes
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>  );
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>  // Display result
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>  println!(&quot;{} risk score: {}&quot;, patient.name, risk);
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>}
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>  // Risk classification
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>  if (risk &lt; 5) {
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>    print(&quot;  Status: Low Risk&quot;);
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>  } else if (risk &lt; 10) {
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>    print(&quot;  Status: Moderate Risk&quot;);
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>  } else {
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>    print(&quot;  Status: High Risk&quot;);
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>  }
 <a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>}
+<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>
+<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>// Visualize results
+<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>visualize {
+<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>  plot_bar(
+<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>    data: patients,
+<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>    x: &quot;name&quot;,
+<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>    y: (p) =&gt; calculate_risk_score(p.age, p.systolic, p.diastolic, p.smoker, p.diabetes),
+<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>    title: &quot;Patient Risk Scores&quot;,
+<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>    y_label: &quot;Risk Score&quot;
+<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>  );
+<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>}
 </code></pre></div>
 <h2 id="running-the-program">Running the Program</h2>
 <p>Save the file and run it using the Medi interpreter:</p>
@@ -1509,7 +1520,7 @@
       <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
       
     
   </body>

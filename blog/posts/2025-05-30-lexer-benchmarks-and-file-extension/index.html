@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Documentation for the Medi healthcare programming language">
+        <meta name="description" content="A look at our lexer performance improvements and the transition to .medi file extension">
       
       
         <meta name="author" content="The Medi Team">
@@ -15,19 +15,19 @@
       
       
       
-      <link rel="icon" href="../../assets/images/favicon-placeholder.png">
+      <link rel="icon" href="../../../assets/images/favicon-placeholder.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
     
     
       
-        <title>Blog - The Medi Book</title>
+        <title>Optimizing MediLang: Lexer Benchmarks and File Extension Standardization - The Medi Book</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.342714a4.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -46,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#blog" class="md-skip">
+        <a href="#optimizing-medilang-lexer-benchmarks-and-file-extension-standardization" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +92,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../../.." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
       
-  <img src="../../assets/medi-logo.png" alt="logo">
+  <img src="../../../assets/medi-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Blog
+              Optimizing MediLang: Lexer Benchmarks and File Extension Standardization
             
           </span>
         </div>
@@ -224,7 +224,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -245,7 +245,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../blog/" class="md-tabs__link">
+        <a href="../../" class="md-tabs__link">
           
   
   
@@ -265,7 +265,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../getting-started/" class="md-tabs__link">
+        <a href="../../../getting-started/" class="md-tabs__link">
           
   
   
@@ -285,7 +285,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../key-features/" class="md-tabs__link">
+        <a href="../../../key-features/" class="md-tabs__link">
           
   
   
@@ -305,7 +305,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../examples/" class="md-tabs__link">
+        <a href="../../../examples/" class="md-tabs__link">
           
   
   
@@ -325,7 +325,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../technical/architecture/" class="md-tabs__link">
+        <a href="../../../technical/architecture/" class="md-tabs__link">
           
   
   
@@ -345,7 +345,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -363,7 +363,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../roadmap/" class="md-tabs__link">
+      <a href="../../../roadmap/" class="md-tabs__link">
         
   
   
@@ -382,7 +382,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../contributing/" class="md-tabs__link">
+      <a href="../../../contributing/" class="md-tabs__link">
         
   
   
@@ -401,7 +401,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../community/" class="md-tabs__link">
+      <a href="../../../community/" class="md-tabs__link">
         
   
   
@@ -436,9 +436,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../../.." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
       
-  <img src="../../assets/medi-logo.png" alt="logo">
+  <img src="../../../assets/medi-logo.png" alt="logo">
 
     </a>
     The Medi Book
@@ -465,7 +465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -532,7 +532,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/" class="md-nav__link">
+      <a href="../../" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../blog/posts/2025-05-24-nested-expressions/" class="md-nav__link">
+      <a href="../2025-05-24-nested-expressions/" class="md-nav__link">
         
   
   
@@ -683,7 +683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/" class="md-nav__link">
+      <a href="../../../getting-started/" class="md-nav__link">
         
   
   
@@ -706,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -729,7 +729,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/basic-syntax/" class="md-nav__link">
+      <a href="../../../getting-started/basic-syntax/" class="md-nav__link">
         
   
   
@@ -752,7 +752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/first-program/" class="md-nav__link">
+      <a href="../../../getting-started/first-program/" class="md-nav__link">
         
   
   
@@ -827,7 +827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../key-features/" class="md-nav__link">
+      <a href="../../../key-features/" class="md-nav__link">
         
   
   
@@ -850,7 +850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../key-features/medical-data-science/" class="md-nav__link">
+      <a href="../../../key-features/medical-data-science/" class="md-nav__link">
         
   
   
@@ -925,7 +925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/" class="md-nav__link">
+      <a href="../../../examples/" class="md-nav__link">
         
   
   
@@ -1000,7 +1000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../technical/architecture/" class="md-nav__link">
+      <a href="../../../technical/architecture/" class="md-nav__link">
         
   
   
@@ -1075,7 +1075,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
@@ -1105,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../roadmap/" class="md-nav__link">
+      <a href="../../../roadmap/" class="md-nav__link">
         
   
   
@@ -1127,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -1149,7 +1149,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../community/" class="md-nav__link">
+      <a href="../../../community/" class="md-nav__link">
         
   
   
@@ -1184,6 +1184,98 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-need-for-speed-lexer-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      The Need for Speed: Lexer Benchmarks
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Need for Speed: Lexer Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#meet-the-lexers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Meet the Lexers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benchmark-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Benchmark Results
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standardizing-on-medi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standardizing on .medi
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Standardizing on .medi">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      What Changed
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-the-right-lexer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Choosing the Right Lexer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      What's Next
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#get-involved" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Involved
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1201,13 +1293,149 @@
   
 
 
-<h1 id="blog">Blog</h1>
+<h1 id="optimizing-medilang-lexer-benchmarks-and-file-extension-standardization">Optimizing MediLang: Lexer Benchmarks and File Extension Standardization</h1>
+<p><em>In our ongoing development of MediLang, we've made significant improvements to our lexer's performance and standardized on the <code>.medi</code> file extension. Here's a deep dive into what changed and why it matters.</em></p>
+<h2 id="the-need-for-speed-lexer-benchmarks">The Need for Speed: Lexer Benchmarks</h2>
+<p>As MediLang grows more sophisticated, we need to ensure our toolchain remains fast and efficient. We implemented a comprehensive benchmarking suite to measure and compare the performance of our different lexer implementations.</p>
+<h3 id="meet-the-lexers">Meet the Lexers</h3>
+<p>We currently maintain three different lexer implementations, each with its own strengths:</p>
+<ol>
+<li><strong>OriginalLexer</strong></li>
+<li>The standard implementation that balances performance and simplicity</li>
+<li>Uses moderate memory (25MB for 1MB input)</li>
+<li>
+<p>Processes tokens in a straightforward manner</p>
+</li>
+<li>
+<p><strong>StreamingLexer</strong></p>
+</li>
+<li>Optimized for memory efficiency</li>
+<li>Processes input in a streaming fashion</li>
+<li>Uses only 5MB of memory for the same 1MB input</li>
+<li>
+<p>Slightly faster than the OriginalLexer</p>
+</li>
+<li>
+<p><strong>ChunkedLexer</strong></p>
+</li>
+<li>Processes input in fixed-size chunks</li>
+<li>Ideal for very large files</li>
+<li>Consistent memory usage at 10MB</li>
+<li>Higher latency but stable performance</li>
+</ol>
+<h3 id="benchmark-results">Benchmark Results</h3>
+<p>Our latest benchmarks show significant performance improvements in the MediLang lexer. Here are the results from processing 12,300 tokens (approximately 73KB of source code) across 10 iterations:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Total Tokens Processed</td>
+<td>123,000</td>
+</tr>
+<tr>
+<td>Tokens per Iteration</td>
+<td>12,300</td>
+</tr>
+<tr>
+<td>Fastest Iteration</td>
+<td>1.50 ms</td>
+</tr>
+<tr>
+<td>Slowest Iteration</td>
+<td>2.42 ms</td>
+</tr>
+<tr>
+<td>Average Time</td>
+<td>1.87 ms</td>
+</tr>
+<tr>
+<td>Tokens per Second</td>
+<td>6.57 million</td>
+</tr>
+<tr>
+<td>Memory Usage</td>
+<td>&lt;5MB</td>
+</tr>
+</tbody>
+</table>
+<p>These results demonstrate that our lexer can process over 6.5 million tokens per second with minimal memory overhead. The consistent token count across all iterations shows the reliability of our lexer implementation.</p>
+<h2 id="standardizing-on-medi">Standardizing on .medi</h2>
+<p>We've also standardized on using <code>.medi</code> as the official file extension for Medi source files. This change brings several benefits:</p>
+<ol>
+<li><strong>Consistency</strong>: A single, standard extension makes it easier to identify Medi files</li>
+<li><strong>Tooling</strong>: Better support in editors and IDEs with proper syntax highlighting</li>
+<li><strong>Clarity</strong>: Distinguishes Medi files from other similar-looking extensions</li>
+</ol>
+<h3 id="what-changed">What Changed</h3>
+<ul>
+<li>Updated all example code and documentation to use <code>.medi</code></li>
+<li>Modified the compiler and tools to recognize <code>.medi</code> files</li>
+<li>Updated build systems and CI/CD pipelines</li>
+</ul>
+<h2 id="choosing-the-right-lexer">Choosing the Right Lexer</h2>
+<p>Based on our benchmarks, here's our recommendation for choosing a lexer:</p>
+<ul>
+<li><strong>Use StreamingLexer</strong> for most cases, especially with large files</li>
+<li><strong>Use OriginalLexer</strong> when you need the simplest implementation</li>
+<li><strong>Use ChunkedLexer</strong> for processing extremely large files with limited memory</li>
+</ul>
+<h2 id="whats-next">What's Next</h2>
+<p>We'll continue to optimize our lexer implementations and add more comprehensive benchmarks. Future work includes:</p>
+<ul>
+<li>Adding more detailed memory profiling</li>
+<li>Implementing parallel lexing for multi-core systems</li>
+<li>Exploring just-in-time compilation for frequently executed lexing patterns</li>
+</ul>
+<h2 id="get-involved">Get Involved</h2>
+<p>We'd love to hear about your experiences with these changes! If you have feedback or want to contribute to MediLang's development, check out our <a href="https://github.com/MediLang/medi">GitHub repository</a>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>// Example Medi code with the new .medi extension
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>protocol PatientData {
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  name: string
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  age: int
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  conditions: list[string]
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>}
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>fn analyze_patient(patient: PatientData) -&gt; RiskScore {
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  // Implementation here
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  let score = 0;
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>  // Example: Calculate risk based on conditions
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>  if patient.conditions.contains(&quot;diabetes&quot;) {
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    score += 10;
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  }
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>  if patient.age &gt; 60 {
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    score += 5;
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  }
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>  score
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>}
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>// Example usage
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>let patient = PatientData {
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>  name: &quot;John Doe&quot;,
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>  age: 65,
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>  conditions: [&quot;hypertension&quot;, &quot;diabetes&quot;]
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>};
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>let risk = analyze_patient(patient);
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>println!(&quot;Risk score: {}&quot;, risk);
+</code></pre></div>
+<p><em>Stay tuned for more updates as we continue to improve MediLang!</em></p>
 
 
 
 
 
 
+
+  
+  
 
 
 
@@ -1282,10 +1510,10 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.56ea9cef.min.js"></script>
       
     
   </body>

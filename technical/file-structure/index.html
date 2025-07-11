@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon-placeholder.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
     
     
       
@@ -1281,15 +1281,15 @@
 <h1 id="medi-file-structure-and-organization">Medi File Structure and Organization</h1>
 <p>Medi follows a Rust-inspired approach to code organization, providing clean structure and explicit visibility for healthcare applications.</p>
 <h2 id="file-extensions">File Extensions</h2>
-<p>Medi source code files use the <code>.mdi</code> extension:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>patient_analysis.mdi
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>data_pipeline.mdi
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>clinical_trial.mdi
+<p>Medi source code files use the <code>.medi</code> extension:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>patient_analysis.medi
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>data_pipeline.medi
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>clinical_trial.medi
 </code></pre></div>
 <h2 id="module-system">Module System</h2>
 <h3 id="single-file-modules">Single File Modules</h3>
-<p>Each <code>.mdi</code> file is a module, containing related functionality. By default, all items (functions, types, etc.) are private to the module unless explicitly marked public:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// my_module.mdi
+<p>Each <code>.medi</code> file is a module, containing related functionality. By default, all items (functions, types, etc.) are private to the module unless explicitly marked public:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>// my_module.medi
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pub fn analyze_vitals(heart_rate: Integer, blood_pressure: Tuple&lt;Integer, Integer&gt;) {
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    // This function is accessible from other modules
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    // because it&#39;s marked with &#39;pub&#39;
@@ -1306,7 +1306,7 @@
 </code></pre></div>
 <h3 id="importing-modules">Importing Modules</h3>
 <p>You can import other modules with the <code>use</code> keyword:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>// main.mdi
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>// main.medi
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>use vitals;
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>use patient::records;
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
@@ -1318,18 +1318,18 @@
 <h3 id="directory-based-modules">Directory-Based Modules</h3>
 <p>For larger projects, you can organize code in directories:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>project/
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── main.mdi         # Main entry point
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── main.medi         # Main entry point
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── vitals/
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   ├── mod.mdi      # Makes directory a module and re-exports items
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── analysis.mdi # Analysis functions
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   └── alerts.mdi   # Alert management
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   ├── mod.medi      # Makes directory a module and re-exports items
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── analysis.medi # Analysis functions
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   └── alerts.medi   # Alert management
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>└── patient/
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    ├── mod.mdi
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    ├── records.mdi  # Patient record handling
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    └── search.mdi   # Patient search functionality
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    ├── mod.medi
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    ├── records.medi  # Patient record handling
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    └── search.medi   # Patient search functionality
 </code></pre></div>
-<p>The <code>mod.mdi</code> file declares and re-exports submodules:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>// vitals/mod.mdi
+<p>The <code>mod.medi</code> file declares and re-exports submodules:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>// vitals/mod.medi
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>pub mod analysis;
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>pub mod alerts;
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
@@ -1354,7 +1354,7 @@
 <p><strong>Privacy by default</strong>: Keep implementation details private and only expose necessary APIs.</p>
 </li>
 <li>
-<p><strong>Re-export for convenience</strong>: Use <code>mod.mdi</code> files to re-export common items for easier imports.</p>
+<p><strong>Re-export for convenience</strong>: Use <code>mod.medi</code> files to re-export common items for easier imports.</p>
 </li>
 <li>
 <p><strong>Consistent naming</strong>: Use snake_case for filenames and functions, PascalCase for types.</p>
@@ -1447,7 +1447,7 @@
       <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
       
     
   </body>
