@@ -7,5 +7,18 @@ members = [
     "medic_lexer",
     "medic_parser",
     "medic_type",
-    "medic_typeck"
+    "medic_typeck",
+    "benches"
 ]
+
+[workspace.dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[profile.bench]
+debug = true
+lto = true
+codegen-units = 1
+
+[profile.release]
+lto = true
+codegen-units = 1
