@@ -23,8 +23,6 @@ venv/
 .venv/
 
 # Editor directories and files
-.idea
-.vscode
 *.suo
 *.ntvs*
 *.njsproj
@@ -38,3 +36,7 @@ venv/
 # Added by cargo
 
 /target
+
+# Task files
+# tasks.json
+# tasks/ 
