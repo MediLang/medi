@@ -1,3 +1,26 @@
+//! # Binary Expressions Parser
+//!
+//! This module implements the core of the precedence climbing algorithm for parsing
+//! binary expressions with proper operator precedence and associativity.
+//!
+//! ## Implementation Details
+//!
+//! The algorithm is implemented in the `parse_nested_binary_expression` function, which:
+//! 1. Parses the left-hand side (primary expression)
+//! 2. While there are operators with sufficient precedence:
+//!    - Gets the operator's precedence and associativity
+//!    - For right-associative operators (like `**`), uses the same precedence for the next level
+//!    - For left-associative operators (like `+`, `*`), uses precedence + 1
+//!    - Recursively parses the right-hand side
+//!    - Combines into a binary expression node
+//!
+//! ## Error Handling
+//!
+//! The parser enforces these rules:
+//! - Chained comparisons (e.g., `a < b < c`) are not allowed
+//! - All binary operators must have properly matched operands
+//! - Operator precedence and associativity are strictly enforced
+
 use nom::error::ErrorKind;
 use nom::IResult;
 
@@ -9,8 +32,27 @@ use crate::parser::{
 
 /// Parses a binary expression with proper precedence and associativity handling.
 ///
-/// This function uses the precedence climbing algorithm to handle operator
-/// precedence and associativity correctly.
+/// This function implements the precedence climbing algorithm to parse binary expressions
+/// while respecting operator precedence and associativity rules.
+///
+/// # Arguments
+///
+/// * `input` - The input token stream to parse
+/// * `min_precedence` - The minimum operator precedence to consider (used for recursion)
+/// * `in_comparison` - Whether we're already in a comparison expression (to prevent chaining)
+///
+/// # Returns
+///
+/// Returns a tuple containing:
+/// 1. The remaining unparsed input
+/// 2. The parsed expression as an `ExpressionNode`
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The input cannot be parsed as a valid expression
+/// - Chained comparisons are detected (e.g., `a < b < c`)
+/// - The maximum nesting depth is exceeded
 pub fn parse_nested_binary_expression(
     input: TokenSlice<'_>,
     min_precedence: u8,

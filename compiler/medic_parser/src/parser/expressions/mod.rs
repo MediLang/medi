@@ -1,3 +1,48 @@
+//! # Expression Parser
+//!
+//! This module handles the parsing of expressions in the Medi language, including:
+//! - Primary expressions (literals, identifiers, parenthesized expressions)
+//! - Binary expressions with operator precedence and associativity
+//! - Match expressions
+//! - Block expressions
+//!
+//! ## Operator Precedence
+//!
+//! Operators are listed in order of increasing precedence:
+//!
+//! | Operator(s) | Associativity | Description           |
+//! |-------------|---------------|-----------------------|
+//! | `||`        | Left          | Logical OR            |
+//! | `&&`        | Left          | Logical AND           |
+//! | `==`, `!=`  | Left          | Equality comparison   |
+//! | `<`, `>`, `<=`, `>=` | Left  | Relational comparison |
+//! | `+`, `-`    | Left          | Addition/Subtraction  |
+//! | `*`, `/`, `%` | Left        | Multiplication/Division/Modulo |
+//! | `**`        | Right         | Exponentiation        |
+//! | `of`, `per` | Left          | Medical operators     |
+//! | `!`, `-`    | Right         | Unary operators       |
+//!
+//! ## Expression Grammar
+//!
+//! ```ebnf
+//! expression     → assignment ;
+//! assignment     → IDENTIFIER "=" assignment
+//!                | logic_or ;
+//! logic_or       → logic_and ( "||" logic_and )* ;
+//! logic_and      → equality ( "&&" equality )* ;
+//! equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+//! comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+//! term           → factor ( ( "-" | "+" ) factor )* ;
+//! factor         → unary ( ( "/" | "*" | "%" ) unary )* ;
+//! unary          → ( "!" | "-" ) unary | primary ;
+//! primary        → NUMBER | STRING | "true" | "false" | "nil"
+//!                | "(" expression ")"
+//!                | IDENTIFIER
+//!                | "match" expression "{" match_arm* "}" ;
+//! match_arm      → pattern "=>" expression ","? ;
+//! pattern        → IDENTIFIER | "_" | literal ;
+//! ```
+
 use nom::error::ErrorKind;
 use nom::Err;
 use nom::IResult;

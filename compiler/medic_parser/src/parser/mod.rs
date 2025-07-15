@@ -1,7 +1,48 @@
-//! Parser for the Medi language
+//! # Medi Language Parser
 //!
-//! This module implements a recursive descent parser for the Medi language.
-//! It transforms a sequence of tokens into an abstract syntax tree (AST).
+//! This module implements a hand-written recursive descent parser for the Medi language,
+//! transforming a sequence of tokens into an abstract syntax tree (AST). The parser uses
+//! the `nom` parser combinator library for building composable and maintainable parsers.
+//!
+//! ## Architecture Overview
+//!
+//! The parser follows a recursive descent approach with these key components:
+//! - **Token Stream**: Wraps the token stream with position tracking and lookahead capabilities
+//! - **Expression Parser**: Handles complex expressions with operator precedence and associativity
+//! - **Statement Parser**: Processes control flow constructs and declarations
+//! - **AST Generation**: Constructs the abstract syntax tree with source location information
+//!
+//! ## Parser Phases
+//!
+//! 1. **Lexical Analysis** (handled by the lexer)
+//!    - Converts source text into tokens
+//!    - Handles whitespace and comments
+//!
+//! 2. **Syntactic Analysis** (this module)
+//!    - Parses tokens into an AST
+//!    - Validates syntax according to the language grammar
+//!    - Handles operator precedence and associativity
+//!
+//! 3. **Semantic Analysis** (future)
+//!    - Type checking
+//!    - Name resolution
+//!    - Other semantic validations
+//!
+//! ## Error Handling
+//!
+//! The parser provides detailed error messages with source locations and implements
+//! error recovery to continue parsing after encountering syntax errors.
+//!
+//! ## Usage
+//!
+//! ```rust
+//! use medic_parser::parser::parse_program;
+//! use medic_lexer::tokenize;
+//!
+//! let source = "let x = 42;";
+//! let tokens = tokenize(source);
+//! let ast = parse_program(&tokens);
+//! ```
 
 #![allow(dead_code)]
 #![allow(unused_imports)]
