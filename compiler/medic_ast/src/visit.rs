@@ -15,7 +15,7 @@ pub enum VisitError {
     /// An error with a custom message.
     #[error("{0}")]
     Custom(String),
-    
+
     /// An error that occurred at a specific location in the source.
     #[error("{message} at {location:?}")]
     Located {
@@ -31,7 +31,7 @@ impl VisitError {
     pub fn custom<T: Into<String>>(msg: T) -> Self {
         VisitError::Custom(msg.into())
     }
-    
+
     /// Creates a new located error.
     pub fn located<T: Into<String>>(msg: T, location: Option<Span>) -> Self {
         VisitError::Located {
@@ -45,9 +45,9 @@ impl VisitError {
 pub trait Visitable {
     /// Accepts a visitor and calls the appropriate visit method.
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output>;
-    
+
     /// Visits the children of this node with the given visitor.
-    /// 
+    ///
     /// The default implementation does nothing.
     fn visit_children<V: Visitor + ?Sized>(&self, _visitor: &mut V) -> VisitResult<V::Output> {
         Ok(Default::default())
@@ -61,83 +61,83 @@ pub trait Visitable {
 pub trait Visitor {
     /// The output type of the visitor.
     type Output: Default;
-    
+
     // Expression nodes
     fn visit_identifier(&mut self, node: &IdentifierNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_literal(&mut self, node: &LiteralNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_binary_expr(&mut self, node: &BinaryExpressionNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_call_expr(&mut self, node: &CallExpressionNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_member_expr(&mut self, node: &MemberExpressionNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_healthcare_query(&mut self, node: &HealthcareQueryNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_struct_literal(&mut self, node: &StructLiteralNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     // Statement nodes
     fn visit_let_stmt(&mut self, node: &LetStatementNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_assignment(&mut self, node: &AssignmentNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_block(&mut self, node: &BlockNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_if_stmt(&mut self, node: &IfNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_while_loop(&mut self, node: &WhileNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_for_loop(&mut self, node: &ForNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_match(&mut self, node: &MatchNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_return(&mut self, node: &ReturnNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     // Program
     fn visit_program(&mut self, node: &ProgramNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     // Pattern matching
     fn visit_pattern(&mut self, node: &PatternNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     fn visit_match_arm(&mut self, node: &MatchArmNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }
-    
+
     // Helper to visit children of a node
     fn visit_children<T: Visitable + ?Sized>(&mut self, node: &T) -> VisitResult<Self::Output> {
         node.visit_children(self)
@@ -169,7 +169,7 @@ impl Span {
             column,
         }
     }
-    
+
     /// Creates a span that covers both this span and another.
     pub fn to(&self, other: &Self) -> Self {
         Self {
@@ -215,7 +215,7 @@ impl<T: Clone> NodeCollector<T> {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Adds a node to the collection.
     pub fn collect(&mut self, node: &T) {
         self.nodes.push(node.clone());
@@ -241,12 +241,12 @@ where
             nodes: Vec::new(),
         }
     }
-    
+
     /// Returns the found nodes.
     pub fn into_inner(self) -> Vec<T> {
         self.nodes
     }
-    
+
     /// Checks if the given node matches the predicate and collects it if it does.
     pub fn check(&mut self, node: &T) -> bool
     where
@@ -265,11 +265,11 @@ where
 mod tests {
     use super::*;
     use crate::ast::*;
-    
+
     #[test]
     fn test_visitor_pattern() {
         use crate::ast::Spanned;
-        
+
         // Create a simple AST: 1 + 2 * 3
         let ast = ExpressionNode::Binary(Spanned::new(
             Box::new(BinaryExpressionNode {
@@ -277,30 +277,36 @@ mod tests {
                 operator: BinaryOperator::Add,
                 right: ExpressionNode::Binary(Spanned::new(
                     Box::new(BinaryExpressionNode {
-                        left: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), Span::default())),
+                        left: ExpressionNode::Literal(Spanned::new(
+                            LiteralNode::Int(2),
+                            Span::default(),
+                        )),
                         operator: BinaryOperator::Mul,
-                        right: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(3), Span::default())),
+                        right: ExpressionNode::Literal(Spanned::new(
+                            LiteralNode::Int(3),
+                            Span::default(),
+                        )),
                     }),
-                    Span::default()
+                    Span::default(),
                 )),
             }),
-            Span::default()
+            Span::default(),
         ));
-        
+
         // Count the number of binary expressions
         struct BinaryCounter {
             count: usize,
         }
-        
+
         impl Visitor for BinaryCounter {
             type Output = ();
-            
+
             fn visit_binary_expr(&mut self, node: &BinaryExpressionNode) -> VisitResult<()> {
                 self.count += 1;
                 self.visit_children(node)
             }
         }
-        
+
         let mut counter = BinaryCounter { count: 0 };
         ast.accept(&mut counter).unwrap();
         assert_eq!(counter.count, 2);

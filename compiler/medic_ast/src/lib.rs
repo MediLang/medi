@@ -10,9 +10,9 @@ pub mod visit;
 // Re-export commonly used types
 pub use ast::Spanned;
 
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fmt;
-use serde::{Serialize, Deserialize};
 
 /// A result type for AST operations.
 pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
@@ -29,10 +29,10 @@ pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 /// let span = Span { start: 0, end: 0, line: 1, column: 1 };
 /// let expr = ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span));
 /// let json = to_json(&expr).unwrap();
-/// 
+///
 /// // Print the JSON for debugging
 /// println!("Serialized JSON: {}", json);
-/// 
+///
 /// // Check for key parts of the JSON in a more flexible way
 /// assert!(json.contains(r#"type": "Literal"#), "JSON should contain type: Literal");
 /// assert!(json.contains(r#"type": "Int"#), "JSON should contain Int type");
@@ -75,7 +75,7 @@ impl AstPrinter {
 
     /// Prints an AST node to a string.
     pub fn print<T: fmt::Display>(&self, node: &T) -> String {
-        format!("{}", node)
+        format!("{node}")
     }
 }
 
@@ -88,14 +88,19 @@ mod tests {
 
     #[test]
     fn test_serialization() -> Result<()> {
-        let span = Span { start: 0, end: 0, line: 1, column: 1 };
+        let span = Span {
+            start: 0,
+            end: 0,
+            line: 1,
+            column: 1,
+        };
         let expr = ExpressionNode::Binary(Spanned::new(
             Box::new(BinaryExpressionNode {
                 left: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), span)),
                 operator: BinaryOperator::Add,
                 right: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), span)),
             }),
-            span
+            span,
         ));
 
         let json = to_json(&expr).map_err(|e| e.to_string())?;

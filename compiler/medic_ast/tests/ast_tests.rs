@@ -1,5 +1,5 @@
 use medic_ast::ast::*;
-use medic_ast::visit::{Visitor, VisitResult, Span, Visitable};
+use medic_ast::visit::{Span, VisitResult, Visitable, Visitor};
 use medic_ast::{to_json, Spanned};
 use std::error::Error;
 
@@ -36,7 +36,7 @@ impl Visitor for NodeCounter {
         self.count += 1;
         Ok(())
     }
-    
+
     fn visit_binary_expr(&mut self, node: &BinaryExpressionNode) -> VisitResult<Self::Output> {
         self.count += 1;
         self.visit_children(node)
@@ -47,11 +47,11 @@ impl Visitor for NodeCounter {
 fn test_spanned_node() {
     // Test creating a spanned node
     let span = test_span();
-    
+
     let node = Spanned::new(42, span);
     assert_eq!(node.node, 42);
     assert_eq!(node.span, span);
-    
+
     // Test mapping
     let node = node.map(|n| n * 2);
     assert_eq!(node.node, 84);
@@ -62,18 +62,18 @@ fn test_spanned_node() {
 fn test_expression_node_visitor() -> Result<(), Box<dyn Error>> {
     // Create a simple expression: 42
     let expr = ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), test_span()));
-    
+
     // Visit the expression
     let mut counter = NodeCounter::new();
     expr.accept(&mut counter)?;
-    
+
     // Verify the visitor was called
     assert_eq!(counter.count, 1);
-    
+
     // Test serialization
     let json = to_json(&expr).map_err(|e| e.to_string())?;
     assert!(json.contains("42"));
-    
+
     Ok(())
 }
 
@@ -82,28 +82,28 @@ fn test_binary_expression_visitor() -> Result<(), Box<dyn Error>> {
     // Create a binary expression: 1 + 2
     let left = LiteralNode::Int(1);
     let right = LiteralNode::Int(2);
-    
+
     let expr = ExpressionNode::Binary(Spanned::new(
         Box::new(BinaryExpressionNode {
             left: ExpressionNode::Literal(Spanned::new(left, test_span())),
             operator: BinaryOperator::Add,
             right: ExpressionNode::Literal(Spanned::new(right, test_span())),
         }),
-        test_span()
+        test_span(),
     ));
-    
+
     // Visit the expression
     let mut counter = NodeCounter::new();
     expr.accept(&mut counter)?;
-    
+
     // Verify the visitor was called for both literals and the binary expression
     assert_eq!(counter.count, 3);
-    
+
     // Test serialization
     let json = to_json(&expr).map_err(|e| e.to_string())?;
     assert!(json.contains("1"));
     assert!(json.contains("2"));
     assert!(json.contains("Add"));
-    
+
     Ok(())
 }

@@ -3,8 +3,8 @@
 //! This module defines the AST nodes used to represent Medi programs, along with
 //! implementations for visiting, displaying, and serializing the AST.
 
-use serde::{Serialize, Deserialize};
-use crate::visit::{Visitable, VisitResult, Visitor, VisitError};
+use crate::visit::{VisitError, VisitResult, Visitable, Visitor};
+use serde::{Deserialize, Serialize};
 
 /// Implement Visitable for String to handle string literals
 impl Visitable for String {
@@ -31,7 +31,7 @@ impl<T> Spanned<T> {
     pub fn new(node: T, span: Span) -> Self {
         Spanned { node, span }
     }
-    
+
     /// Map the inner value while preserving the span
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Spanned<U> {
         Spanned {
@@ -99,7 +99,7 @@ impl Visitable for BinaryExpressionNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_binary_expr(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.left.accept(visitor)?;
         self.right.accept(visitor)
@@ -362,7 +362,7 @@ pub enum PatternNode {
     },
     Struct {
         // Represents a struct pattern like Point { x, y }
-        type_name: String,  // The struct type name
+        type_name: String,               // The struct type name
         fields: Vec<StructFieldPattern>, // The field patterns
     },
 }
@@ -370,25 +370,25 @@ pub enum PatternNode {
 /// Represents a field pattern in a struct pattern
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructFieldPattern {
-    pub name: String,          // The field name
-    pub pattern: PatternNode,  // The pattern for this field
+    pub name: String,         // The field name
+    pub pattern: PatternNode, // The pattern for this field
 }
 
 impl std::fmt::Display for PatternNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PatternNode::Literal(lit) => write!(f, "{}", lit),
+            PatternNode::Literal(lit) => write!(f, "{lit}"),
             PatternNode::Identifier(ident) => write!(f, "{}", ident.name),
             PatternNode::Wildcard => write!(f, "_"),
-            PatternNode::Variant { name, inner } => write!(f, "{}({})", name, inner),
+            PatternNode::Variant { name, inner } => write!(f, "{name}({inner})"),
             PatternNode::Struct { type_name, fields } => {
-                write!(f, "{} {{ ", type_name)?;
+                write!(f, "{type_name} {{ ")?;
                 let fields_str = fields
                     .iter()
                     .map(|f| format!("{}: {}", f.name, f.pattern))
                     .collect::<Vec<_>>()
                     .join(", ");
-                write!(f, "{}}}", fields_str)
+                write!(f, "{fields_str}}}")
             }
         }
     }
@@ -423,15 +423,19 @@ impl Visitable for ExpressionNode {
             ExpressionNode::Statement(spanned) => spanned.node.accept(visitor),
         }
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         match self {
             ExpressionNode::Binary(Spanned { node: expr, .. }) => expr.visit_children(visitor),
             ExpressionNode::Call(Spanned { node: expr, .. }) => expr.visit_children(visitor),
             ExpressionNode::Member(Spanned { node: expr, .. }) => expr.visit_children(visitor),
             ExpressionNode::Literal(Spanned { node: lit, .. }) => lit.visit_children(visitor),
-            ExpressionNode::Identifier(Spanned { node: ident, .. }) => ident.visit_children(visitor),
-            ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => query.visit_children(visitor),
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
+                ident.visit_children(visitor)
+            }
+            ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => {
+                query.visit_children(visitor)
+            }
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.visit_children(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.visit_children(visitor),
@@ -445,7 +449,7 @@ impl Visitable for CallExpressionNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_call_expr(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.callee.accept(visitor)?;
         for arg in &self.arguments {
@@ -459,7 +463,7 @@ impl Visitable for MemberExpressionNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_member_expr(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.object.accept(visitor)?;
         self.property.accept(visitor)
@@ -470,7 +474,7 @@ impl Visitable for HealthcareQueryNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_healthcare_query(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         for arg in &self.arguments {
             arg.accept(visitor)?;
@@ -499,7 +503,7 @@ impl Visitable for LetStatementNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_let_stmt(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.name.accept(visitor)?;
         self.value.accept(visitor)
@@ -510,7 +514,7 @@ impl Visitable for AssignmentNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_assignment(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.target.accept(visitor)?;
         self.value.accept(visitor)
@@ -521,7 +525,7 @@ impl Visitable for BlockNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_block(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         for stmt in &self.statements {
             stmt.accept(visitor)?;
@@ -534,7 +538,7 @@ impl Visitable for IfNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_if_stmt(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.condition.accept(visitor)?;
         self.then_branch.accept(visitor)?;
@@ -549,7 +553,7 @@ impl Visitable for WhileNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_while_loop(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.condition.accept(visitor)?;
         self.body.accept(visitor)
@@ -560,7 +564,7 @@ impl Visitable for ForNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_for_loop(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.var.accept(visitor)?;
         self.iter.accept(visitor)?;
@@ -572,7 +576,7 @@ impl Visitable for MatchNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_match(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.expr.accept(visitor)?;
         for arm in &self.arms {
@@ -586,7 +590,7 @@ impl Visitable for ReturnNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_return(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         if let Some(expr) = &self.value {
             expr.accept(visitor)?;
@@ -605,7 +609,7 @@ impl Visitable for StructLiteralNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_struct_literal(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         for field in &self.fields {
             field.accept(visitor)?;
@@ -624,7 +628,7 @@ impl Visitable for PatternNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_pattern(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         match self {
             PatternNode::Literal(lit) => lit.accept(visitor),
@@ -645,7 +649,7 @@ impl Visitable for MatchArmNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_match_arm(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.pattern.accept(visitor)?;
         self.body.accept(visitor)
@@ -656,7 +660,7 @@ impl Visitable for ProgramNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_program(self)
     }
-    
+
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         for stmt in &self.statements {
             stmt.accept(visitor)?;
@@ -685,7 +689,7 @@ impl std::fmt::Display for StatementNode {
         match self {
             StatementNode::Let(stmt) => write!(f, "let {} = {};", stmt.name.name, stmt.value),
             StatementNode::Assignment(assign) => write!(f, "{} = {};", assign.target, assign.value),
-            StatementNode::Expr(expr) => write!(f, "{};", expr),
+            StatementNode::Expr(expr) => write!(f, "{expr};"),
             StatementNode::Block(block) => {
                 // Use the indentation-aware formatting for blocks
                 // Start with 1 level of indentation since this is inside a statement
@@ -722,7 +726,7 @@ impl std::fmt::Display for StatementNode {
             }
             StatementNode::Return(ret) => {
                 if let Some(expr) = &ret.value {
-                    write!(f, "return {};", expr)
+                    write!(f, "return {expr};")
                 } else {
                     write!(f, "return;")
                 }
@@ -735,10 +739,10 @@ impl std::fmt::Display for ExpressionNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             ExpressionNode::Identifier(Spanned { node: ident, .. }) => write!(f, "{}", ident.name),
-            ExpressionNode::IcdCode(Spanned { node: code, .. }) => write!(f, "ICD:{}", code),
-            ExpressionNode::CptCode(Spanned { node: code, .. }) => write!(f, "CPT:{}", code),
-            ExpressionNode::SnomedCode(Spanned { node: code, .. }) => write!(f, "SNOMED:{}", code),
-            ExpressionNode::Literal(Spanned { node: lit, .. }) => write!(f, "{}", lit),
+            ExpressionNode::IcdCode(Spanned { node: code, .. }) => write!(f, "ICD:{code}"),
+            ExpressionNode::CptCode(Spanned { node: code, .. }) => write!(f, "CPT:{code}"),
+            ExpressionNode::SnomedCode(Spanned { node: code, .. }) => write!(f, "SNOMED:{code}"),
+            ExpressionNode::Literal(Spanned { node: lit, .. }) => write!(f, "{lit}"),
             ExpressionNode::Binary(Spanned { node: expr, .. }) => {
                 write!(f, "({} {} {})", expr.left, expr.operator, expr.right)
             }
@@ -749,7 +753,7 @@ impl std::fmt::Display for ExpressionNode {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", arg)?;
+                    write!(f, "{arg}")?;
                 }
                 write!(f, ")")
             }
@@ -762,11 +766,11 @@ impl std::fmt::Display for ExpressionNode {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", arg)?;
+                    write!(f, "{arg}")?;
                 }
                 write!(f, ")")
             }
-            ExpressionNode::Statement(Spanned { node: stmt, .. }) => write!(f, "{}", stmt),
+            ExpressionNode::Statement(Spanned { node: stmt, .. }) => write!(f, "{stmt}"),
             ExpressionNode::Struct(Spanned { node: s, .. }) => {
                 write!(f, "{} {{", s.type_name)?;
                 for (i, field) in s.fields.iter().enumerate() {
