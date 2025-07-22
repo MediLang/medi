@@ -1,34 +1,75 @@
-// Abstract Syntax Tree (AST) definitions for the Medi language in Rust
-// This is a starting point, mapping the core node types from your TypeScript AST
+//! Abstract Syntax Tree (AST) definitions for the Medi language in Rust
+//!
+//! This module defines the AST nodes used to represent Medi programs, along with
+//! implementations for visiting, displaying, and serializing the AST.
 
-/// Represents an expression in the AST
-#[derive(Debug, Clone, PartialEq)]
-pub enum ExpressionNode {
-    /// An identifier (variable name, function name, etc.)
-    Identifier(IdentifierNode),
-    /// An ICD code literal
-    IcdCode(String),
-    /// A CPT code literal
-    CptCode(String),
-    /// A SNOMED CT code literal
-    SnomedCode(String),
-    /// A literal value (number, string, boolean, etc.)
-    Literal(LiteralNode),
-    /// A binary operation (e.g., 1 + 2, x * y)
-    Binary(Box<BinaryExpressionNode>),
-    /// A function call (e.g., add(1, 2))
-    Call(Box<CallExpressionNode>),
-    /// A member access (e.g., object.property)
-    Member(Box<MemberExpressionNode>),
-    /// A healthcare-specific query
-    HealthcareQuery(Box<HealthcareQueryNode>),
-    /// A statement expression (e.g., a block expression)
-    Statement(Box<StatementNode>),
-    /// A struct literal (e.g., `Patient { id: 1, name: "John" }`)
-    Struct(Box<StructLiteralNode>),
+use serde::{Serialize, Deserialize};
+use crate::visit::{Visitable, VisitResult, Visitor, VisitError};
+
+/// Implement Visitable for String to handle string literals
+impl Visitable for String {
+    fn accept<V: Visitor + ?Sized>(&self, _visitor: &mut V) -> VisitResult<V::Output> {
+        // For string literals, just return the default output
+        Ok(Default::default())
+    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Represents an expression in the AST
+use crate::visit::Span;
+
+/// A node in the AST with source location information
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spanned<T> {
+    /// The actual node value
+    pub node: T,
+    /// The source code span this node was parsed from
+    pub span: Span,
+}
+
+impl<T> Spanned<T> {
+    /// Create a new spanned node
+    pub fn new(node: T, span: Span) -> Self {
+        Spanned { node, span }
+    }
+    
+    /// Map the inner value while preserving the span
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Spanned<U> {
+        Spanned {
+            node: f(self.node),
+            span: self.span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value")]
+pub enum ExpressionNode {
+    /// An identifier (variable name, function name, etc.)
+    Identifier(Spanned<IdentifierNode>),
+    /// An ICD code literal
+    IcdCode(Spanned<String>),
+    /// A CPT code literal
+    CptCode(Spanned<String>),
+    /// A SNOMED CT code literal
+    SnomedCode(Spanned<String>),
+    /// A literal value (number, string, boolean, etc.)
+    Literal(Spanned<LiteralNode>),
+    /// A binary operation (e.g., 1 + 2, x * y)
+    Binary(Spanned<Box<BinaryExpressionNode>>),
+    /// A function call (e.g., add(1, 2))
+    Call(Spanned<Box<CallExpressionNode>>),
+    /// A member access (e.g., object.property)
+    Member(Spanned<Box<MemberExpressionNode>>),
+    /// A healthcare-specific query
+    HealthcareQuery(Spanned<Box<HealthcareQueryNode>>),
+    /// A statement expression (e.g., a block expression)
+    Statement(Spanned<Box<StatementNode>>),
+    /// A struct literal (e.g., `Patient { id: 1, name: "John" }`)
+    Struct(Spanned<Box<StructLiteralNode>>),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value")]
 pub enum LiteralNode {
     // Direct representation of literal values
     Int(i64),
@@ -48,7 +89,24 @@ impl std::fmt::Display for LiteralNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Visitable for LiteralNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_literal(self)
+    }
+}
+
+impl Visitable for BinaryExpressionNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_binary_expr(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.left.accept(visitor)?;
+        self.right.accept(visitor)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BinaryExpressionNode {
     pub left: ExpressionNode,
     pub operator: BinaryOperator,
@@ -56,7 +114,7 @@ pub struct BinaryExpressionNode {
 }
 
 /// Binary operators in order of increasing precedence
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BinaryOperator {
     // Assignment (right-associative, lowest precedence)
     Assign,
@@ -81,30 +139,22 @@ pub enum BinaryOperator {
     Gt, // >
     Ge, // >=
 
-    // Unit conversion (right-associative, highest precedence)
-    UnitConversion, // → (e.g., '5 mg→g')
-
-    // Bitwise OR (left-associative)
-    BitOr, // |
-
-    // Bitwise XOR (left-associative)
-    BitXor, // ^
-
-    // Bitwise AND (left-associative)
-    BitAnd, // &
-
-    // Bit shifts (left-associative)
-    Shl, // <<
-    Shr, // >>
-
-    // Addition/Subtraction (left-associative)
+    // Arithmetic (left-associative)
     Add, // +
     Sub, // -
-
-    // Multiplication/Division/Modulo (left-associative)
     Mul, // *
     Div, // /
     Mod, // %
+
+    // Unit conversion (right-associative, highest precedence)
+    UnitConversion, // → (e.g., '5 mg→g')
+
+    // Bitwise operations (left-associative)
+    BitOr,  // |
+    BitXor, // ^
+    BitAnd, // &
+    Shl,    // <<
+    Shr,    // >>
 
     // Exponentiation (right-associative)
     Pow, // **
@@ -120,11 +170,11 @@ pub enum BinaryOperator {
 }
 
 impl std::fmt::Display for BinaryOperator {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             BinaryOperator::Assign => write!(f, "="),
-            BinaryOperator::Or => write!(f, "||"),
-            BinaryOperator::And => write!(f, "&&"),
+            BinaryOperator::Or => write!(f, "or"),
+            BinaryOperator::And => write!(f, "and"),
             BinaryOperator::Of => write!(f, "of"),
             BinaryOperator::Per => write!(f, "per"),
             BinaryOperator::Eq => write!(f, "=="),
@@ -133,17 +183,17 @@ impl std::fmt::Display for BinaryOperator {
             BinaryOperator::Le => write!(f, "<="),
             BinaryOperator::Gt => write!(f, ">"),
             BinaryOperator::Ge => write!(f, ">="),
+            BinaryOperator::Add => write!(f, "+"),
+            BinaryOperator::Sub => write!(f, "-"),
+            BinaryOperator::Mul => write!(f, "*"),
+            BinaryOperator::Div => write!(f, "/"),
+            BinaryOperator::Mod => write!(f, "%"),
             BinaryOperator::UnitConversion => write!(f, "→"),
             BinaryOperator::BitOr => write!(f, "|"),
             BinaryOperator::BitXor => write!(f, "^"),
             BinaryOperator::BitAnd => write!(f, "&"),
             BinaryOperator::Shl => write!(f, "<<"),
             BinaryOperator::Shr => write!(f, ">>"),
-            BinaryOperator::Add => write!(f, "+"),
-            BinaryOperator::Sub => write!(f, "-"),
-            BinaryOperator::Mul => write!(f, "*"),
-            BinaryOperator::Div => write!(f, "/"),
-            BinaryOperator::Mod => write!(f, "%"),
             BinaryOperator::Pow => write!(f, "**"),
             BinaryOperator::Range => write!(f, ".."),
             BinaryOperator::NullCoalesce => write!(f, "??"),
@@ -152,25 +202,26 @@ impl std::fmt::Display for BinaryOperator {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CallExpressionNode {
     pub callee: ExpressionNode,
     pub arguments: Vec<ExpressionNode>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MemberExpressionNode {
     pub object: ExpressionNode,
     pub property: IdentifierNode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HealthcareQueryNode {
     pub query_type: String,
     pub arguments: Vec<ExpressionNode>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value")]
 pub enum StatementNode {
     Let(Box<LetStatementNode>),
     Assignment(Box<AssignmentNode>),
@@ -183,19 +234,19 @@ pub enum StatementNode {
     Return(Box<ReturnNode>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LetStatementNode {
     pub name: IdentifierNode,
     pub value: ExpressionNode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssignmentNode {
     pub target: ExpressionNode, // Usually Identifier or Member
     pub value: ExpressionNode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlockNode {
     pub statements: Vec<StatementNode>,
 }
@@ -236,33 +287,33 @@ impl std::fmt::Display for BlockNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IfNode {
     pub condition: ExpressionNode,
     pub then_branch: BlockNode,
     pub else_branch: Option<BlockNode>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WhileNode {
     pub condition: ExpressionNode,
     pub body: BlockNode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForNode {
     pub var: IdentifierNode,
     pub iter: ExpressionNode,
     pub body: BlockNode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MatchNode {
     pub expr: Box<ExpressionNode>,
     pub arms: Vec<MatchArmNode>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReturnNode {
     pub value: Option<Box<ExpressionNode>>,
 }
@@ -270,20 +321,20 @@ pub struct ReturnNode {
 use std::hash::Hash;
 
 /// Represents a field in a struct literal
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructField {
     pub name: String,
     pub value: ExpressionNode,
 }
 
 /// Represents a struct literal expression (e.g., `Patient { id: 1, name: "John" }`)
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructLiteralNode {
     pub type_name: String,
     pub fields: Vec<StructField>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IdentifierNode {
     pub name: String,
 }
@@ -298,7 +349,8 @@ impl IdentifierNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value")]
 pub enum PatternNode {
     Literal(LiteralNode),       // Pattern can be a literal
     Identifier(IdentifierNode), // Pattern can be an identifier
@@ -308,29 +360,309 @@ pub enum PatternNode {
         name: String,            // The variant name (e.g., "Some")
         inner: Box<PatternNode>, // The inner pattern (e.g., the x in Some(x))
     },
-    // TODO: Add other pattern types like StructPattern, TuplePattern, etc.
+    Struct {
+        // Represents a struct pattern like Point { x, y }
+        type_name: String,  // The struct type name
+        fields: Vec<StructFieldPattern>, // The field patterns
+    },
+}
+
+/// Represents a field pattern in a struct pattern
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructFieldPattern {
+    pub name: String,          // The field name
+    pub pattern: PatternNode,  // The pattern for this field
 }
 
 impl std::fmt::Display for PatternNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PatternNode::Literal(lit) => write!(f, "{}", lit),
             PatternNode::Identifier(ident) => write!(f, "{}", ident.name),
             PatternNode::Wildcard => write!(f, "_"),
             PatternNode::Variant { name, inner } => write!(f, "{}({})", name, inner),
+            PatternNode::Struct { type_name, fields } => {
+                write!(f, "{} {{ ", type_name)?;
+                let fields_str = fields
+                    .iter()
+                    .map(|f| format!("{}: {}", f.name, f.pattern))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{}}}", fields_str)
+            }
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MatchArmNode {
     pub pattern: PatternNode,
     pub body: Box<ExpressionNode>, // Body of the arm, could also be a BlockNode in more complex scenarios
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProgramNode {
     pub statements: Vec<StatementNode>,
+}
+
+// Implement Visitable for all AST nodes
+
+impl Visitable for ExpressionNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        match self {
+            ExpressionNode::Binary(Spanned { node: expr, .. }) => expr.accept(visitor),
+            ExpressionNode::Call(Spanned { node: expr, .. }) => expr.accept(visitor),
+            ExpressionNode::Member(Spanned { node: expr, .. }) => expr.accept(visitor),
+            ExpressionNode::Literal(Spanned { node: lit, .. }) => lit.accept(visitor),
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => ident.accept(visitor),
+            ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => query.accept(visitor),
+            ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.accept(visitor),
+            ExpressionNode::IcdCode(spanned) => spanned.node.accept(visitor),
+            ExpressionNode::CptCode(spanned) => spanned.node.accept(visitor),
+            ExpressionNode::SnomedCode(spanned) => spanned.node.accept(visitor),
+            ExpressionNode::Statement(spanned) => spanned.node.accept(visitor),
+        }
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        match self {
+            ExpressionNode::Binary(Spanned { node: expr, .. }) => expr.visit_children(visitor),
+            ExpressionNode::Call(Spanned { node: expr, .. }) => expr.visit_children(visitor),
+            ExpressionNode::Member(Spanned { node: expr, .. }) => expr.visit_children(visitor),
+            ExpressionNode::Literal(Spanned { node: lit, .. }) => lit.visit_children(visitor),
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => ident.visit_children(visitor),
+            ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => query.visit_children(visitor),
+            ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.visit_children(visitor),
+            ExpressionNode::IcdCode(spanned) => spanned.node.visit_children(visitor),
+            ExpressionNode::CptCode(spanned) => spanned.node.visit_children(visitor),
+            ExpressionNode::SnomedCode(spanned) => spanned.node.visit_children(visitor),
+            ExpressionNode::Statement(spanned) => spanned.node.visit_children(visitor),
+        }
+    }
+}
+
+impl Visitable for CallExpressionNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_call_expr(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.callee.accept(visitor)?;
+        for arg in &self.arguments {
+            arg.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for MemberExpressionNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_member_expr(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.object.accept(visitor)?;
+        self.property.accept(visitor)
+    }
+}
+
+impl Visitable for HealthcareQueryNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_healthcare_query(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        for arg in &self.arguments {
+            arg.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for StatementNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        match self {
+            StatementNode::Let(stmt) => stmt.accept(visitor),
+            StatementNode::Assignment(stmt) => stmt.accept(visitor),
+            StatementNode::Expr(expr) => expr.accept(visitor),
+            StatementNode::Block(block) => block.accept(visitor),
+            StatementNode::If(stmt) => stmt.accept(visitor),
+            StatementNode::While(stmt) => stmt.accept(visitor),
+            StatementNode::For(stmt) => stmt.accept(visitor),
+            StatementNode::Match(stmt) => stmt.accept(visitor),
+            StatementNode::Return(stmt) => stmt.accept(visitor),
+        }
+    }
+}
+
+impl Visitable for LetStatementNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_let_stmt(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.name.accept(visitor)?;
+        self.value.accept(visitor)
+    }
+}
+
+impl Visitable for AssignmentNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_assignment(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.target.accept(visitor)?;
+        self.value.accept(visitor)
+    }
+}
+
+impl Visitable for BlockNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_block(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        for stmt in &self.statements {
+            stmt.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for IfNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_if_stmt(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.condition.accept(visitor)?;
+        self.then_branch.accept(visitor)?;
+        if let Some(else_branch) = &self.else_branch {
+            else_branch.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for WhileNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_while_loop(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.condition.accept(visitor)?;
+        self.body.accept(visitor)
+    }
+}
+
+impl Visitable for ForNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_for_loop(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.var.accept(visitor)?;
+        self.iter.accept(visitor)?;
+        self.body.accept(visitor)
+    }
+}
+
+impl Visitable for MatchNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_match(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.expr.accept(visitor)?;
+        for arm in &self.arms {
+            arm.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for ReturnNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_return(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        if let Some(expr) = &self.value {
+            expr.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for StructField {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.value.accept(visitor)
+    }
+}
+
+impl Visitable for StructLiteralNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_struct_literal(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        for field in &self.fields {
+            field.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for IdentifierNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_identifier(self)
+    }
+}
+
+impl Visitable for PatternNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_pattern(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        match self {
+            PatternNode::Literal(lit) => lit.accept(visitor),
+            PatternNode::Identifier(ident) => ident.accept(visitor),
+            PatternNode::Wildcard => Ok(Default::default()),
+            PatternNode::Variant { inner, .. } => inner.accept(visitor),
+            PatternNode::Struct { fields, .. } => {
+                for field in fields {
+                    field.pattern.accept(visitor)?;
+                }
+                Ok(Default::default())
+            }
+        }
+    }
+}
+
+impl Visitable for MatchArmNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_match_arm(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.pattern.accept(visitor)?;
+        self.body.accept(visitor)
+    }
+}
+
+impl Visitable for ProgramNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_program(self)
+    }
+    
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        for stmt in &self.statements {
+            stmt.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
 }
 
 // Add more AST nodes as needed (statements, declarations, etc.)
@@ -343,7 +675,7 @@ impl ExpressionNode {
     pub fn from_statement(stmt: StatementNode) -> Self {
         match stmt {
             StatementNode::Expr(expr) => expr,
-            _ => ExpressionNode::Statement(Box::new(stmt)),
+            _ => ExpressionNode::Statement(Spanned::new(Box::new(stmt), Span::default())),
         }
     }
 }
@@ -402,16 +734,15 @@ impl std::fmt::Display for StatementNode {
 impl std::fmt::Display for ExpressionNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ExpressionNode::Identifier(ident) => write!(f, "{}", ident.name),
-            ExpressionNode::IcdCode(code) => write!(f, "ICD:{}", code),
-            ExpressionNode::CptCode(code) => write!(f, "CPT:{}", code),
-            ExpressionNode::SnomedCode(code) => write!(f, "SNOMED:{}", code),
-            ExpressionNode::Literal(lit) => write!(f, "{}", lit),
-            ExpressionNode::Binary(expr) => {
-                // Handle operator precedence and associativity if needed
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => write!(f, "{}", ident.name),
+            ExpressionNode::IcdCode(Spanned { node: code, .. }) => write!(f, "ICD:{}", code),
+            ExpressionNode::CptCode(Spanned { node: code, .. }) => write!(f, "CPT:{}", code),
+            ExpressionNode::SnomedCode(Spanned { node: code, .. }) => write!(f, "SNOMED:{}", code),
+            ExpressionNode::Literal(Spanned { node: lit, .. }) => write!(f, "{}", lit),
+            ExpressionNode::Binary(Spanned { node: expr, .. }) => {
                 write!(f, "({} {} {})", expr.left, expr.operator, expr.right)
             }
-            ExpressionNode::Call(call) => {
+            ExpressionNode::Call(Spanned { node: call, .. }) => {
                 write!(f, "{}", call.callee)?;
                 write!(f, "(")?;
                 for (i, arg) in call.arguments.iter().enumerate() {
@@ -422,10 +753,10 @@ impl std::fmt::Display for ExpressionNode {
                 }
                 write!(f, ")")
             }
-            ExpressionNode::Member(member) => {
+            ExpressionNode::Member(Spanned { node: member, .. }) => {
                 write!(f, "{}.{}", member.object, member.property.name)
             }
-            ExpressionNode::HealthcareQuery(query) => {
+            ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => {
                 write!(f, "{}(", query.query_type)?;
                 for (i, arg) in query.arguments.iter().enumerate() {
                     if i > 0 {
@@ -435,8 +766,8 @@ impl std::fmt::Display for ExpressionNode {
                 }
                 write!(f, ")")
             }
-            ExpressionNode::Statement(stmt) => write!(f, "{}", stmt),
-            ExpressionNode::Struct(s) => {
+            ExpressionNode::Statement(Spanned { node: stmt, .. }) => write!(f, "{}", stmt),
+            ExpressionNode::Struct(Spanned { node: s, .. }) => {
                 write!(f, "{} {{", s.type_name)?;
                 for (i, field) in s.fields.iter().enumerate() {
                     if i > 0 {

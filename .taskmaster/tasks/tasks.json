@@ -47,7 +47,7 @@
             3
           ],
           "details": "Acceptance Criteria:\n- Well-defined AST node types for all language constructs\n- Visitor pattern implementation for AST traversal\n- Position information preserved in AST nodes\n- Memory-efficient AST representation\n- Serialization/deserialization support\n- Unit tests for AST generation and traversal\nEstimated Complexity: High - requires careful design of node types and efficient memory management.",
-          "status": "pending"
+          "status": "in-progress"
         },
         {
           "id": 5,
