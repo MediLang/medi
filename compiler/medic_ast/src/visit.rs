@@ -268,16 +268,24 @@ mod tests {
     
     #[test]
     fn test_visitor_pattern() {
+        use crate::ast::Spanned;
+        
         // Create a simple AST: 1 + 2 * 3
-        let ast = ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-            left: ExpressionNode::Literal(LiteralNode::Int(1)),
-            operator: BinaryOperator::Add,
-            right: ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                left: ExpressionNode::Literal(LiteralNode::Int(2)),
-                operator: BinaryOperator::Multiply,
-                right: ExpressionNode::Literal(LiteralNode::Int(3)),
-            })),
-        }));
+        let ast = ExpressionNode::Binary(Spanned::new(
+            Box::new(BinaryExpressionNode {
+                left: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), Span::default())),
+                operator: BinaryOperator::Add,
+                right: ExpressionNode::Binary(Spanned::new(
+                    Box::new(BinaryExpressionNode {
+                        left: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), Span::default())),
+                        operator: BinaryOperator::Mul,
+                        right: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(3), Span::default())),
+                    }),
+                    Span::default()
+                )),
+            }),
+            Span::default()
+        ));
         
         // Count the number of binary expressions
         struct BinaryCounter {
@@ -287,9 +295,9 @@ mod tests {
         impl Visitor for BinaryCounter {
             type Output = ();
             
-            fn visit_binary_expr(&mut self, _node: &BinaryExpressionNode) -> VisitResult<()> {
+            fn visit_binary_expr(&mut self, node: &BinaryExpressionNode) -> VisitResult<()> {
                 self.count += 1;
-                Ok(())
+                self.visit_children(node)
             }
         }
         

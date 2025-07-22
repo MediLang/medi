@@ -19,15 +19,28 @@ pub type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 /// Serializes an AST node to a JSON string.
 ///
-/// # Examples
+/// # Example
 ///
-/// ```no_run
+/// ```
 /// use medic_ast::ast::*;
 /// use medic_ast::to_json;
+/// use medic_ast::visit::Span;
 ///
-/// let expr = ExpressionNode::Literal(LiteralNode::Int(42));
+/// let span = Span { start: 0, end: 0, line: 1, column: 1 };
+/// let expr = ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span));
 /// let json = to_json(&expr).unwrap();
-/// println!("{}", json);
+/// 
+/// // Print the JSON for debugging
+/// println!("Serialized JSON: {}", json);
+/// 
+/// // Check for key parts of the JSON in a more flexible way
+/// assert!(json.contains(r#"type": "Literal"#), "JSON should contain type: Literal");
+/// assert!(json.contains(r#"type": "Int"#), "JSON should contain Int type");
+/// assert!(json.contains(r#"value": 42"#), "JSON should contain value 42");
+/// assert!(json.contains(r#"start": 0"#), "JSON should contain start position");
+/// assert!(json.contains(r#"end": 0"#), "JSON should contain end position");
+/// assert!(json.contains(r#"line": 1"#), "JSON should contain line number");
+/// assert!(json.contains(r#"column": 1"#), "JSON should contain column number");
 /// ```
 pub fn to_json<T: Serialize>(value: &T) -> Result<String> {
     Ok(serde_json::to_string_pretty(value)?)
@@ -71,16 +84,22 @@ mod tests {
     use super::*;
     use crate::ast::*;
 
+    use crate::visit::Span;
+
     #[test]
     fn test_serialization() -> Result<()> {
-        let expr = ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-            left: ExpressionNode::Literal(LiteralNode::Int(1)),
-            operator: BinaryOperator::Add,
-            right: ExpressionNode::Literal(LiteralNode::Int(2)),
-        }));
+        let span = Span { start: 0, end: 0, line: 1, column: 1 };
+        let expr = ExpressionNode::Binary(Spanned::new(
+            Box::new(BinaryExpressionNode {
+                left: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), span)),
+                operator: BinaryOperator::Add,
+                right: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), span)),
+            }),
+            span
+        ));
 
-        let json = to_json(&expr)?;
-        let deserialized: ExpressionNode = from_json(&json)?;
+        let json = to_json(&expr).map_err(|e| e.to_string())?;
+        let deserialized: ExpressionNode = from_json(&json).map_err(|e| e.to_string())?;
         assert_eq!(expr, deserialized);
         Ok(())
     }

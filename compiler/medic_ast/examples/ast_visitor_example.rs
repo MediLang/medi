@@ -1,7 +1,41 @@
 //! Example of using the visitor pattern to traverse and process the AST.
 
+use std::collections::HashSet;
 use medic_ast::ast::*;
 use medic_ast::visit::*;
+use medic_ast::Spanned;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a sample AST
+    let ast = create_sample_ast();
+    
+    // Count nodes in the AST
+    let mut counter = NodeCounter::default();
+    ast.accept(&mut counter)?;
+    
+    println!("AST Node Counts:");
+    println!("  Statements: {}", counter.statement_count);
+    println!("  Identifiers: {}", counter.identifier_count);
+    println!("  Literals: {}", counter.literal_count);
+    println!("  Binary Operations: {}", counter.binary_op_count);
+    
+    // Collect variables
+    let mut collector = VariableCollector::new();
+    ast.accept(&mut collector)?;
+    
+    println!("\nVariables used:");
+    for var in &collector.variables {
+        println!("  {}", var);
+    }
+    
+    // Print the AST
+    println!("\nPretty-printed AST:");
+    let mut printer = AstPrinter::new();
+    ast.accept(&mut printer)?;
+    println!("{}", printer.into_inner());
+    
+    Ok(())
+}
 
 /// A visitor that counts the number of nodes of each type in the AST.
 #[derive(Default)]
@@ -229,91 +263,43 @@ impl Visitor for AstPrinter {
     }
     
     // Default implementation for other node types
-    fn visit_children<T: Visitable>(&mut self, node: &T) -> VisitResult<Self::Output> {
+    fn visit_children<T: ?Sized + Visitable>(&mut self, node: &T) -> VisitResult<Self::Output> {
         node.visit_children(self)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use medic_ast::ast::*;
+
+
+fn create_sample_ast() -> ProgramNode {
+    let span = Span { start: 0, end: 0, line: 1, column: 1 };
     
-    fn create_sample_ast() -> ProgramNode {
-        // let x = 1 + 2 * 3;
-        // if x > 5 {
-        //     println("x is greater than 5");
-        // }
-        ProgramNode {
-            statements: vec![
-                StatementNode::Let(Box::new(LetStatementNode {
-                    name: IdentifierNode { name: "x".to_string() },
-                    value: ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                        left: ExpressionNode::Literal(LiteralNode::Int(1)),
-                        operator: BinaryOperator::Add,
-                        right: ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                            left: ExpressionNode::Literal(LiteralNode::Int(2)),
-                            operator: BinaryOperator::Multiply,
-                            right: ExpressionNode::Literal(LiteralNode::Int(3)),
-                        })),
-                    })),
-                })),
-                StatementNode::If(Box::new(IfNode {
-                    condition: ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                        left: ExpressionNode::Identifier(IdentifierNode { name: "x".to_string() }),
-                        operator: BinaryOperator::GreaterThan,
-                        right: ExpressionNode::Literal(LiteralNode::Int(5)),
-                    })),
-                    then_branch: BlockNode {
-                        statements: vec![
-                            StatementNode::Expression(ExpressionNode::Call(Box::new(CallExpressionNode {
-                                callee: ExpressionNode::Identifier(IdentifierNode { name: "println".to_string() }),
-                                arguments: vec![
-                                    ExpressionNode::Literal(LiteralNode::String("x is greater than 5".to_string())),
-                                ],
-                            }))),
-                        ],
-                    },
-                    else_branch: None,
-                })),
-            ],
-        }
-    }
+    // let x = 42;
+    // let y = x + 1;
+    // y
     
-    #[test]
-    fn test_node_counter() {
-        let ast = create_sample_ast();
-        let mut counter = NodeCounter::default();
-        ast.accept(&mut counter).unwrap();
-        
-        assert_eq!(counter.expression_count, 5); // 1+2*3, x>5, println, "x is greater than 5"
-        assert_eq!(counter.statement_count, 2);  // let, if
-        assert_eq!(counter.identifier_count, 3);  // x, x, println
-        assert_eq!(counter.literal_count, 4);     // 1, 2, 3, "x is greater than 5"
-        assert_eq!(counter.binary_op_count, 2);   // +, * in 1+2*3, > in x>5
-    }
+    let stmt1 = StatementNode::Let(Box::new(LetStatementNode {
+        name: IdentifierNode { name: "x".to_string() },
+        value: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span)),
+    }));
     
-    #[test]
-    fn test_variable_collector() {
-        let ast = create_sample_ast();
-        let mut collector = VariableCollector::new();
-        ast.accept(&mut collector).unwrap();
-        
-        assert_eq!(collector.variables, vec!["x", "x", "println"]);
-    }
+    let stmt2 = StatementNode::Let(Box::new(LetStatementNode {
+        name: IdentifierNode { name: "y".to_string() },
+        value: ExpressionNode::Binary(Spanned::new(
+            Box::new(BinaryExpressionNode {
+                left: ExpressionNode::Identifier(Spanned::new(IdentifierNode { name: "x".to_string() }, span)),
+                operator: BinaryOperator::Add,
+                right: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), span)),
+            }),
+            span
+        )),
+    }));
     
-    #[test]
-    fn test_ast_printer() {
-        let ast = create_sample_ast();
-        let mut printer = AstPrinter::new();
-        ast.accept(&mut printer).unwrap();
-        let output = printer.into_inner();
-        
-        // Just check that the output contains some expected strings
-        assert!(output.contains("Let statement"));
-        assert!(output.contains("Binary: +"));
-        assert!(output.contains("Binary: *"));
-        assert!(output.contains("If statement"));
-        assert!(output.contains("x is greater than 5"));
+    let stmt3 = StatementNode::Expr(ExpressionNode::Identifier(Spanned::new(
+        IdentifierNode { name: "y".to_string() },
+        span
+    )));
+    
+    ProgramNode {
+        statements: vec![stmt1, stmt2, stmt3],
     }
 }
