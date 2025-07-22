@@ -264,7 +264,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::*;
+    // Removed unused import
 
     #[test]
     fn test_visitor_pattern() {

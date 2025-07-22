@@ -475,6 +475,7 @@ dependencies = [
 name = "medic_ast"
 version = "0.1.0"
 dependencies = [
+ "medic_lexer",
  "pretty_assertions",
  "serde",
  "serde_json",

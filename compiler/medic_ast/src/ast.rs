@@ -3,7 +3,7 @@
 //! This module defines the AST nodes used to represent Medi programs, along with
 //! implementations for visiting, displaying, and serializing the AST.
 
-use crate::visit::{VisitError, VisitResult, Visitable, Visitor};
+use crate::visit::{VisitResult, Visitable, Visitor};
 use serde::{Deserialize, Serialize};
 
 /// Implement Visitable for String to handle string literals
@@ -81,10 +81,10 @@ pub enum LiteralNode {
 impl std::fmt::Display for LiteralNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            LiteralNode::Int(i) => write!(f, "{}", i),
-            LiteralNode::Float(fl) => write!(f, "{}", fl),
-            LiteralNode::Bool(b) => write!(f, "{}", b),
-            LiteralNode::String(s) => write!(f, "\"{}\"", s),
+            LiteralNode::Int(i) => write!(f, "{i}"),
+            LiteralNode::Float(fl) => write!(f, "{fl}"),
+            LiteralNode::Bool(b) => write!(f, "{b}"),
+            LiteralNode::String(s) => write!(f, "\"{s}\""),
         }
     }
 }
@@ -267,17 +267,17 @@ impl BlockNode {
         let indent = " ".repeat(indent_level * indent_size);
         let stmt_indent = " ".repeat((indent_level + 1) * indent_size);
 
-        writeln!(f, "{}{{", indent)?;
+        writeln!(f, "{indent}{{")?;
         for stmt in &self.statements {
             // Handle nested blocks by passing increased indentation
             if let StatementNode::Block(block) = stmt {
                 block.fmt_indented(f, indent_level + 1, indent_size)?;
             } else {
-                write!(f, "{}{};", stmt_indent, stmt)?;
+                write!(f, "{stmt_indent}{stmt}; ")?;
             }
             writeln!(f)?;
         }
-        write!(f, "{}}}", indent)
+        write!(f, "{indent}}}")
     }
 }
 

@@ -64,7 +64,7 @@ pub fn from_json<T: for<'de> Deserialize<'de>>(json: &str) -> Result<T> {
 /// A utility for pretty-printing AST nodes.
 #[derive(Default)]
 pub struct AstPrinter {
-    indent: usize,
+    _indent: usize, // Prefix with underscore to suppress unused field warning
 }
 
 impl AstPrinter {

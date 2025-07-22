@@ -261,12 +261,12 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
         line: ident.span.line,
         column: ident.span.column,
     };
-    
+
     let stmt = LetStatementNode {
         name: ident.node,
         value: expr,
     };
-    
+
     let stmt = Spanned::new(stmt, span);
 
     Ok((input, StatementNode::Let(Box::new(stmt))))
@@ -312,17 +312,16 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
 /// A tuple containing the remaining input and the parsed return statement if successful
 pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'return' keyword and get its span
-    let (mut input, return_token) = take_token_if(|t| matches!(t, TokenType::Return), ErrorKind::Tag)(input)?;
+    let (mut input, return_token) =
+        take_token_if(|t| matches!(t, TokenType::Return), ErrorKind::Tag)(input)?;
     let start_span = return_token.location.into();
-    
+
     // Check if there's an expression to parse
     if let Ok((new_input, expr)) = parse_expression(input) {
         input = new_input;
-        let (new_input, semicolon_token) = take_token_if(
-            |t| matches!(t, TokenType::Semicolon), 
-            ErrorKind::Tag
-        )(input)?;
-        
+        let (new_input, semicolon_token) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+
         // Create a span from the return keyword to the semicolon
         let end_span = semicolon_token.location.into();
         let span = Span {
@@ -331,19 +330,20 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
             line: start_span.line,
             column: start_span.column,
         };
-        
+
         let return_node = ReturnNode {
             value: Some(Box::new(expr)),
         };
-        
-        Ok((new_input, StatementNode::Return(Spanned::new(Box::new(return_node), span))))
+
+        Ok((
+            new_input,
+            StatementNode::Return(Spanned::new(Box::new(return_node), span)),
+        ))
     } else {
         // No expression, just a bare return
-        let (new_input, semicolon_token) = take_token_if(
-            |t| matches!(t, TokenType::Semicolon), 
-            ErrorKind::Tag
-        )(input)?;
-        
+        let (new_input, semicolon_token) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+
         // Create a span from the return keyword to the semicolon
         let end_span = semicolon_token.location.into();
         let span = Span {
@@ -352,12 +352,13 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
             line: start_span.line,
             column: start_span.column,
         };
-        
-        let return_node = ReturnNode { 
-            value: None 
-        };
-        
-        Ok((new_input, StatementNode::Return(Spanned::new(Box::new(return_node), span))))
+
+        let return_node = ReturnNode { value: None };
+
+        Ok((
+            new_input,
+            StatementNode::Return(Spanned::new(Box::new(return_node), span)),
+        ))
     }
 }
 
@@ -390,9 +391,10 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 /// A tuple containing the remaining input and the parsed if statement if successful
 pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Consume 'if' keyword and get its span
-    let (mut input, if_token) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
+    let (mut input, if_token) =
+        take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
     let start_span = if_token.location.into();
-    
+
     // Parse the condition as a full expression
     let (new_input, condition) = parse_expression(input)?;
     input = new_input;
@@ -400,7 +402,7 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
     // Parse the then block
     let (new_input, then_block) = parse_block(input)?;
     input = new_input;
-    
+
     // Track the end span for the if statement
     let mut end_span = then_block.span;
     let mut else_branch = None;
@@ -410,7 +412,7 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
         take_token_if(|t| matches!(t, TokenType::Else), ErrorKind::Tag)(input)
     {
         input = new_input;
-        
+
         // Parse else if or else block
         if let Ok((new_input, _)) =
             take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)
@@ -431,7 +433,7 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
             input = new_input;
         }
     }
-    
+
     // Create the full span from 'if' to the end of the else block (or then block if no else)
     let span = Span {
         start: start_span.start,
@@ -439,14 +441,17 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
         line: start_span.line,
         column: start_span.column,
     };
-    
+
     let if_node = IfNode {
         condition,
         then_branch: then_block,
         else_branch: else_branch,
     };
-    
-    Ok((input, StatementNode::If(Spanned::new(Box::new(if_node), span))))
+
+    Ok((
+        input,
+        StatementNode::If(Spanned::new(Box::new(if_node), span)),
+    ))
 }
 
 // WhileNode is already imported above
@@ -490,7 +495,8 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
     log::trace!("Starting to parse while statement");
 
     // Consume 'while' keyword and get its span
-    let (input, while_token) = take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
+    let (input, while_token) =
+        take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
     let start_span = while_token.location.into();
 
     log::trace!("After consuming 'while' keyword");
@@ -524,7 +530,7 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
     })?;
 
     log::trace!("Body block parsed successfully");
-    
+
     // Create the full span from 'while' to the end of the body block
     let span = Span {
         start: start_span.start,
@@ -533,12 +539,12 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
         column: start_span.column,
     };
 
-    let while_node = WhileNode { 
-        condition,
-        body,
-    };
-    
-    Ok((input, StatementNode::While(Spanned::new(Box::new(while_node), span))))
+    let while_node = WhileNode { condition, body };
+
+    Ok((
+        input,
+        StatementNode::While(Spanned::new(Box::new(while_node), span)),
+    ))
 }
 
 /// Parses an assignment statement (e.g., `x = 42;` or `x.y = z + 1;`).
@@ -557,20 +563,23 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
     let start_span = match &target {
         ExpressionNode::Identifier(ident) => ident.span,
         ExpressionNode::Member(member) => member.span,
-        _ => return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            ErrorKind::Tag,
-        ))),
+        _ => {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                ErrorKind::Tag,
+            )))
+        }
     };
 
     // Get the equals sign token for span calculation
-    let (input, equals_token) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
+    let (input, equals_token) =
+        take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
     let eq_span = equals_token.location.into();
 
     // Parse the expression after the equals sign
     let input = input.skip_whitespace();
     let (input, value) = parse_expression(input)?;
-    
+
     // Calculate the full span from target start to value end
     let end_span = match &value {
         ExpressionNode::Identifier(ident) => ident.span,
@@ -579,7 +588,7 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
         ExpressionNode::Member(mem) => mem.span,
         _ => start_span, // Fallback
     };
-    
+
     let span = Span {
         start: start_span.start,
         end: end_span.end,
@@ -592,16 +601,21 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
         target: match target {
             ExpressionNode::Identifier(ident) => ExpressionNode::Identifier(ident),
             ExpressionNode::Member(member) => ExpressionNode::Member(member),
-            _ => return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                ErrorKind::Tag,
-            ))),
+            _ => {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )))
+            }
         },
         value,
     };
-    
+
     // Wrap in Spanned and return
-    Ok((input, StatementNode::Assignment(Spanned::new(Box::new(assignment), span))))
+    Ok((
+        input,
+        StatementNode::Assignment(Spanned::new(Box::new(assignment), span)),
+    ))
 }
 /// where <arms> is a comma-separated list of patterns and expressions.
 ///

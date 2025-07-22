@@ -4,7 +4,7 @@ use nom::IResult;
 use crate::parser::{
     take_token_if, ExpressionNode, IdentifierNode, MemberExpressionNode, TokenSlice, TokenType,
 };
-use medic_ast::ast::{Spanned, Span};
+use medic_ast::ast::{Span, Spanned};
 
 use super::expressions::parse_expression;
 
@@ -132,7 +132,8 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                 Ok((input, expr))
             }
             TokenType::If => {
-                let (input, _) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
+                let (input, _) =
+                    take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
 
                 // Create a Spanned identifier node for 'if' keyword
                 let ident_node = IdentifierNode::new("if".to_string());
@@ -234,18 +235,18 @@ pub fn parse_member_expression(
                     |t| matches!(t, TokenType::Identifier(_)),
                     ErrorKind::Tag,
                 )(input)?;
-                
+
                 // Get the token we just consumed to create a proper Spanned identifier
                 let token = input.0[input.0.len() - 1];
                 let name = match &token.token_type {
                     TokenType::Identifier(name) => name.to_string(),
                     _ => unreachable!(),
                 };
-                
+
                 // Create a Spanned identifier node for the property
                 let ident_node = IdentifierNode::new(name);
                 let spanned_ident = Spanned::new(ident_node, token.location.into());
-                
+
                 (input, spanned_ident)
             }
             _ => {
@@ -264,13 +265,13 @@ pub fn parse_member_expression(
             ExpressionNode::Member(m) => m.span,
             _ => unreachable!("Member expression can only have identifier or member as object"),
         };
-        
+
         // Create a new member expression node with the current object and property
         let member_expr = MemberExpressionNode {
             object: Box::new(object),
             property: property.node, // Extract the IdentifierNode from Spanned
         };
-        
+
         // Create a span that covers the entire member expression
         let span = Span {
             start: start_span.start,
@@ -278,10 +279,10 @@ pub fn parse_member_expression(
             line: start_span.line,
             column: start_span.column,
         };
-        
+
         // Wrap the member expression in a Spanned and then in an ExpressionNode::Member
         let member_expr = ExpressionNode::Member(Spanned::new(Box::new(member_expr), span));
-        
+
         // Update the object for the next iteration
         object = member_expr;
         log::debug!("Updated object: {:?}", object);

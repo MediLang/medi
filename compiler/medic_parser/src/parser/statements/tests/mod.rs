@@ -157,9 +157,10 @@ mod statements_test {
                 assert_eq!(bin_expr.node.operator.to_string(), "+");
                 if let ExpressionNode::Literal(lit) = &bin_expr.node.right.node {
                     if let LiteralNode::Int(1) = lit.node {
-                    // Correct
-                } else {
-                    panic!("Expected 1 as right operand of binary expression");
+                        // Correct
+                    } else {
+                        panic!("Expected 1 as right operand of binary expression");
+                    }
                 }
             } else {
                 panic!(

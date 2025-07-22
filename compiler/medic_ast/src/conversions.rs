@@ -1,6 +1,5 @@
 use super::ast::{ExpressionNode, StatementNode};
 use super::visit::Span;
-use medic_lexer::token::Location;
 
 impl From<StatementNode> for ExpressionNode {
     fn from(stmt: StatementNode) -> Self {

@@ -425,27 +425,27 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                     ExpressionNode::Binary(b) => b.span,
                     _ => Span::default(),
                 };
-                
+
                 let end_span = match &right {
                     ExpressionNode::Identifier(i) => i.span,
                     ExpressionNode::Literal(l) => l.span,
                     ExpressionNode::Binary(b) => b.span,
                     _ => Span::default(),
                 };
-                
+
                 let span = Span {
                     start: start_span.start,
                     end: end_span.end,
                     line: start_span.line,
                     column: start_span.column,
                 };
-                
+
                 let bin_expr = BinaryExpressionNode {
                     left,
                     operator: BinaryOperator::Of,
                     right,
                 };
-                
+
                 left = ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span));
 
                 // Continue parsing any remaining binary expressions
@@ -458,28 +458,29 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                         ExpressionNode::Binary(b) => b.span,
                         _ => span,
                     };
-                    
+
                     let end_span = match &bin.right {
                         ExpressionNode::Identifier(i) => i.span,
                         ExpressionNode::Literal(l) => l.span,
                         ExpressionNode::Binary(b) => b.span,
                         _ => span,
                     };
-                    
+
                     let combined_span = Span {
                         start: start_span.start,
                         end: end_span.end,
                         line: start_span.line,
                         column: start_span.column,
                     };
-                    
+
                     let combined_bin = BinaryExpressionNode {
                         left,
                         operator: bin.operator,
                         right: bin.right,
                     };
-                    
-                    left = ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
+
+                    left =
+                        ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
                 }
             }
             TokenType::Per => {
@@ -498,27 +499,27 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                     ExpressionNode::Binary(b) => b.span,
                     _ => Span::default(),
                 };
-                
+
                 let end_span = match &right {
                     ExpressionNode::Identifier(i) => i.span,
                     ExpressionNode::Literal(l) => l.span,
                     ExpressionNode::Binary(b) => b.span,
                     _ => Span::default(),
                 };
-                
+
                 let span = Span {
                     start: start_span.start,
                     end: end_span.end,
                     line: start_span.line,
                     column: start_span.column,
                 };
-                
+
                 let bin_expr = BinaryExpressionNode {
                     left,
                     operator: BinaryOperator::Per,
                     right,
                 };
-                
+
                 left = ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span));
 
                 // Continue parsing any remaining binary expressions
@@ -531,28 +532,29 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                         ExpressionNode::Binary(b) => b.span,
                         _ => span,
                     };
-                    
+
                     let end_span = match &bin.right {
                         ExpressionNode::Identifier(i) => i.span,
                         ExpressionNode::Literal(l) => l.span,
                         ExpressionNode::Binary(b) => b.span,
                         _ => span,
                     };
-                    
+
                     let combined_span = Span {
                         start: start_span.start,
                         end: end_span.end,
                         line: start_span.line,
                         column: start_span.column,
                     };
-                    
+
                     let combined_bin = BinaryExpressionNode {
                         left,
                         operator: bin.operator,
                         right: bin.right,
                     };
-                    
-                    left = ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
+
+                    left =
+                        ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
                 }
             }
             _ => {
@@ -568,28 +570,29 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                         ExpressionNode::Binary(b) => b.span,
                         _ => Span::default(),
                     };
-                    
+
                     let end_span = match &bin.right {
                         ExpressionNode::Identifier(i) => i.span,
                         ExpressionNode::Literal(l) => l.span,
                         ExpressionNode::Binary(b) => b.span,
                         _ => start_span,
                     };
-                    
+
                     let combined_span = Span {
                         start: start_span.start,
                         end: end_span.end,
                         line: start_span.line,
                         column: start_span.column,
                     };
-                    
+
                     let combined_bin = BinaryExpressionNode {
                         left,
                         operator: bin.operator,
                         right: bin.right,
                     };
-                    
-                    left = ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
+
+                    left =
+                        ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
                 } else {
                     left = expr;
                 }
@@ -680,7 +683,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                         operator: BinaryOperator::Mul,
                         right,
                     };
-                    
+
                     // Create a span that covers the entire binary expression
                     let span = Span {
                         start: lit.span.start,
@@ -692,8 +695,11 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                         line: lit.span.line,
                         column: lit.span.column,
                     };
-                    
-                    return Ok((input, ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span))));
+
+                    return Ok((
+                        input,
+                        ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span)),
+                    ));
                 }
             }
 
