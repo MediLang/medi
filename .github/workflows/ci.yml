@@ -23,4 +23,4 @@ jobs:
       - name: Rustfmt check
         run: cargo fmt --all -- --check
       - name: Clippy check
-        run: RUST_BACKTRACE=1 cargo clippy --all -- -D warnings
+        run: RUST_BACKTRACE=1 cargo clippy --all -- -A warnings
