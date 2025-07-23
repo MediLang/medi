@@ -29,6 +29,7 @@ use crate::parser::{
     get_binary_operator, get_operator_precedence, is_comparison_operator, BinaryExpressionNode,
     BinaryOperator, ExpressionNode, TokenSlice, TokenType,
 };
+use medic_ast::ast::Spanned;
 
 /// Parses a binary expression with proper precedence and associativity handling.
 ///
@@ -63,6 +64,7 @@ pub fn parse_nested_binary_expression(
 
     // Parse the left-hand side (primary expression)
     let (mut input, mut left) = super::super::parse_primary(input)?;
+    let mut left_span = left.span().clone();
 
     // Keep parsing binary operators as long as they have sufficient precedence
     while let Some(token) = input.peek() {
@@ -97,25 +99,31 @@ pub fn parse_nested_binary_expression(
         };
 
         // Consume the operator token
+        let operator_span = token.location.into();
         input = input.advance();
 
-        // For all operators, use the standard precedence climbing
-        // The precedence is already handled by the min_precedence parameter
-        // Propagate in_comparison flag to prevent chained comparisons
+        // Parse the right-hand side with the appropriate precedence
         let (new_input, right) = parse_nested_binary_expression(
             input,
             next_min_precedence,
             in_comparison || is_comparison_operator(&op),
         )?;
 
-        input = new_input;
+        // Update the span to cover the entire binary expression
+        let right_span = right.span();
+        let span = Spanned::combine(&left_span, &right_span);
 
         // Create the binary expression node
-        left = Binary(Box::new(BinaryExpressionNode {
-            left,
+        let bin_expr = BinaryExpressionNode {
+            left: Box::new(left),
             operator: op,
-            right,
-        }));
+            right: Box::new(right),
+        };
+
+        // Wrap in Spanned and update left for the next iteration
+        left = Binary(Spanned::new(Box::new(bin_expr), span));
+        left_span = span;
+        input = new_input;
     }
 
     Ok((input, left))

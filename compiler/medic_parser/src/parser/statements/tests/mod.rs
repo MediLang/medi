@@ -148,17 +148,19 @@ mod statements_test {
 
         // Verify AST structure for binary expression match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
-            if let ExpressionNode::Binary(bin_expr) = match_stmt.expr.as_ref() {
-                if let ExpressionNode::Identifier(ident) = &bin_expr.left {
-                    assert_eq!(ident.name, "x");
+            if let ExpressionNode::Binary(bin_expr) = &match_stmt.expr.node {
+                if let ExpressionNode::Identifier(ident) = &bin_expr.node.left.node {
+                    assert_eq!(ident.node.name, "x");
                 } else {
                     panic!("Expected 'x' as left operand of binary expression");
                 }
-                assert_eq!(bin_expr.operator.to_string(), "+");
-                if let ExpressionNode::Literal(LiteralNode::Int(1)) = &bin_expr.right {
-                    // Correct
-                } else {
-                    panic!("Expected 1 as right operand of binary expression");
+                assert_eq!(bin_expr.node.operator.to_string(), "+");
+                if let ExpressionNode::Literal(lit) = &bin_expr.node.right.node {
+                    if let LiteralNode::Int(1) = lit.node {
+                        // Correct
+                    } else {
+                        panic!("Expected 1 as right operand of binary expression");
+                    }
                 }
             } else {
                 panic!(
@@ -181,14 +183,14 @@ mod statements_test {
 
         // Verify AST structure for function call match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
-            if let ExpressionNode::Call(call_expr) = match_stmt.expr.as_ref() {
-                if let ExpressionNode::Identifier(ident) = &call_expr.callee {
-                    assert_eq!(ident.name, "some_function");
+            if let ExpressionNode::Call(call_expr) = &match_stmt.expr.node {
+                if let ExpressionNode::Identifier(ident) = &call_expr.node.callee.node {
+                    assert_eq!(ident.node.name, "some_function");
                 } else {
                     panic!("Expected 'some_function' as callee");
                 }
                 assert!(
-                    call_expr.arguments.is_empty(),
+                    call_expr.node.arguments.is_empty(),
                     "Expected no arguments in function call"
                 );
             } else {
@@ -212,13 +214,13 @@ mod statements_test {
 
         // Verify AST structure for member expression match
         if let Ok((_, StatementNode::Match(match_stmt))) = result {
-            if let ExpressionNode::Member(member_expr) = match_stmt.expr.as_ref() {
-                if let ExpressionNode::Identifier(ident) = &member_expr.object {
-                    assert_eq!(ident.name, "some_object");
+            if let ExpressionNode::Member(member_expr) = &match_stmt.expr.node {
+                if let ExpressionNode::Identifier(ident) = &member_expr.node.object.node {
+                    assert_eq!(ident.node.name, "some_object");
                 } else {
                     panic!("Expected 'some_object' as object in member expression");
                 }
-                assert_eq!(member_expr.property.name, "property");
+                assert_eq!(member_expr.node.property.node.name, "property");
             } else {
                 panic!(
                     "Expected member expression as match expression, got {:?}",

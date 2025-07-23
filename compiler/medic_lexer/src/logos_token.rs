@@ -105,18 +105,18 @@ pub enum LogosToken {
         if lex.span().start > 0 {
             let prev_char = &lex.source()[lex.span().start - 1..lex.span().start];
             if prev_char == "-" {
-                debug!("POSITIVE INTEGER PARSING - Skipping negative number part: {}", slice);
+                debug!("POSITIVE INTEGER PARSING - Skipping negative number part: {slice}");
                 return None;
             }
         }
 
-        debug!("POSITIVE INTEGER PARSING - Raw slice: '{}' at span {:?}", slice, lex.span());
+        debug!("POSITIVE INTEGER PARSING - Raw slice: '{slice}' at span {:?}", lex.span());
 
         // Check if the number is followed by an identifier character (letter or underscore)
         // which would make it an invalid numeric literal
         if let Some(next_char) = lex.remainder().chars().next() {
             if next_char.is_alphabetic() || next_char == '_' {
-                debug!("POSITIVE INTEGER PARSING - Invalid numeric literal: {} followed by identifier character", slice);
+                debug!("POSITIVE INTEGER PARSING - Invalid numeric literal: {slice} followed by identifier character");
                 return None;
             }
 
@@ -125,7 +125,7 @@ pub enum LogosToken {
 
             if next_next_char == Some('.') || next_next_char == Some('=') {
                 // It's a range operator, so this is an integer
-                debug!("POSITIVE INTEGER PARSING - Integer before range operator: {}", slice);
+                debug!("POSITIVE INTEGER PARSING - Integer before range operator: {slice}");
                 return slice.parse().ok();
             }
 
@@ -133,20 +133,20 @@ pub enum LogosToken {
             // If the next character is a dot, this is an integer followed by a dot
             // We'll return the integer and let the dot be matched as a separate token
             if next_char == '.' {
-                debug!("POSITIVE INTEGER PARSING - Integer with trailing dot: {}", slice);
+                debug!("POSITIVE INTEGER PARSING - Integer with trailing dot: {slice}");
                 return slice.parse().ok();
             }
         }
 
         // For any other case, it's a valid positive integer
-        debug!("POSITIVE INTEGER PARSING - Parsing positive integer: {}", slice);
+        debug!("POSITIVE INTEGER PARSING - Parsing positive integer: {slice}");
         match slice.parse::<i64>() {
             Ok(n) => {
-                debug!("POSITIVE INTEGER PARSING - Successfully parsed: {}", n);
+                debug!("POSITIVE INTEGER PARSING - Successfully parsed: {n}");
                 Some(n)
             },
             Err(e) => {
-                debug!("POSITIVE INTEGER PARSING - Failed to parse '{}' as i64: {:?}", slice, e);
+                debug!("POSITIVE INTEGER PARSING - Failed to parse '{slice}' as i64: {e:?}");
                 None
             }
         }
@@ -165,21 +165,21 @@ pub enum LogosToken {
         let slice = lex.slice();
         let span = lex.span();
 
-        debug!("NEGATIVE INTEGER PARSING - Raw slice: '{}' at span {:?}", slice, span);
+        debug!("NEGATIVE INTEGER PARSING - Raw slice: '{slice}' at span {span:?}");
         debug!("NEGATIVE INTEGER PARSING - Full source: '{:?}'", lex.source());
         debug!("NEGATIVE INTEGER PARSING - Remainder: '{:?}'", lex.remainder());
 
         // Parse the entire string as i64 (including the minus sign)
         match slice.parse::<i64>() {
             Ok(value) => {
-                debug!("NEGATIVE INTEGER PARSING - Successfully parsed value: {}", value);
+                debug!("NEGATIVE INTEGER PARSING - Successfully parsed value: {value}");
                 debug!("NEGATIVE INTEGER PARSING - Bytes: {:?}", slice.as_bytes());
 
                 // Return the parsed value (should be negative)
                 Some(value)
             },
             Err(e) => {
-                debug!("NEGATIVE INTEGER PARSING - Failed to parse '{}' as i64: {:?}", slice, e);
+                debug!("NEGATIVE INTEGER PARSING - Failed to parse '{slice}' as i64: {e:?}");
                 debug!("NEGATIVE INTEGER PARSING - Bytes that failed to parse: {:?}", slice.as_bytes());
                 None
             }

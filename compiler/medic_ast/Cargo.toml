@@ -18,6 +18,7 @@ serde = ["dep:serde", "dep:serde_json"]
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 thiserror = "1.0"
+medic_lexer = { path = "../medic_lexer" }
 
 [dev-dependencies]
 pretty_assertions = "1.0"

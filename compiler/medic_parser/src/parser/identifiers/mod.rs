@@ -4,6 +4,7 @@ use nom::IResult;
 use crate::parser::{
     take_token_if, ExpressionNode, IdentifierNode, MemberExpressionNode, TokenSlice, TokenType,
 };
+use medic_ast::ast::{Span, Spanned};
 
 use super::expressions::parse_expression;
 
@@ -60,132 +61,126 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                 };
                 log::debug!("Successfully parsed identifier: {}", name);
 
+                // Create a Spanned identifier node
+                let ident_node = IdentifierNode::new(name.to_string());
+                let span: Span = token.location.into();
+                let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
+
                 // Check for member access
                 if let Some(next_token) = input.peek() {
                     if matches!(next_token.token_type, TokenType::Dot) {
-                        return parse_member_expression(
-                            input,
-                            ExpressionNode::Identifier(IdentifierNode {
-                                name: name.to_string(),
-                            }),
-                        );
+                        return parse_member_expression(input, expr);
                     }
                 }
 
-                Ok((
-                    input,
-                    ExpressionNode::Identifier(IdentifierNode {
-                        name: name.to_string(),
-                    }),
-                ))
+                Ok((input, expr))
             }
             // Handle healthcare keywords as identifiers
             TokenType::Patient => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Patient), ErrorKind::Tag)(input)?;
 
+                // Create a Spanned identifier node for 'patient' keyword
+                let ident_node = IdentifierNode::new("patient".to_string());
+                let span: Span = token.location.into();
+                let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
+
                 // Check for member access
                 if let Some(next_token) = input.peek() {
                     if matches!(next_token.token_type, TokenType::Dot) {
-                        return parse_member_expression(
-                            input,
-                            ExpressionNode::Identifier(IdentifierNode {
-                                name: "patient".to_string(),
-                            }),
-                        );
+                        return parse_member_expression(input, expr);
                     }
                 }
 
-                Ok((
-                    input,
-                    ExpressionNode::Identifier(IdentifierNode {
-                        name: "patient".to_string(),
-                    }),
-                ))
+                Ok((input, expr))
             }
+            // Handle other keywords that can be used as identifiers
             TokenType::Observation => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Observation), ErrorKind::Tag)(input)?;
 
+                // Create a Spanned identifier node for 'observation' keyword
+                let ident_node = IdentifierNode::new("observation".to_string());
+                let span: Span = token.location.into();
+                let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
+
                 // Check for member access
                 if let Some(next_token) = input.peek() {
                     if matches!(next_token.token_type, TokenType::Dot) {
-                        return parse_member_expression(
-                            input,
-                            ExpressionNode::Identifier(IdentifierNode {
-                                name: "observation".to_string(),
-                            }),
-                        );
+                        return parse_member_expression(input, expr);
                     }
                 }
 
-                Ok((
-                    input,
-                    ExpressionNode::Identifier(IdentifierNode {
-                        name: "observation".to_string(),
-                    }),
-                ))
+                Ok((input, expr))
             }
             TokenType::Medication => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Medication), ErrorKind::Tag)(input)?;
 
-                // Check for member access
-                if let Some(next_token) = input.peek() {
-                    if matches!(next_token.token_type, TokenType::Dot) {
-                        return parse_member_expression(
-                            input,
-                            ExpressionNode::Identifier(IdentifierNode {
-                                name: "medication".to_string(),
-                            }),
-                        );
-                    }
-                }
-
-                Ok((
-                    input,
-                    ExpressionNode::Identifier(IdentifierNode {
-                        name: "medication".to_string(),
-                    }),
-                ))
-            }
-            // Handle other keywords that can be used as identifiers
-            TokenType::If | TokenType::Else => {
-                let name = match token.token_type {
-                    TokenType::If => "if",
-                    TokenType::Else => "else",
-                    _ => unreachable!(),
-                };
-                let (input, _) = take_token_if(|t| t == &token.token_type, ErrorKind::Tag)(input)?;
+                // Create a Spanned identifier node for 'medication' keyword
+                let ident_node = IdentifierNode::new("medication".to_string());
+                let span: Span = token.location.into();
+                let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
 
                 // Check for member access
                 if let Some(next_token) = input.peek() {
                     if matches!(next_token.token_type, TokenType::Dot) {
-                        return parse_member_expression(
-                            input,
-                            ExpressionNode::Identifier(IdentifierNode {
-                                name: name.to_string(),
-                            }),
-                        );
+                        return parse_member_expression(input, expr);
                     }
                 }
 
-                Ok((
-                    input,
-                    ExpressionNode::Identifier(IdentifierNode {
-                        name: name.to_string(),
-                    }),
-                ))
+                Ok((input, expr))
             }
-            _ => Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                ErrorKind::Tag,
-            ))),
+            TokenType::If => {
+                let (input, _) =
+                    take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
+
+                // Create a Spanned identifier node for 'if' keyword
+                let ident_node = IdentifierNode::new("if".to_string());
+                let span: Span = token.location.into();
+                let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
+
+                // Check for member access
+                if let Some(next_token) = input.peek() {
+                    if matches!(next_token.token_type, TokenType::Dot) {
+                        return parse_member_expression(input, expr);
+                    }
+                }
+
+                Ok((input, expr))
+            }
+            TokenType::Else => {
+                let (input, _) =
+                    take_token_if(|t| matches!(t, TokenType::Else), ErrorKind::Tag)(input)?;
+
+                // Create a Spanned identifier node for 'else' keyword
+                let ident_node = IdentifierNode::new("else".to_string());
+                let span: Span = token.location.into();
+                let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
+
+                // Check for member access
+                if let Some(next_token) = input.peek() {
+                    if matches!(next_token.token_type, TokenType::Dot) {
+                        return parse_member_expression(input, expr);
+                    }
+                }
+
+                Ok((input, expr))
+            }
+            // Add other keyword cases as needed
+            _ => {
+                log::error!("Expected identifier, found: {:?}", token.token_type);
+                Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )))
+            }
         }
     } else {
+        log::error!("Unexpected end of input in parse_identifier");
         Err(nom::Err::Error(nom::error::Error::new(
             input,
-            ErrorKind::Tag,
+            ErrorKind::Eof,
         )))
     }
 }
@@ -217,73 +212,81 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
 /// assert!(matches!(expr, ExpressionNode::Member { .. }));
 /// ```
 pub fn parse_member_expression(
-    input: TokenSlice<'_>,
-    object: ExpressionNode,
+    mut input: TokenSlice<'_>,
+    mut object: ExpressionNode,
 ) -> IResult<TokenSlice<'_>, ExpressionNode> {
-    let mut input = input;
-    let mut expr = object;
+    log::debug!("=== parse_member_expression ===");
+    log::debug!("Initial object: {:?}", object);
 
-    // Keep parsing member accesses as long as we find dots
+    // Continue processing as long as we have a dot followed by an identifier
     while let Some(token) = input.peek() {
         if !matches!(token.token_type, TokenType::Dot) {
             break;
         }
 
         // Consume the dot
-        input = input.advance();
+        let (new_input, _) = take_token_if(|t| matches!(t, TokenType::Dot), ErrorKind::Tag)(input)?;
+        input = new_input;
 
-        // Parse the next identifier or keyword after the dot
-        let (new_input, ident_name) = if let Ok((input, token)) =
-            take_token_if(|t| matches!(t, TokenType::Identifier(_)), ErrorKind::Tag)(input)
-        {
-            // Handle regular identifiers
-            if let TokenType::Identifier(name) = &token.token_type {
-                (input, name.to_string())
-            } else {
+        // Parse the property name (must be an identifier)
+        let (new_input, property) = match input.peek() {
+            Some(t) if matches!(t.token_type, TokenType::Identifier(_)) => {
+                let (input, _) = take_token_if(
+                    |t| matches!(t, TokenType::Identifier(_)),
+                    ErrorKind::Tag,
+                )(input)?;
+
+                // Get the token we just consumed to create a proper Spanned identifier
+                let token = input.0[input.0.len() - 1];
+                let name = match &token.token_type {
+                    TokenType::Identifier(name) => name.to_string(),
+                    _ => unreachable!(),
+                };
+
+                // Create a Spanned identifier node for the property
+                let ident_node = IdentifierNode::new(name);
+                let spanned_ident = Spanned::new(ident_node, token.location.into());
+
+                (input, spanned_ident)
+            }
+            _ => {
+                log::error!("Expected identifier after dot in member expression");
                 return Err(nom::Err::Error(nom::error::Error::new(
                     input,
                     ErrorKind::Tag,
                 )));
             }
-        } else if let Ok((input, token)) = take_token_if(
-            |t| {
-                matches!(
-                    t,
-                    TokenType::Patient
-                        | TokenType::Observation
-                        | TokenType::Medication
-                        | TokenType::If
-                        | TokenType::Else
-                )
-            },
-            ErrorKind::Tag,
-        )(input)
-        {
-            // Handle keywords that can be used as identifiers
-            let name = match token.token_type {
-                TokenType::Patient => "patient",
-                TokenType::Observation => "observation",
-                TokenType::Medication => "medication",
-                TokenType::If => "if",
-                TokenType::Else => "else",
-                _ => unreachable!(),
-            };
-            (input, name.to_string())
-        } else {
-            return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                ErrorKind::Tag,
-            )));
+        };
+        input = new_input;
+
+        // Get the span from the start of the object to the end of the property
+        let start_span = match &object {
+            ExpressionNode::Identifier(i) => i.span,
+            ExpressionNode::Member(m) => m.span,
+            _ => unreachable!("Member expression can only have identifier or member as object"),
         };
 
-        // Create a new member expression with the current identifier
-        expr = ExpressionNode::Member(Box::new(MemberExpressionNode {
-            object: expr,
-            property: IdentifierNode { name: ident_name },
-        }));
+        // Create a new member expression node with the current object and property
+        let member_expr = MemberExpressionNode {
+            object: Box::new(object),
+            property: property.node, // Extract the IdentifierNode from Spanned
+        };
 
-        input = new_input;
+        // Create a span that covers the entire member expression
+        let span = Span {
+            start: start_span.start,
+            end: property.span.end,
+            line: start_span.line,
+            column: start_span.column,
+        };
+
+        // Wrap the member expression in a Spanned and then in an ExpressionNode::Member
+        let member_expr = ExpressionNode::Member(Spanned::new(Box::new(member_expr), span));
+
+        // Update the object for the next iteration
+        object = member_expr;
+        log::debug!("Updated object: {:?}", object);
     }
 
-    Ok((input, expr))
+    Ok((input, object))
 }

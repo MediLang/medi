@@ -146,11 +146,15 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
     // Extract the identifier from the expression
     log::debug!("Extracting identifier from expression");
     let ident = if let ExpressionNode::Identifier(ident) = ident_expr {
-        log::debug!("Extracted identifier: {}", ident.name);
-        // Create a new IdentifierNode with the same name
-        IdentifierNode {
-            name: ident.name.clone(),
-        }
+        log::debug!("Extracted identifier: {}", ident.node.name);
+        // Create a new IdentifierNode with the same name and span
+        let span = ident.span;
+        Spanned::new(
+            IdentifierNode {
+                name: ident.node.name.clone(),
+            },
+            span,
+        )
     } else {
         log::error!(
             "Expected identifier after 'let', got {:?} at {}:{}",
@@ -245,12 +249,27 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
         input
     };
 
-    let let_stmt = LetStatementNode {
-        name: ident,
+    // Create the let statement with proper span
+    let span = Span {
+        start: ident.span.start,
+        end: match &expr {
+            ExpressionNode::Identifier(i) => i.span.end,
+            ExpressionNode::Literal(l) => l.span.end,
+            ExpressionNode::Binary(b) => b.span.end,
+            _ => ident.span.end, // Fallback
+        },
+        line: ident.span.line,
+        column: ident.span.column,
+    };
+
+    let stmt = LetStatementNode {
+        name: ident.node,
         value: expr,
     };
 
-    Ok((input, StatementNode::Let(Box::new(let_stmt))))
+    let stmt = Spanned::new(stmt, span);
+
+    Ok((input, StatementNode::Let(Box::new(stmt))))
 }
 
 // ReturnNode is already imported above
@@ -292,24 +311,54 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
 /// # Returns
 /// A tuple containing the remaining input and the parsed return statement if successful
 pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // Consume 'return' keyword
-    let (mut input, _) = take_token_if(|t| matches!(t, TokenType::Return), ErrorKind::Tag)(input)?;
+    // Consume 'return' keyword and get its span
+    let (mut input, return_token) =
+        take_token_if(|t| matches!(t, TokenType::Return), ErrorKind::Tag)(input)?;
+    let start_span = return_token.location.into();
 
     // Check if there's an expression to parse
     if let Ok((new_input, expr)) = parse_expression(input) {
         input = new_input;
-        let (new_input, _) =
+        let (new_input, semicolon_token) =
             take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+
+        // Create a span from the return keyword to the semicolon
+        let end_span = semicolon_token.location.into();
+        let span = Span {
+            start: start_span.start,
+            end: end_span.end,
+            line: start_span.line,
+            column: start_span.column,
+        };
+
         let return_node = ReturnNode {
             value: Some(Box::new(expr)),
         };
-        Ok((new_input, StatementNode::Return(Box::new(return_node))))
+
+        Ok((
+            new_input,
+            StatementNode::Return(Spanned::new(Box::new(return_node), span)),
+        ))
     } else {
         // No expression, just a bare return
-        let (new_input, _) =
+        let (new_input, semicolon_token) =
             take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+
+        // Create a span from the return keyword to the semicolon
+        let end_span = semicolon_token.location.into();
+        let span = Span {
+            start: start_span.start,
+            end: end_span.end,
+            line: start_span.line,
+            column: start_span.column,
+        };
+
         let return_node = ReturnNode { value: None };
-        Ok((new_input, StatementNode::Return(Box::new(return_node))))
+
+        Ok((
+            new_input,
+            StatementNode::Return(Spanned::new(Box::new(return_node), span)),
+        ))
     }
 }
 
@@ -341,8 +390,10 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 /// # Returns
 /// A tuple containing the remaining input and the parsed if statement if successful
 pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    // Consume 'if' keyword
-    let (mut input, _) = take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
+    // Consume 'if' keyword and get its span
+    let (mut input, if_token) =
+        take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
+    let start_span = if_token.location.into();
 
     // Parse the condition as a full expression
     let (new_input, condition) = parse_expression(input)?;
@@ -352,43 +403,55 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
     let (new_input, then_block) = parse_block(input)?;
     input = new_input;
 
+    // Track the end span for the if statement
+    let mut end_span = then_block.span;
+    let mut else_branch = None;
+
     // Check for else clause
-    if let Ok((new_input, _)) =
+    if let Ok((new_input, else_token)) =
         take_token_if(|t| matches!(t, TokenType::Else), ErrorKind::Tag)(input)
     {
+        input = new_input;
+
         // Parse else if or else block
         if let Ok((new_input, _)) =
-            take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(new_input)
+            take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)
         {
             // It's an else if
             let (new_input, else_if) = parse_if_statement(new_input)?;
-            let if_node = IfNode {
-                condition,
-                then_branch: then_block,
-                else_branch: Some(BlockNode {
-                    statements: vec![else_if],
-                }),
-            };
-            Ok((new_input, StatementNode::If(Box::new(if_node))))
+            end_span = else_if.span();
+            else_branch = Some(BlockNode {
+                statements: vec![else_if],
+                span: end_span,
+            });
+            input = new_input;
         } else {
             // It's an else block
-            let (new_input, else_block) = parse_block(new_input)?;
-            let if_node = IfNode {
-                condition,
-                then_branch: then_block,
-                else_branch: Some(else_block),
-            };
-            Ok((new_input, StatementNode::If(Box::new(if_node))))
+            let (new_input, else_block) = parse_block(input)?;
+            end_span = else_block.span;
+            else_branch = Some(else_block);
+            input = new_input;
         }
-    } else {
-        // No else clause
-        let if_node = IfNode {
-            condition,
-            then_branch: then_block,
-            else_branch: None,
-        };
-        Ok((input, StatementNode::If(Box::new(if_node))))
     }
+
+    // Create the full span from 'if' to the end of the else block (or then block if no else)
+    let span = Span {
+        start: start_span.start,
+        end: end_span.end,
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    let if_node = IfNode {
+        condition,
+        then_branch: then_block,
+        else_branch: else_branch,
+    };
+
+    Ok((
+        input,
+        StatementNode::If(Spanned::new(Box::new(if_node), span)),
+    ))
 }
 
 // WhileNode is already imported above
@@ -431,8 +494,10 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
 pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     log::trace!("Starting to parse while statement");
 
-    // Consume 'while' keyword
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
+    // Consume 'while' keyword and get its span
+    let (input, while_token) =
+        take_token_if(|t| matches!(t, TokenType::While), ErrorKind::Tag)(input)?;
+    let start_span = while_token.location.into();
 
     log::trace!("After consuming 'while' keyword");
 
@@ -455,7 +520,6 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
     };
 
     log::debug!("Successfully parsed while condition");
-
     log::debug!("Condition parsed successfully: {:?}", condition);
 
     // Parse the body block
@@ -467,8 +531,20 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
 
     log::trace!("Body block parsed successfully");
 
+    // Create the full span from 'while' to the end of the body block
+    let span = Span {
+        start: start_span.start,
+        end: body.span.end,
+        line: start_span.line,
+        column: start_span.column,
+    };
+
     let while_node = WhileNode { condition, body };
-    Ok((input, StatementNode::While(Box::new(while_node))))
+
+    Ok((
+        input,
+        StatementNode::While(Spanned::new(Box::new(while_node), span)),
+    ))
 }
 
 /// Parses an assignment statement (e.g., `x = 42;` or `x.y = z + 1;`).
@@ -481,21 +557,12 @@ pub fn parse_while_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
 pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
     // Parse the target (l-value). We only want an identifier or member access,
     // not the whole `= …` expression.
-    //
     // `parse_identifier` already understands dotted member chains, so it is
     // sufficient here and guarantees we stop *before* the `=`.
     let (input, target) = parse_identifier(input)?;
-
-    // Check if the next token is an equals sign
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
-
-    // Parse the expression after the equals sign
-    let input = input.skip_whitespace();
-    let (input, value) = parse_expression(input)?;
-
-    // Convert the target to an ExpressionNode::Identifier
-    let target_expr = match target {
-        ExpressionNode::Identifier(ident) => ident,
+    let start_span = match &target {
+        ExpressionNode::Identifier(ident) => ident.span,
+        ExpressionNode::Member(member) => member.span,
         _ => {
             return Err(nom::Err::Error(nom::error::Error::new(
                 input,
@@ -504,13 +571,51 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
         }
     };
 
-    // Create and return the assignment node
-    let assignment = StatementNode::Assignment(Box::new(AssignmentNode {
-        target: ExpressionNode::Identifier(target_expr),
-        value,
-    }));
+    // Get the equals sign token for span calculation
+    let (input, equals_token) =
+        take_token_if(|t| matches!(t, TokenType::Equal), ErrorKind::Tag)(input)?;
+    let eq_span = equals_token.location.into();
 
-    Ok((input, assignment))
+    // Parse the expression after the equals sign
+    let input = input.skip_whitespace();
+    let (input, value) = parse_expression(input)?;
+
+    // Calculate the full span from target start to value end
+    let end_span = match &value {
+        ExpressionNode::Identifier(ident) => ident.span,
+        ExpressionNode::Literal(lit) => lit.span,
+        ExpressionNode::Binary(bin) => bin.span,
+        ExpressionNode::Member(mem) => mem.span,
+        _ => start_span, // Fallback
+    };
+
+    let span = Span {
+        start: start_span.start,
+        end: end_span.end,
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    // Create the assignment node with proper spans
+    let assignment = AssignmentNode {
+        target: match target {
+            ExpressionNode::Identifier(ident) => ExpressionNode::Identifier(ident),
+            ExpressionNode::Member(member) => ExpressionNode::Member(member),
+            _ => {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )))
+            }
+        },
+        value,
+    };
+
+    // Wrap in Spanned and return
+    Ok((
+        input,
+        StatementNode::Assignment(Spanned::new(Box::new(assignment), span)),
+    ))
 }
 /// where <arms> is a comma-separated list of patterns and expressions.
 ///
