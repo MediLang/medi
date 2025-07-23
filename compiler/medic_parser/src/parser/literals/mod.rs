@@ -2,6 +2,8 @@ use nom::error::ErrorKind;
 use nom::IResult;
 
 use crate::parser::{take_token_if, LiteralNode, TokenSlice, TokenType};
+use medic_ast::ast::Spanned;
+use medic_lexer::token::Location;
 
 /// Parses a literal token (integer, float, string, or boolean) from the input and returns it as a `LiteralNode`.
 ///
@@ -23,34 +25,37 @@ use crate::parser::{take_token_if, LiteralNode, TokenSlice, TokenType};
 /// let result = parse_literal(input);
 /// assert!(matches!(result, Ok((_, LiteralNode::Int(42)))));
 /// ```
-pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, LiteralNode> {
+pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Spanned<LiteralNode>> {
     if let Some(token) = input.peek() {
-        match &token.token_type {
+        let span = token.location.into();
+        let result = match &token.token_type {
             TokenType::Integer(i) => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Integer(_)), ErrorKind::Tag)(input)?;
-                Ok((input, LiteralNode::Int(*i)))
+                (input, LiteralNode::Int(*i))
             }
             TokenType::Float(f) => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Float(_)), ErrorKind::Tag)(input)?;
-                Ok((input, LiteralNode::Float(*f)))
+                (input, LiteralNode::Float(*f))
             }
             TokenType::String(s) => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::String(_)), ErrorKind::Tag)(input)?;
-                Ok((input, LiteralNode::String(s.to_string())))
+                (input, LiteralNode::String(s.to_string()))
             }
             TokenType::Boolean(b) => {
                 let (input, _) =
                     take_token_if(|t| matches!(t, TokenType::Boolean(_)), ErrorKind::Tag)(input)?;
-                Ok((input, LiteralNode::Bool(*b)))
+                (input, LiteralNode::Bool(*b))
             }
-            _ => Err(nom::Err::Error(nom::error::Error::new(
+            _ => return Err(nom::Err::Error(nom::error::Error::new(
                 input,
                 ErrorKind::Tag,
             ))),
-        }
+        };
+        
+        Ok((result.0, Spanned::new(result.1, span)))
     } else {
         Err(nom::Err::Error(nom::error::Error::new(
             input,

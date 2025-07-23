@@ -362,9 +362,7 @@ impl ChunkedLexer {
             }
             // LogosToken::Error is handled below in the main match
             LogosToken::String(s) => {
-                debug!(
-                    "Creating string token with content: '{s}' (original: '{lexeme_str}')"
-                );
+                debug!("Creating string token with content: '{s}' (original: '{lexeme_str}')");
 
                 // Process escape sequences in the string
                 let processed = s
@@ -396,9 +394,7 @@ impl ChunkedLexer {
 
                 // Get the full lexeme including the minus sign
                 let full_lexeme = &source[span.start..span.end];
-                debug!(
-                    "CONVERT_TOKEN - Full lexeme from source: '{full_lexeme}' (span: {span:?})"
-                );
+                debug!("CONVERT_TOKEN - Full lexeme from source: '{full_lexeme}' (span: {span:?})");
 
                 if let Some(err) = Self::validate_numeric_literal(source, span, full_lexeme) {
                     debug!("CONVERT_TOKEN - Validation error: {err}");
@@ -538,9 +534,7 @@ impl ChunkedLexer {
                 // Handle any remaining partial token at EOF
                 if let Some(partial) = self.partial_token.take() {
                     let partial_lexeme = partial.partial_lexeme;
-                    debug!(
-                        "Processing final partial token at EOF: '{partial_lexeme}'"
-                    );
+                    debug!("Processing final partial token at EOF: '{partial_lexeme}'");
                     if !partial_lexeme.is_empty() {
                         let tokens = self.tokenize_source(&partial_lexeme, true, false)?;
                         debug!("Generated {} tokens from final partial token", tokens.len());
@@ -893,9 +887,7 @@ impl ChunkedLexer {
 
             // Skip the first token if it's the result of combining with a partial token
             if skip_first_token && is_first_token {
-                debug!(
-                    "Skipping first token from combined partial chunk: {token_result:?}"
-                );
+                debug!("Skipping first token from combined partial chunk: {token_result:?}");
                 is_first_token = false;
                 continue;
             }
@@ -920,8 +912,11 @@ impl ChunkedLexer {
                                 if s.starts_with('"') && s.ends_with('"') && s.len() > 1 {
                                     in_string = false;
                                     let content = s[1..s.len() - 1].to_string();
-                                    debug!("Found complete string: {content} (len: {})", content.len());
-                                    
+                                    debug!(
+                                        "Found complete string: {content} (len: {})",
+                                        content.len()
+                                    );
+
                                     // Convert the string token and add it to the results
                                     if let Some(converted) = self.convert_token(
                                         LogosToken::String(content),
@@ -963,7 +958,9 @@ impl ChunkedLexer {
 
                                     // Convert the string token and add it to the results
                                     if let Some(converted) = self.convert_token(
-                                        LogosToken::String(content[1..content.len()-1].to_string()),
+                                        LogosToken::String(
+                                            content[1..content.len() - 1].to_string(),
+                                        ),
                                         &span,
                                         source,
                                     ) {
@@ -991,7 +988,7 @@ impl ChunkedLexer {
                             }
                         }
                     }
-                    
+
                     // These variables were not actually used in the code
                     // Removed to fix unused variable warnings
                 }
@@ -1208,9 +1205,7 @@ impl ChunkedLexer {
         }
 
         if !has_digits {
-            return Some(format!(
-                "Invalid number literal: '{lexeme}' has no digits"
-            ));
+            return Some(format!("Invalid number literal: '{lexeme}' has no digits"));
         }
 
         // Check for decimal point and fractional part
@@ -1262,7 +1257,9 @@ impl ChunkedLexer {
         if let Some(&c) = chars.peek() {
             // Check if the next character is a valid identifier start (letter or underscore)
             if c.is_alphabetic() || c == '_' {
-                return Some(format!("Invalid number literal: '{lexeme}' has invalid character '{c}'"));
+                return Some(format!(
+                    "Invalid number literal: '{lexeme}' has invalid character '{c}'"
+                ));
             }
         }
 
