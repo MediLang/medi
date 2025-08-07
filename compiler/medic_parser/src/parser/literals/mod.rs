@@ -49,12 +49,14 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Spanned<L
                     take_token_if(|t| matches!(t, TokenType::Boolean(_)), ErrorKind::Tag)(input)?;
                 (input, LiteralNode::Bool(*b))
             }
-            _ => return Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                ErrorKind::Tag,
-            ))),
+            _ => {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )))
+            }
         };
-        
+
         Ok((result.0, Spanned::new(result.1, span)))
     } else {
         Err(nom::Err::Error(nom::error::Error::new(

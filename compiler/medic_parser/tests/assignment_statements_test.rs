@@ -1,4 +1,4 @@
-use medic_ast::ast::{ExpressionNode, LiteralNode, StatementNode};
+use medic_ast::ast::{ExpressionNode, LiteralNode, Spanned, StatementNode};
 use medic_lexer::token::{Token, TokenType};
 use medic_lexer::Location;
 use medic_parser::parser::{statements::parse_assignment_statement, TokenSlice};
@@ -30,20 +30,20 @@ fn test_valid_identifier_assignment() {
 
     if let StatementNode::Assignment(assign) = stmt {
         // Verify the target is an identifier
-        assert!(
-            matches!(assign.target, ExpressionNode::Identifier(_)),
-            "Expected target to be an identifier"
-        );
-
-        // Verify the value is an integer literal
-        if let ExpressionNode::Literal(lit) = &assign.value {
-            if let LiteralNode::Int(value) = lit {
-                assert_eq!(value, &42, "Expected value to be 42");
-            } else {
-                panic!("Expected integer literal value");
+        match &assign.target {
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
+                assert_eq!(ident.name, "x", "Expected target to be identifier 'x'");
             }
-        } else {
-            panic!("Expected literal value");
+            _ => panic!("Expected target to be an identifier"),
+        }
+
+        // Verify the value is an integer literal 42
+        match &assign.value {
+            ExpressionNode::Literal(Spanned {
+                node: LiteralNode::Int(42),
+                ..
+            }) => {}
+            _ => panic!("Expected integer literal value 42"),
         }
     } else {
         panic!("Expected assignment statement");
@@ -78,15 +78,13 @@ fn test_valid_member_expression_assignment() {
             "Expected target to be a member expression"
         );
 
-        // Verify the value is an integer literal
-        if let ExpressionNode::Literal(lit) = &assign.value {
-            if let LiteralNode::Int(value) = lit {
-                assert_eq!(value, &42, "Expected value to be 42");
-            } else {
-                panic!("Expected integer literal value");
-            }
-        } else {
-            panic!("Expected literal value");
+        // Verify the value is an integer literal 42
+        match &assign.value {
+            ExpressionNode::Literal(Spanned {
+                node: LiteralNode::Int(42),
+                ..
+            }) => {}
+            _ => panic!("Expected integer literal value 42"),
         }
     } else {
         panic!("Expected assignment statement");

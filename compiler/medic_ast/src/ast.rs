@@ -39,6 +39,21 @@ impl<T> Spanned<T> {
             span: self.span,
         }
     }
+
+    /// Combine two spans into a single span that covers both
+    pub fn combine<U>(first: &Spanned<T>, second: &Spanned<U>) -> Span {
+        let start = std::cmp::min(first.span.start, second.span.start);
+        let end = std::cmp::max(first.span.end, second.span.end);
+        let line = first.span.line; // Use the line from the first span
+        let column = first.span.column; // Use the column from the first span
+
+        Span {
+            start,
+            end,
+            line,
+            column,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -238,17 +253,20 @@ pub enum StatementNode {
 pub struct LetStatementNode {
     pub name: IdentifierNode,
     pub value: ExpressionNode,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AssignmentNode {
     pub target: ExpressionNode, // Usually Identifier or Member
     pub value: ExpressionNode,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlockNode {
     pub statements: Vec<StatementNode>,
+    pub span: Span,
 }
 
 impl BlockNode {
@@ -291,31 +309,36 @@ impl std::fmt::Display for BlockNode {
 pub struct IfNode {
     pub condition: ExpressionNode,
     pub then_branch: BlockNode,
-    pub else_branch: Option<BlockNode>,
+    pub else_branch: Option<Box<StatementNode>>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WhileNode {
     pub condition: ExpressionNode,
     pub body: BlockNode,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForNode {
-    pub var: IdentifierNode,
-    pub iter: ExpressionNode,
+    pub variable: IdentifierNode,
+    pub iterable: ExpressionNode,
     pub body: BlockNode,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MatchNode {
     pub expr: Box<ExpressionNode>,
     pub arms: Vec<MatchArmNode>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReturnNode {
-    pub value: Option<Box<ExpressionNode>>,
+    pub value: Option<ExpressionNode>,
+    pub span: Span,
 }
 
 use std::hash::Hash;
@@ -497,6 +520,37 @@ impl Visitable for StatementNode {
             StatementNode::Return(stmt) => stmt.accept(visitor),
         }
     }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        match self {
+            StatementNode::Let(stmt) => stmt.visit_children(visitor),
+            StatementNode::Assignment(stmt) => stmt.visit_children(visitor),
+            StatementNode::Expr(expr) => expr.visit_children(visitor),
+            StatementNode::Block(block) => block.visit_children(visitor),
+            StatementNode::If(stmt) => stmt.visit_children(visitor),
+            StatementNode::While(stmt) => stmt.visit_children(visitor),
+            StatementNode::For(stmt) => stmt.visit_children(visitor),
+            StatementNode::Match(stmt) => stmt.visit_children(visitor),
+            StatementNode::Return(stmt) => stmt.visit_children(visitor),
+        }
+    }
+}
+
+impl StatementNode {
+    /// Returns the span of this statement node
+    pub fn span(&self) -> &Span {
+        match self {
+            StatementNode::Let(stmt) => &stmt.span,
+            StatementNode::Assignment(stmt) => &stmt.span,
+            StatementNode::Expr(expr) => expr.span(),
+            StatementNode::Block(block) => &block.span,
+            StatementNode::If(stmt) => &stmt.span,
+            StatementNode::While(stmt) => &stmt.span,
+            StatementNode::For(stmt) => &stmt.span,
+            StatementNode::Match(stmt) => &stmt.span,
+            StatementNode::Return(stmt) => &stmt.span,
+        }
+    }
 }
 
 impl Visitable for LetStatementNode {
@@ -566,8 +620,8 @@ impl Visitable for ForNode {
     }
 
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
-        self.var.accept(visitor)?;
-        self.iter.accept(visitor)?;
+        self.variable.accept(visitor)?;
+        self.iterable.accept(visitor)?;
         self.body.accept(visitor)
     }
 }
@@ -672,6 +726,23 @@ impl Visitable for ProgramNode {
 // Add more AST nodes as needed (statements, declarations, etc.)
 
 impl ExpressionNode {
+    /// Returns the span of this expression node
+    pub fn span(&self) -> &Span {
+        match self {
+            ExpressionNode::Identifier(span) => &span.span,
+            ExpressionNode::IcdCode(span) => &span.span,
+            ExpressionNode::CptCode(span) => &span.span,
+            ExpressionNode::SnomedCode(span) => &span.span,
+            ExpressionNode::Literal(span) => &span.span,
+            ExpressionNode::Binary(span) => &span.span,
+            ExpressionNode::Call(span) => &span.span,
+            ExpressionNode::Member(span) => &span.span,
+            ExpressionNode::HealthcareQuery(span) => &span.span,
+            ExpressionNode::Statement(span) => &span.span,
+            ExpressionNode::Struct(span) => &span.span,
+        }
+    }
+
     /// Creates an expression from a statement
     ///
     /// If the statement is an expression statement, returns the inner expression.
@@ -713,9 +784,12 @@ impl std::fmt::Display for StatementNode {
                 while_stmt.body.fmt_indented(f, 0, 4)
             }
             StatementNode::For(for_stmt) => {
-                write!(f, "for {} in {} ", for_stmt.var.name, for_stmt.iter)?;
-                // Use fmt_indented for the loop body with base indentation
-                for_stmt.body.fmt_indented(f, 0, 4)
+                write!(
+                    f,
+                    "for {} in {} ",
+                    for_stmt.variable.name, for_stmt.iterable
+                )?;
+                write!(f, "{}", for_stmt.body)
             }
             StatementNode::Match(match_stmt) => {
                 write!(f, "match {} {{", match_stmt.expr)?;

@@ -34,21 +34,21 @@ impl<'a> TypeChecker<'a> {
     /// ```
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
         match expr {
-            ExpressionNode::IcdCode(_)
-            | ExpressionNode::CptCode(_)
-            | ExpressionNode::SnomedCode(_) => MediType::String,
-            ExpressionNode::Identifier(name) => self
+            ExpressionNode::IcdCode(Spanned { node: _, .. })
+            | ExpressionNode::CptCode(Spanned { node: _, .. })
+            | ExpressionNode::SnomedCode(Spanned { node: _, .. }) => MediType::String,
+            ExpressionNode::Identifier(Spanned { node: name, .. }) => self
                 .env
                 .get(&name.name)
                 .cloned()
                 .unwrap_or(MediType::Unknown),
-            ExpressionNode::Literal(lit) => match lit {
+            ExpressionNode::Literal(Spanned { node: lit, .. }) => match lit {
                 LiteralNode::Int(_) => MediType::Int,
                 LiteralNode::Float(_) => MediType::Float,
                 LiteralNode::Bool(_) => MediType::Bool,
                 LiteralNode::String(_) => MediType::String,
             },
-            ExpressionNode::Binary(bin) => {
+            ExpressionNode::Binary(Spanned { node: bin, .. }) => {
                 let left = self.check_expr(&bin.left);
                 let right = self.check_expr(&bin.right);
                 match bin.operator {
@@ -135,7 +135,7 @@ impl<'a> TypeChecker<'a> {
                     BinaryOperator::Assign => {
                         // The type of an assignment is the type of the right-hand side
                         // First check if the left-hand side is a valid lvalue (Identifier or Member)
-                        if let ExpressionNode::Binary(bin_expr) = expr {
+                        if let ExpressionNode::Binary(Spanned { node: bin_expr, .. }) = expr {
                             match &bin_expr.left {
                                 ExpressionNode::Identifier(_) | ExpressionNode::Member(_) => {}
                                 _ => {
@@ -158,7 +158,7 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
             }
-            ExpressionNode::Call(call) => {
+            ExpressionNode::Call(Spanned { node: call, .. }) => {
                 let callee_type = self.check_expr(&call.callee);
                 if let MediType::Function {
                     params,
@@ -181,19 +181,18 @@ impl<'a> TypeChecker<'a> {
                     MediType::Unknown
                 }
             }
-            ExpressionNode::Member(mem) => {
-                // Implement member access type rules
+            ExpressionNode::Member(Spanned { node: mem, .. }) => {
                 let object_type = self.check_expr(&mem.object);
-                match object_type {
-                    MediType::Struct(ref fields) => fields
+                if let MediType::Struct(fields) = object_type {
+                    fields
                         .get(mem.property.name())
                         .cloned()
-                        .unwrap_or(MediType::Unknown),
-                    _ => MediType::Unknown, // Member access is only valid on structs
+                        .unwrap_or(MediType::Unknown)
+                } else {
+                    MediType::Unknown // Member access is only valid on structs
                 }
             }
-            ExpressionNode::HealthcareQuery(query) => {
-                // Implement healthcare query type rules
+            ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => {
                 match query.query_type.as_str() {
                     "PatientData" => MediType::Record(vec![
                         ("id".to_string(), MediType::Int),
@@ -212,15 +211,16 @@ impl<'a> TypeChecker<'a> {
                     _ => MediType::Unknown, // Fallback for unsupported query types
                 }
             }
-            ExpressionNode::Statement(stmt) => {
-                // For a statement expression, we need to check the type of the last expression in the statement
-                // For statements that don't produce values, we return Void
-                match **stmt {
-                    StatementNode::Expr(ref expr) => self.check_expr(expr),
+            ExpressionNode::Statement(Spanned { node: stmt, .. }) => {
+                // For statement expressions, check the inner statement
+                match &**stmt {
+                    StatementNode::Expr(expr) => self.check_expr(expr),
                     _ => MediType::Void, // Other statements don't produce values
                 }
             }
-            ExpressionNode::Struct(struct_lit) => {
+            ExpressionNode::Struct(Spanned {
+                node: struct_lit, ..
+            }) => {
                 // For struct literals, we return a struct type with field types
                 // TODO: Look up the actual struct definition for more precise type checking
                 let mut fields = std::collections::HashMap::new();

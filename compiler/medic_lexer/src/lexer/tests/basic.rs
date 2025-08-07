@@ -30,7 +30,7 @@ fn test_lexer_float_numbers() {
     // Print all tokens for debugging
     println!("All tokens:");
     for (i, token) in tokens.iter().enumerate() {
-        println!("{}: {:?}", i, token);
+        println!("{i}: {token:?}");
     }
 
     // Expected tokens: [let, x, =, 3.14, ;, let, y, =, 0.5, ;, let, z, =, 1e10, ;, let, w, =, 2.5e-3, ;, let, a, =, 42, ., ;]
@@ -44,9 +44,7 @@ fn test_lexer_float_numbers() {
             let expected = 3.14;
             assert!(
                 (value - expected).abs() < f64::EPSILON,
-                "Expected Float {} at position 3, got {}",
-                expected,
-                value
+                "Expected Float {expected} at position 3, got {value}"
             )
         }
         _ => panic!(
@@ -66,8 +64,7 @@ fn test_lexer_float_numbers() {
     match tokens[13].token_type {
         TokenType::Float(value) => assert!(
             (value - 10000000000.0).abs() < f64::EPSILON,
-            "Expected value close to 10000000000.0, got {}",
-            value
+            "Expected value close to 10000000000.0, got {value}"
         ),
         _ => panic!(
             "Expected Float token at position 13, got {:?}",
@@ -79,8 +76,7 @@ fn test_lexer_float_numbers() {
     match tokens[18].token_type {
         TokenType::Float(value) => assert!(
             (value - 0.0025).abs() < f64::EPSILON,
-            "Expected value close to 0.0025, got {}",
-            value
+            "Expected value close to 0.0025, got {value}"
         ),
         _ => panic!(
             "Expected Float token at position 18, got {:?}",
@@ -110,14 +106,14 @@ fn test_lexer_range_operator() {
     let input = "1..10";
     let mut lexer = Lexer::new(input);
 
-    println!("Input: {}", input);
+    println!("Input: {input}");
 
     // Collect tokens and print detailed information
     let mut tokens = Vec::new();
 
     // Print lexer state before processing
     println!("\n=== Lexer State Before Processing ===");
-    println!("Source: {}", input);
+    println!("Source: {input}");
 
     // Process tokens one by one to see what's happening
     loop {
@@ -216,7 +212,7 @@ fn test_lexer_range_operator() {
     let lexer = Lexer::new(input_with_spaces);
     let tokens: Vec<Token> = lexer.collect();
 
-    println!("\nInput with spaces: {}", input_with_spaces);
+    println!("\nInput with spaces: {input_with_spaces}");
     println!("All tokens ({}):", tokens.len());
     for (i, token) in tokens.iter().enumerate() {
         println!(

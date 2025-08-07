@@ -1,5 +1,5 @@
 use medic_ast::ast::{
-    ExpressionNode, IdentifierNode, LiteralNode, MatchArmNode, PatternNode, StatementNode,
+    ExpressionNode, IdentifierNode, LiteralNode, MatchArmNode, PatternNode, Spanned, StatementNode,
 };
 
 // Import specific TokenType variants we need
@@ -53,7 +53,10 @@ fn test_parse_empty_match_statement() {
 
             if let StatementNode::Match(match_node) = stmt {
                 match &*match_node.expr {
-                    ExpressionNode::Identifier(IdentifierNode { name }) if name == "x" => {}
+                    ExpressionNode::Identifier(Spanned {
+                        node: IdentifierNode { name },
+                        ..
+                    }) if name == "x" => {}
                     _ => panic!("Expected identifier 'x', got {:?}", match_node.expr),
                 };
                 assert!(match_node.arms.is_empty(), "Expected no match arms");
@@ -100,7 +103,10 @@ fn test_match_with_literal_arms() {
             if let StatementNode::Match(match_node) = stmt {
                 // Check the matched expression
                 match &*match_node.expr {
-                    ExpressionNode::Identifier(IdentifierNode { name }) if name == "x" => {}
+                    ExpressionNode::Identifier(Spanned {
+                        node: IdentifierNode { name },
+                        ..
+                    }) if name == "x" => {}
                     _ => panic!("Expected identifier 'x', got {:?}", match_node.expr),
                 };
 
@@ -118,7 +124,10 @@ fn test_match_with_literal_arms() {
                         _ => panic!("Expected LiteralNode::Int(1), got {:?}", lit),
                     };
                     match &**body {
-                        ExpressionNode::Identifier(IdentifierNode { name }) if name == "one" => {}
+                        ExpressionNode::Identifier(Spanned {
+                            node: IdentifierNode { name },
+                            ..
+                        }) if name == "one" => {}
                         _ => panic!("Expected identifier 'one', got {:?}", body),
                     };
                 } else {
@@ -136,7 +145,10 @@ fn test_match_with_literal_arms() {
                         _ => panic!("Expected LiteralNode::Int(2), got {:?}", lit),
                     };
                     match &**body {
-                        ExpressionNode::Identifier(IdentifierNode { name }) if name == "two" => {}
+                        ExpressionNode::Identifier(Spanned {
+                            node: IdentifierNode { name },
+                            ..
+                        }) if name == "two" => {}
                         _ => panic!("Expected identifier 'two', got {:?}", body),
                     };
                 } else {
@@ -150,7 +162,10 @@ fn test_match_with_literal_arms() {
                 }) = match_node.arms.get(2)
                 {
                     match &**body {
-                        ExpressionNode::Identifier(IdentifierNode { name }) if name == "other" => {}
+                        ExpressionNode::Identifier(Spanned {
+                            node: IdentifierNode { name },
+                            ..
+                        }) if name == "other" => {}
                         _ => panic!("Expected identifier 'other', got {:?}", body),
                     };
                 } else {
@@ -197,7 +212,10 @@ fn test_match_with_identifier_patterns() {
 
             if let StatementNode::Match(match_node) = stmt {
                 match &*match_node.expr {
-                    ExpressionNode::Identifier(IdentifierNode { name }) if name == "result" => {}
+                    ExpressionNode::Identifier(Spanned {
+                        node: IdentifierNode { name },
+                        ..
+                    }) if name == "result" => {}
                     _ => panic!("Expected identifier 'result', got {:?}", match_node.expr),
                 };
                 assert_eq!(match_node.arms.len(), 2, "Expected 2 match arms");
@@ -218,7 +236,10 @@ fn test_match_with_identifier_patterns() {
                         );
                     }
                     match &**body {
-                        ExpressionNode::Identifier(IdentifierNode { name }) if name == "x" => {}
+                        ExpressionNode::Identifier(Spanned {
+                            node: IdentifierNode { name },
+                            ..
+                        }) if name == "x" => {}
                         _ => panic!("Expected identifier 'x', got {:?}", body),
                     };
                 } else {
@@ -232,8 +253,10 @@ fn test_match_with_identifier_patterns() {
                     {
                         assert_eq!(pattern_name, "None");
                         match &*arm.body {
-                            ExpressionNode::Identifier(IdentifierNode { name })
-                                if name == "default" => {}
+                            ExpressionNode::Identifier(Spanned {
+                                node: IdentifierNode { name },
+                                ..
+                            }) if name == "default" => {}
                             _ => panic!("Expected identifier 'default', got {:?}", arm.body),
                         };
                     } else {
@@ -290,7 +313,10 @@ fn test_match_with_complex_expressions() {
 
             if let StatementNode::Match(match_node) = stmt {
                 match &*match_node.expr {
-                    ExpressionNode::Identifier(IdentifierNode { name }) if name == "result" => {}
+                    ExpressionNode::Identifier(Spanned {
+                        node: IdentifierNode { name },
+                        ..
+                    }) if name == "result" => {}
                     _ => panic!("Expected identifier 'result', got {:?}", match_node.expr),
                 };
                 assert_eq!(match_node.arms.len(), 3, "Expected 3 match arms");
@@ -306,7 +332,10 @@ fn test_match_with_complex_expressions() {
                         _ => panic!("Expected LiteralNode::Int(0), got {:?}", lit),
                     };
                     match &**body {
-                        ExpressionNode::Literal(LiteralNode::String(s)) if s == "zero" => {}
+                        ExpressionNode::Literal(Spanned {
+                            node: LiteralNode::String(s),
+                            ..
+                        }) if s == "zero" => {}
                         _ => panic!("Expected string literal 'zero', got {:?}", body),
                     };
                 } else {
@@ -321,7 +350,10 @@ fn test_match_with_complex_expressions() {
                 {
                     assert_eq!(pattern_name, "n");
                     match &**body {
-                        ExpressionNode::Literal(LiteralNode::String(s)) if s == "positive" => {}
+                        ExpressionNode::Literal(Spanned {
+                            node: LiteralNode::String(s),
+                            ..
+                        }) if s == "positive" => {}
                         _ => panic!("Expected string literal 'positive', got {:?}", body),
                     };
                 } else {
@@ -335,7 +367,10 @@ fn test_match_with_complex_expressions() {
                 }) = match_node.arms.get(2)
                 {
                     match &**body {
-                        ExpressionNode::Literal(LiteralNode::String(s)) if s == "negative" => {}
+                        ExpressionNode::Literal(Spanned {
+                            node: LiteralNode::String(s),
+                            ..
+                        }) if s == "negative" => {}
                         _ => panic!("Expected string literal 'negative', got {:?}", body),
                     };
                 } else {

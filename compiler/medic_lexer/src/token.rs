@@ -214,6 +214,9 @@ pub enum TokenType {
     Scope,
     /// `federated` - federated query
     Federated,
+    
+    /// Partial token that spans multiple chunks
+    PartialToken,
     /// `safe` - safe call operator
     Safe,
     /// `realtime` - real-time data access
@@ -390,6 +393,7 @@ impl PartialEq for TokenType {
             (TokenType::Comment(a), TokenType::Comment(b)) => a == b,
             (TokenType::LexerError, TokenType::LexerError) => true,
             (TokenType::Whitespace, TokenType::Whitespace) => true,
+            (TokenType::PartialToken, TokenType::PartialToken) => true,
 
             _ => false,
         }

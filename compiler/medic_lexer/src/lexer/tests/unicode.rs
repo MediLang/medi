@@ -6,14 +6,14 @@ use crate::token::TokenType;
 fn test_lexer_unicode_identifiers() {
     // Test with a Unicode identifier and string
     let input = "let 名字 = \"こんにちは\"";
-    println!("Input string: {}", input);
+    println!("Input string: {input}");
     println!("Input bytes: {:?}", input.as_bytes());
     println!(
         "Input length: {} chars, {} bytes",
         input.chars().count(),
         input.len()
     );
-    println!("Input: {}", input);
+    println!("Input: {input}");
     println!("Input bytes: {:?}", input.as_bytes());
 
     // Collect tokens using the iterator
@@ -41,7 +41,7 @@ fn test_lexer_unicode_identifiers() {
     println!("\nInput string with byte positions:");
     let mut current_line = String::new();
     for (i, b) in input.bytes().enumerate() {
-        print!("{:02X} ", b);
+        print!("{b:02X} ");
         current_line.push(if b.is_ascii_graphic() || b == b' ' {
             b as char
         } else {
@@ -50,7 +50,7 @@ fn test_lexer_unicode_identifiers() {
 
         if (i + 1) % 16 == 0 || i == input.len() - 1 {
             // Print ASCII representation
-            println!("  | {}", current_line);
+            println!("  | {current_line}");
             current_line.clear();
         }
     }

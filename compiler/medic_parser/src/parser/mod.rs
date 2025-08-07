@@ -47,6 +47,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use medic_ast::visit::Span;
 use std::ops;
 
 use nom::error::{Error as NomError, ErrorKind, ParseError};
@@ -597,8 +598,9 @@ where
 /// assert!(matches!(block, BlockNode { .. }));
 /// ```
 pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> {
-    let (mut input, _) =
+    let (mut input, left_brace) =
         take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
+    let start_span: Span = left_brace.location.into();
 
     let mut statements = Vec::new();
 
@@ -628,9 +630,17 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
     }
 
     // Consume the right brace
-    let (input, _) = take_token_if(|t| matches!(t, TokenType::RightBrace), ErrorKind::Tag)(input)?;
+    let (input, right_brace) =
+        take_token_if(|t| matches!(t, TokenType::RightBrace), ErrorKind::Tag)(input)?;
 
-    Ok((input, BlockNode { statements }))
+    let span = Span {
+        start: start_span.start,
+        end: right_brace.location.offset + right_brace.lexeme.len(),
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    Ok((input, BlockNode { statements, span }))
 }
 
 /// Get a binary operator from a token type
@@ -814,11 +824,11 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
 
             // Log the parsed statements for debugging
             for (i, stmt) in statements.iter().enumerate() {
-                log::debug!("Statement {}: {:?}", i, stmt);
+                log::debug!("Statement {i}: {stmt:?}");
             }
         }
         Err(e) => {
-            log::error!("Failed to parse program: {:?}", e);
+            log::error!("Failed to parse program: {e:?}");
             if let Err(nom::Err::Error(e)) = &result {
                 log::error!("Error at token: {:?}", input.0.get(e.input.0.len() - 1));
             }
@@ -1062,7 +1072,7 @@ pub fn parse_for_statement(_input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, St
 /// # assert!(result.is_ok());
 /// ```
 pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
-    debug!("Starting parse_match_statement with input: {:?}", input);
+    debug!("Starting parse_match_statement with input: {input:?}");
 
     // Parse the 'match' keyword
     debug!(
@@ -1076,7 +1086,7 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
             result
         }
         Err(e) => {
-            debug!("Failed to parse 'match' keyword: {:?}", e);
+            debug!("Failed to parse 'match' keyword: {e:?}");
             return Err(e);
         }
     };
@@ -1102,12 +1112,12 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
             result
         }
         Err(e) => {
-            debug!("Failed to parse expression after 'match' keyword: {:?}", e);
+            debug!("Failed to parse expression after 'match' keyword: {e:?}");
             return Err(e);
         }
     };
 
-    debug!("Successfully parsed match expression: {:?}", expr);
+    debug!("Successfully parsed match expression: {expr:?}");
     debug!(
         "Remaining input after expression: {:?}",
         input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
@@ -1154,7 +1164,7 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
                 (input, Vec::new())
             }
             Err(e) => {
-                debug!("No empty match block found: {:?}", e);
+                debug!("No empty match block found: {e:?}");
                 // Parse match arms
                 let mut arms = Vec::new();
                 let mut input = input;
@@ -1214,11 +1224,30 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
             }
         };
 
+    // Create a span that covers the entire match expression
+    let span = if !arms.is_empty() {
+        // If we have arms, the span goes from the start of the expression to the end of the last arm's body
+        let _first_arm = arms.first().unwrap();
+        let last_arm = arms.last().unwrap();
+        let last_arm_span = last_arm.body.span();
+
+        Span {
+            start: expr.span().start,
+            end: last_arm_span.end,
+            line: expr.span().line,
+            column: expr.span().column,
+        }
+    } else {
+        // If no arms, just use the expression span
+        *expr.span()
+    };
+
     Ok((
         input,
         StatementNode::Match(Box::new(MatchNode {
             expr: Box::new(expr),
             arms,
+            span,
         })),
     ))
 }

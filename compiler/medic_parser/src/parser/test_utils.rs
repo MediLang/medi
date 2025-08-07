@@ -55,7 +55,7 @@ pub fn create_operator(op: &str) -> Token {
         ";" => TokenType::Semicolon,
         "." => TokenType::Dot,
         "," => TokenType::Comma,
-        _ => panic!("Unknown operator: {}", op),
+        _ => panic!("Unknown operator: {op}"),
     };
     create_token(token_type, op)
 }

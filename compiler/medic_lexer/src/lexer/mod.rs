@@ -131,8 +131,8 @@ impl<'a> Lexer<'a> {
 
             // Literals
             LogosToken::Integer(i) => TokenType::Integer(i),
-            LogosToken::NegativeInteger(i) => TokenType::Integer(i), // Handle negative integers
             LogosToken::IntegerWithTrailingDot(i) => TokenType::Integer(i), // Handle integer with trailing dot
+            LogosToken::NegativeInteger(i) => TokenType::NegativeInteger(i),
             LogosToken::Float(f) => TokenType::Float(f),
             LogosToken::String(s) => TokenType::String(InternedString::from(&s[..])),
             LogosToken::Bool(b) => TokenType::Boolean(b), // Using Boolean variant for consistency
@@ -148,6 +148,8 @@ impl<'a> Lexer<'a> {
             LogosToken::ICD10(code) => TokenType::ICD10(InternedString::from(&code[..])),
             LogosToken::LOINC(code) => TokenType::LOINC(InternedString::from(&code[..])),
             LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::from(&code[..])),
+            
+
             LogosToken::CPT(code) => TokenType::CPT(InternedString::from(&code[..])),
 
             // Operators

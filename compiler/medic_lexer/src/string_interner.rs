@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_display_trait() {
         let s = InternedString::from("hello world");
-        assert_eq!(format!("{}", s), "hello world");
+        assert_eq!(format!("{s}"), "hello world");
     }
 
     #[test]
@@ -213,8 +213,7 @@ mod tests {
                         if strings[j].as_str() == strings[k].as_str() {
                             assert!(
                                 Arc::ptr_eq(&strings[j].0, &strings[k].0),
-                                "Thread {}: Identical strings should share the same Arc",
-                                i
+                                "Thread {i}: Identical strings should share the same Arc"
                             );
                         }
                     }
@@ -226,8 +225,7 @@ mod tests {
                         if strings[j].as_str() != strings[k].as_str() {
                             assert!(
                                 !Arc::ptr_eq(&strings[j].0, &strings[k].0),
-                                "Thread {}: Different strings should not share the same Arc",
-                                i
+                                "Thread {i}: Different strings should not share the same Arc"
                             );
                         }
                     }
@@ -240,7 +238,7 @@ mod tests {
 
                 // Add strings to shared collection for cross-thread verification
                 shared_strings.lock().unwrap().extend(
-                    (0..10).map(|j| InternedString::from(format!("shared_{}_{}", i, j).as_str())),
+                    (0..10).map(|j| InternedString::from(format!("shared_{i}_{j}").as_str())),
                 );
 
                 // Return the first string for cross-thread verification
