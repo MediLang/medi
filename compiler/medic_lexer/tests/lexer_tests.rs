@@ -87,9 +87,6 @@ fn test_invalid_numeric_literals() {
         // Create lexer with debug configuration
         let config = ChunkedLexerConfig {
             chunk_size: 8, // Small chunk size to test chunk boundary handling
-            max_buffer_size: 10,
-            include_whitespace: false,
-            keep_source_in_memory: true,
         };
 
         let lexer = ChunkedLexer::from_reader(cursor, config);
@@ -159,9 +156,6 @@ fn test_numeric_literals_in_expressions() {
 
     let config = ChunkedLexerConfig {
         chunk_size: 1024,
-        max_buffer_size: 4096,
-        include_whitespace: true, // Include whitespace for debugging
-        keep_source_in_memory: true,
     };
 
     let lexer = ChunkedLexer::from_reader(source.as_bytes(), config);
