@@ -23,22 +23,27 @@ fn test_operator_precedence() {
 
             // Check left side is a literal 2
             match &bin_expr.left {
-                ExpressionNode::Literal(spanned_lit) => {
-                    assert_eq!(spanned_lit.node, LiteralNode::Int(2));
+                ExpressionNode::Literal(Spanned {
+                    node: LiteralNode::Int(2),
+                    ..
+                }) => {
                     // Check right side is a binary expression with multiplication
                     match &bin_expr.right {
-                        ExpressionNode::Binary(spanned_mul) => {
-                            let mul_expr = unwrap_spanned(spanned_mul);
+                        ExpressionNode::Binary(Spanned { node: mul_expr, .. }) => {
                             assert_eq!(mul_expr.operator, BinaryOperator::Mul);
 
                             // Check left side of multiplication is a literal 3
                             match &mul_expr.left {
-                                ExpressionNode::Literal(LiteralNode::Int(3)) => {
+                                ExpressionNode::Literal(Spanned {
+                                    node: LiteralNode::Int(3),
+                                    ..
+                                }) => {
                                     // Check right side of multiplication is a literal 4
                                     match &mul_expr.right {
-                                        ExpressionNode::Literal(spanned_four) => {
-                                            assert_eq!(spanned_four.node, LiteralNode::Int(4));
-                                        }
+                                        ExpressionNode::Literal(Spanned {
+                                            node: LiteralNode::Int(4),
+                                            ..
+                                        }) => {}
                                         _ => panic!(
                                             "Expected right side of multiplication to be literal 4"
                                         ),
@@ -117,7 +122,7 @@ fn test_operator_precedence() {
                 match &pow1_expr.left {
                     ExpressionNode::Literal(spanned_two) => {
                         assert_eq!(spanned_two.node, LiteralNode::Int(2));
-                        
+
                         // Check right side is another exponentiation
                         match &pow1_expr.right {
                             ExpressionNode::Binary(spanned_pow2) => {
@@ -128,7 +133,7 @@ fn test_operator_precedence() {
                                 match &pow2_expr.left {
                                     ExpressionNode::Literal(spanned_three) => {
                                         assert_eq!(spanned_three.node, LiteralNode::Int(3));
-                                        
+
                                         // Check right side of inner exponentiation is a literal 2
                                         match &pow2_expr.right {
                                             ExpressionNode::Literal(spanned_two) => {

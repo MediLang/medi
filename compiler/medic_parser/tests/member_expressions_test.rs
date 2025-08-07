@@ -1,4 +1,4 @@
-use medic_ast::ast::ExpressionNode;
+use medic_ast::ast::{ExpressionNode, Spanned};
 use medic_lexer::token::{Token, TokenType};
 use medic_lexer::Location;
 use medic_parser::parser::{parse_expression, TokenSlice};
@@ -24,35 +24,37 @@ fn test_nested_member_expressions() {
         create_identifier_token("prop2"),
     ];
 
-    println!("Test tokens for obj.prop1.prop2: {:?}", tokens);
+    println!("Test tokens for obj.prop1.prop2: {tokens:?}");
     let result = parse_expression(TokenSlice::new(&tokens));
     let (_, expr) = result.unwrap();
-    println!("Parsed expression: {:#?}", expr);
+    println!("Parsed expression: {expr:#?}");
 
     // The expression should be parsed as ((obj.prop1).prop2)
     // First, verify the outer structure
-    let outer = if let ExpressionNode::Member(outer_box) = &expr {
-        outer_box
-    } else {
-        panic!("Expected member expression, got {:?}", expr);
-    };
+    match &expr {
+        ExpressionNode::Member(Spanned {
+            node: outer_member, ..
+        }) => {
+            // Access the MemberExpressionNode inside the Spanned
+            assert_eq!(outer_member.property.name, "prop2");
 
-    // Access the MemberExpressionNode inside the Box
-    let outer_member = outer.as_ref();
-    assert_eq!(outer_member.property.name, "prop2");
+            // Then verify the inner structure
+            match &outer_member.object {
+                ExpressionNode::Member(Spanned { node: inner, .. }) => {
+                    assert_eq!(inner.property.name, "prop1");
 
-    // Then verify the inner structure
-    let inner = match &outer_member.object {
-        ExpressionNode::Member(inner_box) => inner_box.as_ref(),
-        _ => panic!("Expected inner member expression 'obj.prop1'"),
-    };
-
-    assert_eq!(inner.property.name, "prop1");
-
-    // Finally, verify the base identifier
-    match &inner.object {
-        ExpressionNode::Identifier(ident) => assert_eq!(ident.name, "obj"),
-        _ => panic!("Expected identifier 'obj' at the base of member chain"),
+                    // Finally, verify the base identifier
+                    match &inner.object {
+                        ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
+                            assert_eq!(ident.name, "obj");
+                        }
+                        _ => panic!("Expected identifier 'obj' at the base of member chain"),
+                    }
+                }
+                _ => panic!("Expected inner member expression 'obj.prop1'"),
+            }
+        }
+        _ => panic!("Expected member expression, got {expr:?}"),
     }
 
     // Test with more levels of nesting using a different identifier
@@ -66,40 +68,42 @@ fn test_nested_member_expressions() {
         create_identifier_token("blood_pressure"),
     ];
 
-    println!(
-        "Test tokens for hospital.patient_id.records.blood_pressure: {:?}",
-        tokens
-    );
+    println!("Test tokens for hospital.patient_id.records.blood_pressure: {tokens:?}");
     let result = parse_expression(TokenSlice::new(&tokens));
     let (_, expr) = result.unwrap();
-    println!("Parsed expression: {:#?}", expr);
+    println!("Parsed expression: {expr:#?}");
 
     // Verify the nested structure
-    if let ExpressionNode::Member(outer_box) = &expr {
-        let outer = outer_box.as_ref();
-        assert_eq!(outer.property.name, "blood_pressure");
+    match &expr {
+        ExpressionNode::Member(Spanned { node: outer, .. }) => {
+            assert_eq!(outer.property.name, "blood_pressure");
 
-        if let ExpressionNode::Member(inner_box) = &outer.object {
-            let inner = inner_box.as_ref();
-            assert_eq!(inner.property.name, "records");
+            match &outer.object {
+                ExpressionNode::Member(Spanned { node: inner, .. }) => {
+                    assert_eq!(inner.property.name, "records");
 
-            if let ExpressionNode::Member(innermost_box) = &inner.object {
-                let innermost = innermost_box.as_ref();
-                assert_eq!(innermost.property.name, "patient_id");
+                    match &inner.object {
+                        ExpressionNode::Member(Spanned {
+                            node: innermost, ..
+                        }) => {
+                            assert_eq!(innermost.property.name, "patient_id");
 
-                if let ExpressionNode::Identifier(ident) = &innermost.object {
-                    assert_eq!(ident.name, "hospital");
-                } else {
-                    panic!("Expected identifier 'hospital' at the base of member chain");
+                            match &innermost.object {
+                                ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
+                                    assert_eq!(ident.name, "hospital");
+                                }
+                                _ => panic!(
+                                    "Expected identifier 'hospital' at the base of member chain"
+                                ),
+                            }
+                        }
+                        _ => panic!("Expected inner member expression 'hospital.patient_id'"),
+                    }
                 }
-            } else {
-                panic!("Expected inner member expression 'hospital.patient_id'");
+                _ => panic!("Expected middle member expression 'hospital.patient_id.records'"),
             }
-        } else {
-            panic!("Expected middle member expression 'hospital.patient_id.records'");
         }
-    } else {
-        panic!("Expected member expression, got {:?}", expr);
+        _ => panic!("Expected member expression, got {expr:?}"),
     }
 
     // Test with 'Patient' as a keyword (case-sensitive)
@@ -121,34 +125,40 @@ fn test_nested_member_expressions() {
         create_identifier_token("blood_pressure"),
     ];
 
-    println!(
-        "Test tokens for hospital.Patient.records.blood_pressure: {:?}",
-        tokens
-    );
+    println!("Test tokens for hospital.Patient.records.blood_pressure: {tokens:?}");
     let result = parse_expression(TokenSlice::new(&tokens));
     let (_, expr) = result.unwrap();
-    println!("Parsed expression: {:?}", expr);
+    println!("Parsed expression: {expr:?}");
 
     // The expression should be parsed as (((hospital.Patient).records).blood_pressure)
-    if let ExpressionNode::Member(outer) = &expr {
-        assert_eq!(outer.property.name, "blood_pressure");
-        if let ExpressionNode::Member(mid) = &outer.object {
-            assert_eq!(mid.property.name, "records");
-            if let ExpressionNode::Member(inner) = &mid.object {
-                // Note: 'Patient' keyword becomes 'patient' identifier
-                assert_eq!(inner.property.name, "patient");
-                if let ExpressionNode::Identifier(ident) = &inner.object {
-                    assert_eq!(ident.name, "hospital");
-                } else {
-                    panic!("Expected identifier 'hospital' at the base of member chain");
+    match &expr {
+        ExpressionNode::Member(Spanned { node: outer, .. }) => {
+            assert_eq!(outer.property.name, "blood_pressure");
+
+            match &outer.object {
+                ExpressionNode::Member(Spanned { node: mid, .. }) => {
+                    assert_eq!(mid.property.name, "records");
+
+                    match &mid.object {
+                        ExpressionNode::Member(Spanned { node: inner, .. }) => {
+                            // Note: 'Patient' keyword becomes 'patient' identifier
+                            assert_eq!(inner.property.name, "patient");
+
+                            match &inner.object {
+                                ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
+                                    assert_eq!(ident.name, "hospital");
+                                }
+                                _ => panic!(
+                                    "Expected identifier 'hospital' at the base of member chain"
+                                ),
+                            }
+                        }
+                        _ => panic!("Expected inner member expression 'hospital.Patient'"),
+                    }
                 }
-            } else {
-                panic!("Expected inner member expression 'hospital.Patient'");
+                _ => panic!("Expected middle member expression 'hospital.Patient.records'"),
             }
-        } else {
-            panic!("Expected middle member expression 'hospital.Patient.records'");
         }
-    } else {
-        panic!("Expected member expression, got {:?}", expr);
+        _ => panic!("Expected member expression, got {expr:?}"),
     }
 }

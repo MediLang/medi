@@ -354,7 +354,7 @@ mod tests {
         let _ = env_logger::builder().is_test(true).try_init();
 
         let source = "let x = 42;\nlet y = 'test';";
-        println!("Source: {:?}", source);
+        println!("Source: {source:?}");
 
         // Create a lexer with debug output
         let config = LexerConfig {
@@ -370,7 +370,7 @@ mod tests {
             Some(t) => t,
             None => panic!("Failed to get first token"),
         };
-        println!("Got first token: {:?}", token);
+        println!("Got first token: {token:?}");
         assert!(
             matches!(token.token_type, TokenType::Let),
             "Expected Let, got {:?}",
@@ -386,7 +386,7 @@ mod tests {
             Some(t) => t,
             None => panic!("Failed to get second token"),
         };
-        println!("Got second token: {:?}", token);
+        println!("Got second token: {token:?}");
         assert!(
             matches!(&token.token_type, TokenType::Identifier(_)),
             "Expected Identifier, got {:?}",

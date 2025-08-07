@@ -35,11 +35,11 @@ fn main() -> io::Result<()> {
     let mut token_count = 0;
 
     for token in &mut lexer {
-        println!("Token: {:?}", token);
+        println!("Token: {token:?}");
         token_count += 1;
     }
 
-    println!("\nProcessed {} tokens\n", token_count);
+    println!("\nProcessed {token_count} tokens\n");
 
     // Example 2: Process a large file in chunks
     println!("Example 2: Processing a large file in chunks");
@@ -78,16 +78,16 @@ fn process_large_file(path: &str) -> io::Result<()> {
         for _token in lexer {
             token_count += 1;
             if token_count % 1000 == 0 {
-                println!("Processed {} tokens...", token_count);
+                println!("Processed {token_count} tokens...");
             }
         }
     }
 
     let duration = start_time.elapsed();
     println!("\nFile processing complete!");
-    println!("Lines processed: {}", line_count);
-    println!("Tokens processed: {}", token_count);
-    println!("Processing time: {:.2?}", duration);
+    println!("Lines processed: {line_count}");
+    println!("Tokens processed: {token_count}");
+    println!("Processing time: {duration:.2?}");
     println!(
         "Tokens per second: {:.0}",
         token_count as f64 / duration.as_secs_f64()
@@ -98,7 +98,7 @@ fn process_large_file(path: &str) -> io::Result<()> {
 
 /// Generate a test file with sample medical data
 fn generate_test_file(path: &str, patient_count: usize) -> io::Result<()> {
-    println!("Generating test file with {} patients...", patient_count);
+    println!("Generating test file with {patient_count} patients...");
     let mut file = std::fs::File::create(path)?;
 
     for i in 0..patient_count {
@@ -138,6 +138,6 @@ if bmi_{0} > 30.0 {{
         file.write_all(patient_data.as_bytes())?;
     }
 
-    println!("Test file generated: {}", path);
+    println!("Test file generated: {path}");
     Ok(())
 }

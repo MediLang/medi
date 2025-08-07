@@ -62,31 +62,29 @@ fn test_parse_while_statement() {
 }
 
 fn test_while_parsing(tokens: Vec<Token>, test_name: &str) {
-    log::debug!("Testing while statement parsing: {}", test_name);
-    log::debug!("Tokens: {:?}", tokens);
+    log::debug!("Testing while statement parsing: {test_name}");
+    log::debug!("Tokens: {tokens:?}");
 
     let slice = TokenSlice::new(&tokens);
     let result = parse_while_statement(slice);
 
     match &result {
         Ok((remaining, stmt)) => {
-            log::debug!("Parse successful for {}!", test_name);
+            log::debug!("Parse successful for {test_name}!");
             log::debug!("  Remaining tokens: {}", remaining.0.len());
-            log::debug!("  Statement: {:?}", stmt);
+            log::debug!("  Statement: {stmt:?}");
             assert!(
                 remaining.is_empty(),
-                "Expected no remaining tokens for {}",
-                test_name
+                "Expected no remaining tokens for {test_name}"
             );
             assert!(
                 matches!(stmt, StatementNode::While(_)),
-                "Expected While statement for {}",
-                test_name
+                "Expected While statement for {test_name}"
             );
         }
         Err(e) => {
-            log::error!("Parse failed for {}: {:?}", test_name, e);
-            panic!("Parse failed for {}: {:?}", test_name, e);
+            log::error!("Parse failed for {test_name}: {e:?}");
+            panic!("Parse failed for {test_name}: {e:?}");
         }
     }
 }

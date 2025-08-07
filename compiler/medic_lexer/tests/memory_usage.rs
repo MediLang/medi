@@ -136,7 +136,7 @@ fn test_memory_usage_comparison() {
     // Optional: Log the improvement percentage
     if original_mem > 0 {
         let improvement = ((original_mem - streaming_mem) as f64 / original_mem as f64) * 100.0;
-        println!("Memory improvement: {:.1}%", improvement);
+        println!("Memory improvement: {improvement:.1}%");
     }
 }
 fn generate_medium_medical_script() -> String {
@@ -150,7 +150,7 @@ fn generate_medium_medical_script() -> String {
 
     // Add some basic patient data
     for i in 0..patient_count {
-        source.push_str(&format!("patient{}: Patient = {{\n", i));
+        source.push_str(&format!("patient{i}: Patient = {{\n"));
         source.push_str(&format!("  id: \"P{:06}\",\n", 100000 + i));
         source.push_str(&format!("  age: {},\n", 20 + (i % 60)));
         source.push_str("  gender: \"");
@@ -165,8 +165,8 @@ fn generate_medium_medical_script() -> String {
         source.push_str("  conditions: [\n");
         for j in 0..conditions_per_patient {
             source.push_str("    {\n");
-            source.push_str(&format!("      code: \"ICD-10:E11.6{0}\",\n", j));
-            source.push_str(&format!("      description: \"Condition {0}\"\n", j));
+            source.push_str(&format!("      code: \"ICD-10:E11.6{j}\",\n"));
+            source.push_str(&format!("      description: \"Condition {j}\"\n"));
             source.push_str("    }");
             if j < conditions_per_patient - 1 {
                 source.push(',');
@@ -179,7 +179,7 @@ fn generate_medium_medical_script() -> String {
         source.push_str("  observations: [\n");
         for j in 0..observations_per_patient {
             source.push_str("    {\n");
-            source.push_str(&format!("      code: \"LOINC:1234-{0}\",\n", j));
+            source.push_str(&format!("      code: \"LOINC:1234-{j}\",\n"));
             source.push_str(&format!("      value: {0},\n", 100 + (i * j) % 50));
             source.push_str("      unit: \"mg/dL\"\n");
             source.push_str("    }");

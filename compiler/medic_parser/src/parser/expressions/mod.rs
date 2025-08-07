@@ -43,6 +43,8 @@
 //! pattern        → IDENTIFIER | "_" | literal ;
 //! ```
 
+use crate::parser::Span;
+use medic_ast::Spanned;
 use nom::error::ErrorKind;
 use nom::Err;
 use nom::IResult;
@@ -50,8 +52,9 @@ use nom::IResult;
 use crate::parser::{
     get_binary_operator, get_operator_precedence, is_comparison_operator, parse_block,
     take_token_if, BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, IdentifierNode,
-    LiteralNode, MatchArmNode, MatchNode, PatternNode, StatementNode, TokenSlice, TokenType,
+    LiteralNode, MatchArmNode, MatchNode, PatternNode, StatementNode, Token, TokenSlice, TokenType,
 };
+use medic_lexer::Location;
 
 use super::{identifiers::parse_identifier, literals::parse_literal};
 
@@ -160,7 +163,7 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 
         // Log more tokens for context
         let num_tokens = input.0.len().min(5);
-        log::debug!("Next {} tokens:", num_tokens);
+        log::debug!("Next {num_tokens} tokens:");
         for i in 0..num_tokens {
             log::debug!(
                 "  {}: {:?} at {}:{}",
@@ -173,21 +176,22 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     }
 
     // Check if this is the full match syntax or the concise syntax
-    let (input, expr) = if input
+    let (input, expr, match_keyword) = if input
         .0
-        .get(0)
-        .map_or(false, |t| t.token_type == TokenType::Match)
+        .first()
+        .is_some_and(|t| t.token_type == TokenType::Match)
     {
         // Full match syntax: match <expr> { ... }
         log::debug!("Parsing full match syntax");
-        let (input, _) = take_token_if(|tt| *tt == TokenType::Match, ErrorKind::Tag)(input)?;
+        let (input, match_token) =
+            take_token_if(|tt| *tt == TokenType::Match, ErrorKind::Tag)(input)?;
         let input = input.skip_whitespace();
         let (input, expr) = parse_expression(input)?;
-        (input, expr)
+        (input, expr, match_token)
     } else if input
         .0
         .get(1)
-        .map_or(false, |t| t.token_type == TokenType::LeftBrace)
+        .is_some_and(|t| t.token_type == TokenType::LeftBrace)
     {
         // Concise syntax: <expr> { ... }
         log::debug!("Parsing concise match syntax");
@@ -200,8 +204,19 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
             .unwrap_or(input.0.len());
         let (expr_input, rest) = input.0.split_at(expr_end);
         let (_, expr) = parse_expression(TokenSlice(expr_input))?;
-        // Return the rest of the input (starting with the left brace)
-        (TokenSlice(rest), expr)
+        // For concise syntax, we don't have a match keyword, so we'll use the first token of the expression as a dummy
+        let expr_span = expr.span();
+        let dummy_match_token = Token {
+            token_type: TokenType::Match,
+            lexeme: "match".into(),
+            location: Location {
+                offset: expr_span.start,
+                line: expr_span.line as usize, // Convert u32 to usize
+                column: expr_span.column as usize, // Convert u32 to usize
+            },
+        };
+        // Return the rest of the input (starting with the left brace) and the dummy match token
+        (TokenSlice(rest), expr, dummy_match_token)
     } else {
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
@@ -213,7 +228,7 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     let input = input.skip_whitespace();
 
     // Parse the opening brace
-    let (mut input, _) = take_token_if(|tt| *tt == TokenType::LeftBrace, ErrorKind::Tag)(input)?;
+    let (input, _) = take_token_if(|tt| *tt == TokenType::LeftBrace, ErrorKind::Tag)(input)?;
 
     // Parse match arms
     let mut arms = Vec::new();
@@ -249,9 +264,21 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     }
 
     // Create a match statement node
+    let match_span = Span {
+        start: match_keyword.location.offset,
+        end: if !input.0.is_empty() {
+            input.0[0].location.offset + input.0[0].lexeme.len()
+        } else {
+            match_keyword.location.offset + match_keyword.lexeme.len()
+        },
+        line: match_keyword.location.line as u32, // Convert usize to u32
+        column: match_keyword.location.column as u32, // Convert usize to u32
+    };
+
     let match_stmt = StatementNode::Match(Box::new(MatchNode {
         expr: Box::new(expr),
         arms,
+        span: match_span,
     }));
 
     // Convert the statement to an expression
@@ -291,7 +318,7 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
     // Log the first few tokens for better context
     if !input.0.is_empty() {
         let num_tokens = input.0.len().min(5);
-        log::debug!("Next {} tokens in parse_expression:", num_tokens);
+        log::debug!("Next {num_tokens} tokens in parse_expression:");
         for (i, token) in input.0.iter().take(num_tokens).enumerate() {
             log::debug!(
                 "  {}: {:?} at {}:{}",
@@ -339,14 +366,14 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
 
     let result = parse_nested_binary_expression(input, 0, false);
 
-    log::debug!("parse_nested_binary_expression result: {:?}", result);
+    log::debug!("parse_nested_binary_expression result: {result:?}");
     if let Err(e) = &result {
-        log::error!("Failed to parse binary expression: {:?}", e);
+        log::error!("Failed to parse binary expression: {e:?}");
     }
 
     match &result {
         Ok((remaining, expr)) => {
-            log::debug!("parse_expression success, parsed: {:?}", expr);
+            log::debug!("parse_expression success, parsed: {expr:?}");
             log::debug!("Remaining tokens: {}", remaining.0.len());
 
             if !remaining.0.is_empty() {
@@ -364,13 +391,23 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                     let (remaining, match_expr) = parse_match_expression(*remaining)?;
                     // Convert the previous result to a binary expression with the match expression as the right operand
                     if let Ok((_, left_expr)) = &result {
+                        let span = Span {
+                            start: left_expr.span().start,
+                            end: match_expr.span().end,
+                            line: left_expr.span().line,
+                            column: left_expr.span().column,
+                        };
+
                         return Ok((
                             remaining,
-                            ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                                left: left_expr.clone(),
-                                operator: BinaryOperator::Mul, // Default to multiplication for now
-                                right: match_expr,
-                            })),
+                            ExpressionNode::Binary(Spanned::new(
+                                Box::new(BinaryExpressionNode {
+                                    left: left_expr.clone(),
+                                    operator: BinaryOperator::Mul, // Default to multiplication for now
+                                    right: match_expr,
+                                }),
+                                span,
+                            )),
                         ));
                     }
                 }
@@ -380,13 +417,13 @@ pub fn parse_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
             result
         }
         Err(e) => {
-            log::error!("parse_expression failed: {:?}", e);
+            log::error!("parse_expression failed: {e:?}");
 
             // If binary expression parsing failed, try parsing as a match expression
             if input
                 .0
                 .first()
-                .map_or(false, |t| t.token_type == TokenType::Match)
+                .is_some_and(|t| t.token_type == TokenType::Match)
             {
                 log::debug!("Trying to parse as match expression after binary expression failed");
                 return parse_match_expression(input);
@@ -410,34 +447,50 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
     if !input.0.is_empty() {
         match input.0[0].token_type {
             TokenType::Of => {
+                log::debug!("=== START OF 'OF' OPERATOR PARSING ===");
+                log::debug!(
+                    "Current tokens: {:?}",
+                    input
+                        .0
+                        .iter()
+                        .map(|t| format!("{}:{}:{}", t.lexeme, t.location.line, t.location.column))
+                        .collect::<Vec<_>>()
+                );
+
                 // Consume the 'of' token
                 input = input.advance();
+                log::debug!(
+                    "After consuming 'of', remaining tokens: {:?}",
+                    input
+                        .0
+                        .iter()
+                        .map(|t| format!("{}:{}:{}", t.lexeme, t.location.line, t.location.column))
+                        .collect::<Vec<_>>()
+                );
 
-                // Parse the right-hand side with higher precedence for 'of'
-                // This ensures '2 of 3 * doses' is parsed as '2 of (3 * doses)'
-                let (new_input, right) = parse_nested_binary_expression(input, 1, false)?;
+                // For 'of' operator, parse the right-hand side as a primary expression
+                // and disable implicit multiplication
+                let (new_input, right) = parse_primary(input)?;
+                log::debug!(
+                    "After parse_primary, remaining tokens: {:?}",
+                    new_input
+                        .0
+                        .iter()
+                        .map(|t| format!("{}:{}:{}", t.lexeme, t.location.line, t.location.column))
+                        .collect::<Vec<_>>()
+                );
+
                 input = new_input;
+                log::debug!("=== END OF 'OF' OPERATOR PARSING ===");
 
-                // Create the 'of' expression with proper span
-                let start_span = match &left {
-                    ExpressionNode::Identifier(i) => i.span,
-                    ExpressionNode::Literal(l) => l.span,
-                    ExpressionNode::Binary(b) => b.span,
-                    _ => Span::default(),
-                };
-
-                let end_span = match &right {
-                    ExpressionNode::Identifier(i) => i.span,
-                    ExpressionNode::Literal(l) => l.span,
-                    ExpressionNode::Binary(b) => b.span,
-                    _ => Span::default(),
-                };
-
+                // Create and return the binary expression immediately without further parsing
+                let left_span = left.span();
+                let right_span = right.span();
                 let span = Span {
-                    start: start_span.start,
-                    end: end_span.end,
-                    line: start_span.line,
-                    column: start_span.column,
+                    start: left_span.start,
+                    end: right_span.end,
+                    line: left_span.line,
+                    column: left_span.column,
                 };
 
                 let bin_expr = BinaryExpressionNode {
@@ -446,42 +499,10 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                     right,
                 };
 
-                left = ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span));
-
-                // Continue parsing any remaining binary expressions
-                let (new_input, expr) = parse_nested_binary_expression(input, 0, false)?;
-                input = new_input;
-
-                // If we parsed more operators, combine with the 'of' expression
-                if let ExpressionNode::Binary(bin) = expr {
-                    let start_span = match &left {
-                        ExpressionNode::Binary(b) => b.span,
-                        _ => span,
-                    };
-
-                    let end_span = match &bin.right {
-                        ExpressionNode::Identifier(i) => i.span,
-                        ExpressionNode::Literal(l) => l.span,
-                        ExpressionNode::Binary(b) => b.span,
-                        _ => span,
-                    };
-
-                    let combined_span = Span {
-                        start: start_span.start,
-                        end: end_span.end,
-                        line: start_span.line,
-                        column: start_span.column,
-                    };
-
-                    let combined_bin = BinaryExpressionNode {
-                        left,
-                        operator: bin.operator,
-                        right: bin.right,
-                    };
-
-                    left =
-                        ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
-                }
+                return Ok((
+                    input,
+                    ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span)),
+                ));
             }
             TokenType::Per => {
                 // Consume the 'per' token
@@ -493,25 +514,13 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                 input = new_input;
 
                 // Create the 'per' expression with proper span
-                let start_span = match &left {
-                    ExpressionNode::Identifier(i) => i.span,
-                    ExpressionNode::Literal(l) => l.span,
-                    ExpressionNode::Binary(b) => b.span,
-                    _ => Span::default(),
-                };
-
-                let end_span = match &right {
-                    ExpressionNode::Identifier(i) => i.span,
-                    ExpressionNode::Literal(l) => l.span,
-                    ExpressionNode::Binary(b) => b.span,
-                    _ => Span::default(),
-                };
-
+                let left_span = left.span();
+                let right_span = right.span();
                 let span = Span {
-                    start: start_span.start,
-                    end: end_span.end,
-                    line: start_span.line,
-                    column: start_span.column,
+                    start: left_span.start,
+                    end: right_span.end,
+                    line: left_span.line,
+                    column: left_span.column,
                 };
 
                 let bin_expr = BinaryExpressionNode {
@@ -533,7 +542,7 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
                         _ => span,
                     };
 
-                    let end_span = match &bin.right {
+                    let end_span = match &bin.node.right {
                         ExpressionNode::Identifier(i) => i.span,
                         ExpressionNode::Literal(l) => l.span,
                         ExpressionNode::Binary(b) => b.span,
@@ -549,8 +558,8 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
 
                     let combined_bin = BinaryExpressionNode {
                         left,
-                        operator: bin.operator,
-                        right: bin.right,
+                        operator: bin.node.operator,
+                        right: bin.node.right.clone(),
                     };
 
                     left =
@@ -564,33 +573,26 @@ pub fn parse_binary_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>,
 
                 // If we parsed a binary expression, combine it with the left-hand side
                 if let ExpressionNode::Binary(bin) = expr {
-                    let start_span = match &left {
-                        ExpressionNode::Identifier(i) => i.span,
-                        ExpressionNode::Literal(l) => l.span,
-                        ExpressionNode::Binary(b) => b.span,
-                        _ => Span::default(),
-                    };
+                    // Get spans for the left and right sides
+                    let left_span = left.span();
+                    let right_span = bin.node.right.span();
 
-                    let end_span = match &bin.right {
-                        ExpressionNode::Identifier(i) => i.span,
-                        ExpressionNode::Literal(l) => l.span,
-                        ExpressionNode::Binary(b) => b.span,
-                        _ => start_span,
-                    };
-
+                    // Create a combined span for the entire expression
                     let combined_span = Span {
-                        start: start_span.start,
-                        end: end_span.end,
-                        line: start_span.line,
-                        column: start_span.column,
+                        start: left_span.start,
+                        end: right_span.end,
+                        line: left_span.line,
+                        column: left_span.column,
                     };
 
+                    // Create the combined binary expression
                     let combined_bin = BinaryExpressionNode {
                         left,
-                        operator: bin.operator,
-                        right: bin.right,
+                        operator: bin.node.operator,
+                        right: bin.node.right,
                     };
 
+                    // Wrap in Spanned and ExpressionNode
                     left =
                         ExpressionNode::Binary(Spanned::new(Box::new(combined_bin), combined_span));
                 } else {
@@ -626,21 +628,44 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
     }
 
     let token_type = &input.0[0].token_type;
-    log::debug!("parse_primary: Processing token type: {:?}", token_type);
+    log::debug!("parse_primary: Processing token type: {token_type:?}");
 
     match token_type {
         // Handle match expressions first - check for 'match' keyword
         TokenType::Match => {
             log::debug!("Found 'match' keyword, parsing match expression");
-            return parse_match_expression(input);
+            parse_match_expression(input)
         }
-        // Handle identifiers that might be part of a match expression or a regular identifier
+        // Handle identifiers that might be part of a match expression, struct literal, or regular identifier
         TokenType::Identifier(_) => {
-            // First, check if this is followed by a left brace, indicating a match expression
+            log::debug!(
+                "Found identifier '{}' at {}:{}",
+                match &input.0[0].token_type {
+                    TokenType::Identifier(s) => s.to_string(),
+                    _ => "".to_string(),
+                },
+                input.0[0].location.line,
+                input.0[0].location.column
+            );
+            log::debug!("Remaining tokens: {}", input.0.len());
+
+            // Check if this is followed by a left brace, indicating a match expression or struct literal
             if input.0.len() > 1 && input.0[1].token_type == TokenType::LeftBrace {
-                log::debug!("Found identifier followed by '{{', treating as match expression");
-                // This is a match expression, so we need to handle it as a statement
-                return parse_match_expression(input);
+                // Check if this is in a special context where we shouldn't treat it as a struct literal
+                let is_special_context = input
+                    .0
+                    .iter()
+                    .skip(1)
+                    .take_while(|t| t.token_type != TokenType::RightBrace)
+                    .any(|t| matches!(t.token_type, TokenType::Colon | TokenType::Comma));
+
+                if is_special_context {
+                    log::debug!("Found struct literal pattern");
+                    return parse_struct_literal(input);
+                } else {
+                    log::debug!("Found match expression pattern");
+                    return parse_match_expression(input);
+                }
             }
 
             // Otherwise, parse as a regular identifier
@@ -649,14 +674,12 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             // Return the parsed identifier
             match expr {
                 ExpressionNode::Identifier(ident) => {
-                    return Ok((new_input, ExpressionNode::Identifier(ident)));
+                    Ok((new_input, ExpressionNode::Identifier(ident)))
                 }
-                _ => {
-                    return Err(nom::Err::Error(nom::error::Error::new(
-                        input,
-                        ErrorKind::Tag,
-                    )));
-                }
+                _ => Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                ))),
             }
         }
         // Handle literals
@@ -673,15 +696,29 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             let (mut input, lit) = parse_literal(input)?;
 
             // Check for implicit multiplication with an identifier (e.g., "5 mg")
-            if !input.0.is_empty() {
+            // But only if we're not in an 'of' expression context and the next token is not 'doses'
+            let is_doses = if !input.0.is_empty() {
+                match &input.0[0].token_type {
+                    TokenType::Identifier(s) => s.as_str() == "doses",
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
+            if !input.0.is_empty() && !matches!(input.0[0].token_type, TokenType::Of) && !is_doses {
                 if let TokenType::Identifier(_) = input.0[0].token_type {
                     let (new_input, right) = parse_identifier(input)?;
                     input = new_input;
+
+                    // Clone right before moving it into the BinaryExpressionNode
+                    let right_clone = right.clone();
+
                     // Create a Spanned BinaryExpressionNode
                     let bin_expr = BinaryExpressionNode {
-                        left: ExpressionNode::Literal(Spanned::new(lit, lit.span)),
+                        left: ExpressionNode::Literal(Spanned::new(lit.node, lit.span)),
                         operator: BinaryOperator::Mul,
-                        right,
+                        right: right_clone,
                     };
 
                     // Create a span that covers the entire binary expression
@@ -704,11 +741,12 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             }
 
             if log::log_enabled!(log::Level::Debug) {
-                log::debug!("Successfully parsed number literal: {:?}", lit);
+                log::debug!("Successfully parsed number literal: {lit:?}");
             }
-            // Wrap the literal in a Spanned
+            // Extract the inner LiteralNode and its span
+            let lit_node = lit.node;
             let span = lit.span;
-            Ok((input, ExpressionNode::Literal(Spanned::new(lit, span))))
+            Ok((input, ExpressionNode::Literal(Spanned::new(lit_node, span))))
         }
         TokenType::String(_) | TokenType::Boolean(_) => {
             if log::log_enabled!(log::Level::Debug) {
@@ -722,26 +760,8 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             }
             let (input, lit) = parse_literal(input)?;
             if log::log_enabled!(log::Level::Debug) {
-                log::debug!("Successfully parsed literal: {:?}", lit);
+                log::debug!("Successfully parsed literal: {lit:?}");
             }
-            // Wrap the literal in a Spanned
-            let span = lit.span;
-            Ok((input, ExpressionNode::Literal(Spanned::new(lit, span))))
-        }
-        // Match expressions are handled in the first pattern match above
-        // Handle identifiers, member expressions, and implicit multiplication
-        TokenType::Identifier(_) => {
-            log::debug!(
-                "Found identifier '{}' at {}:{}, checking for struct literal",
-                match &input.0[0].token_type {
-                    TokenType::Identifier(s) => s.to_string(),
-                    _ => "".to_string(),
-                },
-                input.0[0].location.line,
-                input.0[0].location.column
-            );
-            log::debug!("Remaining tokens: {}", input.0.len());
-
             // Don't treat `x {}` as a struct literal in certain contexts
             let is_special_context = input
                 .0
@@ -786,35 +806,28 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                 if let TokenType::Integer(_) | TokenType::Float(_) = input.0[0].token_type {
                     let (new_input, right) = parse_primary(input)?;
                     input = new_input;
+
+                    // Create a span that covers the entire binary expression
+                    let left_span = left.span();
+                    let right_span = right.span();
+                    let span = Span {
+                        start: left_span.start,
+                        end: right_span.end,
+                        line: left_span.line,
+                        column: left_span.column,
+                    };
+
+                    // Create the binary expression node
+                    let bin_expr = BinaryExpressionNode {
+                        left,
+                        operator: BinaryOperator::Mul,
+                        right,
+                    };
+
+                    // Wrap in Spanned and Box, then in ExpressionNode::Binary
                     return Ok((
                         input,
-                        ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                            left,
-                            operator: BinaryOperator::Mul,
-                            right,
-                        })),
-                    ));
-                }
-            }
-
-            Ok((input, left))
-        }
-        TokenType::Dot => {
-            // First parse the identifier or member expression
-            let (mut input, left) = parse_identifier(input)?;
-
-            // Check for implicit multiplication with a following number (e.g., "doses 3")
-            if !input.0.is_empty() {
-                if let TokenType::Integer(_) | TokenType::Float(_) = input.0[0].token_type {
-                    let (new_input, right) = parse_primary(input)?;
-                    input = new_input;
-                    return Ok((
-                        input,
-                        ExpressionNode::Binary(Box::new(BinaryExpressionNode {
-                            left,
-                            operator: BinaryOperator::Mul,
-                            right,
-                        })),
+                        ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span)),
                     ));
                 }
             }
@@ -831,14 +844,14 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                 take_token_if(|t| matches!(t, TokenType::LeftParen), ErrorKind::Tag)(input)
                     .map_err(|e| {
                         if log::log_enabled!(log::Level::Error) {
-                            log::error!("Failed to parse left parenthesis: {:?}", e);
+                            log::error!("Failed to parse left parenthesis: {e:?}");
                         }
                         e
                     })?;
 
             let (input, expr) = parse_expression(input).map_err(|e| {
                 if log::log_enabled!(log::Level::Error) {
-                    log::error!("Failed to parse expression inside parentheses: {:?}", e);
+                    log::error!("Failed to parse expression inside parentheses: {e:?}");
                 }
                 e
             })?;
@@ -846,7 +859,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             let (input, _) =
                 take_token_if(|t| matches!(t, TokenType::RightParen), ErrorKind::Tag)(input)
                     .map_err(|e| {
-                        log::error!("Failed to parse right parenthesis: {:?}", e);
+                        log::error!("Failed to parse right parenthesis: {e:?}");
                         e
                     })?;
 
@@ -862,7 +875,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             // Parse the block as a statement first
             let (input, block) = parse_block(input).map_err(|e| {
                 if log::log_enabled!(log::Level::Error) {
-                    log::error!("Failed to parse block: {:?}", e);
+                    log::error!("Failed to parse block: {e:?}");
                 }
                 e
             })?;
@@ -881,7 +894,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             // This will create an expression containing the statement
             let expr = ExpressionNode::from_statement(stmt);
             if log::log_enabled!(log::Level::Debug) {
-                log::debug!("Converted block to expression: {:?}", expr);
+                log::debug!("Converted block to expression: {expr:?}");
             }
 
             Ok((input, expr))
@@ -922,7 +935,10 @@ mod tests {
         let tokens = tokenize("42");
         let (_, expr) = parse_primary(TokenSlice::new(&tokens)).unwrap();
         match expr {
-            ExpressionNode::Literal(LiteralNode::Int(42)) => {}
+            ExpressionNode::Literal(Spanned {
+                node: LiteralNode::Int(42),
+                ..
+            }) => {}
             _ => panic!("Expected integer literal 42"),
         }
     }
@@ -932,7 +948,7 @@ mod tests {
         let tokens = tokenize("x");
         let (_, expr) = parse_primary(TokenSlice::new(&tokens)).unwrap();
         match expr {
-            ExpressionNode::Identifier(ident) => assert_eq!(ident.name, "x"),
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => assert_eq!(ident.name, "x"),
             _ => panic!("Expected identifier"),
         }
     }
@@ -966,13 +982,13 @@ mod tests {
 
         // Verify the parsed block has one statement
         if let Ok((_, ExpressionNode::Statement(stmt))) = result {
-            if let StatementNode::Block(block) = *stmt {
+            if let StatementNode::Block(block) = *stmt.node {
                 assert_eq!(block.statements.len(), 1, "Block should have one statement");
             } else {
-                panic!("Expected block statement, got {:?}", stmt);
+                panic!("Expected block statement, got {stmt:?}");
             }
         } else {
-            panic!("Expected Statement variant, got {:?}", result);
+            panic!("Expected Statement variant, got {result:?}");
         }
     }
 
@@ -1003,14 +1019,13 @@ mod tests {
         for (input, expected_count) in test_cases {
             let tokens = tokenize(input);
             let result = parse_block(TokenSlice::new(&tokens));
-            assert!(result.is_ok(), "Failed to parse: {}", input);
+            assert!(result.is_ok(), "Failed to parse: {input}");
 
             let (_, block) = result.unwrap();
             assert_eq!(
                 block.statements.len(),
                 expected_count,
-                "Incorrect number of statements in: {}",
-                input
+                "Incorrect number of statements in: {input}"
             );
         }
     }

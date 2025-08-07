@@ -285,6 +285,7 @@ fn create_sample_ast() -> ProgramNode {
             name: "x".to_string(),
         },
         value: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span)),
+        span,
     }));
 
     let stmt2 = StatementNode::Let(Box::new(LetStatementNode {
@@ -304,6 +305,7 @@ fn create_sample_ast() -> ProgramNode {
             }),
             span,
         )),
+        span,
     }));
 
     let stmt3 = StatementNode::Expr(ExpressionNode::Identifier(Spanned::new(

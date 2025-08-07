@@ -27,9 +27,9 @@ use nom::IResult;
 use crate::parser::expressions::nested::error_handling::ExpressionError;
 use crate::parser::{
     get_binary_operator, get_operator_precedence, is_comparison_operator, BinaryExpressionNode,
-    BinaryOperator, ExpressionNode, TokenSlice, TokenType,
+    BinaryOperator, ExpressionNode, Span, TokenSlice, TokenType,
 };
-use medic_ast::ast::Spanned;
+use medic_ast::ast::{self, Spanned};
 
 /// Parses a binary expression with proper precedence and associativity handling.
 ///
@@ -62,16 +62,33 @@ pub fn parse_nested_binary_expression(
     use BinaryOperator::*;
     use ExpressionNode::*;
 
+    log::debug!("parse_nested_binary_expression: Starting with min_precedence: {min_precedence}");
+    log::debug!(
+        "  Initial tokens: {:?}",
+        input.0.iter().map(|t| &t.lexeme).collect::<Vec<_>>()
+    );
+
     // Parse the left-hand side (primary expression)
     let (mut input, mut left) = super::super::parse_primary(input)?;
-    let mut left_span = left.span().clone();
+    log::debug!(
+        "  After parsing primary, remaining tokens: {:?}",
+        input.0.iter().map(|t| &t.lexeme).collect::<Vec<_>>()
+    );
 
     // Keep parsing binary operators as long as they have sufficient precedence
     while let Some(token) = input.peek() {
+        log::debug!("  Next token: {:?}", token.token_type);
+
         // Check if the next token is a binary operator
         let (op, is_right_assoc) = match get_binary_operator(&token.token_type) {
-            Some((op, is_right)) => (op, is_right),
-            None => break, // Not a binary operator, we're done
+            Some((op, is_right)) => {
+                log::debug!("  Found operator: {op:?} (right_assoc: {is_right})");
+                (op, is_right)
+            }
+            None => {
+                log::debug!("  Not a binary operator, stopping");
+                break; // Not a binary operator, we're done
+            }
         };
 
         // Check for invalid comparison chaining (e.g., a < b < c)
@@ -99,30 +116,45 @@ pub fn parse_nested_binary_expression(
         };
 
         // Consume the operator token
-        let operator_span = token.location.into();
+        let _operator_span: Span = Span {
+            start: token.location.offset,
+            end: token.location.offset + token.lexeme.len(),
+            line: token.location.line as u32, // Convert usize to u32
+            column: token.location.column as u32, // Convert usize to u32
+        };
         input = input.advance();
 
         // Parse the right-hand side with the appropriate precedence
+        log::debug!("  Parsing RHS with precedence: {next_min_precedence}");
         let (new_input, right) = parse_nested_binary_expression(
             input,
             next_min_precedence,
             in_comparison || is_comparison_operator(&op),
         )?;
+        log::debug!(
+            "  After parsing RHS, remaining tokens: {:?}",
+            new_input.0.iter().map(|t| &t.lexeme).collect::<Vec<_>>()
+        );
 
-        // Update the span to cover the entire binary expression
-        let right_span = right.span();
-        let span = Spanned::combine(&left_span, &right_span);
-
-        // Create the binary expression node
+        // Create the binary expression node with proper Spanned wrappers
         let bin_expr = BinaryExpressionNode {
-            left: Box::new(left),
+            left: left.clone(),
             operator: op,
-            right: Box::new(right),
+            right: right.clone(),
         };
 
-        // Wrap in Spanned and update left for the next iteration
-        left = Binary(Spanned::new(Box::new(bin_expr), span));
-        left_span = span;
+        // Create a new span that covers the entire binary expression
+        let left_span = left.span();
+        let right_span = right.span();
+        let span = Span {
+            start: left_span.start,
+            end: right_span.end,
+            line: left_span.line,
+            column: left_span.column,
+        };
+
+        // Wrap the binary expression in a Spanned and update left for the next iteration
+        left = ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span));
         input = new_input;
     }
 
@@ -156,7 +188,7 @@ mod tests {
                 "Expected Tag error for chained comparison"
             );
         } else {
-            panic!("Expected nom::Err::Error, got {:?}", result);
+            panic!("Expected nom::Err::Error, got {result:?}");
         }
     }
 
@@ -182,7 +214,7 @@ mod tests {
                 "Expected Tag error for chained comparison with expression"
             );
         } else {
-            panic!("Expected nom::Err::Error, got {:?}", result);
+            panic!("Expected nom::Err::Error, got {result:?}");
         }
     }
 }
