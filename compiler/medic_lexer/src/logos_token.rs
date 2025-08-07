@@ -1,11 +1,14 @@
 use logos::Logos;
 
+use crate::chunked_lexer::Position;
+
 /// Token types used by the Logos lexer.
 ///
 /// This enum defines all the possible tokens that can be produced by the lexer,
 /// including keywords, literals, operators, and punctuation. Each variant corresponds
 /// to a specific token type with an associated regex pattern or exact string match.
 #[derive(Logos, Debug, PartialEq, Clone)]
+#[logos(extras = Position)]
 pub enum LogosToken {
     // Range operators (higher priority to match before float literals)
     /// Inclusive range operator (`..=`)
