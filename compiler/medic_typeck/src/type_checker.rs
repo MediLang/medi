@@ -211,6 +211,29 @@ impl<'a> TypeChecker<'a> {
                     _ => MediType::Unknown, // Fallback for unsupported query types
                 }
             }
+            ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                if arr.elements.is_empty() {
+                    MediType::List(Box::new(MediType::Unknown))
+                } else {
+                    // Infer a unified element type
+                    let mut iter = arr.elements.iter().map(|e| self.check_expr(e));
+                    let mut elem_ty = iter.next().unwrap_or(MediType::Unknown);
+                    for t in iter {
+                        if t == elem_ty {
+                            continue;
+                        }
+                        // If numeric mix, promote to Float
+                        if t.is_numeric() && elem_ty.is_numeric() {
+                            elem_ty = MediType::Float;
+                        } else {
+                            // Heterogeneous types: fall back to Unknown
+                            elem_ty = MediType::Unknown;
+                            break;
+                        }
+                    }
+                    MediType::List(Box::new(elem_ty))
+                }
+            }
             ExpressionNode::Statement(Spanned { node: stmt, .. }) => {
                 // For statement expressions, check the inner statement
                 match &**stmt {

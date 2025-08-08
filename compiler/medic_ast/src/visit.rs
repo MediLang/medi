@@ -91,6 +91,10 @@ pub trait Visitor {
         self.visit_children(node)
     }
 
+    fn visit_array_literal(&mut self, node: &ArrayLiteralNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
     // Statement nodes
     fn visit_let_stmt(&mut self, node: &LetStatementNode) -> VisitResult<Self::Output> {
         self.visit_children(node)

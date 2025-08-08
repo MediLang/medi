@@ -236,7 +236,7 @@ pub fn parse_member_expression(
         let (new_input, _) = take_token_if(|t| matches!(t, TokenType::Dot), ErrorKind::Tag)(input)?;
         input = new_input;
 
-        // Parse the property name (must be an identifier)
+        // Parse the property name (identifier or supported keyword)
         let (new_input, property) = match input.peek() {
             Some(t) if matches!(t.token_type, TokenType::Identifier(_)) => {
                 // Consume the identifier token
@@ -245,16 +245,58 @@ pub fn parse_member_expression(
                     ErrorKind::Tag,
                 )(input)?;
 
-                // Extract the identifier name
                 let name = match &token.token_type {
                     TokenType::Identifier(name) => name.to_string(),
                     _ => unreachable!("Expected identifier token"),
                 };
 
-                // Create a Spanned identifier node for the property
                 let ident_node = IdentifierNode::new(name);
                 let spanned_ident = Spanned::new(ident_node, token.location.into());
+                (input, spanned_ident)
+            }
+            Some(t)
+                if matches!(
+                    t.token_type,
+                    TokenType::Patient
+                        | TokenType::Observation
+                        | TokenType::Medication
+                        | TokenType::If
+                        | TokenType::Else
+                ) =>
+            {
+                // Consume the keyword token and map to identifier name
+                let (input, token) = match t.token_type {
+                    TokenType::Patient => {
+                        take_token_if(|tt| matches!(tt, TokenType::Patient), ErrorKind::Tag)(input)?
+                    }
+                    TokenType::Observation => take_token_if(
+                        |tt| matches!(tt, TokenType::Observation),
+                        ErrorKind::Tag,
+                    )(input)?,
+                    TokenType::Medication => take_token_if(
+                        |tt| matches!(tt, TokenType::Medication),
+                        ErrorKind::Tag,
+                    )(input)?,
+                    TokenType::If => {
+                        take_token_if(|tt| matches!(tt, TokenType::If), ErrorKind::Tag)(input)?
+                    }
+                    TokenType::Else => {
+                        take_token_if(|tt| matches!(tt, TokenType::Else), ErrorKind::Tag)(input)?
+                    }
+                    _ => unreachable!("Keyword case should be matched above"),
+                };
 
+                let name = match token.token_type {
+                    TokenType::Patient => "patient",
+                    TokenType::Observation => "observation",
+                    TokenType::Medication => "medication",
+                    TokenType::If => "if",
+                    TokenType::Else => "else",
+                    _ => unreachable!(),
+                };
+
+                let ident_node = IdentifierNode::new(name.to_string());
+                let spanned_ident = Spanned::new(ident_node, token.location.into());
                 (input, spanned_ident)
             }
             _ => {

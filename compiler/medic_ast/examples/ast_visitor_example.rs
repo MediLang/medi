@@ -3,7 +3,6 @@
 use medic_ast::ast::*;
 use medic_ast::visit::*;
 use medic_ast::Spanned;
-use std::collections::HashSet;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a sample AST

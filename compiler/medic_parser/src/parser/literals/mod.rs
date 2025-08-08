@@ -23,7 +23,8 @@ use medic_lexer::token::Location;
 /// ];
 /// let input = TokenSlice::new(&tokens);
 /// let result = parse_literal(input);
-/// assert!(matches!(result, Ok((_, LiteralNode::Int(42)))));
+/// let (_, spanned) = result.unwrap();
+/// assert!(matches!(spanned.node, LiteralNode::Int(42)));
 /// ```
 pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Spanned<LiteralNode>> {
     if let Some(token) = input.peek() {

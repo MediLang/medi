@@ -214,7 +214,7 @@ pub enum TokenType {
     Scope,
     /// `federated` - federated query
     Federated,
-    
+
     /// Partial token that spans multiple chunks
     PartialToken,
     /// `safe` - safe call operator

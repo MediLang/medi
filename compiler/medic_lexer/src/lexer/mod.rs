@@ -148,7 +148,6 @@ impl<'a> Lexer<'a> {
             LogosToken::ICD10(code) => TokenType::ICD10(InternedString::from(&code[..])),
             LogosToken::LOINC(code) => TokenType::LOINC(InternedString::from(&code[..])),
             LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::from(&code[..])),
-            
 
             LogosToken::CPT(code) => TokenType::CPT(InternedString::from(&code[..])),
 

@@ -20,7 +20,7 @@ fn test_numeric_literals() {
     // Test valid numeric literals
     let valid_cases = [
         ("42", TokenType::Integer(42)),
-        ("-123", TokenType::Integer(-123)),
+        ("-123", TokenType::NegativeInteger(-123)),
         ("3.141592653589793", TokenType::Float(std::f64::consts::PI)),
         ("1.0e10", TokenType::Float(1.0e10)),
         ("1.0e-10", TokenType::Float(1.0e-10)),
@@ -154,9 +154,7 @@ fn test_numeric_literals_in_expressions() {
     println!("=== Starting test_numeric_literals_in_expressions ===");
     println!("Source code: {:?}", source);
 
-    let config = ChunkedLexerConfig {
-        chunk_size: 1024,
-    };
+    let config = ChunkedLexerConfig { chunk_size: 1024 };
 
     let lexer = ChunkedLexer::from_reader(source.as_bytes(), config);
 
@@ -294,12 +292,21 @@ mod basic_tests {
                 "Expected exactly one token for input: {}",
                 input
             );
-            pretty_assert_eq!(
-                tokens[0].token_type,
-                TokenType::Integer(*expected),
-                "Mismatch for input: {}",
-                input
-            );
+            if *expected < 0 {
+                pretty_assert_eq!(
+                    tokens[0].token_type,
+                    TokenType::NegativeInteger(*expected),
+                    "Mismatch for input: {}",
+                    input
+                );
+            } else {
+                pretty_assert_eq!(
+                    tokens[0].token_type,
+                    TokenType::Integer(*expected),
+                    "Mismatch for input: {}",
+                    input
+                );
+            }
         }
     }
 

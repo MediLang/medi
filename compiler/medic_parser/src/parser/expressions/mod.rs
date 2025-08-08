@@ -183,10 +183,26 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     {
         // Full match syntax: match <expr> { ... }
         log::debug!("Parsing full match syntax");
-        let (input, match_token) =
+        let (input_after_match, match_token) =
             take_token_if(|tt| *tt == TokenType::Match, ErrorKind::Tag)(input)?;
-        let input = input.skip_whitespace();
-        let (input, expr) = parse_expression(input)?;
+        let lookahead = input_after_match.skip_whitespace();
+        // Parse the expression up to but not including the opening brace
+        let expr_end = lookahead
+            .0
+            .iter()
+            .position(|t| t.token_type == TokenType::LeftBrace)
+            .ok_or_else(|| nom::Err::Error(nom::error::Error::new(lookahead, ErrorKind::Tag)))?;
+
+        if expr_end == 0 {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                lookahead,
+                ErrorKind::Tag,
+            )));
+        }
+
+        let (.., expr) = parse_expression(TokenSlice(&lookahead.0[..expr_end]))?;
+        // Set input to start at the '{' for parsing arms
+        let input = TokenSlice(&lookahead.0[expr_end..]);
         (input, expr, match_token)
     } else if input
         .0
@@ -288,9 +304,11 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
 }
 
 // Re-export nested expressions API
+pub mod array_literal;
 pub mod nested;
 pub mod struct_literal;
 
+pub use array_literal::parse_array_literal;
 pub use nested::parse_nested_binary_expression;
 pub use struct_literal::parse_struct_literal;
 
@@ -668,19 +686,10 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                 }
             }
 
-            // Otherwise, parse as a regular identifier
+            // Otherwise, parse as an identifier or member expression.
+            // parse_identifier already handles chained member access (e.g., obj.prop1.prop2).
             let (new_input, expr) = parse_identifier(input)?;
-
-            // Return the parsed identifier
-            match expr {
-                ExpressionNode::Identifier(ident) => {
-                    Ok((new_input, ExpressionNode::Identifier(ident)))
-                }
-                _ => Err(nom::Err::Error(nom::error::Error::new(
-                    input,
-                    ErrorKind::Tag,
-                ))),
-            }
+            Ok((new_input, expr))
         }
         // Handle literals
         TokenType::Integer(_) | TokenType::Float(_) => {
@@ -762,77 +771,9 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             if log::log_enabled!(log::Level::Debug) {
                 log::debug!("Successfully parsed literal: {lit:?}");
             }
-            // Don't treat `x {}` as a struct literal in certain contexts
-            let is_special_context = input
-                .0
-                .iter()
-                .any(|t| matches!(t.token_type, TokenType::If | TokenType::Match));
-
-            if !is_special_context {
-                // Only check for struct literals if we're not in a special context
-                if input.0.len() > 1 {
-                    match &input.0[1].token_type {
-                        TokenType::LeftBrace => {
-                            log::debug!(
-                                "Found LeftBrace at {}:{}, parsing as struct literal",
-                                input.0[1].location.line,
-                                input.0[1].location.column
-                            );
-                            return parse_struct_literal(input);
-                        }
-                        _ => log::debug!(
-                            "Next token is {:?}, not a struct literal",
-                            input.0[1].token_type
-                        ),
-                    }
-                } else {
-                    log::debug!("No more tokens after identifier");
-                }
-
-                log::debug!("Not a struct literal, parsing as regular identifier");
-                // Look ahead to see if this is a struct literal
-                if input.0.len() > 1 && matches!(input.0[1].token_type, TokenType::LeftBrace) {
-                    return parse_struct_literal(input);
-                }
-            } else {
-                log::debug!("In if statement context, not treating as struct literal");
-            }
-
-            // Otherwise parse as identifier or member expression
-            let (mut input, left) = parse_identifier(input)?;
-
-            // Check for implicit multiplication with a following number (e.g., "doses 3")
-            if !input.0.is_empty() {
-                if let TokenType::Integer(_) | TokenType::Float(_) = input.0[0].token_type {
-                    let (new_input, right) = parse_primary(input)?;
-                    input = new_input;
-
-                    // Create a span that covers the entire binary expression
-                    let left_span = left.span();
-                    let right_span = right.span();
-                    let span = Span {
-                        start: left_span.start,
-                        end: right_span.end,
-                        line: left_span.line,
-                        column: left_span.column,
-                    };
-
-                    // Create the binary expression node
-                    let bin_expr = BinaryExpressionNode {
-                        left,
-                        operator: BinaryOperator::Mul,
-                        right,
-                    };
-
-                    // Wrap in Spanned and Box, then in ExpressionNode::Binary
-                    return Ok((
-                        input,
-                        ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span)),
-                    ));
-                }
-            }
-
-            Ok((input, left))
+            let lit_node = lit.node;
+            let span = lit.span;
+            Ok((input, ExpressionNode::Literal(Spanned::new(lit_node, span))))
         }
         // Handle parenthesized expressions
         TokenType::LeftParen => {
@@ -865,6 +806,11 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
 
             log::debug!("Successfully parsed parenthesized expression");
             Ok((input, expr))
+        }
+        // Handle array literals
+        TokenType::LeftBracket => {
+            log::debug!("Found LeftBracket, parsing array literal");
+            parse_array_literal(input)
         }
         // Handle block expressions
         TokenType::LeftBrace => {

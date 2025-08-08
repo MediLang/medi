@@ -94,19 +94,6 @@ pub fn parse_struct_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Ex
         )));
     }
 
-    // Check if we're in an if statement context
-    let is_in_if_context = input
-        .0
-        .iter()
-        .any(|t| matches!(t.token_type, TokenType::If));
-    if is_in_if_context {
-        log::debug!("In if statement context, not parsing as struct literal");
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Tag,
-        )));
-    }
-
     // Parse the type name
     log::debug!("Parsing type name...");
     let (input, type_name_token) = match take_token_if(

@@ -389,9 +389,27 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
         take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
     let start_span: Span = if_token.location.into();
 
-    // Parse the condition as a full expression
-    let (new_input, condition) = parse_expression(input)?;
-    input = new_input;
+    // Parse the condition using only the tokens before the opening brace of the then block.
+    // This prevents misinterpreting patterns like `x {` as a concise match expression.
+    let lookahead = input.skip_whitespace();
+    let expr_end = lookahead
+        .0
+        .iter()
+        .position(|t| t.token_type == TokenType::LeftBrace)
+        .ok_or_else(|| nom::Err::Error(nom::error::Error::new(lookahead, ErrorKind::Tag)))?;
+
+    if expr_end == 0 {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            lookahead,
+            ErrorKind::Tag,
+        )));
+    }
+
+    // Parse the condition on the slice before the '{'
+    let (.., condition) =
+        super::expressions::parse_expression(TokenSlice(&lookahead.0[..expr_end]))?;
+    // Advance input to start at the '{' for parse_block
+    input = TokenSlice(&lookahead.0[expr_end..]);
 
     // Parse the then block
     let (new_input, then_block) = parse_block(input)?;
@@ -615,7 +633,7 @@ pub fn parse_assignment_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'
 /// where <arms> is a comma-separated list of patterns and expressions.
 ///
 /// # Examples
-/// ```
+/// ```rust,ignore
 /// // Full syntax
 /// match x {
 ///     1 => "one",
@@ -678,8 +696,8 @@ pub(crate) fn parse_match_statement(
                 },
                 span,
             ));
-            // Return the input with the identifier and left brace consumed
-            (TokenSlice(&input.0[2..]), expr)
+            // Only consume the identifier here; leave the '{' for the common brace-consumption logic below
+            (TokenSlice(&input.0[1..]), expr)
         } else {
             log::error!(
                 "Expected identifier in concise match syntax, got: {:?}",
@@ -715,207 +733,197 @@ pub(crate) fn parse_match_statement(
     log::debug!("Found opening brace, remaining tokens: {}", input.0.len());
     log::debug!("Starting to parse match arms...");
 
-    let mut input = input;
-    let mut arms = Vec::new();
-
-    // Keep parsing arms until we hit the closing brace
-    while !input.0.is_empty() {
-        // Check for closing brace
-        if let Some((first, _)) = input.0.split_first() {
-            if first.token_type == TokenType::RightBrace {
-                input = input.advance();
-                break;
-            }
+    // First, check for an empty match block
+    let (input, arms) = match take_token_if(|tt| *tt == TokenType::RightBrace, ErrorKind::Tag)(
+        input,
+    ) {
+        Ok((input, _)) => {
+            log::debug!("Found empty match block");
+            (input, Vec::new())
         }
+        Err(_) => {
+            // Parse match arms
+            let mut arms = Vec::new();
+            let mut input = input;
 
-        // Parse pattern
-        log::debug!("Parsing match arm pattern at token: {:?}", input.0[0]);
-        let (next_input, pattern) = match input.0.split_first() {
-            Some((token, rest)) => {
-                match &token.token_type {
-                    TokenType::Underscore => {
-                        log::debug!("Found wildcard pattern");
-                        (TokenSlice(rest), PatternNode::Wildcard)
-                    }
-                    TokenType::Identifier(id) => {
-                        // Check if this is a variant pattern (e.g., Some(x))
-                        if rest
-                            .first()
-                            .is_some_and(|t| t.token_type == TokenType::LeftParen)
-                        {
-                            // This is a variant pattern like Some(x)
-                            log::debug!("Found variant pattern: {id}");
-                            let variant_name = id.to_string();
-                            let inner_rest = &rest[1..]; // Skip the identifier and left paren
-
-                            // Parse the inner pattern
-                            if let Some((inner_token, inner_rest)) = inner_rest.split_first() {
-                                match &inner_token.token_type {
-                                    TokenType::Identifier(inner_id) => {
-                                        // Handle simple identifier inside the variant
-                                        let inner_pattern =
-                                            PatternNode::Identifier(IdentifierNode {
-                                                name: inner_id.to_string(),
-                                            });
-
-                                        // Skip to the closing parenthesis
-                                        if let Some((close_paren, rest_after_paren)) =
-                                            inner_rest.split_first()
-                                        {
-                                            if close_paren.token_type == TokenType::RightParen {
-                                                (
-                                                    TokenSlice(rest_after_paren),
-                                                    PatternNode::Variant {
-                                                        name: variant_name,
-                                                        inner: Box::new(inner_pattern),
-                                                    },
-                                                )
+            loop {
+                // Parse pattern (reuse existing lightweight pattern logic here)
+                log::debug!("Parsing match arm pattern at token: {:?}", input.0[0]);
+                let (next_input, pattern) = match input.0.split_first() {
+                    Some((token, rest)) => match &token.token_type {
+                        TokenType::Underscore => {
+                            log::debug!("Found wildcard pattern");
+                            (TokenSlice(rest), PatternNode::Wildcard)
+                        }
+                        TokenType::Identifier(id) => {
+                            if rest
+                                .first()
+                                .is_some_and(|t| t.token_type == TokenType::LeftParen)
+                            {
+                                log::debug!("Found variant pattern: {id}");
+                                let variant_name = id.to_string();
+                                let inner_rest = &rest[1..];
+                                if let Some((inner_token, inner_rest)) = inner_rest.split_first() {
+                                    match &inner_token.token_type {
+                                        TokenType::Identifier(inner_id) => {
+                                            let inner_pattern =
+                                                PatternNode::Identifier(IdentifierNode {
+                                                    name: inner_id.to_string(),
+                                                });
+                                            if let Some((close_paren, rest_after_paren)) =
+                                                inner_rest.split_first()
+                                            {
+                                                if close_paren.token_type == TokenType::RightParen {
+                                                    (
+                                                        TokenSlice(rest_after_paren),
+                                                        PatternNode::Variant {
+                                                            name: variant_name,
+                                                            inner: Box::new(inner_pattern),
+                                                        },
+                                                    )
+                                                } else {
+                                                    log::error!(
+                                                        "Expected closing parenthesis after variant pattern, got: {:?}",
+                                                        close_paren.token_type
+                                                    );
+                                                    return Err(nom::Err::Error(
+                                                        nom::error::Error::new(
+                                                            input,
+                                                            ErrorKind::Tag,
+                                                        ),
+                                                    ));
+                                                }
                                             } else {
-                                                log::error!("Expected closing parenthesis after variant pattern, got: {:?}", close_paren.token_type);
+                                                log::error!(
+                                                    "Unexpected end of input after variant pattern"
+                                                );
                                                 return Err(nom::Err::Error(
-                                                    nom::error::Error::new(input, ErrorKind::Tag),
+                                                    nom::error::Error::new(input, ErrorKind::Eof),
                                                 ));
                                             }
-                                        } else {
+                                        }
+                                        _ => {
                                             log::error!(
-                                                "Unexpected end of input after variant pattern"
+                                                "Expected identifier inside variant pattern, got: {:?}",
+                                                inner_token.token_type
                                             );
                                             return Err(nom::Err::Error(nom::error::Error::new(
                                                 input,
-                                                ErrorKind::Eof,
+                                                ErrorKind::Tag,
                                             )));
                                         }
                                     }
-                                    _ => {
-                                        log::error!(
-                                            "Expected identifier inside variant pattern, got: {:?}",
-                                            inner_token.token_type
-                                        );
-                                        return Err(nom::Err::Error(nom::error::Error::new(
-                                            input,
-                                            ErrorKind::Tag,
-                                        )));
-                                    }
+                                } else {
+                                    log::error!("Unexpected end of input after variant pattern");
+                                    return Err(nom::Err::Error(nom::error::Error::new(
+                                        input,
+                                        ErrorKind::Eof,
+                                    )));
                                 }
                             } else {
-                                log::error!("Unexpected end of input after variant pattern");
-                                return Err(nom::Err::Error(nom::error::Error::new(
-                                    input,
-                                    ErrorKind::Eof,
-                                )));
+                                log::debug!("Found identifier pattern: {id}");
+                                (
+                                    TokenSlice(rest),
+                                    PatternNode::Identifier(IdentifierNode {
+                                        name: id.to_string(),
+                                    }),
+                                )
                             }
-                        } else {
-                            // This is a simple identifier pattern
-                            log::debug!("Found identifier pattern: {id}");
-                            (
-                                TokenSlice(rest),
-                                PatternNode::Identifier(IdentifierNode {
-                                    name: id.to_string(),
-                                }),
-                            )
                         }
-                    }
-                    TokenType::Integer(n) => {
-                        log::debug!("Found integer literal pattern: {n}");
-                        (TokenSlice(rest), PatternNode::Literal(LiteralNode::Int(*n)))
-                    }
-                    _ => {
-                        log::error!("Unexpected token in pattern: {:?}", token.token_type);
+                        TokenType::Integer(n) => {
+                            log::debug!("Found integer literal pattern: {n}");
+                            (TokenSlice(rest), PatternNode::Literal(LiteralNode::Int(*n)))
+                        }
+                        _ => {
+                            log::error!("Unexpected token in pattern: {:?}", token.token_type);
+                            return Err(nom::Err::Error(nom::error::Error::new(
+                                input,
+                                ErrorKind::Tag,
+                            )));
+                        }
+                    },
+                    None => {
+                        log::error!("Unexpected end of input while parsing pattern");
                         return Err(nom::Err::Error(nom::error::Error::new(
                             input,
-                            ErrorKind::Tag,
+                            ErrorKind::Eof,
                         )));
                     }
-                }
-            }
-            None => {
-                log::error!("Unexpected end of input while parsing pattern");
-                return Err(nom::Err::Error(nom::error::Error::new(
-                    input,
-                    ErrorKind::Eof,
-                )));
-            }
-        };
+                };
 
-        // Parse the fat arrow
-        log::debug!("Looking for fat arrow after pattern");
-        let next_input =
-            match take_token_if(|tt| *tt == TokenType::FatArrow, ErrorKind::Tag)(next_input) {
-                Ok((input, _)) => {
-                    log::debug!("Found fat arrow");
-                    input
-                }
-                Err(e) => {
-                    log::error!("Failed to find fat arrow: {e:?}");
-                    log::error!(
-                        "Next token: {:?}",
-                        next_input.0.first().map(|t| &t.token_type)
-                    );
-                    return Err(e);
-                }
-            };
+                // Expect fat arrow
+                let next_input = match take_token_if(
+                    |tt| *tt == TokenType::FatArrow,
+                    ErrorKind::Tag,
+                )(next_input)
+                {
+                    Ok((ni, _)) => ni,
+                    Err(e) => return Err(e),
+                };
 
-        // Parse the expression
-        log::debug!("Parsing expression for match arm");
-        let (mut after_expr, body) = match parse_expression(next_input) {
-            Ok(result) => result,
-            Err(e) => {
-                log::error!("Failed to parse expression in match arm: {e:?}");
-                log::error!(
-                    "Next token: {:?}",
-                    next_input.0.first().map(|t| &t.token_type)
-                );
-                return Err(e);
-            }
-        };
-
-        // Add the arm to the list
-        log::debug!("Adding match arm with pattern: {pattern:?}");
-        arms.push(MatchArmNode {
-            pattern,
-            body: Box::new(body),
-        });
-
-        // Check for comma or closing brace
-        if let Some((first, rest)) = after_expr.0.split_first() {
-            match first.token_type {
-                TokenType::Comma => {
-                    // Skip the comma and continue with the next arm
-                    after_expr = TokenSlice(rest);
-                    log::debug!("Skipping comma between match arms");
+                // Parse arm body expression on a sliced lookahead up to top-level ',' or '}'
+                let look = next_input.skip_whitespace();
+                let mut idx = 0usize;
+                let mut paren = 0i32;
+                let mut bracket = 0i32;
+                let mut brace = 0i32;
+                let mut boundary: Option<usize> = None;
+                while idx < look.0.len() {
+                    match look.0[idx].token_type {
+                        TokenType::LeftParen => paren += 1,
+                        TokenType::RightParen => paren = (paren - 1).max(0),
+                        TokenType::LeftBracket => bracket += 1,
+                        TokenType::RightBracket => bracket = (bracket - 1).max(0),
+                        TokenType::LeftBrace => brace += 1,
+                        TokenType::RightBrace => {
+                            if paren == 0 && bracket == 0 && brace == 0 {
+                                boundary = Some(idx);
+                                break;
+                            } else {
+                                brace = (brace - 1).max(0);
+                            }
+                        }
+                        TokenType::Comma => {
+                            if paren == 0 && bracket == 0 && brace == 0 {
+                                boundary = Some(idx);
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                    idx += 1;
                 }
-                TokenType::RightBrace => {
-                    // Found the closing brace, we're done
-                    after_expr = TokenSlice(rest);
-                    input = after_expr;
+
+                let end_idx = boundary
+                    .ok_or_else(|| nom::Err::Error(nom::error::Error::new(look, ErrorKind::Tag)))?;
+
+                // Parse expression on slice [0..end_idx)
+                let (_, body) = parse_expression(TokenSlice(&look.0[..end_idx]))?;
+
+                // Advance input to boundary token for separator consumption
+                input = TokenSlice(&look.0[end_idx..]);
+
+                // Push arm
+                arms.push(MatchArmNode {
+                    pattern,
+                    body: Box::new(body),
+                });
+
+                // Consume '}' or ','
+                if let Ok((ni, _)) =
+                    take_token_if(|tt| *tt == TokenType::RightBrace, ErrorKind::Tag)(input)
+                {
+                    input = ni;
                     break;
                 }
-                _ => {
-                    log::error!(
-                        "Expected comma or closing brace after match arm, got: {:?}",
-                        first.token_type
-                    );
-                    return Err(nom::Err::Error(nom::error::Error::new(
-                        after_expr,
-                        ErrorKind::Tag,
-                    )));
-                }
+
+                let (ni, _) = take_token_if(|tt| *tt == TokenType::Comma, ErrorKind::Tag)(input)?;
+                input = ni;
             }
-        } else {
-            // End of input, but we still need a closing brace
-            log::error!("Unexpected end of input, expected comma or closing brace");
-            return Err(nom::Err::Error(nom::error::Error::new(
-                after_expr,
-                ErrorKind::Eof,
-            )));
+
+            (input, arms)
         }
-
-        // Update input for the next iteration
-        input = after_expr;
-    }
-
-    // We've already consumed the closing brace in the loop, so just return the input
-    let input = TokenSlice(input.0);
+    };
 
     log::debug!(
         "Successfully parsed match statement with {} arms",
@@ -928,8 +936,6 @@ pub(crate) fn parse_match_statement(
 
     // Create a span that covers the entire match expression
     let span = if !arms.is_empty() {
-        // If we have arms, the span goes from the start of the expression to the end of the last arm's body
-        let _first_arm = arms.first().unwrap();
         let last_arm = arms.last().unwrap();
         let last_arm_span = last_arm.body.span();
 
@@ -940,7 +946,6 @@ pub(crate) fn parse_match_statement(
             column: expr.span().column,
         }
     } else {
-        // If no arms, just use the expression span
         *expr.span()
     };
 

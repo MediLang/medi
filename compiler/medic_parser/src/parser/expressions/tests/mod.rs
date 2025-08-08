@@ -13,6 +13,84 @@ fn str_to_token_slice(input: &str) -> (TokenSlice<'_>, Vec<Token>) {
 }
 
 #[cfg(test)]
+mod array_literals_test {
+    use super::*;
+    use medic_ast::ast::{ExpressionNode, LiteralNode};
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_parse_simple_array_literal() {
+        let (input, _tokens) = str_to_token_slice("[1, 2, 3]");
+        let (remaining, expr) = parse_expression(input).unwrap();
+        // Fully consumed
+        assert!(remaining.is_empty());
+
+        match expr {
+            ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                assert_eq!(arr.elements.len(), 3);
+                // Verify element kinds
+                for (idx, el) in arr.elements.iter().enumerate() {
+                    match el {
+                        ExpressionNode::Literal(Spanned {
+                            node: LiteralNode::Int(n),
+                            ..
+                        }) => {
+                            assert_eq!(*n as usize, idx + 1);
+                        }
+                        other => panic!("Expected int literal, got {other:?}"),
+                    }
+                }
+            }
+            other => panic!("Expected array literal, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_nested_array_in_struct_literal() {
+        let (input, _tokens) = str_to_token_slice("Point { coords: [1, 2, [3, 4]] }");
+        let (remaining, expr) = parse_expression(input).unwrap();
+        // Fully consumed
+        assert!(remaining.is_empty());
+
+        match expr {
+            ExpressionNode::Struct(Spanned { node: s, .. }) => {
+                assert_eq!(s.type_name, "Point");
+                assert_eq!(s.fields.len(), 1);
+                assert_eq!(s.fields[0].name, "coords");
+                match &s.fields[0].value {
+                    ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                        assert_eq!(arr.elements.len(), 3);
+                        // Third element is a nested array
+                        match &arr.elements[2] {
+                            ExpressionNode::Array(Spanned { node: inner, .. }) => {
+                                assert_eq!(inner.elements.len(), 2);
+                                match &inner.elements[0] {
+                                    ExpressionNode::Literal(Spanned {
+                                        node: LiteralNode::Int(3),
+                                        ..
+                                    }) => {}
+                                    other => panic!("Expected 3, got {other:?}"),
+                                }
+                                match &inner.elements[1] {
+                                    ExpressionNode::Literal(Spanned {
+                                        node: LiteralNode::Int(4),
+                                        ..
+                                    }) => {}
+                                    other => panic!("Expected 4, got {other:?}"),
+                                }
+                            }
+                            other => panic!("Expected nested array, got {other:?}"),
+                        }
+                    }
+                    other => panic!("Expected array for coords, got {other:?}"),
+                }
+            }
+            other => panic!("Expected struct literal, got {other:?}"),
+        }
+    }
+}
+
+#[cfg(test)]
 mod expressions_test {
     use super::*;
     use medic_ast::ast::{BinaryExpressionNode, BinaryOperator, ExpressionNode, LiteralNode};

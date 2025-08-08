@@ -81,6 +81,8 @@ pub enum ExpressionNode {
     Statement(Spanned<Box<StatementNode>>),
     /// A struct literal (e.g., `Patient { id: 1, name: "John" }`)
     Struct(Spanned<Box<StructLiteralNode>>),
+    /// An array literal (e.g., `[1, 2, 3]`)
+    Array(Spanned<Box<ArrayLiteralNode>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -357,6 +359,12 @@ pub struct StructLiteralNode {
     pub fields: Vec<StructField>,
 }
 
+/// Represents an array literal expression (e.g., `[1, 2, 3]`)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ArrayLiteralNode {
+    pub elements: Vec<ExpressionNode>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IdentifierNode {
     pub name: String,
@@ -440,6 +448,7 @@ impl Visitable for ExpressionNode {
             ExpressionNode::Identifier(Spanned { node: ident, .. }) => ident.accept(visitor),
             ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => query.accept(visitor),
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.accept(visitor),
+            ExpressionNode::Array(Spanned { node: arr, .. }) => arr.accept(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.accept(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.accept(visitor),
             ExpressionNode::SnomedCode(spanned) => spanned.node.accept(visitor),
@@ -460,6 +469,7 @@ impl Visitable for ExpressionNode {
                 query.visit_children(visitor)
             }
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.visit_children(visitor),
+            ExpressionNode::Array(Spanned { node: arr, .. }) => arr.visit_children(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::SnomedCode(spanned) => spanned.node.visit_children(visitor),
@@ -672,6 +682,19 @@ impl Visitable for StructLiteralNode {
     }
 }
 
+impl Visitable for ArrayLiteralNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_array_literal(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        for el in &self.elements {
+            el.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
 impl Visitable for IdentifierNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_identifier(self)
@@ -740,6 +763,7 @@ impl ExpressionNode {
             ExpressionNode::HealthcareQuery(span) => &span.span,
             ExpressionNode::Statement(span) => &span.span,
             ExpressionNode::Struct(span) => &span.span,
+            ExpressionNode::Array(span) => &span.span,
         }
     }
 
@@ -854,6 +878,16 @@ impl std::fmt::Display for ExpressionNode {
                     write!(f, "{}: {}", field.name, field.value)?;
                 }
                 write!(f, "}}")
+            }
+            ExpressionNode::Array(Spanned { node: a, .. }) => {
+                write!(f, "[")?;
+                for (i, el) in a.elements.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{el}")?;
+                }
+                write!(f, "]")
             }
         }
     }
