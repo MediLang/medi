@@ -56,10 +56,7 @@ fn test_parser_integration() {
 
     // Verify parsing was successful
     let (remaining, ast) = result.unwrap_or_else(|e| {
-        panic!(
-            "Failed to parse tokens. Error: {:?}\nTokens: {:?}",
-            e, tokens
-        );
+        panic!("Failed to parse tokens. Error: {e:?}\nTokens: {tokens:?}",);
     });
 
     // Verify we consumed all tokens
@@ -70,7 +67,7 @@ fn test_parser_integration() {
         println!("First 5 remaining tokens:");
         let slice = remaining.0;
         for (i, item) in slice.iter().take(5).enumerate() {
-            println!("  {}: {:?}", i, item);
+            println!("  {i}: {item:?}");
         }
 
         // Print context around the first remaining token
@@ -93,7 +90,7 @@ fn test_parser_integration() {
                     } else {
                         ""
                     };
-                    println!("  {}: {:?} (offset: {}) {}", i, token, token_offset, marker);
+                    println!("  {i}: {token:?} (offset: {token_offset}) {marker}");
                 }
             }
         }
@@ -107,8 +104,7 @@ fn test_parser_integration() {
     // Verify the AST structure
     assert!(
         !ast.statements.is_empty(),
-        "AST should contain statements, but got: {:?}",
-        ast
+        "AST should contain statements, but got: {ast:?}",
     );
 
     // Basic AST validation
@@ -139,7 +135,7 @@ fn test_large_file_parsing() {
 
     // Read the test file
     let source = std::fs::read_to_string(&test_file)
-        .unwrap_or_else(|e| panic!("Failed to read test file {:?}: {}", test_file, e));
+        .unwrap_or_else(|e| panic!("Failed to read test file {test_file:?}: {e}"));
 
     println!("Source file size: {} bytes", source.len());
 
@@ -216,24 +212,27 @@ fn generate_test_file(path: &str, patient_count: usize) -> std::io::Result<()> {
     writeln!(file, "// Helper functions")?;
     writeln!(
         file,
-        "fn calculate_bmi(weight_kg: f64, height_m: f64) -> f64 {{"
+        "fn calculate_bmi(weight_kg: float, height_m: float) -> float {{"
     )?;
-    writeln!(file, "    weight_kg / (height_m * height_m)")?;
+    writeln!(file, "    return weight_kg / (height_m * height_m)")?;
     writeln!(file, "}}\n")?;
 
-    writeln!(file, "fn recommend_lifestyle_changes(patient_id: &str) {{")?;
     writeln!(
         file,
-        "    println!(\"Recommend lifestyle changes for {{}}\", patient_id);"
+        "fn recommend_lifestyle_changes(patient_id: string) {{"
+    )?;
+    writeln!(
+        file,
+        "    print(\"Recommend lifestyle changes for \", patient_id)"
     )?;
     writeln!(file, "}}\n")?;
 
     // Generate patient data
     for i in 0..patient_count {
-        writeln!(file, "// Patient {}", i)?;
-        writeln!(file, "let patient_{} = Patient {{", i)?;
-        writeln!(file, "    id: \"PATIENT-{}\",", i)?;
-        writeln!(file, "    name: \"Patient {}\",", i)?;
+        writeln!(file, "// Patient {i}")?;
+        writeln!(file, "let patient_{i} = Patient {{")?;
+        writeln!(file, "    id: \"PATIENT-{i}\",")?;
+        writeln!(file, "    name: \"Patient {i}\",")?;
         writeln!(file, "    age: {}", 20 + (i % 60))?;
         writeln!(file, "    weight_kg: {:.1}", 50.0 + (i as f64 * 0.5) % 50.0)?;
         writeln!(file, "    height_m: {:.2}", 1.5 + (i as f64 * 0.01) % 0.5)?;
@@ -291,16 +290,15 @@ fn generate_test_file(path: &str, patient_count: usize) -> std::io::Result<()> {
         writeln!(file, "}};\n")?;
 
         // Add some calculations
-        writeln!(file, "// Calculate BMI for patient_{}", i)?;
+        writeln!(file, "// Calculate BMI for patient_{i}")?;
         writeln!(
             file,
-            "let bmi_{} = calculate_bmi(patient_{}.weight_kg, patient_{}.height_m);",
-            i, i, i
+            "let bmi_{i} = calculate_bmi(patient_{i}.weight_kg, patient_{i}.height_m);",
         )?;
 
         // Add some decision making
-        writeln!(file, "if bmi_{} > 25.0 {{", i)?;
-        writeln!(file, "    recommend_lifestyle_changes(patient_{}.id);", i)?;
+        writeln!(file, "if bmi_{i} > 25.0 {{")?;
+        writeln!(file, "    recommend_lifestyle_changes(patient_{i}.id);")?;
         writeln!(file, "}}\n")?;
     }
 

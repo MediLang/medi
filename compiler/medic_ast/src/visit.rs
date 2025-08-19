@@ -128,6 +128,15 @@ pub trait Visitor {
         self.visit_children(node)
     }
 
+    // Function-related nodes
+    fn visit_parameter(&mut self, node: &ParameterNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
+    fn visit_function(&mut self, node: &FunctionNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
     // Program
     fn visit_program(&mut self, node: &ProgramNode) -> VisitResult<Self::Output> {
         self.visit_children(node)

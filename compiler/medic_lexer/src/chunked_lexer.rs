@@ -661,7 +661,7 @@ mod tests {
     /// Helper function to create a temporary file with the given content
     fn create_temp_file(content: &str) -> NamedTempFile {
         let mut file = NamedTempFile::new().unwrap();
-        write!(file, "{}", content).unwrap();
+        write!(file, "{content}").unwrap();
         file.seek(std::io::SeekFrom::Start(0)).unwrap();
         file
     }
@@ -706,7 +706,7 @@ mod tests {
         let _ = env_logger::builder().is_test(true).try_init();
         let mut large_input = String::new();
         for i in 0..1000 {
-            large_input.push_str(&format!("let x{} = {};\n", i, i));
+            large_input.push_str(&format!("let x{i} = {i};\n"));
         }
 
         let cursor = Cursor::new(large_input);
@@ -782,14 +782,13 @@ mod tests {
         let required = vec!["", "Line 1\\nLine 2\\nLine 3"];
         for exp in required {
             assert!(
-                string_lexemes.iter().any(|&s| s == exp),
+                string_lexemes.contains(&exp),
                 "Missing expected string literal: {exp}"
             );
         }
         // Soft check for the long string (don't fail the test if it's missing)
-        let _maybe_long = string_lexemes
-            .iter()
-            .any(|&s| s == "Hello, world! This is a long string that might span chunks");
+        let _maybe_long =
+            string_lexemes.contains(&"Hello, world! This is a long string that might span chunks");
     }
 
     #[test]

@@ -21,7 +21,8 @@ impl<'a> TypeChecker<'a> {
     /// # Examples
     ///
     /// ```
-    /// use medic_ast::ast::{ExpressionNode, IdentifierNode};
+    /// use medic_ast::ast::{ExpressionNode, IdentifierNode, Spanned};
+    /// use medic_ast::visit::Span;
     /// use medic_env::env::TypeEnv;
     /// use medic_type::types::MediType;
     /// use medic_typeck::type_checker::TypeChecker;
@@ -29,7 +30,11 @@ impl<'a> TypeChecker<'a> {
     /// let mut env = TypeEnv::new();
     /// env.insert("x".to_string(), MediType::Int);
     /// let mut checker = TypeChecker::new(&mut env);
-    /// let expr = ExpressionNode::Identifier(IdentifierNode { name: "x".to_string() });
+    /// let id = Spanned::new(
+    ///     IdentifierNode { name: "x".to_string() },
+    ///     Span { start: 0, end: 1, line: 1, column: 1 },
+    /// );
+    /// let expr = ExpressionNode::Identifier(id);
     /// assert_eq!(checker.check_expr(&expr), MediType::Int);
     /// ```
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {

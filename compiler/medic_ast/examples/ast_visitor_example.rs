@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nVariables used:");
     for var in &collector.variables {
-        println!("  {}", var);
+        println!("  {var}");
     }
 
     // Print the AST
@@ -149,6 +149,12 @@ impl VariableCollector {
     }
 }
 
+impl Default for VariableCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Visitor for VariableCollector {
     type Output = ();
 
@@ -204,6 +210,12 @@ impl AstPrinter {
     }
 }
 
+impl Default for AstPrinter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Visitor for AstPrinter {
     type Output = ();
 
@@ -214,10 +226,10 @@ impl Visitor for AstPrinter {
 
     fn visit_literal(&mut self, node: &LiteralNode) -> VisitResult<Self::Output> {
         match node {
-            LiteralNode::Int(n) => self.write_line(&format!("Literal: {}", n)),
-            LiteralNode::Float(f) => self.write_line(&format!("Literal: {}", f)),
-            LiteralNode::Bool(b) => self.write_line(&format!("Literal: {}", b)),
-            LiteralNode::String(s) => self.write_line(&format!("Literal: \"{}\"", s)),
+            LiteralNode::Int(n) => self.write_line(&format!("Literal: {n}")),
+            LiteralNode::Float(f) => self.write_line(&format!("Literal: {f}")),
+            LiteralNode::Bool(b) => self.write_line(&format!("Literal: {b}")),
+            LiteralNode::String(s) => self.write_line(&format!("Literal: \"{s}\"")),
         }
         Ok(())
     }

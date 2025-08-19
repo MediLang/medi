@@ -152,7 +152,7 @@ fn test_numeric_literals_in_expressions() {
     "#;
 
     println!("=== Starting test_numeric_literals_in_expressions ===");
-    println!("Source code: {:?}", source);
+    println!("Source code: {source:?}");
 
     let config = ChunkedLexerConfig { chunk_size: 1024 };
 
@@ -160,12 +160,12 @@ fn test_numeric_literals_in_expressions() {
 
     // Collect all tokens and log them
     let tokens: Vec<_> = lexer
-        .inspect(|token| println!("Token: {:?}", token))
+        .inspect(|token| println!("Token: {token:?}"))
         .collect();
 
     println!("\n=== Total tokens collected: {} ===", tokens.len());
     for (i, token) in tokens.iter().enumerate() {
-        println!("Token[{}]: {:?}", i, token);
+        println!("Token[{i}]: {token:?}");
     }
 
     // Verify we have the expected number of tokens (including the error token)

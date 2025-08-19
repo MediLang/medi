@@ -57,14 +57,14 @@ fn test_parse_empty_match_statement() {
                         node: IdentifierNode { name },
                         ..
                     }) if name == "x" => {}
-                    _ => panic!("Expected identifier 'x', got {:?}", match_node.expr),
+                    _ => panic!("Expected identifier 'x', got {0:?}", match_node.expr),
                 };
                 assert!(match_node.arms.is_empty(), "Expected no match arms");
             } else {
-                panic!("Expected StatementNode::Match, got {:?}", stmt);
+                panic!("Expected StatementNode::Match, got {stmt:?}");
             }
         }
-        Err(e) => panic!("Parse error: {}", e),
+        Err(e) => panic!("Parse error: {e}"),
     }
 }
 
@@ -107,7 +107,7 @@ fn test_match_with_literal_arms() {
                         node: IdentifierNode { name },
                         ..
                     }) if name == "x" => {}
-                    _ => panic!("Expected identifier 'x', got {:?}", match_node.expr),
+                    _ => panic!("Expected identifier 'x', got {0:?}", match_node.expr),
                 };
 
                 // Check the arms
@@ -121,14 +121,14 @@ fn test_match_with_literal_arms() {
                 {
                     match lit {
                         LiteralNode::Int(1) => {}
-                        _ => panic!("Expected LiteralNode::Int(1), got {:?}", lit),
+                        _ => panic!("Expected LiteralNode::Int(1), got {lit:?}"),
                     };
                     match &**body {
                         ExpressionNode::Identifier(Spanned {
                             node: IdentifierNode { name },
                             ..
                         }) if name == "one" => {}
-                        _ => panic!("Expected identifier 'one', got {:?}", body),
+                        _ => panic!("Expected identifier 'one', got {body:?}"),
                     };
                 } else {
                     panic!("First arm should be a literal pattern");
@@ -142,14 +142,14 @@ fn test_match_with_literal_arms() {
                 {
                     match lit {
                         LiteralNode::Int(2) => {}
-                        _ => panic!("Expected LiteralNode::Int(2), got {:?}", lit),
+                        _ => panic!("Expected LiteralNode::Int(2), got {lit:?}"),
                     };
                     match &**body {
                         ExpressionNode::Identifier(Spanned {
                             node: IdentifierNode { name },
                             ..
                         }) if name == "two" => {}
-                        _ => panic!("Expected identifier 'two', got {:?}", body),
+                        _ => panic!("Expected identifier 'two', got {body:?}"),
                     };
                 } else {
                     panic!("Second arm should be a literal pattern");
@@ -166,7 +166,7 @@ fn test_match_with_literal_arms() {
                             node: IdentifierNode { name },
                             ..
                         }) if name == "other" => {}
-                        _ => panic!("Expected identifier 'other', got {:?}", body),
+                        _ => panic!("Expected identifier 'other', got {body:?}"),
                     };
                 } else {
                     panic!("Third arm should be a wildcard pattern");
@@ -175,7 +175,7 @@ fn test_match_with_literal_arms() {
                 panic!("Expected Match statement");
             }
         }
-        Err(e) => panic!("Parse error: {}", e),
+        Err(e) => panic!("Parse error: {e}"),
     }
 }
 
@@ -216,7 +216,7 @@ fn test_match_with_identifier_patterns() {
                         node: IdentifierNode { name },
                         ..
                     }) if name == "result" => {}
-                    _ => panic!("Expected identifier 'result', got {:?}", match_node.expr),
+                    _ => panic!("Expected identifier 'result', got {0:?}", match_node.expr),
                 };
                 assert_eq!(match_node.arms.len(), 2, "Expected 2 match arms");
 
@@ -230,17 +230,14 @@ fn test_match_with_identifier_patterns() {
                     if let PatternNode::Identifier(IdentifierNode { name: inner_name }) = &**inner {
                         assert_eq!(inner_name, "x");
                     } else {
-                        panic!(
-                            "Expected inner pattern to be an identifier, got {:?}",
-                            inner
-                        );
+                        panic!("Expected inner pattern to be an identifier, got {inner:?}",);
                     }
                     match &**body {
                         ExpressionNode::Identifier(Spanned {
                             node: IdentifierNode { name },
                             ..
                         }) if name == "x" => {}
-                        _ => panic!("Expected identifier 'x', got {:?}", body),
+                        _ => panic!("Expected identifier 'x', got {body:?}"),
                     };
                 } else {
                     panic!("First arm should be a variant pattern");
@@ -257,12 +254,12 @@ fn test_match_with_identifier_patterns() {
                                 node: IdentifierNode { name },
                                 ..
                             }) if name == "default" => {}
-                            _ => panic!("Expected identifier 'default', got {:?}", arm.body),
+                            _ => panic!("Expected identifier 'default', got {0:?}", arm.body),
                         };
                     } else {
                         panic!(
-                            "Second arm should be an identifier pattern, got {:?}",
-                            arm.pattern
+                            "Second arm should be an identifier pattern, got {0:?}",
+                            arm.pattern,
                         );
                     }
                 } else {
@@ -272,7 +269,7 @@ fn test_match_with_identifier_patterns() {
                 panic!("Expected Match statement");
             }
         }
-        Err(e) => panic!("Parse error: {}", e),
+        Err(e) => panic!("Parse error: {e}"),
     }
 }
 
@@ -317,7 +314,7 @@ fn test_match_with_complex_expressions() {
                         node: IdentifierNode { name },
                         ..
                     }) if name == "result" => {}
-                    _ => panic!("Expected identifier 'result', got {:?}", match_node.expr),
+                    _ => panic!("Expected identifier 'result', got {0:?}", match_node.expr),
                 };
                 assert_eq!(match_node.arms.len(), 3, "Expected 3 match arms");
 
@@ -329,14 +326,14 @@ fn test_match_with_complex_expressions() {
                 {
                     match lit {
                         LiteralNode::Int(0) => {}
-                        _ => panic!("Expected LiteralNode::Int(0), got {:?}", lit),
+                        _ => panic!("Expected LiteralNode::Int(0), got {lit:?}"),
                     };
                     match &**body {
                         ExpressionNode::Literal(Spanned {
                             node: LiteralNode::String(s),
                             ..
                         }) if s == "zero" => {}
-                        _ => panic!("Expected string literal 'zero', got {:?}", body),
+                        _ => panic!("Expected string literal 'zero', got {body:?}"),
                     };
                 } else {
                     panic!("First arm should be a literal pattern with no guard");
@@ -354,7 +351,7 @@ fn test_match_with_complex_expressions() {
                             node: LiteralNode::String(s),
                             ..
                         }) if s == "positive" => {}
-                        _ => panic!("Expected string literal 'positive', got {:?}", body),
+                        _ => panic!("Expected string literal 'positive', got {body:?}"),
                     };
                 } else {
                     panic!("Second arm should be an identifier pattern");
@@ -371,7 +368,7 @@ fn test_match_with_complex_expressions() {
                             node: LiteralNode::String(s),
                             ..
                         }) if s == "negative" => {}
-                        _ => panic!("Expected string literal 'negative', got {:?}", body),
+                        _ => panic!("Expected string literal 'negative', got {body:?}"),
                     };
                 } else {
                     panic!("Third arm should be a wildcard pattern with no guard");
@@ -380,7 +377,7 @@ fn test_match_with_complex_expressions() {
                 panic!("Expected Match statement");
             }
         }
-        Err(e) => panic!("Parse error: {}", e),
+        Err(e) => panic!("Parse error: {e}"),
     }
 }
 

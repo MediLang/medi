@@ -51,8 +51,9 @@ use nom::IResult;
 
 use crate::parser::{
     get_binary_operator, get_operator_precedence, is_comparison_operator, parse_block,
-    take_token_if, BinaryExpressionNode, BinaryOperator, BlockNode, ExpressionNode, IdentifierNode,
-    LiteralNode, MatchArmNode, MatchNode, PatternNode, StatementNode, Token, TokenSlice, TokenType,
+    take_token_if, BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode,
+    ExpressionNode, IdentifierNode, LiteralNode, MatchArmNode, MatchNode, PatternNode,
+    StatementNode, Token, TokenSlice, TokenType,
 };
 use medic_lexer::Location;
 
@@ -654,17 +655,66 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             log::debug!("Found 'match' keyword, parsing match expression");
             parse_match_expression(input)
         }
+        // Healthcare code literals
+        TokenType::ICD10(code) => {
+            log::debug!("Found ICD10 code literal: {code}");
+            let loc = &input.0[0].location;
+            let span = Span {
+                start: loc.offset,
+                end: loc.offset + input.0[0].lexeme.len(),
+                line: loc.line as u32,
+                column: loc.column as u32,
+            };
+            let expr = ExpressionNode::IcdCode(Spanned::new(code.to_string(), span));
+            Ok((input.advance(), expr))
+        }
+        TokenType::CPT(code) => {
+            log::debug!("Found CPT code literal: {code}");
+            let loc = &input.0[0].location;
+            let span = Span {
+                start: loc.offset,
+                end: loc.offset + input.0[0].lexeme.len(),
+                line: loc.line as u32,
+                column: loc.column as u32,
+            };
+            let expr = ExpressionNode::CptCode(Spanned::new(code.to_string(), span));
+            Ok((input.advance(), expr))
+        }
+        TokenType::SNOMED(code) => {
+            log::debug!("Found SNOMED code literal: {code}");
+            let loc = &input.0[0].location;
+            let span = Span {
+                start: loc.offset,
+                end: loc.offset + input.0[0].lexeme.len(),
+                line: loc.line as u32,
+                column: loc.column as u32,
+            };
+            let expr = ExpressionNode::SnomedCode(Spanned::new(code.to_string(), span));
+            Ok((input.advance(), expr))
+        }
+        // LOINC token exists in lexer but no dedicated AST variant.
+        // Represent as a string literal to ensure graceful parsing.
+        TokenType::LOINC(code) => {
+            log::debug!("Found LOINC code literal: {code}");
+            let loc = &input.0[0].location;
+            let span = Span {
+                start: loc.offset,
+                end: loc.offset + input.0[0].lexeme.len(),
+                line: loc.line as u32,
+                column: loc.column as u32,
+            };
+            let lit = Spanned::new(LiteralNode::String(code.to_string()), span);
+            Ok((input.advance(), ExpressionNode::Literal(lit)))
+        }
         // Handle identifiers that might be part of a match expression, struct literal, or regular identifier
         TokenType::Identifier(_) => {
-            log::debug!(
-                "Found identifier '{}' at {}:{}",
-                match &input.0[0].token_type {
-                    TokenType::Identifier(s) => s.to_string(),
-                    _ => "".to_string(),
-                },
-                input.0[0].location.line,
-                input.0[0].location.column
-            );
+            if let TokenType::Identifier(s) = &input.0[0].token_type {
+                log::debug!(
+                    "Found identifier '{s}' at {}:{}",
+                    input.0[0].location.line,
+                    input.0[0].location.column
+                );
+            }
             log::debug!("Remaining tokens: {}", input.0.len());
 
             // Check if this is followed by a left brace, indicating a match expression or struct literal
@@ -688,8 +738,101 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
 
             // Otherwise, parse as an identifier or member expression.
             // parse_identifier already handles chained member access (e.g., obj.prop1.prop2).
-            let (new_input, expr) = parse_identifier(input)?;
-            Ok((new_input, expr))
+            let (mut input, mut expr) = parse_identifier(input)?;
+
+            // Parse potential function call(s) after the identifier/member expression.
+            // Supports chained calls like `foo()(1)`.
+            loop {
+                let lookahead = input.skip_whitespace();
+                if let Some(t) = lookahead.peek() {
+                    if matches!(t.token_type, TokenType::LeftParen) {
+                        // Consume '('
+                        let (mut after_lparen, _) = take_token_if(
+                            |tt| matches!(tt, TokenType::LeftParen),
+                            ErrorKind::Tag,
+                        )(lookahead)?;
+                        after_lparen = after_lparen.skip_whitespace();
+
+                        // Parse arguments
+                        let mut args: Vec<ExpressionNode> = Vec::new();
+                        // Empty args: directly right paren
+                        if let Some(tp) = after_lparen.peek() {
+                            if matches!(tp.token_type, TokenType::RightParen) {
+                                // consume right paren and finish this call
+                                let (after_rparen, rparen_tok) =
+                                    take_token_if(
+                                        |tt| matches!(tt, TokenType::RightParen),
+                                        ErrorKind::Tag,
+                                    )(after_lparen)?;
+                                // Build call node
+                                let callee_span = *expr.span();
+                                let span = Span {
+                                    start: callee_span.start,
+                                    end: rparen_tok.location.offset + rparen_tok.lexeme.len(),
+                                    line: callee_span.line,
+                                    column: callee_span.column,
+                                };
+                                let call = CallExpressionNode {
+                                    callee: expr,
+                                    arguments: args,
+                                };
+                                expr = ExpressionNode::Call(Spanned::new(Box::new(call), span));
+                                input = after_rparen;
+                                continue; // allow chained calls
+                            }
+                        }
+
+                        // At least one argument
+                        let (mut rest, first_arg) = parse_expression(after_lparen)?;
+                        args.push(first_arg);
+                        rest = rest.skip_whitespace();
+                        // More arguments separated by commas
+                        loop {
+                            if let Some(tok) = rest.peek() {
+                                if matches!(tok.token_type, TokenType::Comma) {
+                                    // consume comma
+                                    let (after_comma, _) =
+                                        take_token_if(
+                                            |tt| matches!(tt, TokenType::Comma),
+                                            ErrorKind::Tag,
+                                        )(rest)?;
+                                    let after_comma = after_comma.skip_whitespace();
+                                    let (after_arg, arg) = parse_expression(after_comma)?;
+                                    args.push(arg);
+                                    rest = after_arg.skip_whitespace();
+                                    continue;
+                                }
+                            }
+                            break;
+                        }
+
+                        // Expect closing ')'
+                        let (after_rparen, rparen_tok) = take_token_if(
+                            |tt| matches!(tt, TokenType::RightParen),
+                            ErrorKind::Tag,
+                        )(rest)?;
+
+                        // Build call node
+                        let callee_span = *expr.span();
+                        let span = Span {
+                            start: callee_span.start,
+                            end: rparen_tok.location.offset + rparen_tok.lexeme.len(),
+                            line: callee_span.line,
+                            column: callee_span.column,
+                        };
+                        let call = CallExpressionNode {
+                            callee: expr,
+                            arguments: args,
+                        };
+                        expr = ExpressionNode::Call(Spanned::new(Box::new(call), span));
+                        input = after_rparen;
+                        // Continue loop to handle chained calls
+                        continue;
+                    }
+                }
+                // No call suffix; return
+                break Ok((input, expr));
+            }
         }
         // Handle literals
         TokenType::Integer(_) | TokenType::Float(_) => {

@@ -249,6 +249,7 @@ pub enum StatementNode {
     For(Box<ForNode>),
     Match(Box<MatchNode>),
     Return(Box<ReturnNode>),
+    Function(Box<FunctionNode>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -340,6 +341,22 @@ pub struct MatchNode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReturnNode {
     pub value: Option<ExpressionNode>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParameterNode {
+    pub name: IdentifierNode,
+    pub type_annotation: Option<ExpressionNode>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FunctionNode {
+    pub name: IdentifierNode,
+    pub params: Vec<ParameterNode>,
+    pub return_type: Option<ExpressionNode>,
+    pub body: BlockNode,
     pub span: Span,
 }
 
@@ -528,6 +545,7 @@ impl Visitable for StatementNode {
             StatementNode::For(stmt) => stmt.accept(visitor),
             StatementNode::Match(stmt) => stmt.accept(visitor),
             StatementNode::Return(stmt) => stmt.accept(visitor),
+            StatementNode::Function(stmt) => stmt.accept(visitor),
         }
     }
 
@@ -542,6 +560,7 @@ impl Visitable for StatementNode {
             StatementNode::For(stmt) => stmt.visit_children(visitor),
             StatementNode::Match(stmt) => stmt.visit_children(visitor),
             StatementNode::Return(stmt) => stmt.visit_children(visitor),
+            StatementNode::Function(stmt) => stmt.visit_children(visitor),
         }
     }
 }
@@ -559,7 +578,39 @@ impl StatementNode {
             StatementNode::For(stmt) => &stmt.span,
             StatementNode::Match(stmt) => &stmt.span,
             StatementNode::Return(stmt) => &stmt.span,
+            StatementNode::Function(stmt) => &stmt.span,
         }
+    }
+}
+
+impl Visitable for ParameterNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_parameter(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.name.accept(visitor)?;
+        if let Some(ty) = &self.type_annotation {
+            ty.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
+impl Visitable for FunctionNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_function(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.name.accept(visitor)?;
+        for p in &self.params {
+            p.accept(visitor)?;
+        }
+        if let Some(ret) = &self.return_type {
+            ret.accept(visitor)?;
+        }
+        self.body.accept(visitor)
     }
 }
 
@@ -828,6 +879,23 @@ impl std::fmt::Display for StatementNode {
                 } else {
                     write!(f, "return;")
                 }
+            }
+            StatementNode::Function(fun) => {
+                write!(f, "fn {}(", fun.name.name)?;
+                for (i, p) in fun.params.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", p.name.name)?;
+                    if let Some(ty) = &p.type_annotation {
+                        write!(f, ": {ty}")?;
+                    }
+                }
+                write!(f, ")")?;
+                if let Some(ret) = &fun.return_type {
+                    write!(f, " -> {ret}")?;
+                }
+                write!(f, " {}", fun.body)
             }
         }
     }

@@ -30,7 +30,7 @@ fn test_parse_simple_if_statement() {
         Token::new(TokenType::RightBrace, "}", loc),
     ];
 
-    log::debug!("Testing parse_if_statement with tokens: {:?}", tokens);
+    log::debug!("Testing parse_if_statement with tokens: {tokens:?}");
 
     let slice = TokenSlice::new(&tokens);
     let result = parse_if_statement(slice);
@@ -39,7 +39,7 @@ fn test_parse_simple_if_statement() {
         Ok((remaining, stmt)) => {
             log::debug!("Parse successful!");
             log::debug!("  Remaining tokens: {}", remaining.0.len());
-            log::debug!("  Statement: {:?}", stmt);
+            log::debug!("  Statement: {stmt:?}");
             assert!(remaining.is_empty(), "Expected no remaining tokens");
             assert!(
                 matches!(stmt, StatementNode::If(_)),
@@ -47,8 +47,8 @@ fn test_parse_simple_if_statement() {
             );
         }
         Err(e) => {
-            log::error!("Parse failed: {:?}", e);
-            panic!("Parse failed: {:?}", e);
+            log::error!("Parse failed: {e:?}");
+            panic!("Parse failed: {e:?}");
         }
     }
 }
@@ -73,10 +73,7 @@ fn test_parse_if_else_statement() {
         Token::new(TokenType::RightBrace, "}", loc),
     ];
 
-    log::debug!(
-        "Testing parse_if_statement with if-else tokens: {:?}",
-        tokens
-    );
+    log::debug!("Testing parse_if_statement with if-else tokens: {tokens:?}",);
 
     let slice = TokenSlice::new(&tokens);
     let result = parse_if_statement(slice);
@@ -85,7 +82,7 @@ fn test_parse_if_else_statement() {
         Ok((remaining, stmt)) => {
             log::debug!("Parse successful!");
             log::debug!("  Remaining tokens: {}", remaining.0.len());
-            log::debug!("  Statement: {:?}", stmt);
+            log::debug!("  Statement: {stmt:?}");
             assert!(remaining.is_empty(), "Expected no remaining tokens");
             assert!(
                 matches!(stmt, StatementNode::If(_)),
@@ -93,8 +90,8 @@ fn test_parse_if_else_statement() {
             );
         }
         Err(e) => {
-            log::error!("Parse failed: {:?}", e);
-            panic!("Parse failed: {:?}", e);
+            log::error!("Parse failed: {e:?}");
+            panic!("Parse failed: {e:?}");
         }
     }
 }

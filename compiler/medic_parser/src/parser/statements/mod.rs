@@ -6,19 +6,41 @@ use nom::sequence::{delimited, preceded, tuple};
 use nom::IResult;
 
 use crate::parser::{
-    parse_block, parse_expression, parse_primary, take_token_if, TokenSlice, TokenType,
+    parse_block, parse_expression, parse_for_statement, parse_primary, take_token_if, TokenSlice,
+    TokenType,
 };
 
 use medic_ast::ast::{
     AssignmentNode, BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode,
-    ExpressionNode, IdentifierNode, IfNode, LetStatementNode, LiteralNode, MatchArmNode, MatchNode,
-    MemberExpressionNode, PatternNode, ProgramNode, ReturnNode, StatementNode, WhileNode,
+    ExpressionNode, FunctionNode, IdentifierNode, IfNode, LetStatementNode, LiteralNode,
+    MatchArmNode, MatchNode, MemberExpressionNode, ParameterNode, PatternNode, ProgramNode,
+    ReturnNode, StatementNode, WhileNode,
 };
 use medic_ast::visit::Span;
 use medic_ast::Spanned;
 
 use super::{expressions::parse_expression as parse_expr, identifiers::parse_identifier};
 use std::convert::TryFrom;
+
+/// Parse a simple type identifier (e.g., `float`, `string`, `Foo`).
+/// This is stricter than a full expression and avoids greedily consuming
+/// commas or parentheses in function signatures.
+fn parse_type_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    let (input, tok) = take_token_if(
+        |tt| matches!(tt, TokenType::Identifier(_)),
+        ErrorKind::Alpha,
+    )(input)?;
+    let name = if let TokenType::Identifier(n) = &tok.token_type {
+        n.to_string()
+    } else {
+        unreachable!()
+    };
+    let span: Span = tok.location.into();
+    Ok((
+        input,
+        ExpressionNode::Identifier(Spanned::new(IdentifierNode { name }, span)),
+    ))
+}
 
 /// Parses a `let` statement from the input token stream.
 ///
@@ -199,23 +221,40 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
     // Parse the expression (which won't consume the semicolon)
     log::debug!("Starting to parse expression");
     let (input, expr) = match parse_expression(input) {
-        Ok((input, expr)) => {
-            log::debug!("Successfully parsed expression: {expr:?}");
-            if !input.0.is_empty() {
-                log::debug!(
-                    "After expression, next token: {:?} at {}:{}",
-                    input.0[0].token_type,
-                    input.0[0].location.line,
-                    input.0[0].location.column
-                );
-            } else {
-                log::warn!("No more tokens after expression (expected semicolon)");
-            }
-            (input, expr)
+        Ok((next_input, expr)) => {
+            log::debug!("Successfully parsed expression");
+            (next_input, expr)
         }
         Err(e) => {
-            log::error!("Failed to parse expression: {e:?}");
-            return Err(e);
+            log::warn!(
+                "parse_let_statement: initializer expression failed: {e:?}. Performing tolerant recovery by skipping to ';' and using nil."
+            );
+            // Find next semicolon boundary
+            let mut idx = 0usize;
+            while idx < input.len() {
+                if matches!(input.0[idx].token_type, TokenType::Semicolon) {
+                    break;
+                }
+                idx += 1;
+            }
+            let (next_input, consumed_span_end) = if idx < input.len() {
+                (TokenSlice(&input.0[idx..]), input.0[idx].location.offset)
+            } else {
+                (
+                    TokenSlice(&[]),
+                    input.0.last().map(|t| t.location.offset).unwrap_or(0),
+                )
+            };
+
+            // Build a placeholder nil literal with a reasonable span
+            let span = Span {
+                start: ident.span.start,
+                end: consumed_span_end,
+                line: ident.span.line,
+                column: ident.span.column,
+            };
+            let placeholder = ExpressionNode::Literal(Spanned::new(LiteralNode::Int(0), span));
+            (next_input, placeholder)
         }
     };
 
@@ -320,39 +359,91 @@ pub fn parse_return_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     // Check if there's an expression to parse
     if let Ok((new_input, expr)) = parse_expression(input) {
         input = new_input;
-        let (new_input, semicolon_token) =
-            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
 
-        // Create a span from the return keyword to the semicolon
-        let span = Span {
-            start: start_span.start,
-            end: semicolon_token.location.offset + semicolon_token.lexeme.len(),
-            line: start_span.line,
-            column: start_span.column,
-        };
-
-        let return_node = ReturnNode {
-            value: Some(expr),
-            span,
-        };
-
-        Ok((new_input, StatementNode::Return(Box::new(return_node))))
+        // Prefer a trailing semicolon, but allow end-of-block '}' without semicolon
+        if let Ok((after_semi, semicolon_token)) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)
+        {
+            // Span ends at semicolon
+            let span = Span {
+                start: start_span.start,
+                end: semicolon_token.location.offset + semicolon_token.lexeme.len(),
+                line: start_span.line,
+                column: start_span.column,
+            };
+            let return_node = ReturnNode {
+                value: Some(expr),
+                span,
+            };
+            Ok((after_semi, StatementNode::Return(Box::new(return_node))))
+        } else {
+            // No semicolon: allow if next is a right brace '}' (end of block)
+            if let Some(TokenType::RightBrace) = input.peek().map(|t| &t.token_type) {
+                let span = Span {
+                    start: start_span.start,
+                    end: expr.span().end,
+                    line: start_span.line,
+                    column: start_span.column,
+                };
+                let return_node = ReturnNode {
+                    value: Some(expr),
+                    span,
+                };
+                Ok((input, StatementNode::Return(Box::new(return_node))))
+            } else {
+                // Require semicolon otherwise
+                let (after_semi, semicolon_token) =
+                    take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+                let span = Span {
+                    start: start_span.start,
+                    end: semicolon_token.location.offset + semicolon_token.lexeme.len(),
+                    line: start_span.line,
+                    column: start_span.column,
+                };
+                let return_node = ReturnNode {
+                    value: Some(expr),
+                    span,
+                };
+                Ok((after_semi, StatementNode::Return(Box::new(return_node))))
+            }
+        }
     } else {
         // No expression, just a bare return
-        let (new_input, semicolon_token) =
-            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
-
-        // Create a span from the return keyword to the semicolon
-        let span = Span {
-            start: start_span.start,
-            end: semicolon_token.location.offset + semicolon_token.lexeme.len(),
-            line: start_span.line,
-            column: start_span.column,
-        };
-
-        let return_node = ReturnNode { value: None, span };
-
-        Ok((new_input, StatementNode::Return(Box::new(return_node))))
+        // Allow either a semicolon or an immediate right brace '}'
+        if let Ok((new_input, semicolon_token)) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)
+        {
+            let span = Span {
+                start: start_span.start,
+                end: semicolon_token.location.offset + semicolon_token.lexeme.len(),
+                line: start_span.line,
+                column: start_span.column,
+            };
+            let return_node = ReturnNode { value: None, span };
+            Ok((new_input, StatementNode::Return(Box::new(return_node))))
+        } else if let Some(TokenType::RightBrace) = input.peek().map(|t| &t.token_type) {
+            // Tolerate missing semicolon at end of block
+            let span = Span {
+                start: start_span.start,
+                end: start_span.end,
+                line: start_span.line,
+                column: start_span.column,
+            };
+            let return_node = ReturnNode { value: None, span };
+            Ok((input, StatementNode::Return(Box::new(return_node))))
+        } else {
+            // Otherwise, demand a semicolon as per syntax
+            let (new_input, semicolon_token) =
+                take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+            let span = Span {
+                start: start_span.start,
+                end: semicolon_token.location.offset + semicolon_token.lexeme.len(),
+                line: start_span.line,
+                column: start_span.column,
+            };
+            let return_node = ReturnNode { value: None, span };
+            Ok((new_input, StatementNode::Return(Box::new(return_node))))
+        }
     }
 }
 
@@ -959,6 +1050,158 @@ pub(crate) fn parse_match_statement(
     ))
 }
 
+/// Parses a function declaration:
+/// fn <name>(<param_list>?) (-> <return_type>)? <block>
+pub fn parse_function_declaration(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    log::debug!("=== parse_function_declaration ===");
+
+    // 'fn'
+    let (input, fn_tok) = take_token_if(|tt| matches!(tt, TokenType::Fn), ErrorKind::Tag)(input)?;
+    let input = input.skip_whitespace();
+    let next_tok = input.peek().map(|t| &t.token_type);
+    println!("parse_function_declaration: after 'fn', next token = {next_tok:?}");
+
+    // name identifier
+    let (input_after_name, name_tok) = take_token_if(
+        |tt| matches!(tt, TokenType::Identifier(_)),
+        ErrorKind::Alpha,
+    )(input)?;
+    let name = if let TokenType::Identifier(n) = &name_tok.token_type {
+        IdentifierNode {
+            name: n.to_string(),
+        }
+    } else {
+        unreachable!()
+    };
+    let next_tok_after_name = input_after_name.peek().map(|t| &t.token_type);
+    println!("parse_function_declaration: name = {name:?}, next token = {next_tok_after_name:?}");
+
+    // '('
+    let (mut input, _) = take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Char)(
+        input_after_name.skip_whitespace(),
+    )?;
+    input = input.skip_whitespace();
+    let next_tok_after_lparen = input.peek().map(|t| &t.token_type);
+    println!("parse_function_declaration: after '(', next token = {next_tok_after_lparen:?}");
+
+    // parameters
+    let mut params: Vec<ParameterNode> = Vec::new();
+    // Empty parameter list?
+    if let Ok((i, _)) =
+        take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Char)(input)
+    {
+        input = i; // consumed ')'
+        let next_tok = input.peek().map(|t| &t.token_type);
+        println!("parse_function_declaration: empty param list, next = {next_tok:?}");
+    } else {
+        loop {
+            // param name
+            let (i, param_ident_tok) = take_token_if(
+                |tt| matches!(tt, TokenType::Identifier(_)),
+                ErrorKind::Alpha,
+            )(input)?;
+            let next_tok = i.peek().map(|t| &t.token_type);
+            println!(
+                "parse_function_declaration: param ident = {:?}, next = {next_tok:?}",
+                param_ident_tok.token_type
+            );
+            let pname = if let TokenType::Identifier(s) = &param_ident_tok.token_type {
+                s.to_string()
+            } else {
+                unreachable!()
+            };
+            let pstart: Span = param_ident_tok.location.into();
+
+            // optional type annotation
+            let mut i2 = i.skip_whitespace();
+            let mut type_annotation: Option<ExpressionNode> = None;
+            if let Ok((i_after_colon, _)) =
+                take_token_if(|tt| matches!(tt, TokenType::Colon), ErrorKind::Char)(i2)
+            {
+                let i_after_colon = i_after_colon.skip_whitespace();
+                let (i_after_ty, ty_expr) = parse_type_identifier(i_after_colon)?;
+                type_annotation = Some(ty_expr);
+                i2 = i_after_ty;
+                let next_tok = i2.peek().map(|t| &t.token_type);
+                println!("parse_function_declaration: parsed type annotation, next = {next_tok:?}");
+            }
+
+            let pend = type_annotation
+                .as_ref()
+                .map(|e| e.span().end)
+                .unwrap_or(pstart.end);
+            let pspan = Span {
+                start: pstart.start,
+                end: pend,
+                line: pstart.line,
+                column: pstart.column,
+            };
+            params.push(ParameterNode {
+                name: IdentifierNode { name: pname },
+                type_annotation,
+                span: pspan,
+            });
+
+            // comma or ')'
+            let i2 = i2.skip_whitespace();
+            if let Ok((i_after_comma, _)) =
+                take_token_if(|tt| matches!(tt, TokenType::Comma), ErrorKind::Char)(i2)
+            {
+                input = i_after_comma.skip_whitespace();
+                let next_tok = input.peek().map(|t| &t.token_type);
+                println!("parse_function_declaration: found ',', next = {next_tok:?}");
+                continue;
+            } else {
+                // must be ')'
+                let (i_after_rparen, _) =
+                    take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Char)(i2)?;
+                input = i_after_rparen;
+                let next_tok = input.peek().map(|t| &t.token_type);
+                println!("parse_function_declaration: closed params with ')', next = {next_tok:?}");
+                break;
+            }
+        }
+    }
+
+    // optional return type
+    let mut input = input.skip_whitespace();
+    let mut return_type: Option<ExpressionNode> = None;
+    if let Ok((i, _)) = take_token_if(|tt| matches!(tt, TokenType::Arrow), ErrorKind::Tag)(input) {
+        let i = i.skip_whitespace();
+        let (i2, ret) = parse_type_identifier(i)?;
+        return_type = Some(ret);
+        input = i2;
+        let next_tok = input.peek().map(|t| &t.token_type);
+        println!("parse_function_declaration: parsed return type, next = {next_tok:?}");
+    }
+
+    // body block
+    let input = input.skip_whitespace();
+    let next_tok = input.peek().map(|t| &t.token_type);
+    println!("parse_function_declaration: before block, next = {next_tok:?}");
+    let (input, body) = parse_block(input)?;
+    let next_tok = input.peek().map(|t| &t.token_type);
+    println!("parse_function_declaration: parsed block, next = {next_tok:?}");
+
+    // function span from 'fn' to end of body
+    let span = Span {
+        start: fn_tok.location.offset,
+        end: body.span.end,
+        line: fn_tok.location.line as u32,
+        column: fn_tok.location.column as u32,
+    };
+
+    let func = FunctionNode {
+        name,
+        params,
+        return_type,
+        body,
+        span,
+    };
+
+    Ok((input, StatementNode::Function(Box::new(func))))
+}
+
 /// Parses a single statement from the input token stream.
 ///
 /// Determines the statement type based on the first token and delegates to the appropriate parser.
@@ -998,27 +1241,19 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                 token.location.column
             );
 
-            // First, check for match statement (either full or concise syntax)
-            match &token.token_type {
-                TokenType::Match => {
-                    log::debug!("Found 'match' statement");
-                    let result = parse_match_statement(input);
-                    log::debug!("parse_match_statement (full) result: {result:?}");
-                    return result;
-                }
-                TokenType::Identifier(_)
-                    if input.0.len() > 1
-                        && matches!(input.0[1].token_type, TokenType::LeftBrace) =>
-                {
-                    log::debug!("Found concise match syntax, parsing as match statement");
-                    let result = parse_match_statement(input);
-                    log::debug!("parse_match_statement (concise) result: {result:?}");
-                    return result;
-                }
-                _ => {}
+            // First, check for match statement (keyword-based only)
+            if let TokenType::Match = &token.token_type {
+                log::debug!("Found 'match' statement");
+                let result = parse_match_statement(input);
+                log::debug!("parse_match_statement (full) result: {result:?}");
+                return result;
             }
 
             match &token.token_type {
+                TokenType::Fn => {
+                    log::debug!("Found 'fn' function declaration");
+                    return parse_function_declaration(input);
+                }
                 TokenType::Let => {
                     log::debug!("Found 'let' statement");
                     parse_let_statement(input)
@@ -1031,6 +1266,10 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                     log::debug!("Found 'if' statement");
                     parse_if_statement(input)
                 }
+                TokenType::For => {
+                    log::debug!("Found 'for' statement");
+                    parse_for_statement(input)
+                }
                 TokenType::Match => {
                     log::debug!("Found 'match' statement");
                     let result = parse_match_statement(input);
@@ -1042,20 +1281,7 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                     parse_while_statement(input)
                 }
                 _ => {
-                    log::debug!("No statement keyword found, checking for concise match syntax");
-
-                    // Check for concise match syntax: <ident> { ... }
-                    if input.0.len() > 1 {
-                        if let TokenType::Identifier(_) = input.0[0].token_type {
-                            if let TokenType::LeftBrace = input.0[1].token_type {
-                                log::debug!(
-                                    "Found concise match syntax, parsing as match statement"
-                                );
-                                return parse_match_statement(input);
-                            }
-                        }
-                    }
-
+                    log::debug!("No statement keyword found, trying expression statement");
                     log::debug!("No concise match syntax found, trying expression statement");
                     // Log the next few tokens for better debugging
                     log::debug!("Next tokens in parse_statement (expression case):");
