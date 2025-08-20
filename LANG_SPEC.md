@@ -20,7 +20,7 @@ This specification outlines Medi's syntax, data types, control structures, and d
 ### Source Code Representation
 - Source files are encoded in UTF-8
 - Line endings are platform-independent (\n or \r\n)
-- Whitespace is significant for indentation
+- Blocks are brace-delimited; indentation is not significant
 
 ### Tokens
 1. **Identifiers**:
@@ -31,17 +31,18 @@ This specification outlines Medi's syntax, data types, control structures, and d
 
 2. **Keywords**:
    ```
-   module    import    fn       if       else    for
-   while     match     return   let      const   type
+   module    import    fn       let      const   type
    struct    enum      trait    impl     pub     priv
-   fhir      query     async    await    scope   federated
+   return    while     for      in       match   if
+   else      loop      break    continue true    false
+   nil       fhir_query regulate federated scope real_time
    ```
 
 3. **Operators and Delimiters**:
    ```
    +    -    *    /    %    =    ==   !=   <    >    <=   >=
-   &&   ||   !    |>   ->   =>   {    }    (    )    [    ]
-   .    ,    :    ;    @    #    ?    ..   ...
+   +=   -=   *=   /=   %=   &&   ||   !    ->   =>   {    }    (    )    [    ]
+   .    ::   ,    :    ;    @    #    ?    ..   ..=  ...
    ```
 
 4. **Literals**:
@@ -150,19 +151,17 @@ print("BMI: ", bmi)
 
 ### Domain-Specific Functions
 
-- `query_fhir(resource: string, id: string) -> record`: Fetches FHIR-compliant medical data.
+- `fhir_query(resource: string, id: string, filter?: map[string, string]) -> record | list[record]`: Fetches FHIR-compliant medical data.
 - `validate_vital(v: vital) -> bool`: Checks if vital signs are within normal ranges.
 
 ## Error Handling
 
-Medi uses a try/catch mechanism for robust error handling, critical for medical applications.
+v0.1 uses `Result<T, E>` and the `?` operator for error propagation. `try/catch` is planned for a future version.
 
 ```medi
-try {
-    let data = query_fhir("Patient", "PT-12345")
-    print("Patient data retrieved")
-} catch error {
-    print("Error: ", error.message)
+fn load_patient(id: string) -> Result<record, Error> {
+    let patient = fhir_query("Patient", id)? // propagate any fetch error
+    Ok(patient)
 }
 ```
 
@@ -185,8 +184,8 @@ fn analyze_vitals(vitals: list[vital]) -> map[string, float] {
 Medi provides built-in support for medical data standards:
 
 ```medi
-let patient = query_fhir("Patient", "PT-12345")
-let labs = query_fhir("Observation", "LAB-67890")
+let patient = fhir_query("Patient", "PT-12345")
+let labs = fhir_query("Observation", "LAB-67890")
 ```
 
 ### Clinical Rules
@@ -244,7 +243,7 @@ import LabResults
 
 fn monitor_patient(id: patient_id) -> bool {
     let vitals = query_vitals(id)
-    let labs = query_fhir("Observation", id.value)
+    let labs = fhir_query("Observation", id.value)
 
     for vital in vitals {
         if vital.temperature > 38.0 or vital.pulse > 100 {
@@ -321,9 +320,9 @@ ComplianceSpec ::= 'hipaa' | 'gdpr' | 'fda' | STRING
 ### Syntax Resolution
 
 1. **Whitespace Rules**
-   - Significant whitespace only in `safe` zones
-   - Braces required in `real_time` zones
-   - Clear visual distinction between modes
+   - Blocks are brace-delimited in all zones
+   - Indentation is not significant (recommended for readability)
+   - Visual distinction between modes via annotations/keywords, not whitespace
 
 2. **Healthcare Integration**
    - Medical types are first-class citizens
@@ -391,7 +390,7 @@ The grammar is inspired by multiple languages but maintains consistency through 
 1. **Task-based Parallelism**
    - Lightweight tasks scheduled by runtime
    - Channel-based message passing
-   - Async/await for non-blocking I/O
+   - Async/await for non-blocking I/O (deferred in v0.1)
 
 2. **Data Race Prevention**
    - Static analysis via borrow checker
@@ -492,6 +491,15 @@ The Medi compiler (`medic`) consists of several stages:
 - Full ecosystem maturity
 - Advanced AI capabilities
 - Quantum computing support
+
+## Reserved & Future (Post v0.1)
+
+- Pipeline operator `|>`: left-associative; desugars `x |> f(a)` to `f(x, a)`; specify in v0.2.
+- Async/await syntax and runtime: structured concurrency; deferred in v0.1.
+- Units/Quantities (UCUM): quantity literals and compile-time unit checking; v0.2+.
+- try/catch sugar: surface syntax layered over `Result`; planned.
+- Target blocks `target riscv { ... }`: build-time configuration; not core semantics.
+
 
 ## Version History
 

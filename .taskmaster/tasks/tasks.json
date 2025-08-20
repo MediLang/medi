@@ -26,7 +26,7 @@
             1
           ],
           "details": "Acceptance Criteria:\n- Correctly tokenize all language constructs\n- Handle whitespace and comments appropriately\n- Proper position tracking for error reporting\n- Support for string literals with escape sequences\n- Performance optimization for large inputs\n- Comprehensive test suite covering edge cases\nEstimated Complexity: High - requires careful state management and performance considerations.",
-          "status": "done"
+          "status": "in-progress"
         },
         {
           "id": 3,
@@ -37,7 +37,7 @@
             2
           ],
           "details": "Acceptance Criteria:\n- Implementation of all grammar rules\n- Proper handling of operator precedence\n- Support for nested expressions and statements\n- Memory-efficient parsing of large documents\n- Comprehensive test suite for all grammar constructs\n- Documentation of parsing algorithms\nEstimated Complexity: Very High - requires implementation of mutually recursive procedures and careful handling of grammar ambiguities.",
-          "status": "done"
+          "status": "in-progress"
         },
         {
           "id": 4,
@@ -47,7 +47,7 @@
             3
           ],
           "details": "Acceptance Criteria:\n- Well-defined AST node types for all language constructs\n- Visitor pattern implementation for AST traversal\n- Position information preserved in AST nodes\n- Memory-efficient AST representation\n- Serialization/deserialization support\n- Unit tests for AST generation and traversal\nEstimated Complexity: High - requires careful design of node types and efficient memory management.",
-          "status": "done"
+          "status": "in-progress"
         },
         {
           "id": 5,

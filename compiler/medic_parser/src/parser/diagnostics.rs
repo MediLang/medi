@@ -188,6 +188,29 @@ fn span_from_token(token: &Token) -> Span {
     }
 }
 
+/// Compute the inclusive end column for a token based on its Unicode character length.
+///
+/// Columns are 1-based. If a token starts at column C and spans N Unicode scalar values,
+/// the inclusive end column is C + N - 1. This respects multi-byte UTF-8 characters.
+pub fn end_column_inclusive_from_token(token: &Token) -> u32 {
+    let start_col = token.location.column as u32;
+    let char_len = token.lexeme.as_str().chars().count() as u32;
+    // Guard against empty lexemes (should not happen for real tokens)
+    if char_len == 0 {
+        start_col
+    } else {
+        start_col + char_len - 1
+    }
+}
+
+/// Compute the exclusive end column (one past the last character) for a token.
+///
+/// This is useful for rendering spans as ranges. For a token that starts at column C
+/// and spans N Unicode scalar values, the exclusive end column is C + N.
+pub fn end_column_exclusive_from_token(token: &Token) -> u32 {
+    token.location.column as u32 + token.lexeme.as_str().chars().count() as u32
+}
+
 // Optional mapping from expression-specific errors if/when used by expression parser
 #[allow(dead_code)]
 impl From<crate::parser::expressions::nested::ExpressionError> for Diagnostic {

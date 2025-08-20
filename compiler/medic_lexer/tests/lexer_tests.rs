@@ -62,6 +62,128 @@ fn test_numeric_literals() {
     }
 }
 
+// Position tracking tests (single-line, multi-line, UTF-8)
+#[cfg(test)]
+mod position_tests {
+    use super::*;
+
+    #[test]
+    fn test_positions_single_line_ascii() {
+        let input = "let x = 42;";
+        let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+        let tokens: Vec<_> = lexer.collect();
+
+        // Expect: let, Identifier(x), =, 42, ;
+        assert!(tokens.len() >= 5, "got tokens: {:?}", tokens);
+
+        // Helper to check a token's pos quickly
+        let check = |idx: usize, expected_lex: &str, line: usize, column: usize, offset: usize| {
+            let t = &tokens[idx];
+            pretty_assert_eq!(t.lexeme.as_str(), expected_lex, "lexeme mismatch at {idx}");
+            pretty_assert_eq!(t.location.line, line, "line mismatch for '{expected_lex}'");
+            pretty_assert_eq!(
+                t.location.column,
+                column,
+                "column mismatch for '{expected_lex}'"
+            );
+            pretty_assert_eq!(
+                t.location.offset,
+                offset,
+                "offset mismatch for '{expected_lex}'"
+            );
+        };
+
+        check(0, "let", 1, 1, 0);
+        check(1, "x", 1, 5, 4);
+        check(2, "=", 1, 7, 6);
+        check(3, "42", 1, 9, 8);
+        check(4, ";", 1, 11, 10);
+    }
+
+    #[test]
+    fn test_positions_multiline_with_utf8() {
+        // Greek letters are 2-byte UTF-8; ensure columns reset per line and offsets count bytes
+        let input = "β = 1\nx = 2\nγδ = 3";
+        let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+        let tokens: Vec<_> = lexer.collect();
+
+        // Expect sequence by lexeme: β, =, 1, x, =, 2, γδ, =, 3
+        let seq: Vec<&str> = tokens.iter().map(|t| t.lexeme.as_str()).collect();
+        pretty_assert_eq!(seq, vec!["β", "=", "1", "x", "=", "2", "γδ", "=", "3"]);
+
+        // β at start (line 1, col 1, offset 0)
+        pretty_assert_eq!(tokens[0].location.line, 1);
+        pretty_assert_eq!(tokens[0].location.column, 1);
+        pretty_assert_eq!(tokens[0].location.offset, 0);
+
+        // '=' on line 1, after 'β ' (β is 2 bytes, space 1) -> column 3, offset 3
+        pretty_assert_eq!(tokens[1].location.line, 1);
+        pretty_assert_eq!(tokens[1].location.column, 3);
+        pretty_assert_eq!(tokens[1].location.offset, 3);
+
+        // '1' on line 1, column 5, offset 5
+        pretty_assert_eq!(tokens[2].location.line, 1);
+        pretty_assert_eq!(tokens[2].location.column, 5);
+        pretty_assert_eq!(tokens[2].location.offset, 5);
+
+        // 'x' starts line 2 (offset after "β = 1\n"). Bytes for first line: β(2)+' '(1)+'='(1)+' '(1)+'1'(1)=6, plus '\n'(1)=7
+        pretty_assert_eq!(tokens[3].location.line, 2);
+        pretty_assert_eq!(tokens[3].location.column, 1);
+        pretty_assert_eq!(tokens[3].location.offset, 7);
+
+        // '=' on line 2, after "x " -> column 3, offset 9
+        pretty_assert_eq!(tokens[4].location.line, 2);
+        pretty_assert_eq!(tokens[4].location.column, 3);
+        pretty_assert_eq!(tokens[4].location.offset, 9);
+
+        // '2' on line 2, column 5, offset 11
+        pretty_assert_eq!(tokens[5].location.line, 2);
+        pretty_assert_eq!(tokens[5].location.column, 5);
+        pretty_assert_eq!(tokens[5].location.offset, 11);
+
+        // 'γδ' starts line 3. Offsets so far: line1 (6) + '\n'(1) + line2 ("x = 2" -> 5) + '\n'(1) = 13
+        pretty_assert_eq!(tokens[6].location.line, 3);
+        pretty_assert_eq!(tokens[6].location.column, 1);
+        pretty_assert_eq!(tokens[6].location.offset, 13);
+
+        // '=' on line 3 after "γδ " -> column 4, offset 18 (γ(2)+δ(2)+space(1)=5; line start offset 13)
+        pretty_assert_eq!(tokens[7].location.line, 3);
+        pretty_assert_eq!(tokens[7].location.column, 4);
+        pretty_assert_eq!(tokens[7].location.offset, 18);
+
+        // '3' on line 3, column 6, offset 20
+        pretty_assert_eq!(tokens[8].location.line, 3);
+        pretty_assert_eq!(tokens[8].location.column, 6);
+        pretty_assert_eq!(tokens[8].location.offset, 20);
+    }
+
+    #[test]
+    fn test_utf8_in_line_column_tracking() {
+        // Ensure columns account for multi-byte char before an operator on the same line
+        let input = "µg == 5"; // 'µ' is 2 bytes
+        let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+        let tokens: Vec<_> = lexer.collect();
+
+        // Expect: Identifier("µg"), '==', '5'
+        assert!(tokens.len() >= 3, "got tokens: {:?}", tokens);
+        pretty_assert_eq!(tokens[0].lexeme.as_str(), "µg");
+        pretty_assert_eq!(tokens[1].lexeme.as_str(), "==");
+        pretty_assert_eq!(tokens[2].lexeme.as_str(), "5");
+
+        // 'µg' at col 1, offset 0
+        pretty_assert_eq!(tokens[0].location.column, 1);
+        pretty_assert_eq!(tokens[0].location.offset, 0);
+
+        // '==' should begin at column 4 (µ, g, space) and byte offset 4 (2 + 1 + 1)
+        pretty_assert_eq!(tokens[1].location.column, 4);
+        pretty_assert_eq!(tokens[1].location.offset, 4);
+
+        // '5' at column 7 and byte offset 7
+        pretty_assert_eq!(tokens[2].location.column, 7);
+        pretty_assert_eq!(tokens[2].location.offset, 7);
+    }
+}
+
 #[test]
 #[ignore = "Temporarily disabled - needs investigation for infinite loop"]
 fn test_invalid_numeric_literals() {
