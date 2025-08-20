@@ -52,6 +52,7 @@ Phase 2 focuses on stabilizing the Medi language core, expanding its capabilitie
 #### Performance Optimization
 - LLVM optimization passes for medical workloads
 - SIMD support for genomics/imaging
+- RISC-V RV64 and vector (RVV) support for edge and server-class devices
 - Memory optimization for large datasets
 - Real-time guarantees for medical devices
 
@@ -236,9 +237,9 @@ resource_optimizer.allocate_staff(
 
 ### Compatibility
 - Support for all major healthcare data standards
-- Integration with Epic, Cerner APIs
+- Prepare for EHR integration (Epic, Cerner) via discovery/design; defer full integration to Phase 3
 - Python/R bidirectional interoperability
-- Cloud deployment options (AWS, Azure, GCP)
+- Prepare for cloud deployment (AWS, Azure, GCP); full platform integrations in Phase 3
 
 ### Security & Privacy
 - SOC 2 compliance for `medipacks.io`

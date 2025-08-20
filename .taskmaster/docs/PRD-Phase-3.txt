@@ -62,6 +62,7 @@ Phase 3 represents a critical maturation period for the Medi programming languag
   - Privacy framework
   - Analytics engine
   - Real-time monitoring
+  - Hospital operations module (`medi.ops`)
 
 ### 2. AI and Advanced Analytics
 
@@ -88,6 +89,10 @@ Phase 3 represents a critical maturation period for the Medi programming languag
 - Implement risk stratification frameworks
 - Develop clinical decision support tools
 - Build temporal modeling for disease progression
+
+#### Quantum Readiness
+- Experimental support for quantum algorithm backends (e.g., Qiskit) for future drug discovery and optimization
+- Abstractions to simulate quantum workflows where hardware is not available
 
 ### 3. Enterprise Integration
 

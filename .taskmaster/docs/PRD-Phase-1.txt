@@ -1,5 +1,5 @@
 # MEDI PROGRAMMING LANGUAGE: PHASE 1 (PROTOTYPE)
-**Development Timeline: 0-12 Months**
+**Development Timeline: 6-12 Months**
 **Last Updated:** May 11, 2025
 
 ## EXECUTIVE SUMMARY
@@ -33,7 +33,7 @@ Phase 1 focuses on building the foundational components of the Medi programming 
 - Implement Rust-like borrow checking for memory safety and concurrency
 - LLVM backend integration for efficient code generation
 - Support for WebAssembly target (for browser deployments)
-- Initial RISC-V support for medical IoT devices
+- Initial RISC-V (RV32) support for medical IoT devices
 - Basic optimization pipeline for healthcare workloads
 - Privacy/compliance checking stage for HIPAA/GDPR rules
 

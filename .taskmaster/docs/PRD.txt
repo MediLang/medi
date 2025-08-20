@@ -342,8 +342,8 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - **Compliance**: Automated verification of security controls
 
 # Development Roadmap  
-## Phase 1: Foundation (MVP)
-
+## Phase 1: Prototype (6-12 Months)
+ 
 ### Core Language Implementation
 - Develop lexer and parser for Medi syntax
 - Implement type system with healthcare data types
@@ -356,27 +356,35 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - Create basic statistical functions in `medi.stats`
 - Develop simple visualization capabilities in `medi.viz`
 - Build foundation for `medi.compliance` with HIPAA checks
+- Introduce initial `medi.ai` scaffolding (pre-trained models, stubs)
 
 ### Development Tools
 - Create basic IDE with syntax highlighting and code completion
 - Implement package management system
 - Develop documentation generator
 - Build testing framework for healthcare-specific validation
-
+ 
+### Early Testing and Targets
+- Test with synthetic data (FHIR, VCF, IoT streams)
+- Target RISC-V (RV32) for IoT prototype
+ 
 ### Initial Use Cases
 - Clinical data exploration and basic statistics
 - Simple patient cohort analysis
 - Regulatory compliance checking
 - Basic visualization of healthcare metrics
 
-## Phase 2: Core Capabilities
-
+## Phase 2: Pilot (12-18 Months)
+ 
+### Pilot Programs
+- Pilot with universities/hospitals on trials, IoT, or AI use cases
+ 
 ### Language Enhancements
 - Implement advanced type system features
 - Add concurrency model with parallel processing
 - Develop healthcare-specific optimizations
 - Create WebAssembly target for browser deployment
-- Implement RISC-V code generation for edge devices
+- Expand RISC-V support (RV64, vector extensions)
 
 ### Standard Library Expansion
 - Extend `medi.data` with HL7, DICOM, and genomic formats
@@ -398,7 +406,7 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - Real-time monitoring of patient vitals
 - Interactive visualization of healthcare data
 
-## Phase 3: Advanced Features
+## Phase 3: Production Release (18-36 Months)
 
 ### AI and Advanced Analytics
 - Implement `medi.ai` with pre-trained healthcare models
@@ -428,8 +436,6 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - Build staffing and scheduling optimization
 - Develop inventory and supply chain management
 
-## Phase 4: Ecosystem Growth
-
 ### Plugin Marketplace
 - Create plugin architecture and SDK
 - Develop marketplace infrastructure
@@ -443,20 +449,6 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - Build certification program for developers
 - Develop specialized tracks for different healthcare domains
 - Create academic curriculum for medical informatics
-
-### Industry Partnerships
-- Develop integration with medical device manufacturers
-- Create partnerships with EHR vendors
-- Build relationships with cloud healthcare providers
-- Establish academic research collaborations
-- Form industry consortia for standards development
-
-### Global Health Initiatives
-- Create low-resource deployments for developing regions
-- Develop offline-capable applications
-- Build open datasets for global health challenges
-- Create templates for epidemic response
-- Develop telemedicine frameworks for remote areas
 
 # Logical Dependency Chain
 ## Foundation Layer (Must Build First)
