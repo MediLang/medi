@@ -175,6 +175,34 @@ Discussions on X (as of May 2025) validate Medi’s relevance:
 *   **Compliance:** Frustration with SAS’s manual reporting endorses Medi’s `regulate` and `report`.
 *   **Privacy:** Need for secure genomics/EHR analytics supports Medi’s differential privacy.
 
+## Audience & Personas
+
+* **Clinician/Researcher**
+  - Goal: Ask clinical questions, run stats/AI without deep programming.
+  - Needs: FHIR-native data access, clear diagnostics, units/terminology help.
+  - Value: Short, readable code; built-ins for trials/epi; privacy by default.
+
+* **Data Scientist**
+  - Goal: Analyze multi-modal healthcare data at scale.
+  - Needs: Interop with Python/R, parallelism, reproducibility, compliance.
+  - Value: Domain types (FHIR/DICOM), federated learning, UCUM normalization.
+
+* **Health IT Engineer**
+  - Goal: Integrate EHRs, imaging, devices, identity/security.
+  - Needs: FHIR/HL7/DICOM adapters, SMART on FHIR, audit, deploy to edge.
+  - Value: First-class standards, WASM/RISC-V targets, compliance hooks.
+
+## Value Proposition vs Existing Languages
+
+- **Python**: Massive ecosystem but slower and lacks native healthcare models.
+  - Medi: LLVM-native performance, first-class FHIR/DICOM/terminologies, `regulate` for compliance; still interoperates via `py_call`.
+
+- **Julia**: High performance, growing DS/ML ecosystem; not healthcare-specific.
+  - Medi: Similar perf target with domain primitives and compliance baked in.
+
+- **SAS/Stata**: Trusted in clinical settings; proprietary, expensive, slower iteration.
+  - Medi: Open-source, modern tooling, automation of regulatory artifacts, edge/WASM targets.
+
 ## Getting Started
 
 Medi is in pre-alpha, with a prototype under development. To contribute or follow progress:
@@ -183,6 +211,24 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 *   Join the Community: [X: @MediLangHQ](https://twitter.com/MediLangHQ) | [Discord]([Discord](https://discord.gg/JxE6dD285R))
 *   Read the Docs: [medi-lang.org/docs](http://medi-lang.org/docs) (Coming Soon)
 *   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: medic, standard library, IDE, RISC-V, AI models.
+
+## Current Status
+
+| Area | Status |
+| --- | --- |
+| [Lexer/Parser/AST](.taskmaster/tasks/tasks.json) (Task 1) | Supported (prototype) |
+| [Clinician-friendly diagnostics](.taskmaster/tasks/tasks.json) (Task 1, subtask 5) | In progress |
+| [Type system core/inference](.taskmaster/tasks/tasks.json) (Task 2) | In progress |
+| [LLVM backend (x86-64/WASM/RISC-V)](.taskmaster/tasks/tasks.json) (Task 3) | Planned |
+| [Runtime/memory zones](.taskmaster/tasks/tasks.json) (Task 4) | Planned |
+| [Standard library (data/stats/compliance/ai)](.taskmaster/tasks/tasks.json) (Task 5) | Planned |
+| [FHIR interop (REST, Search, Bulk)](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
+| [DICOM/DICOMweb](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
+| [Terminologies (SNOMED, LOINC, ICD, RxNorm, UCUM, CPT/HCPCS, NDC)](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
+| [CLI/REPL](.taskmaster/tasks/tasks.json) (Task 7) | Planned |
+| [Compliance checker (HIPAA/GDPR/Part 11)](.taskmaster/tasks/tasks.json) (Task 6) | Planned |
+
+Legend: Supported = usable prototype; In progress = partial implementation; Planned = on roadmap.
 
 ## Development Roadmap
 
@@ -221,6 +267,101 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
     *   `medi.compliance`: Regulatory automation.
     *   `medi.ai`: AI models for diagnostics, NLP, prediction.
     *   `medi.ops`: Hospital operations.
+
+### Architecture Overview
+
+```
+Source (.medi)
+  -> Lexer (`medic_lexer`)
+  -> Parser / AST (`medic_parser`, `medic_ast`)
+  -> Type System (`medic_type`) & Type Checker (`medic_typeck`)
+  -> IR / Codegen (planned: `medic_codegen_llvm`)
+  -> Binaries/WASM (planned) + Runtime (planned)
+  -> CLI/REPL (planned: `medic`)
+```
+
+- Crates map:
+  - `compiler/medic_lexer`: Tokenization
+  - `compiler/medic_parser`: Parsing -> AST
+  - `compiler/medic_ast`: AST definitions/utilities
+  - `compiler/medic_type`: Types and inference primitives
+  - `compiler/medic_typeck`: Type checking passes
+  - Planned: `compiler/medic_codegen_llvm`, `compiler/medic_runtime`, CLI integration in `compiler/medic`
+
+## Standards & Interoperability
+
+Medi integrates with clinical data standards, terminologies, and protocols. Status tags: [Supported] [In progress] [Planned]. Current status: Planned unless otherwise noted.
+
+- Data exchange & models
+  - HL7 FHIR R4/R5 (REST, Search, Subscriptions, Bulk Data/Flat FHIR) [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - HL7 v2.x (ADT/ORM/ORU) [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - HL7 CDA [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - IHE profiles: XDS/XCA/MHD/PDQ/PIX/ATNA [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - openEHR (EHRbase, Archetypes/Templates) [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - OMOP CDM / OHDSI [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+  - PCORnet CDM [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+  - X12 HIPAA (270/271/837/835) [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+  - NCPDP SCRIPT (eRx) [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+  - CDISC SDTM/ADaM (clinical trials) [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+
+- Imaging
+  - DICOM (files, SR) [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - DICOMweb (QIDO-RS, WADO-RS, STOW-RS) [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+
+- Genomics
+  - GA4GH: htsget, refget, Beacon v2, VRS, Phenopackets [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+  - Formats: FASTQ, BAM/CRAM, VCF/BCF [Planned] ([tracking: Task 5](.taskmaster/tasks/tasks.json))
+
+- Terminologies & units
+  - SNOMED CT [Planned] (License required; see note) ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - LOINC [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - ICD-10/ICD-11 [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - RxNorm, ATC, NDC/EMA [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - CPT/HCPCS [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+  - UCUM (units) [Planned] ([tracking: Task 5: medi.data](.taskmaster/tasks/tasks.json))
+
+- Security, identity, and app integration
+  - SMART on FHIR (OAuth2/OIDC, SMART scopes) [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+  - mTLS/JWT/JOSE [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+  - FHIR CDS Hooks [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+  - Audit: IHE ATNA, FHIR AuditEvent [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+  - Consent & provenance: FHIR Consent, W3C PROV [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+
+- Public health & reporting
+  - eCR Now / ELR [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+  - FDA/EMA reporting templates (21 CFR Part 11 alignment) [Planned] ([tracking: Task 6](.taskmaster/tasks/tasks.json))
+
+Licensing note: Some terminologies (e.g., SNOMED CT) require a license in certain jurisdictions. Medi will integrate via pluggable terminology services and will not redistribute proprietary content.
+
+## Diagnostics and Error Experience
+
+Clinician-friendly diagnostics aim to provide clear messages, code frames, and actionable suggestions.
+
+Example (illustrative):
+
+```
+error[E1002]: Type mismatch: expected Number, found String
+ --> patient_risk.medi:12:17
+  |
+12|   let bmi = weight / "height";
+  |                  ^^^^^^^^^^^ expected Number
+  |
+help: did you mean to use the numeric value?
+      try: height.value  // or normalize units via ucum("180 cm")
+note: future versions will suggest unit conversions and terminology lookups.
+```
+
+## Compliance & Safety
+
+Planned compliance-by-design features and security posture:
+
+- Regulatory scope: HIPAA, GDPR, 21 CFR Part 11; relevant ISO standards (ISO 13485, ISO 14971) [Planned]
+- Controls: `regulate { ... }` blocks for compile-time checks, audit artifacts, and reporting [Planned]
+- Data governance: PHI tagging, data minimization, consent/provenance (FHIR Consent, W3C PROV) [Planned]
+- Security: OAuth2/OIDC (SMART on FHIR), mTLS, JWT, key management (KMS/HSM), secrets management [Planned]
+- Observability: structured logs, FHIR AuditEvent/IHE ATNA alignment [Planned]
+
+Disclaimer: This is not legal advice. Compliance features are under active design and implementation.
 
 ## Project Structure (Rust-Inspired)
 
