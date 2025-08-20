@@ -180,7 +180,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                 log::error!("Expected identifier, found: {:?}", token.token_type);
                 Err(nom::Err::Error(nom::error::Error::new(
                     input,
-                    ErrorKind::Tag,
+                    ErrorKind::Alpha,
                 )))
             }
         }

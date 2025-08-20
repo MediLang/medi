@@ -67,6 +67,7 @@ use medic_ast::ast::{
 use medic_lexer::token::{Token, TokenType};
 
 // Declare submodules
+pub mod diagnostics;
 pub mod expressions;
 pub mod identifiers;
 pub mod literals;
@@ -74,6 +75,7 @@ pub mod statements;
 pub mod test_utils;
 
 // Re-export commonly used functions from submodules
+pub use diagnostics::{diagnostic_from_nom_error, Diagnostic, Severity};
 pub use expressions::{parse_expression, *};
 pub use identifiers::*;
 pub use literals::*;
@@ -671,6 +673,54 @@ where
     }
 }
 
+/// Recover from a statement-level parse error by skipping tokens until a synchronization point.
+///
+/// Synchronization points are:
+/// - Semicolon ';' (consumed)
+/// - Right brace '}' (not consumed, so outer block can handle it)
+/// - End of input
+///
+/// Emits a clinician-friendly diagnostic describing the error and the recovery action.
+fn recover_to_sync<'a>(
+    mut input: TokenSlice<'a>,
+    err: &nom::Err<nom::error::Error<TokenSlice<'a>>>,
+    diagnostics: &mut Vec<Diagnostic>,
+    context: &str,
+) -> TokenSlice<'a> {
+    // Build base diagnostic from the underlying nom error
+    let mut diag = diagnostics::diagnostic_from_nom_error(err);
+
+    // Attach recovery action help text
+    let recovery_help = "I skipped ahead to the next ';' or '}' to continue parsing this ";
+    let combined_help = match diag.help.take() {
+        Some(existing) => format!("{existing} Also: {context}. {recovery_help}{context}."),
+        None => format!("{context}. {recovery_help}{context}."),
+    };
+    diag.help = Some(combined_help);
+    diagnostics.push(diag);
+
+    // Skip tokens until a synchronization point
+    loop {
+        match input.peek().map(|t| &t.token_type) {
+            Some(TokenType::Semicolon) => {
+                // Consume the semicolon and resume after it
+                return input.advance();
+            }
+            Some(TokenType::RightBrace) => {
+                // Do not consume; let the caller handle the block closing
+                return input;
+            }
+            Some(_) => {
+                input = input.advance();
+            }
+            None => {
+                // End of input
+                return input;
+            }
+        }
+    }
+}
+
 /// Parses a block of statements enclosed in braces and returns a `BlockNode`.
 ///
 /// The function expects the input to start with a left brace (`{`), parses zero or more statements until a right brace (`}`) is encountered, and returns the collected statements as a `BlockNode`.
@@ -729,6 +779,84 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
             let (new_input, _) =
                 take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
             input = new_input;
+        }
+    }
+
+    // Consume the right brace
+    let (input, right_brace) =
+        take_token_if(|t| matches!(t, TokenType::RightBrace), ErrorKind::Tag)(input)?;
+
+    let span = Span {
+        start: start_span.start,
+        end: right_brace.location.offset + right_brace.lexeme.len(),
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    Ok((input, BlockNode { statements, span }))
+}
+
+/// A recovering variant of `parse_block` that records diagnostics and continues after errors.
+pub fn parse_block_with_recovery<'a>(
+    input: TokenSlice<'a>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> IResult<TokenSlice<'a>, BlockNode> {
+    let (mut input, left_brace) =
+        take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
+    let start_span: Span = left_brace.location.into();
+
+    let mut statements = Vec::new();
+
+    // Skip any leading semicolons before the first statement
+    while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+        let (new_input, _) =
+            take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+        input = new_input;
+    }
+
+    // Parse statements until we hit a right brace
+    while !matches!(
+        input.peek().map(|t| &t.token_type),
+        Some(TokenType::RightBrace)
+    ) {
+        match parse_statement(input) {
+            Ok((next, stmt)) => {
+                input = next;
+                statements.push(stmt);
+
+                // Skip any extra semicolons
+                while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                    let (new_input, _) = take_token_if(
+                        |t| matches!(t, TokenType::Semicolon),
+                        ErrorKind::Tag,
+                    )(input)?;
+                    input = new_input;
+                }
+            }
+            Err(e) => {
+                // Recover to next synchronization point and continue
+                let recovered = recover_to_sync(input, &e, diagnostics, "block");
+                // If no progress made, decide whether to break (for '}') or abort
+                if recovered.len() == input.len() {
+                    if matches!(
+                        recovered.peek().map(|t| &t.token_type),
+                        Some(TokenType::RightBrace)
+                    ) {
+                        break;
+                    } else {
+                        return Err(e);
+                    }
+                }
+                input = recovered;
+                // If we recovered at a semicolon, also skip any extra semicolons
+                while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                    let (new_input, _) = take_token_if(
+                        |t| matches!(t, TokenType::Semicolon),
+                        ErrorKind::Tag,
+                    )(input)?;
+                    input = new_input;
+                }
+            }
         }
     }
 
@@ -975,6 +1103,76 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
         statements.len()
     );
     Ok((input, ProgramNode { statements }))
+}
+
+/// A recovering variant of `parse_program` that continues after errors and collects diagnostics.
+pub fn parse_program_recovering<'a>(
+    input: TokenSlice<'a>,
+    diagnostics: &mut Vec<Diagnostic>,
+) -> IResult<TokenSlice<'a>, ProgramNode> {
+    log::debug!("=== parse_program_recovering ===");
+    let mut input = input.skip_whitespace();
+    let mut statements = Vec::new();
+
+    while !input.is_empty() {
+        input = input.skip_whitespace();
+        if input.is_empty() {
+            break;
+        }
+
+        match parse_statement(input) {
+            Ok((next, stmt)) => {
+                statements.push(stmt);
+                input = next.skip_whitespace();
+            }
+            Err(e) => {
+                // Attempt to recover and continue parsing subsequent statements
+                let mut recovered = recover_to_sync(input, &e, diagnostics, "top-level statement");
+
+                // If we are stuck on an unmatched right brace at the top level, consume it with a warning
+                if let Some(TokenType::RightBrace) = recovered.peek().map(|t| &t.token_type) {
+                    let tok = recovered.first().cloned();
+                    if let Some(tok) = tok {
+                        diagnostics.push(Diagnostic {
+                            severity: Severity::Warning,
+                            message: "Unmatched closing brace '}' at top level".to_string(),
+                            span: tok.location.into(),
+                            help: Some(
+                                "This '}' does not close any open block. It was ignored."
+                                    .to_string(),
+                            ),
+                        });
+                    }
+                    recovered = recovered.advance();
+                }
+
+                // Skip any extra semicolons after recovery
+                while let Some(TokenType::Semicolon) = recovered.peek().map(|t| &t.token_type) {
+                    let (new_recovered, _) = take_token_if(
+                        |t| matches!(t, TokenType::Semicolon),
+                        ErrorKind::Tag,
+                    )(recovered)?;
+                    recovered = new_recovered;
+                }
+
+                // If no progress could be made, abort to avoid infinite loop
+                if recovered.len() == input.len() {
+                    return Err(e);
+                }
+                input = recovered;
+            }
+        }
+    }
+
+    Ok((input, ProgramNode { statements }))
+}
+
+/// Wrapper that parses a program and returns a clinician-friendly Diagnostic on error
+pub fn parse_program_with_diagnostics(input: TokenSlice<'_>) -> Result<ProgramNode, Diagnostic> {
+    match parse_program(input) {
+        Ok((_rest, program)) => Ok(program),
+        Err(e) => Err(diagnostics::diagnostic_from_nom_error(&e)),
+    }
 }
 
 /// Parses a pattern for use in match expressions.
