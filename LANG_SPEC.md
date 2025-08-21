@@ -53,6 +53,13 @@ This specification outlines Medi's syntax, data types, control structures, and d
    - DateTime: `2025-05-15T00:00:00Z`
    - Medical: `pid("PT123")`, `icd10("A00.0")`
 
+### Lexer Error Tokens
+
+- When the lexer encounters an invalid or unrecognized lexeme, it does not abort; instead it emits an error token.
+- Form: `TokenType::Error("Invalid token '<lexeme>'")` with an attached `Location` (line, column, offset).
+- This behavior is unified across both the streaming and chunked lexers via centralized conversion logic (`convert_logos_to_token`), ensuring consistent messaging regardless of lexing mode.
+- Debug logging: When the optional `logging` feature is enabled, a debug log is emitted at the point of error token creation to aid diagnostics. Logs include the source location and offending lexeme (and for chunked lexing, whether the chunk is final). Enable at runtime with `RUST_LOG=debug` and a logger (e.g., `env_logger`).
+
 ### Comments
 ```medi
 // Line comments

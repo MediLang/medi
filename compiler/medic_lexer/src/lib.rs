@@ -32,6 +32,9 @@ pub mod string_interner;
 /// Token types and related data structures.
 pub mod token;
 
+/// Shared conversion logic from LogosToken to Token/TokenType.
+pub mod convert;
+
 // Re-export the main types for convenience
 pub use chunked_lexer::{ChunkedLexer, ChunkedLexerConfig};
 pub use lexer::Lexer;

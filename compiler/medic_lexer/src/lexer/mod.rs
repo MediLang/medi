@@ -5,6 +5,7 @@ use logos::Logos;
 use std::collections::VecDeque;
 use std::ops::Range;
 
+use crate::convert::{convert_logos_to_token, ConversionConfig};
 use crate::string_interner::InternedString;
 use crate::token::{Location, Token, TokenType};
 use crate::LogosToken;
@@ -163,8 +164,9 @@ impl<'a> Lexer<'a> {
             LogosToken::LessEqual => TokenType::LessEqual,
             LogosToken::Greater => TokenType::Greater,
             LogosToken::GreaterEqual => TokenType::GreaterEqual,
-            LogosToken::And => TokenType::BitAnd,
-            LogosToken::Or => TokenType::BitOr,
+            // Logical operators (double char)
+            LogosToken::And => TokenType::AndAnd,
+            LogosToken::Or => TokenType::OrOr,
             LogosToken::Not => TokenType::Not,
             LogosToken::Equal => TokenType::Equal,
             LogosToken::PlusEqual => TokenType::PlusEqual,
@@ -174,6 +176,7 @@ impl<'a> Lexer<'a> {
             LogosToken::PercentEqual => TokenType::PercentEqual,
             LogosToken::DoubleStar => TokenType::DoubleStar,
             LogosToken::DoubleStarAssign => TokenType::DoubleStarAssign,
+            // Bitwise operators (single char)
             LogosToken::BitAnd => TokenType::BitAnd,
             LogosToken::BitAndAssign => TokenType::BitAndAssign,
             // Bitwise OR is used as pipe in patterns
@@ -205,8 +208,11 @@ impl<'a> Lexer<'a> {
             LogosToken::Underscore => TokenType::Underscore,
             LogosToken::FatArrow => TokenType::FatArrow,
 
-            // Error
-            LogosToken::Error => TokenType::LexerError,
+            // Error: emit a descriptive Error token that includes the offending lexeme
+            LogosToken::Error => {
+                let msg = format!("Invalid token '{lexeme}'");
+                TokenType::Error(InternedString::from(msg.as_str()))
+            }
 
             // Handle healthcare keywords
             LogosToken::Patient => TokenType::Patient,
@@ -260,11 +266,25 @@ impl<'a> Lexer<'a> {
                 Err(_) => {
                     let span = self.inner.span();
                     let lexeme = &self.source[span.clone()];
-                    return Some(Token {
-                        token_type: TokenType::LexerError,
-                        lexeme: InternedString::from(lexeme),
-                        location: self.location_from_span(&span),
-                    });
+                    #[cfg(feature = "logging")]
+                    {
+                        let loc = self.location_from_span(&span);
+                        log::debug!(
+                            "Lexer: error token at {}:{} (offset {}), lexeme={:?}",
+                            loc.line,
+                            loc.column,
+                            loc.offset,
+                            lexeme
+                        );
+                    }
+                    // Use the centralized converter to produce a TokenType::Error with message
+                    let tok = convert_logos_to_token(
+                        LogosToken::Error,
+                        lexeme,
+                        self.location_from_span(&span),
+                        ConversionConfig::default(),
+                    );
+                    return Some(tok);
                 }
             }
         };

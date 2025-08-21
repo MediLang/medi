@@ -42,9 +42,10 @@ fn test_lexer_float_numbers() {
             // Using exact value from input string
             #[allow(clippy::approx_constant)]
             let expected = 3.14;
+            let got = value;
             assert!(
-                (value - expected).abs() < f64::EPSILON,
-                "Expected Float {expected} at position 3, got {value}"
+                (got - expected).abs() < f64::EPSILON,
+                "Expected Float {expected} at position 3, got {got}"
             )
         }
         _ => panic!(
@@ -66,10 +67,10 @@ fn test_lexer_float_numbers() {
             (value - 10000000000.0).abs() < f64::EPSILON,
             "Expected value close to 10000000000.0, got {value}"
         ),
-        _ => panic!(
-            "Expected Float token at position 13, got {:?}",
-            tokens[13].token_type
-        ),
+        _ => {
+            let got = &tokens[13].token_type;
+            panic!("Expected Float token at position 13, got {got:?}")
+        }
     }
 
     // Check the scientific notation with negative exponent (2.5e-3)
@@ -78,26 +79,26 @@ fn test_lexer_float_numbers() {
             (value - 0.0025).abs() < f64::EPSILON,
             "Expected value close to 0.0025, got {value}"
         ),
-        _ => panic!(
-            "Expected Float token at position 18, got {:?}",
-            tokens[18].token_type
-        ),
+        _ => {
+            let got = &tokens[18].token_type;
+            panic!("Expected Float token at position 18, got {got:?}")
+        }
     }
 
     // Check the integer with trailing dot (42.)
     match tokens[23].token_type {
         TokenType::Integer(42) => {}
-        _ => panic!(
-            "Expected Integer(42) at position 23, got {:?}",
-            tokens[23].token_type
-        ),
+        _ => {
+            let got = &tokens[23].token_type;
+            panic!("Expected Integer(42) at position 23, got {got:?}")
+        }
     }
     match tokens[24].token_type {
         TokenType::Dot => {}
-        _ => panic!(
-            "Expected Dot at position 24, got {:?}",
-            tokens[24].token_type
-        ),
+        _ => {
+            let got = &tokens[24].token_type;
+            panic!("Expected Dot at position 24, got {got:?}")
+        }
     }
 }
 
@@ -119,11 +120,11 @@ fn test_lexer_range_operator() {
     loop {
         match lexer.next() {
             Some(token) => {
-                println!(
-                    "\nProcessing token: {:?} (lexeme: '{}')",
-                    token.token_type, token.lexeme
-                );
-                println!("  Location: {:?}", token.location);
+                let kind = &token.token_type;
+                let lex = &token.lexeme;
+                println!("\nProcessing token: {kind:?} (lexeme: '{lex}')");
+                let loc = &token.location;
+                println!("  Location: {loc:?}");
                 tokens.push(token);
 
                 // Stop after a reasonable number of tokens to prevent infinite loops
@@ -133,19 +134,20 @@ fn test_lexer_range_operator() {
                 }
             }
             None => {
-                println!("\nNo more tokens. Total tokens: {}", tokens.len());
+                let count = tokens.len();
+                println!("\nNo more tokens. Total tokens: {count}");
                 break;
             }
         }
     }
 
     // Print all tokens for debugging
-    println!("\n=== All Tokens ({}): ===", tokens.len());
+    let count = tokens.len();
+    println!("\n=== All Tokens ({count}): ===");
     for (i, token) in tokens.iter().enumerate() {
-        println!(
-            "  {}: {:?} (lexeme: '{}')",
-            i, token.token_type, token.lexeme
-        );
+        let kind = &token.token_type;
+        let lex = &token.lexeme;
+        println!("  {i}: {kind:?} (lexeme: '{lex}')");
     }
 
     // Check if we got any tokens at all
@@ -155,20 +157,19 @@ fn test_lexer_range_operator() {
 
     // Print the first token's debug info
     if let Some(first_token) = tokens.first() {
-        println!(
-            "\nFirst token: {:?} (lexeme: '{}')",
-            first_token.token_type, first_token.lexeme
-        );
+        let kind = &first_token.token_type;
+        let lex = &first_token.lexeme;
+        println!("\nFirst token: {kind:?} (lexeme: '{lex}')");
     }
 
     // Check the number of tokens (should be 3: 1, .., 10)
     if tokens.len() != 3 {
-        println!("\nExpected 3 tokens but got {}:", tokens.len());
+        let count = tokens.len();
+        println!("\nExpected 3 tokens but got {count}:");
         for (i, token) in tokens.iter().enumerate() {
-            println!(
-                "  {}: {:?} (lexeme: '{}')",
-                i, token.token_type, token.lexeme
-            );
+            let kind = &token.token_type;
+            let lex = &token.lexeme;
+            println!("  {i}: {kind:?} (lexeme: '{lex}')");
         }
         panic!("Unexpected number of tokens");
     }
@@ -213,12 +214,12 @@ fn test_lexer_range_operator() {
     let tokens: Vec<Token> = lexer.collect();
 
     println!("\nInput with spaces: {input_with_spaces}");
-    println!("All tokens ({}):", tokens.len());
+    let count = tokens.len();
+    println!("All tokens ({count}):");
     for (i, token) in tokens.iter().enumerate() {
-        println!(
-            "  {}: {:?} (lexeme: '{}')",
-            i, token.token_type, token.lexeme
-        );
+        let kind = &token.token_type;
+        let lex = &token.lexeme;
+        println!("  {i}: {kind:?} (lexeme: '{lex}')");
     }
 
     // Should still be 3 tokens (whitespace is skipped)

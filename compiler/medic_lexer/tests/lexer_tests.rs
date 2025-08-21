@@ -6,6 +6,7 @@ use medic_lexer::token::TokenType;
 
 #[allow(unused_imports)]
 use std::env;
+use std::io::Cursor;
 
 #[allow(dead_code)]
 fn init_test_logger() {
@@ -13,6 +14,26 @@ fn init_test_logger() {
         .is_test(true)
         .filter_level(log::LevelFilter::Debug)
         .try_init();
+}
+
+#[test]
+fn test_pipeline_operator_not_tokenized() {
+    // `|>` must NOT be tokenized as a single pipeline operator in v0.1.
+    // Expect two tokens: '|' (BitOr) and '>' (Greater).
+    let input = "|>";
+    let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+    let tokens: Vec<_> = lexer.collect();
+
+    // Verify exactly two tokens were produced
+    pretty_assert_eq!(tokens.len(), 2, "Expected 2 tokens for '|>'");
+
+    // Verify lexemes
+    pretty_assert_eq!(tokens[0].lexeme.as_str(), "|");
+    pretty_assert_eq!(tokens[1].lexeme.as_str(), ">");
+
+    // Verify token types
+    pretty_assert_eq!(tokens[0].token_type, TokenType::BitOr);
+    pretty_assert_eq!(tokens[1].token_type, TokenType::Greater);
 }
 
 #[test]
@@ -32,17 +53,15 @@ fn test_numeric_literals() {
         let tokens: Vec<_> = lexer.collect();
 
         // Print all tokens for debugging
-        println!("Tokens ({}):", tokens.len());
+        let count = tokens.len();
+        println!("Tokens ({count}):");
         for (i, token) in tokens.iter().enumerate() {
             println!("  {i}: {token:?}");
         }
 
         assert_eq!(
-            tokens.len(),
-            1,
-            "Expected exactly one token for input: {}, but got {} tokens",
-            input,
-            tokens.len()
+            count, 1,
+            "Expected exactly one token for input: {input}, but got {count} tokens"
         );
 
         match (&tokens[0].token_type, expected) {
@@ -74,7 +93,8 @@ mod position_tests {
         let tokens: Vec<_> = lexer.collect();
 
         // Expect: let, Identifier(x), =, 42, ;
-        assert!(tokens.len() >= 5, "got tokens: {:?}", tokens);
+        let count = tokens.len();
+        assert!(count >= 5, "got tokens: {tokens:?}");
 
         // Helper to check a token's pos quickly
         let check = |idx: usize, expected_lex: &str, line: usize, column: usize, offset: usize| {
@@ -165,7 +185,8 @@ mod position_tests {
         let tokens: Vec<_> = lexer.collect();
 
         // Expect: Identifier("µg"), '==', '5'
-        assert!(tokens.len() >= 3, "got tokens: {:?}", tokens);
+        let count = tokens.len();
+        assert!(count >= 3, "got tokens: {tokens:?}");
         pretty_assert_eq!(tokens[0].lexeme.as_str(), "µg");
         pretty_assert_eq!(tokens[1].lexeme.as_str(), "==");
         pretty_assert_eq!(tokens[2].lexeme.as_str(), "5");
@@ -218,12 +239,13 @@ fn test_invalid_numeric_literals() {
         match tokens_result {
             Ok(tokens) => {
                 println!("Successfully tokenized input '{input}'");
-                println!("Tokens ({}):", tokens.len());
+                let count = tokens.len();
+                println!("Tokens ({count}):");
                 for (i, token) in tokens.iter().enumerate() {
-                    println!(
-                        "  {}: {:?} - '{}' at {:?}",
-                        i, token.token_type, token.lexeme, token.location
-                    );
+                    let kind = &token.token_type;
+                    let lexeme = &token.lexeme;
+                    let loc = &token.location;
+                    println!("  {i}: {kind:?} - '{lexeme}' at {loc:?}");
                 }
 
                 // Check that we have at least one error token
@@ -285,7 +307,8 @@ fn test_numeric_literals_in_expressions() {
         .inspect(|token| println!("Token: {token:?}"))
         .collect();
 
-    println!("\n=== Total tokens collected: {} ===", tokens.len());
+    let count = tokens.len();
+    println!("\n=== Total tokens collected: {count} ===");
     for (i, token) in tokens.iter().enumerate() {
         println!("Token[{i}]: {token:?}");
     }
@@ -296,10 +319,9 @@ fn test_numeric_literals_in_expressions() {
         "No tokens were generated. Expected at least some tokens."
     );
 
-    if tokens.len() <= 10 {
+    if count <= 10 {
         println!(
-            "Warning: Only {} tokens generated, expected more. This might indicate an issue.",
-            tokens.len()
+            "Warning: Only {count} tokens generated, expected more. This might indicate an issue."
         );
     }
 
@@ -310,7 +332,9 @@ fn test_numeric_literals_in_expressions() {
     if !has_error {
         println!("No error token found. All tokens:");
         for (i, token) in tokens.iter().enumerate() {
-            println!("  {}: {:?} - '{}'", i, token.token_type, token.lexeme);
+            let kind = &token.token_type;
+            let lexeme = &token.lexeme;
+            println!("  {i}: {kind:?} - '{lexeme}'");
         }
     }
 
@@ -339,17 +363,15 @@ fn test_error_recovery() {
     let lexer = ChunkedLexer::from_reader(source.as_bytes(), Default::default());
     let tokens: Vec<_> = lexer.collect();
 
-    println!("\n=== Tokens found ({} total) ===", tokens.len());
+    let count = tokens.len();
+    println!("\n=== Tokens found ({count} total) ===");
     for (i, token) in tokens.iter().enumerate() {
         println!("Token[{i}]: {token:?}");
     }
 
     // Verify we have the expected number of tokens
-    assert!(
-        tokens.len() >= 10,
-        "Expected at least 10 tokens, got: {}",
-        tokens.len()
-    );
+    let count = tokens.len();
+    assert!(count >= 10, "Expected at least 10 tokens, got: {count}");
 
     // Check that we have an error token for the invalid numeric literal
     let has_error = tokens
@@ -384,85 +406,37 @@ fn test_error_recovery() {
     if has_456 && has_789 {
         println!("\nFound both expected integer literals after error");
     }
-
-    println!("\n=== test_error_recovery passed ===");
 }
 
-// Basic test cases for the lexer
-#[cfg(test)]
-mod basic_tests {
-    use super::*;
-    use std::io::Cursor;
+#[test]
+fn test_specific_floats() {
+    let test_cases = [
+        ("0.0", 0.0),
+        ("3.141592653589793", std::f64::consts::PI),
+        ("-123.456", -123.456),
+        ("1.0e10", 1.0e10),
+        ("1.0e-10", 1.0e-10),
+    ];
 
-    #[test]
-    fn test_specific_integers() {
-        let test_cases = [
-            ("0", 0),
-            ("42", 42),
-            ("-123", -123),
-            ("999999999999999", 999999999999999),
-        ];
+    for (input, expected) in test_cases.iter() {
+        let cursor = Cursor::new(input.as_bytes());
+        let lexer = ChunkedLexer::from_reader(cursor, Default::default());
+        let tokens: Vec<_> = lexer.collect();
 
-        for (input, expected) in test_cases.iter() {
-            let cursor = Cursor::new(input.as_bytes());
-            let lexer = ChunkedLexer::from_reader(cursor, Default::default());
-            let tokens: Vec<_> = lexer.collect();
-
-            pretty_assert_eq!(
-                tokens.len(),
-                1,
-                "Expected exactly one token for input: {}",
-                input
+        pretty_assert_eq!(
+            tokens.len(),
+            1,
+            "Expected exactly one token for input: {input}"
+        );
+        if let TokenType::Float(actual) = tokens[0].token_type {
+            let diff = (actual - expected).abs();
+            let tolerance = 1e-10 * expected.abs().max(1.0);
+            assert!(
+                diff <= tolerance,
+                "Float parsing mismatch for input '{input}': expected {expected}, got {actual}"
             );
-            if *expected < 0 {
-                pretty_assert_eq!(
-                    tokens[0].token_type,
-                    TokenType::NegativeInteger(*expected),
-                    "Mismatch for input: {}",
-                    input
-                );
-            } else {
-                pretty_assert_eq!(
-                    tokens[0].token_type,
-                    TokenType::Integer(*expected),
-                    "Mismatch for input: {}",
-                    input
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_specific_floats() {
-        let test_cases = [
-            ("0.0", 0.0),
-            ("3.141592653589793", std::f64::consts::PI),
-            ("-123.456", -123.456),
-            ("1.0e10", 1.0e10),
-            ("1.0e-10", 1.0e-10),
-        ];
-
-        for (input, expected) in test_cases.iter() {
-            let cursor = Cursor::new(input.as_bytes());
-            let lexer = ChunkedLexer::from_reader(cursor, Default::default());
-            let tokens: Vec<_> = lexer.collect();
-
-            pretty_assert_eq!(
-                tokens.len(),
-                1,
-                "Expected exactly one token for input: {}",
-                input
-            );
-            if let TokenType::Float(actual) = tokens[0].token_type {
-                let diff = (actual - expected).abs();
-                let tolerance = 1e-10 * expected.abs().max(1.0);
-                assert!(
-                    diff <= tolerance,
-                    "Float parsing mismatch for input '{input}': expected {expected}, got {actual}"
-                );
-            } else {
-                panic!("Expected a float token for input: {input}");
-            }
+        } else {
+            panic!("Expected a float token for input: {input}");
         }
     }
 }

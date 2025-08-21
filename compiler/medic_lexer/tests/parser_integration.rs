@@ -45,7 +45,8 @@ fn test_parser_integration() {
     // Collect all tokens
     let tokens: Vec<Token> = lexer.collect();
 
-    println!("Lexed {} tokens", tokens.len());
+    let count = tokens.len();
+    println!("Lexed {count} tokens");
     assert!(
         !tokens.is_empty(),
         "Lexer should produce at least some tokens"
@@ -73,10 +74,8 @@ fn test_parser_integration() {
         // Print context around the first remaining token
         if !slice.is_empty() {
             let first_remaining = &slice[0];
-            println!(
-                "\nTokens around first remaining (offset: {}):",
-                first_remaining.location.offset
-            );
+            let off = first_remaining.location.offset;
+            println!("\nTokens around first remaining (offset: {off}):");
 
             // Find the position in the original tokens
             for (i, token) in tokens.iter().enumerate() {
@@ -95,10 +94,8 @@ fn test_parser_integration() {
             }
         }
 
-        panic!(
-            "Not all tokens were consumed. Remaining count: {}",
-            slice.len()
-        );
+        let remaining_count = slice.len();
+        panic!("Not all tokens were consumed. Remaining count: {remaining_count}");
     }
 
     // Verify the AST structure
@@ -108,17 +105,15 @@ fn test_parser_integration() {
     );
 
     // Basic AST validation
+    let stmt_count = ast.statements.len();
     assert!(
-        ast.statements.len() >= 3,
-        "Expected at least 3 statements (patient, bmi, if), got {}",
-        ast.statements.len()
+        stmt_count >= 3,
+        "Expected at least 3 statements (patient, bmi, if), got {stmt_count}",
     );
 
     // Print a summary of the parsed program
-    println!(
-        "Successfully parsed program with {} statements",
-        ast.statements.len()
-    );
+    let stmt_count = ast.statements.len();
+    println!("Successfully parsed program with {stmt_count} statements");
 }
 
 #[test]
@@ -137,7 +132,8 @@ fn test_large_file_parsing() {
     let source = std::fs::read_to_string(&test_file)
         .unwrap_or_else(|e| panic!("Failed to read test file {test_file:?}: {e}"));
 
-    println!("Source file size: {} bytes", source.len());
+    let size = source.len();
+    println!("Source file size: {size} bytes");
 
     // Create a streaming lexer with a small buffer to test chunking
     let config = LexerConfig {
@@ -158,12 +154,10 @@ fn test_large_file_parsing() {
     }
 
     let lex_duration = start_time.elapsed();
-    println!(
-        "Lexed {} tokens in {:.2?} ({:.1} tokens/ms)",
-        tokens.len(),
-        lex_duration,
-        tokens.len() as f64 / lex_duration.as_millis() as f64
-    );
+    let count = tokens.len();
+    let duration = lex_duration;
+    let rate = count as f64 / duration.as_millis() as f64;
+    println!("Lexed {count} tokens in {duration:.2?} ({rate:.1} tokens/ms)");
 
     // Parse the tokens
     let parse_start = std::time::Instant::now();
@@ -171,26 +165,21 @@ fn test_large_file_parsing() {
 
     // Verify parsing was successful
     let (remaining, ast) = result.unwrap_or_else(|e| {
-        panic!(
-            "Failed to parse large file. Error: {:?}\nFirst 10 tokens: {:?}",
-            e,
-            tokens.iter().take(10).collect::<Vec<_>>()
-        );
+        let first10 = tokens.iter().take(10).collect::<Vec<_>>();
+        panic!("Failed to parse large file. Error: {e:?}\nFirst 10 tokens: {first10:?}");
     });
 
+    let rem_count = remaining.len();
     assert!(
         remaining.is_empty(),
-        "Not all tokens were consumed. Remaining count: {}",
-        remaining.len()
+        "Not all tokens were consumed. Remaining count: {rem_count}",
     );
 
     let parse_duration = parse_start.elapsed();
-    println!(
-        "Parsed AST with {} statements in {:.2?} ({:.1} statements/ms)",
-        ast.statements.len(),
-        parse_duration,
-        ast.statements.len() as f64 / parse_duration.as_millis() as f64
-    );
+    let stmt_count = ast.statements.len();
+    let dur = parse_duration;
+    let rate = stmt_count as f64 / dur.as_millis() as f64;
+    println!("Parsed AST with {stmt_count} statements in {dur:.2?} ({rate:.1} statements/ms)");
 
     // Clean up test file
     let _ = std::fs::remove_file(&test_file);

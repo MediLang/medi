@@ -105,27 +105,28 @@ fn test_memory_usage_comparison() {
     let original_mem = original_measurements.iter().sum::<usize>() / iterations;
     let streaming_mem = streaming_measurements.iter().sum::<usize>() / iterations;
 
-    println!("Original lexer memory usage: {} KB", original_mem / 1024);
-    println!("Streaming lexer memory usage: {} KB", streaming_mem / 1024);
+    let orig_kb = original_mem / 1024;
+    let stream_kb = streaming_mem / 1024;
+    println!("Original lexer memory usage: {orig_kb} KB");
+    println!("Streaming lexer memory usage: {stream_kb} KB");
 
     // Compare memory usage with a more lenient threshold
     // Allow streaming lexer to use up to 2x the memory of the original lexer
     // This accounts for the overhead of buffering and other implementation details
     let max_allowed_memory = original_mem * 2;
 
-    println!("Original lexer memory usage: {} KB", original_mem / 1024);
-    println!(
-        "Streaming lexer memory usage: {} KB (max allowed: {} KB)",
-        streaming_mem / 1024,
-        max_allowed_memory / 1024
-    );
+    let orig_kb = original_mem / 1024;
+    let stream_kb = streaming_mem / 1024;
+    let max_kb = max_allowed_memory / 1024;
+    println!("Original lexer memory usage: {orig_kb} KB");
+    println!("Streaming lexer memory usage: {stream_kb} KB (max allowed: {max_kb} KB)");
 
     // Only fail if the streaming lexer uses significantly more memory than expected
     if streaming_mem > max_allowed_memory {
+        let used_kb = streaming_mem / 1024;
+        let orig_kb = original_mem / 1024;
         panic!(
-            "Streaming lexer used {} KB, which is more than 2x the original lexer's {} KB",
-            streaming_mem / 1024,
-            original_mem / 1024
+            "Streaming lexer used {used_kb} KB, which is more than 2x the original lexer's {orig_kb} KB"
         );
     } else if streaming_mem < original_mem {
         println!("✅ Streaming lexer used less memory than original");

@@ -265,8 +265,9 @@ impl<'a> StreamingLexer<'a> {
 
             // Operators and punctuation
             LogosToken::Equal => TokenType::Equal,
-            LogosToken::Or => TokenType::BitOr,
-            LogosToken::And => TokenType::BitAnd,
+            // Logical operators (double char)
+            LogosToken::Or => TokenType::OrOr,
+            LogosToken::And => TokenType::AndAnd,
             LogosToken::Not => TokenType::Not,
             LogosToken::EqualEqual => TokenType::EqualEqual,
             LogosToken::NotEqual => TokenType::NotEqual,
@@ -274,6 +275,7 @@ impl<'a> StreamingLexer<'a> {
             LogosToken::LessEqual => TokenType::LessEqual,
             LogosToken::Greater => TokenType::Greater,
             LogosToken::GreaterEqual => TokenType::GreaterEqual,
+            // Bitwise operators (single char)
             LogosToken::BitOr => TokenType::BitOr,
             LogosToken::BitXor => TokenType::BitXor,
             LogosToken::BitAnd => TokenType::BitAnd,
@@ -371,11 +373,8 @@ mod tests {
             None => panic!("Failed to get first token"),
         };
         println!("Got first token: {token:?}");
-        assert!(
-            matches!(token.token_type, TokenType::Let),
-            "Expected Let, got {:?}",
-            token.token_type
-        );
+        let got = &token.token_type;
+        assert!(matches!(*got, TokenType::Let), "Expected Let, got {got:?}");
         assert_eq!(token.lexeme.as_str(), "let");
         assert_eq!(token.location.line, 1);
         assert_eq!(token.location.column, 1);
@@ -387,10 +386,10 @@ mod tests {
             None => panic!("Failed to get second token"),
         };
         println!("Got second token: {token:?}");
+        let got = &token.token_type;
         assert!(
-            matches!(&token.token_type, TokenType::Identifier(_)),
-            "Expected Identifier, got {:?}",
-            token.token_type
+            matches!(got, TokenType::Identifier(_)),
+            "Expected Identifier, got {got:?}"
         );
         assert_eq!(token.lexeme.as_str(), "x");
         assert_eq!(token.location.column, 5);
@@ -398,21 +397,20 @@ mod tests {
         // Continue with the rest of the tokens...
         println!("\n--- Collecting remaining tokens ---");
         let tokens: Vec<_> = lexer.collect();
-        println!("Number of remaining tokens: {}", tokens.len());
+        let remaining = tokens.len();
+        println!("Number of remaining tokens: {remaining}");
 
         // Print all tokens for debugging
         for (i, token) in tokens.iter().enumerate() {
-            println!("Token {}: {:?}", i + 1, token);
+            let idx = i + 1;
+            println!("Token {idx}: {token:?}");
         }
 
         // Verify we got the expected number of tokens
         // Expected tokens: =, 42, ;, let, y, =, 'test', ;
         assert!(!tokens.is_empty(), "No tokens were collected");
-        assert!(
-            tokens.len() >= 6,
-            "Expected at least 6 tokens, got {}",
-            tokens.len()
-        );
+        let count = tokens.len();
+        assert!(count >= 6, "Expected at least 6 tokens, got {count}");
 
         // Verify some key tokens
         assert!(matches!(tokens[0].token_type, TokenType::Equal));

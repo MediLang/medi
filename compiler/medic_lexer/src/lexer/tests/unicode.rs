@@ -7,34 +7,33 @@ fn test_lexer_unicode_identifiers() {
     // Test with a Unicode identifier and string
     let input = "let 名字 = \"こんにちは\"";
     println!("Input string: {input}");
-    println!("Input bytes: {:?}", input.as_bytes());
-    println!(
-        "Input length: {} chars, {} bytes",
-        input.chars().count(),
-        input.len()
-    );
+    let bytes = input.as_bytes();
+    println!("Input bytes: {bytes:?}");
+    let chars = input.chars().count();
+    let len = input.len();
+    println!("Input length: {chars} chars, {len} bytes");
     println!("Input: {input}");
-    println!("Input bytes: {:?}", input.as_bytes());
+    println!("Input bytes: {bytes:?}");
 
     // Collect tokens using the iterator
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     // Print the tokens for debugging
     for token in &tokens {
-        println!("Token: {:?} (lexeme: '{}')", token.token_type, token.lexeme);
+        let kind = &token.token_type;
+        let lex = &token.lexeme;
+        println!("Token: {kind:?} (lexeme: '{lex}')");
     }
 
     // Print detailed information about each token
-    println!("\nCollected tokens ({}):", tokens.len());
+    let count = tokens.len();
+    println!("\nCollected tokens ({count}):");
     for (i, token) in tokens.iter().enumerate() {
-        println!(
-            "  Token {}: {:?} (lexeme: '{}' at {}..{})",
-            i,
-            token.token_type,
-            token.lexeme,
-            token.location.offset,
-            token.location.offset + token.lexeme.len()
-        );
+        let kind = &token.token_type;
+        let lex = &token.lexeme;
+        let start = token.location.offset;
+        let end = start + token.lexeme.len();
+        println!("  Token {i}: {kind:?} (lexeme: '{lex}' at {start}..{end})");
     }
 
     // Print the input string with byte positions
@@ -56,73 +55,72 @@ fn test_lexer_unicode_identifiers() {
     }
 
     // Print all tokens for debugging
-    println!("\nAll tokens ({}):", tokens.len());
+    println!("\nAll tokens ({count}):");
     for (i, token) in tokens.iter().enumerate() {
-        println!("  {}: {:?} ('{}')", i, token.token_type, token.lexeme);
+        let kind = &token.token_type;
+        let lex = &token.lexeme;
+        println!("  {i}: {kind:?} ('{lex}')");
     }
 
     // We expect exactly 4 tokens: 'let', identifier, '=', string (no semicolon in input)
+    let count = tokens.len();
     assert_eq!(
-        tokens.len(),
-        4,
-        "Expected exactly 4 tokens, got {}\nTokens: {:#?}",
-        tokens.len(),
-        tokens
+        count, 4,
+        "Expected exactly 4 tokens, got {count}\nTokens: {tokens:#?}"
     );
 
     // Check each token
+    let got0 = &tokens[0].token_type;
     assert_eq!(
         tokens[0].token_type,
         TokenType::Let,
-        "First token should be 'let', got {:?}",
-        tokens[0].token_type
+        "First token should be 'let', got {got0:?}"
     );
 
     let expected_ident = "名字";
-    println!(
-        "\nToken 1: {:?} ('{}')",
-        tokens[1].token_type, tokens[1].lexeme
-    );
+    let kind1 = &tokens[1].token_type;
+    let lex1 = &tokens[1].lexeme;
+    println!("\nToken 1: {kind1:?} ('{lex1}')");
     match &tokens[1].token_type {
         TokenType::Identifier(ident) => {
+            let got = ident.as_str();
             assert_eq!(
-                ident.as_str(),
-                expected_ident,
-                "Expected identifier '{}', got '{:?}'",
-                expected_ident,
-                ident.as_str()
+                got, expected_ident,
+                "Expected identifier '{expected_ident}', got '{got}'"
             );
         }
-        _ => panic!("Expected identifier token, got {:?}", tokens[1].token_type),
+        _ => {
+            let got = &tokens[1].token_type;
+            panic!("Expected identifier token, got {got:?}")
+        }
     }
 
-    println!(
-        "\nToken 2: {:?} ('{}')",
-        tokens[2].token_type, tokens[2].lexeme
-    );
+    let kind2 = &tokens[2].token_type;
+    let lex2 = &tokens[2].lexeme;
+    println!("\nToken 2: {kind2:?} ('{lex2}')");
+    let got2 = &tokens[2].token_type;
     assert_eq!(
         tokens[2].token_type,
         TokenType::Equal,
-        "Third token should be '=', got {:?}",
-        tokens[2].token_type
+        "Third token should be '=', got {got2:?}"
     );
 
     let expected_str = "こんにちは";
-    println!(
-        "\nToken 3: {:?} ('{}')",
-        tokens[3].token_type, tokens[3].lexeme
-    );
+    let kind3 = &tokens[3].token_type;
+    let lex3 = &tokens[3].lexeme;
+    println!("\nToken 3: {kind3:?} ('{lex3}')");
     match &tokens[3].token_type {
         TokenType::String(s) => {
+            let got = s.as_str();
             assert_eq!(
-                s.as_str(),
-                expected_str,
-                "Expected string '{}', got '{:?}'",
-                expected_str,
-                s.as_str()
+                got, expected_str,
+                "Expected string '{expected_str}', got '{got}'"
             );
         }
-        _ => panic!("Expected string token, got {:?}", tokens[3].token_type),
+        _ => {
+            let got = &tokens[3].token_type;
+            panic!("Expected string token, got {got:?}")
+        }
     }
 }
 
