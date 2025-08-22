@@ -528,96 +528,26 @@ impl ChunkedLexer {
         if !is_final_chunk && partial_string.is_none() && !chunk.is_empty() {
             let bytes = chunk.as_bytes();
             let n = bytes.len();
-            // Helper to check if the sequence just before idx forms a numeric tail
-            // that can be followed by exponent marker: digit(s) [ '.' digit* ] .
-            let mut consider_cut: Option<usize> = None;
-            if n >= 2 {
-                let last = bytes[n - 1];
-                // Case A: ... [0-9 or .] 'e'|'E' at end
-                if last == b'e' || last == b'E' {
-                    // Ensure char before 'e' is digit or a '.' that has a digit before it
-                    if bytes[n - 2].is_ascii_digit()
-                        || (bytes[n - 2] == b'.' && n >= 3 && bytes[n - 3].is_ascii_digit())
+            // If the last token is an Error and the tail looks like an exponent prefix,
+            // compute cut index first to avoid borrowing issues, then defer.
+            let mut error_tail_cut: Option<usize> = None;
+            if let Some((tok, start)) = tokens_with_spans.last() {
+                if matches!(tok.token_type, TokenType::Error(_)) {
+                    let cut_idx = *start;
+                    let tail = &chunk[cut_idx..];
+                    if tail.ends_with('e')
+                        || tail.ends_with('E')
+                        || tail.ends_with("e+")
+                        || tail.ends_with("e-")
+                        || tail.ends_with("E+")
+                        || tail.ends_with("E-")
                     {
-                        // Walk backwards to find the start of the numeric base
-                        let mut k = n - 2; // position before 'e'
-                        while k > 0 && bytes[k].is_ascii_digit() {
-                            k -= 1;
-                        }
-                        if bytes[k].is_ascii_digit() {
-                            // we're at the first digit of the run
-                        } else if bytes[k] == b'.' {
-                            // require at least one digit before '.'
-                            if k > 0 && bytes[k - 1].is_ascii_digit() {
-                                k -= 1;
-                                while k > 0 && bytes[k].is_ascii_digit() {
-                                    k -= 1;
-                                }
-                                if !bytes[k].is_ascii_digit() {
-                                    k += 1;
-                                }
-                            } else {
-                                // not a valid numeric tail
-                                k = n; // sentinel to skip
-                            }
-                        } else {
-                            // not a valid numeric tail
-                            k = n; // sentinel
-                        }
-                        if k != n {
-                            // include optional leading '-' immediately before the digits/dot
-                            if k > 0
-                                && bytes[k - 1] == b'-'
-                                && (k < 2 || !bytes[k - 2].is_ascii_digit())
-                            {
-                                k -= 1;
-                            }
-                            consider_cut = Some(k);
-                        }
-                    }
-                }
-                // Case B: ... 'e'|'E' ('+'|'-') at end
-                else if (last == b'+' || last == b'-')
-                    && n >= 3
-                    && (bytes[n - 2] == b'e' || bytes[n - 2] == b'E')
-                    && (bytes[n - 3].is_ascii_digit()
-                        || (bytes[n - 3] == b'.' && n >= 4 && bytes[n - 4].is_ascii_digit()))
-                {
-                    // Walk back starting before the 'e'
-                    let mut k = n - 3; // position before 'e'
-                    while k > 0 && bytes[k].is_ascii_digit() {
-                        k -= 1;
-                    }
-                    if bytes[k].is_ascii_digit() {
-                        // ok
-                    } else if bytes[k] == b'.' {
-                        if k > 0 && bytes[k - 1].is_ascii_digit() {
-                            k -= 1;
-                            while k > 0 && bytes[k].is_ascii_digit() {
-                                k -= 1;
-                            }
-                            if !bytes[k].is_ascii_digit() {
-                                k += 1;
-                            }
-                        } else {
-                            k = n; // sentinel skip
-                        }
-                    } else {
-                        k = n;
-                    }
-                    if k != n {
-                        if k > 0
-                            && bytes[k - 1] == b'-'
-                            && (k < 2 || !bytes[k - 2].is_ascii_digit())
-                        {
-                            k -= 1;
-                        }
-                        consider_cut = Some(k);
+                        error_tail_cut = Some(cut_idx);
                     }
                 }
             }
-            if let Some(cut_idx) = consider_cut {
-                // Drop any tokens that overlap the cut (end > cut_idx)
+            if let Some(cut_idx) = error_tail_cut {
+                // Drop any tokens that overlap the cut point
                 while let Some((tok, start)) = tokens_with_spans.last() {
                     let end = *start + tok.lexeme.as_str().len();
                     if end > cut_idx {
@@ -628,6 +558,163 @@ impl ChunkedLexer {
                 }
                 used_end = cut_idx.min(used_end);
                 partial_string = Some(chunk[cut_idx..].to_string());
+            }
+
+            if partial_string.is_none() {
+                // Special-case: Logos sometimes yields Error('1') then Identifier('e') at tail for "1e".
+                // If so, and we're not at the final chunk, defer from the Error's start to preserve exponent formation.
+                if tokens_with_spans.len() >= 2 {
+                    // Capture needed details without holding immutable borrow during mutation
+                    let (should_defer_pair, cut_idx_val) = {
+                        let (last_tok, last_start) =
+                            &tokens_with_spans[tokens_with_spans.len() - 1];
+                        let last_end = *last_start + last_tok.lexeme.as_str().len();
+                        let is_tail_e_ident = matches!(
+                            last_tok.token_type,
+                            TokenType::Identifier(ref is) if {
+                                let s = is.as_str();
+                                (s == "e" || s == "E") && last_end == n
+                            }
+                        );
+                        if is_tail_e_ident {
+                            let (prev_tok, prev_start) =
+                                &tokens_with_spans[tokens_with_spans.len() - 2];
+                            if matches!(prev_tok.token_type, TokenType::Error(_)) {
+                                (true, *prev_start)
+                            } else {
+                                (false, 0)
+                            }
+                        } else {
+                            (false, 0)
+                        }
+                    };
+                    if should_defer_pair {
+                        // Remove 'e' Identifier and preceding Error, then defer from cut_idx
+                        tokens_with_spans.pop(); // Identifier('e'|'E')
+                        tokens_with_spans.pop(); // Error('1' or similar)
+                        used_end = cut_idx_val.min(used_end);
+                        partial_string = Some(chunk[cut_idx_val..].to_string());
+                    }
+                }
+
+                if partial_string.is_none() {
+                    // Helper to check if the sequence just before idx forms a numeric tail
+                    // that can be followed by exponent marker: digit(s) [ '.' digit* ] .
+                    let mut consider_cut: Option<usize> = None;
+                    if n >= 2 {
+                        let last = bytes[n - 1];
+                        // Case A: ... [0-9 or .] 'e'|'E' at end
+                        if last == b'e' || last == b'E' {
+                            // Ensure char before 'e' is digit or a '.' that has a digit before it
+                            if bytes[n - 2].is_ascii_digit()
+                                || (bytes[n - 2] == b'.' && n >= 3 && bytes[n - 3].is_ascii_digit())
+                            {
+                                // Walk backwards to find the start of the numeric base
+                                let mut k = n - 2; // position before 'e'
+                                while k > 0 && bytes[k].is_ascii_digit() {
+                                    k -= 1;
+                                }
+                                // Determine the tentative base start (first digit of the run)
+                                let mut base_start =
+                                    if bytes[k].is_ascii_digit() { k } else { k + 1 };
+                                // Consider a preceding '.' that has at least one digit before it
+                                if base_start > 0 && bytes[base_start - 1] == b'.' {
+                                    let mut j = base_start - 1;
+                                    if j > 0 && bytes[j - 1].is_ascii_digit() {
+                                        j -= 1;
+                                        while j > 0 && bytes[j].is_ascii_digit() {
+                                            j -= 1;
+                                        }
+                                        if !bytes[j].is_ascii_digit() {
+                                            j += 1;
+                                        }
+                                        base_start = j;
+                                    }
+                                }
+                                // Optional leading '-'
+                                if base_start > 0
+                                    && bytes[base_start - 1] == b'-'
+                                    && (base_start < 2 || !bytes[base_start - 2].is_ascii_digit())
+                                {
+                                    base_start -= 1;
+                                }
+                                // Clamp so we don't cut before the end of the last successful token
+                                let last_ok_end = tokens_with_spans
+                                    .iter()
+                                    .rfind(|(t, _)| !matches!(t.token_type, TokenType::Error(_)))
+                                    .map(|(t, s)| *s + t.lexeme.as_str().len())
+                                    .unwrap_or(0);
+                                if base_start < last_ok_end {
+                                    base_start = last_ok_end;
+                                }
+                                consider_cut = Some(base_start);
+                            }
+                        }
+                        // Case B: ... 'e'|'E' ('+'|'-') at end
+                        else if (last == b'+' || last == b'-')
+                            && n >= 3
+                            && (bytes[n - 2] == b'e' || bytes[n - 2] == b'E')
+                            && (bytes[n - 3].is_ascii_digit()
+                                || (bytes[n - 3] == b'.'
+                                    && n >= 4
+                                    && bytes[n - 4].is_ascii_digit()))
+                        {
+                            // Walk back starting before the 'e'
+                            let mut k = n - 3; // position before 'e'
+                            while k > 0 && bytes[k].is_ascii_digit() {
+                                k -= 1;
+                            }
+                            // Tentative base start
+                            let mut base_start = if bytes[k].is_ascii_digit() { k } else { k + 1 };
+                            // Consider preceding '.' with digits before it
+                            if base_start > 0 && bytes[base_start - 1] == b'.' {
+                                let mut j = base_start - 1;
+                                if j > 0 && bytes[j - 1].is_ascii_digit() {
+                                    j -= 1;
+                                    while j > 0 && bytes[j].is_ascii_digit() {
+                                        j -= 1;
+                                    }
+                                    if !bytes[j].is_ascii_digit() {
+                                        j += 1;
+                                    }
+                                    base_start = j;
+                                }
+                            }
+                            // Optional leading '-'
+                            if base_start > 0
+                                && bytes[base_start - 1] == b'-'
+                                && (base_start < 2 || !bytes[base_start - 2].is_ascii_digit())
+                            {
+                                base_start -= 1;
+                            }
+                            // Clamp to end of last successful token
+                            let last_ok_end = tokens_with_spans
+                                .iter()
+                                .rfind(|(t, _)| !matches!(t.token_type, TokenType::Error(_)))
+                                .map(|(t, s)| *s + t.lexeme.as_str().len())
+                                .unwrap_or(0);
+                            if base_start < last_ok_end {
+                                base_start = last_ok_end;
+                            }
+                            consider_cut = Some(base_start);
+                        }
+                    }
+                    if let Some(cut_idx) = consider_cut {
+                        if cut_idx < n {
+                            // Drop any tokens that overlap the cut (end > cut_idx)
+                            while let Some((tok, start)) = tokens_with_spans.last() {
+                                let end = *start + tok.lexeme.as_str().len();
+                                if end > cut_idx {
+                                    tokens_with_spans.pop();
+                                } else {
+                                    break;
+                                }
+                            }
+                            used_end = cut_idx.min(used_end);
+                            partial_string = Some(chunk[cut_idx..].to_string());
+                        }
+                    }
+                }
             }
         }
 
