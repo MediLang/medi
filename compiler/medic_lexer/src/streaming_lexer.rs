@@ -420,4 +420,17 @@ mod tests {
         assert!(matches!(tokens[4].token_type, TokenType::Identifier(_)));
         assert_eq!(tokens[4].lexeme.as_str(), "y");
     }
+
+    #[test]
+    fn test_pipeline_operator_not_tokenized_streaming() {
+        let source = "|>";
+        let lexer = StreamingLexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+
+        assert_eq!(tokens.len(), 2, "Expected 2 tokens for '|>'");
+        assert_eq!(tokens[0].lexeme.as_str(), "|");
+        assert_eq!(tokens[1].lexeme.as_str(), ">");
+        assert!(matches!(tokens[0].token_type, TokenType::BitOr));
+        assert!(matches!(tokens[1].token_type, TokenType::Greater));
+    }
 }

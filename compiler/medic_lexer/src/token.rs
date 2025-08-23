@@ -196,8 +196,6 @@ pub enum TokenType {
     QuestionColon,
     /// `!` - macro or never type
     Bang,
-    /// `|` - pattern separator
-    Pipe,
     /// `..` - range pattern
     Range,
     /// `..=` - inclusive range pattern
@@ -359,7 +357,6 @@ impl PartialEq for TokenType {
             (TokenType::QuestionQuestion, TokenType::QuestionQuestion) => true,
             (TokenType::QuestionColon, TokenType::QuestionColon) => true,
             (TokenType::Bang, TokenType::Bang) => true,
-            (TokenType::Pipe, TokenType::Pipe) => true,
             (TokenType::Range, TokenType::Range) => true,
             (TokenType::RangeInclusive, TokenType::RangeInclusive) => true,
 

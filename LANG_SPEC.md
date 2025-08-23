@@ -41,7 +41,7 @@ This specification outlines Medi's syntax, data types, control structures, and d
 3. **Operators and Delimiters**:
    ```
    +    -    *    /    %    =    ==   !=   <    >    <=   >=
-   +=   -=   *=   /=   %=   &&   ||   !    ->   =>   {    }    (    )    [    ]
+   +=   -=   *=   /=   %=   &&   ||   |    !    ->   =>   {    }    (    )    [    ]
    .    ::   ,    :    ;    @    #    ?    ..   ..=  ...
    ```
 
@@ -142,6 +142,11 @@ match lab_result {
     case _ => print("Normal result")
 }
 ```
+
+#### Notes on '|' and pipeline operator
+
+- '|' is tokenized as `TokenType::BitOr` in all contexts. The parser disambiguates it as alternation inside patterns.
+- There is no pipeline operator `|>` in v0.1; it is reserved (see "Reserved & Future") and not recognized by the lexer.
 
 ## Functions
 
