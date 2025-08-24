@@ -246,6 +246,28 @@ pub enum LogosToken {
     #[token("false", |_| false)]
     Bool(bool),
 
+    // Function-like medical literals (must come before Identifier to avoid shadowing)
+    /// Patient ID function-like literal: pid("...")
+    #[regex(r#"pid\(\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\s*\)"#, |lex| {
+        let s = lex.slice();
+        // Extract the inner quoted string
+        if let (Some(start), Some(end)) = (s.find('"'), s.rfind('"')) {
+            if end > start { return Ok::<_, ()>(s[start+1..end].replace("\\\"", "\"")); }
+        }
+        Err(())
+    })]
+    PatientIdFunc(String),
+
+    /// ICD-10 function-like literal: icd10("A00.0")
+    #[regex(r#"icd10\(\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\s*\)"#, |lex| {
+        let s = lex.slice();
+        if let (Some(start), Some(end)) = (s.find('"'), s.rfind('"')) {
+            if end > start { return Ok::<_, ()>(s[start+1..end].replace("\\\"", "\"")); }
+        }
+        Err(())
+    })]
+    ICD10Func(String),
+
     // Medical operators (must come before Identifier to avoid shadowing)
     /// `of` operator (e.g., '2 of 3' criteria)
     #[token("of")]

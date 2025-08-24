@@ -135,6 +135,9 @@ impl Position {
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
+            } else if c == '\r' {
+                // Normalize CRLF/CR: do not advance column on '\r'.
+                // Still advance byte offset below.
             } else {
                 self.column += 1;
             }
@@ -220,8 +223,125 @@ impl ChunkedLexer {
             let token_type = match &token_result {
                 Ok(t) => t.clone(),
                 Err(_) => {
-                    // Emit an Error token with a descriptive message, matching convert.rs behavior
-                    // so tests that expect TokenType::Error with the offending lexeme in the message pass.
+                    // Expand malformed numeric error lexemes to include the whole offending attempt.
+                    // Examples: "123abc" => "123abc", "1.2.3" => "1.2.", "1_000" => "1_000",
+                    //           "123e" => "123e", "1.2e+" => "1.2e+", "0x1.2p3" => "0x1".
+                    let err_start = span.start;
+                    let mut err_end = span.end;
+                    let bytes = chunk.as_bytes();
+                    let n = bytes.len();
+
+                    // Try to detect a numeric-looking prefix starting at err_start
+                    let mut i = err_start;
+                    let mut _consumed_any = false;
+
+                    // Hex prefix 0x/0X handling: consume 0x[hex]+ as one invalid token
+                    if i + 1 < n
+                        && bytes[i] == b'0'
+                        && (bytes[i + 1] == b'x' || bytes[i + 1] == b'X')
+                    {
+                        i += 2;
+                        _consumed_any = true;
+                        while i < n && (bytes[i].is_ascii_hexdigit()) {
+                            i += 1;
+                        }
+                        err_end = i; // stop before '.' or any non-hex continuation
+                    } else {
+                        // General numeric attempt state machine
+                        // States: 0 start, 1 int run, 2 seen '.', 3 frac run, 4 seen 'e/E', 5 seen exp sign
+                        let mut state = 0u8;
+                        // Optional leading minus
+                        if i < n && bytes[i] == b'-' {
+                            i += 1;
+                        }
+                        // Integer part
+                        let int_start = i;
+                        while i < n && bytes[i].is_ascii_digit() {
+                            i += 1;
+                        }
+                        if i > int_start {
+                            state = 1; // have integer digits
+                            _consumed_any = true;
+                        }
+                        // Fractional part
+                        if i < n && bytes[i] == b'.' {
+                            // If we already had a '.', then this dot makes it invalid; include it and stop
+                            if state >= 2 {
+                                i += 1; // include the second dot and stop
+                                err_end = i;
+                            } else {
+                                i += 1; // consume dot
+                                state = 2;
+                                let frac_start = i;
+                                while i < n && bytes[i].is_ascii_digit() {
+                                    i += 1;
+                                }
+                                if i > frac_start {
+                                    state = 3;
+                                }
+                            }
+                        }
+                        // Allow underscores only when followed by at least one digit (e.g., 1_000).
+                        // Do NOT consume a trailing underscore with no following digit (e.g., 0_)
+                        // to match non-chunked behavior (Error("0"), then Underscore token).
+                        while i + 1 < n && bytes[i] == b'_' && bytes[i + 1].is_ascii_digit() {
+                            _consumed_any = true;
+                            // consume '_' and subsequent digit run
+                            i += 1;
+                            let after_us = i;
+                            while i < n && bytes[i].is_ascii_digit() {
+                                i += 1;
+                            }
+                            if i == after_us {
+                                break;
+                            }
+                        }
+                        // Exponent: only include an 'e'/'E' if it's actually part of an exponent prefix.
+                        // Do NOT consume 'e' when it's the start of an identifier (e.g., "0else").
+                        if i < n && (bytes[i] == b'e' || bytes[i] == b'E') {
+                            let mut include_e = false;
+                            if i + 1 < n {
+                                let next = bytes[i + 1];
+                                // Only include 'e' when it's clearly part of an exponent prefix
+                                if next.is_ascii_digit() || next == b'+' || next == b'-' {
+                                    include_e = true;
+                                }
+                            } else if is_final_chunk {
+                                // At end of input, include the trailing 'e' to match non-chunked behavior
+                                include_e = true;
+                            }
+                            if include_e {
+                                i += 1; // include 'e'
+                                state = 4;
+                                if i < n && (bytes[i] == b'+' || bytes[i] == b'-') {
+                                    i += 1; // include sign
+                                    state = 5;
+                                }
+                                // If there are exponent digits, this would have been a valid float; since we're here
+                                // due to Err, we include up to this point (no digits yet) and stop.
+                            }
+                        }
+
+                        // mark that `state` was used for flow tracking even if final value isn't read
+                        let _ = state;
+
+                        // Do NOT consume trailing alphabetic identifier characters; preserve parity
+                        // with the non-chunked lexer which emits Error("0") followed by Identifier.
+
+                        // If we advanced, use that as error end; otherwise, keep original slice
+                        if i > err_start {
+                            err_end = i;
+                        }
+                    }
+
+                    // Finalize the error lexeme using the expanded [err_start, err_end)
+                    let expanded_slice = &chunk[err_start..err_end.min(n)];
+                    let err_tok = convert_logos_to_token(
+                        LogosToken::Error,
+                        expanded_slice,
+                        token_start_pos.into(),
+                        convert_cfg,
+                    );
                     #[cfg(feature = "logging")]
                     {
                         log::debug!(
@@ -229,16 +349,10 @@ impl ChunkedLexer {
                             token_start_pos.line,
                             token_start_pos.column,
                             token_start_pos.offset,
-                            slice,
+                            expanded_slice,
                             is_final_chunk
                         );
                     }
-                    let err_tok = convert_logos_to_token(
-                        LogosToken::Error,
-                        slice,
-                        token_start_pos.into(),
-                        convert_cfg,
-                    );
                     tokens_with_spans.push((err_tok, span.start));
                     last_token_pushed = true;
                     last_span_start = Some(span.start);
@@ -318,6 +432,58 @@ impl ChunkedLexer {
                 last_token_pushed = false;
             }
         }
+
+        // Post-process to merge a leading '-' with a following float that begins with '.'
+        // into a single negative float token (e.g., "-.5" => Float(-0.5)), matching the
+        // non-chunked lexer behavior. Only merge when the tokens are directly adjacent
+        // (no whitespace or other chars between) and the float lexeme starts with '.'.
+        if !tokens_with_spans.is_empty() {
+            let mut merged: Vec<(Token, usize)> = Vec::with_capacity(tokens_with_spans.len());
+            let mut idx = 0;
+            while idx < tokens_with_spans.len() {
+                if idx + 1 < tokens_with_spans.len() {
+                    let (ref t1, s1) = tokens_with_spans[idx];
+                    let (ref t2, s2) = tokens_with_spans[idx + 1];
+                    let t1_is_minus = matches!(t1.token_type, TokenType::Minus);
+                    let t2_is_float = matches!(t2.token_type, TokenType::Float(_));
+                    let adj = s1 + t1.lexeme.as_str().len() == s2;
+                    if t1_is_minus && t2_is_float && adj && t2.lexeme.as_str().starts_with('.') {
+                        // Build a single Float token with negated value and combined lexeme
+                        let fval = match t2.token_type {
+                            TokenType::Float(v) => v,
+                            _ => unreachable!(),
+                        };
+                        let combined_lexeme = {
+                            let mut s = String::with_capacity(1 + t2.lexeme.as_str().len());
+                            s.push('-');
+                            s.push_str(t2.lexeme.as_str());
+                            s
+                        };
+                        let new_tok = Token::new(
+                            TokenType::Float(-fval),
+                            combined_lexeme.as_str(),
+                            t1.location,
+                        );
+                        merged.push((new_tok, s1));
+                        idx += 2;
+                        continue;
+                    }
+                }
+                merged.push(tokens_with_spans[idx].clone());
+                idx += 1;
+            }
+            // Recalculate last_span_end based on merged tokens
+            if let Some((last_tok, last_start)) = merged.last() {
+                last_span_end = last_start + last_tok.lexeme.as_str().len();
+            } else {
+                last_span_end = 0;
+            }
+            tokens_with_spans = merged;
+        }
+
+        // Note: do not alter Float + adjacent .Float sequences here to preserve parity with
+        // the non-chunked lexer (e.g., medical codes like 'B99.13.14'). Invalid cases like
+        // '1.2.3' are handled in ChunkedLexer::tokenize() without changing the token stream.
 
         // Determine if there is an unmatched (unclosed) string starting in this chunk.
         // We scan for unescaped double quotes and toggle in_string. If we end the chunk
@@ -933,7 +1099,7 @@ impl ChunkedLexer {
                     if tokens_with_spans.len() >= 2 {
                         let prev_idx = tokens_with_spans.len() - 2;
                         // Capture needed data without holding an immutable borrow during mutation
-                        let (prev_start_val, prev_is_adjacent, prev_is_number) = {
+                        let (prev_start_val, prev_is_adjacent, prev_is_number, prev_is_minus) = {
                             let (prev_tok, prev_start_ref) = &tokens_with_spans[prev_idx];
                             let prev_len = prev_tok.lexeme.as_str().len();
                             let prev_end = *prev_start_ref + prev_len;
@@ -942,10 +1108,11 @@ impl ChunkedLexer {
                                 prev_tok.token_type,
                                 TokenType::Integer(_) | TokenType::NegativeInteger(_)
                             );
-                            (*prev_start_ref, adjacent, is_number)
+                            let is_minus = matches!(prev_tok.token_type, TokenType::Minus);
+                            (*prev_start_ref, adjacent, is_number, is_minus)
                         };
 
-                        if prev_is_adjacent && prev_is_number {
+                        if prev_is_adjacent && (prev_is_number || prev_is_minus) {
                             // Pop '.' and the preceding number; carry both into partial
                             tokens_with_spans.pop(); // '.'
                             tokens_with_spans.pop(); // number
@@ -1235,13 +1402,140 @@ impl ChunkedLexer {
     /// Process the entire input and return a result with all tokens or an error
     pub fn tokenize(self) -> Result<Vec<Token>, String> {
         let mut tokens = Vec::new();
-        for token in self {
-            match &token.token_type {
-                TokenType::Error(msg) => {
+        let mut iter = self.into_iter();
+        let mut prev: Option<Token> = None;
+        while let Some(token) = iter.next() {
+            // Detect invalid numeric pattern: Float immediately followed by adjacent Float
+            // that begins with '.' (e.g., "1.2.3" -> error "1.2."). Do this here to avoid
+            // altering the iterator stream and breaking parity tests.
+            if let Some(ref p) = prev {
+                if matches!(p.token_type, TokenType::Float(_))
+                    && matches!(token.token_type, TokenType::Float(_))
+                    && token.lexeme.as_str().starts_with('.')
+                    && p.location.offset + p.lexeme.as_str().len() == token.location.offset
+                    && !p.lexeme.as_str().starts_with('.')
+                {
+                    let offending = format!("{}.", p.lexeme.as_str());
                     let error_msg = format!(
-                        "Lexer error at line {}: {}",
-                        token.location.line,
-                        msg.as_str()
+                        "Lexer error at line {}: Invalid token '{}'",
+                        p.location.line, offending
+                    );
+                    return Err(error_msg);
+                }
+                // Detect Float followed by adjacent Identifier("e"/"E") and validate exponent tail.
+                // Valid forms: Float + 'e'/'E' + [ '+' | '-' ]? + Integer (all adjacent).
+                // Invalid examples (emit error): "1.2e", "1.2e+", "1.2e-".
+                if matches!(p.token_type, TokenType::Float(_))
+                    && matches!(token.token_type, TokenType::Identifier(_))
+                    && (token.lexeme.as_str() == "e" || token.lexeme.as_str() == "E")
+                    && p.location.offset + p.lexeme.as_str().len() == token.location.offset
+                {
+                    // Try to look ahead to see if we have + / - and digits
+                    // We'll only consume lookahead tokens if we are NOT going to error.
+                    let mut offending = String::with_capacity(p.lexeme.len() + 2);
+                    offending.push_str(p.lexeme.as_str());
+                    offending.push_str(token.lexeme.as_str());
+                    // Peek next
+                    if let Some(next1) = iter.next() {
+                        let adj1 =
+                            token.location.offset + token.lexeme.len() == next1.location.offset;
+                        if adj1 {
+                            match &next1.token_type {
+                                TokenType::Plus | TokenType::Minus => {
+                                    // Optional sign present; require adjacent Integer next
+                                    offending.push_str(next1.lexeme.as_str());
+                                    if let Some(next2) = iter.next() {
+                                        let adj2 = next1.location.offset + next1.lexeme.len()
+                                            == next2.location.offset;
+                                        if adj2 {
+                                            match &next2.token_type {
+                                                TokenType::Integer(_) => {
+                                                    // Valid exponent; push tokens and continue
+                                                    tokens.push(token.clone());
+                                                    tokens.push(next1.clone());
+                                                    tokens.push(next2.clone());
+                                                    prev = Some(next2);
+                                                    continue;
+                                                }
+                                                _ => {
+                                                    // No digits after sign
+                                                    let error_msg = format!(
+                                                        "Lexer error at line {}: Invalid token '{}'",
+                                                        p.location.line, offending
+                                                    );
+                                                    return Err(error_msg);
+                                                }
+                                            }
+                                        } else {
+                                            // Non-adjacent after sign -> invalid
+                                            let error_msg = format!(
+                                                "Lexer error at line {}: Invalid token '{}'",
+                                                p.location.line, offending
+                                            );
+                                            return Err(error_msg);
+                                        }
+                                    } else {
+                                        // EOF after sign
+                                        let error_msg = format!(
+                                            "Lexer error at line {}: Invalid token '{}'",
+                                            p.location.line, offending
+                                        );
+                                        return Err(error_msg);
+                                    }
+                                }
+                                TokenType::Integer(_) => {
+                                    // Valid exponent without sign; push and continue
+                                    tokens.push(token.clone());
+                                    tokens.push(next1.clone());
+                                    prev = Some(next1);
+                                    continue;
+                                }
+                                _ => {
+                                    // Adjacent but not sign or digits -> invalid (e.g., eX)
+                                    let error_msg = format!(
+                                        "Lexer error at line {}: Invalid token '{}'",
+                                        p.location.line, offending
+                                    );
+                                    return Err(error_msg);
+                                }
+                            }
+                        } else {
+                            // Non-adjacent 'e' -> invalid continuation
+                            let error_msg = format!(
+                                "Lexer error at line {}: Invalid token '{}'",
+                                p.location.line, offending
+                            );
+                            return Err(error_msg);
+                        }
+                    } else {
+                        // EOF right after 'e'
+                        let error_msg = format!(
+                            "Lexer error at line {}: Invalid token '{}'",
+                            p.location.line, offending
+                        );
+                        return Err(error_msg);
+                    }
+                }
+            }
+            match &token.token_type {
+                TokenType::Error(_msg) => {
+                    // Try to expand message when an invalid numeric is immediately followed by
+                    // a contiguous identifier (e.g., "123" + "abc" => "123abc").
+                    let mut offending = token.lexeme.as_str().to_string();
+                    // Only attempt to lookahead once; we won't emit further tokens since we return Err.
+                    if let Some(next_tok) = iter.next() {
+                        // Ensure contiguity by checking offsets
+                        let expected_next_offset = token.location.offset + token.lexeme.len();
+                        let is_contiguous = next_tok.location.offset == expected_next_offset;
+                        if is_contiguous {
+                            if let TokenType::Identifier(id) = &next_tok.token_type {
+                                offending.push_str(id.as_str());
+                            }
+                        }
+                    }
+                    let error_msg = format!(
+                        "Lexer error at line {}: Invalid token '{}'",
+                        token.location.line, offending
                     );
                     return Err(error_msg);
                 }
@@ -1251,6 +1545,7 @@ impl ChunkedLexer {
                 }
                 _ => {}
             }
+            prev = Some(token.clone());
             tokens.push(token);
         }
         Ok(tokens)
@@ -1482,6 +1777,68 @@ mod tests {
         // Ensure there is no comment token emitted and the sequence matches non-chunked
         let tokens_plain: Vec<_> = Lexer::new(input).collect();
         assert_eq!(normalize(&tokens_chunked), normalize(&tokens_plain));
+    }
+
+    #[test]
+    fn test_negative_dot_float_single_token() {
+        let input = "-.5";
+        // Compare to non-chunked lexer
+        let plain = normalize(&Lexer::new(input).collect::<Vec<_>>());
+        // Try a few chunk sizes to stress boundary handling
+        for &cs in &[1usize, 2, 3, 4, 8] {
+            let chunked = normalize(
+                &ChunkedLexer::from_reader(
+                    Cursor::new(input),
+                    ChunkedLexerConfig { chunk_size: cs },
+                )
+                .collect::<Vec<_>>(),
+            );
+            assert_eq!(
+                chunked, plain,
+                "mismatch at chunk_size={} for '{}'",
+                cs, input
+            );
+        }
+    }
+
+    #[test]
+    fn test_dot_float_chain_two_floats_parity() {
+        // Cases where a leading dot float is followed by another dot float should not error
+        for input in [".13.14", "B99.13.14"] {
+            let plain = normalize(&Lexer::new(input).collect::<Vec<_>>());
+            for &cs in &[1usize, 2, 3, 4, 5, 8, 16] {
+                let chunked = normalize(
+                    &ChunkedLexer::from_reader(
+                        Cursor::new(input),
+                        ChunkedLexerConfig { chunk_size: cs },
+                    )
+                    .collect::<Vec<_>>(),
+                );
+                assert_eq!(
+                    chunked, plain,
+                    "mismatch at chunk_size={} for '{}'",
+                    cs, input
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_invalid_exponent_tails_error_messages() {
+        // These should be invalid: missing exponent digits
+        for input in ["1.2e", "1.2e+", "1.2e-"] {
+            let res =
+                ChunkedLexer::from_reader(Cursor::new(input), ChunkedLexerConfig { chunk_size: 2 })
+                    .tokenize();
+            assert!(res.is_err(), "expected error for '{}'", input);
+            let err = res.err().unwrap();
+            assert!(
+                err.contains(input),
+                "error message '{}' does not contain expected lexeme '{}'",
+                err,
+                input
+            );
+        }
     }
 
     #[test]

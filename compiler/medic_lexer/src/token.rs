@@ -227,6 +227,8 @@ pub enum TokenType {
     Medication,
 
     // Literals and identifiers
+    /// Patient ID literal (e.g., pid("PT-12345"))
+    PatientId(InternedString),
     /// ICD-10 code literal
     ICD10(InternedString),
     /// LOINC code literal
@@ -373,6 +375,7 @@ impl PartialEq for TokenType {
             (TokenType::Medication, TokenType::Medication) => true,
 
             // Literals and identifiers with data
+            (TokenType::PatientId(a), TokenType::PatientId(b)) => a == b,
             (TokenType::ICD10(a), TokenType::ICD10(b)) => a == b,
             (TokenType::LOINC(a), TokenType::LOINC(b)) => a == b,
             (TokenType::SNOMED(a), TokenType::SNOMED(b)) => a == b,
@@ -403,7 +406,8 @@ impl Hash for TokenType {
     fn hash<H: Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
-            TokenType::ICD10(s)
+            TokenType::PatientId(s)
+            | TokenType::ICD10(s)
             | TokenType::LOINC(s)
             | TokenType::SNOMED(s)
             | TokenType::CPT(s)
@@ -511,6 +515,7 @@ impl Token {
                 | TokenType::Patient
                 | TokenType::Observation
                 | TokenType::Medication
+                | TokenType::PatientId(_)
                 | TokenType::ICD10(_)
                 | TokenType::LOINC(_)
                 | TokenType::SNOMED(_)

@@ -27,7 +27,7 @@
               1
             ],
             "details": "Acceptance Criteria:\n- Correctly tokenize all v0.1 language constructs per `LANG_SPEC.md`, including healthcare keywords and medical literals (e.g., pid(\"PT123\"), icd10(\"A00.0\")).\n- UTF-8 input handling and platform-independent line endings (CRLF/CR/LF) with consistent normalization.\n- Handle whitespace and comments per `LANG_SPEC.md` (single-line and block forms as specified).\n- Unicode-aware position tracking (line 1-based, column 1-based using Unicode scalar count, not bytes); verified on multi-line and non-ASCII input.\n- Support string literals with escape sequences and multiline strings as specified.\n- Standardized lexer error token: emit TokenType::Error(\"Invalid token '<lexeme>'\") for invalid input; keep debug logging behind a `logging` feature (no behavior change when disabled).\n- Large-input performance: provide streaming/chunked lexing path with bounded memory and stable throughput; avoid loading entire files into memory.\n- Do not emit pipeline `|>` as a single token (ensure it lexes according to v0.1 rules).\n- Comprehensive tests:\n  - All healthcare keywords and representative medical literals.\n  - Unicode and cross-platform line endings.\n  - Edge cases: unterminated strings/comments, invalid escapes, extremely long tokens.\n  - PRD key examples compile through lexing without lexer errors.\n- Contribute to PRD compile-time target by ensuring lexing is not the bottleneck for simple scripts (< 2s end-to-end).\nEstimated Complexity: High - requires careful state management and performance considerations.",
-            "status": "in-progress"
+            "status": "done"
           },
           {
             "id": 3,
@@ -61,6 +61,15 @@
             ],
             "details": "Acceptance Criteria:\n- Clear error messages with line and column information\n- Context-aware error suggestions\n- Categorization of errors by severity\n- Recovery mechanisms to continue parsing after errors\n- Visual highlighting of error locations in source\n- Documentation of common errors and solutions\n- User testing with clinical staff\nEstimated Complexity: High - requires natural language generation and deep understanding of common user mistakes.",
             "status": "pending"
+          },
+          {
+            "id": 6,
+            "title": "Plan pipeline operator lexer design (no behavior change in v0.1)",
+            "description": "Design the approach for optional single-token pipeline operator '|>' recognition across lexers without changing v0.1 behavior by default.\\n\\nScope:\\n- Define feature flag name (e.g., 'pipeline_op') in compiler/medic_lexer/Cargo.toml; disabled by default.\\n- Add planned variants: LogosToken::PipeGreater and TokenType::PipeGreater (gated usage).\\n- Plan updates to convert_logos_to_token() to map PipeGreater when feature enabled.\\n- Plan recognition paths in lexers: lexer/mod.rs, streaming_lexer.rs, chunked_lexer.rs, including chunk-boundary handling.\\n- Ensure position tracking and performance unchanged.\\n\\nTests to plan:\\n- Default (no feature): '|>' tokenizes as BitOr, Greater in all lexers (keep existing tests).\\n- With feature: '|>' tokenizes as single PipeGreater in all lexers, including across chunk boundaries.\\n- Conversion mapping and Location correctness.\\n\\nDocs to plan:\\n- Update LANG_SPEC.md to document the operator and feature gating.\\n- Note backward compatibility and default-off behavior.\\n\\nAcceptance Notes:\\n- This subtask is planning-only; no behavior change for v0.1.\\n- Output: a brief design note and checklist to implement in the follow-up task.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 1
           }
         ]
       },
@@ -836,11 +845,24 @@
             "status": "pending"
           }
         ]
+      },
+      {
+        "id": 16,
+        "title": "Implement Feature-Gated Pipeline Operator",
+        "description": "Add support for a single-token pipeline operator '|>' in the Medi lexer, gated behind a Cargo feature flag to preserve backward compatibility.",
+        "details": "Implement a feature-gated single-token pipeline operator '|>' across the medic_lexer module with the following steps:\n\n1. Add new token types:\n   - Add `LogosToken::PipeGreater` to the Logos token enum\n   - Add `TokenType::PipeGreater` to the token type enum\n\n2. Update token conversion:\n   - Modify `convert_logos_to_token()` to handle the new token type\n   - Ensure proper span information is preserved\n\n3. Enable recognition in lexer modules:\n   - Update `lexer/mod.rs` to recognize the new token\n   - Update `streaming_lexer.rs` to handle the token in streaming contexts\n   - Update `chunked_lexer.rs` to properly handle the token, including special handling for chunk boundaries where '|' and '>' might be split across chunks\n\n4. Add a new Cargo feature flag:\n   - Create a new feature flag (e.g., `pipeline-operator`) that is disabled by default\n   - Gate the single-token behavior behind this feature\n   - When the feature is disabled, the lexer should continue to recognize '|' and '>' as separate tokens (BitOr and Greater)\n   - When enabled, recognize '|>' as a single PipeGreater token\n\n5. Update documentation:\n   - Add the new token to the language specification in LANG_SPEC.md\n   - Document the feature flag in relevant README files\n   - Add usage examples showing both default and feature-enabled behavior\n\n6. Ensure backward compatibility:\n   - Verify that existing tests pass with the feature disabled\n   - Confirm that the lexer behavior is unchanged for existing code when the feature is off",
+        "testStrategy": "1. Unit tests for token recognition:\n   - Test that '|>' is recognized as a single token when the feature is enabled\n   - Test that '|' and '>' are recognized as separate tokens when the feature is disabled\n   - Test edge cases like whitespace between '|' and '>'\n\n2. Chunked lexer tests:\n   - Test recognition when '|' and '>' are in the same chunk\n   - Test recognition when '|' is at the end of one chunk and '>' is at the beginning of the next\n   - Verify correct behavior with various chunk sizes\n\n3. Streaming lexer tests:\n   - Test streaming recognition of the pipeline operator\n   - Verify correct token boundaries in streaming mode\n\n4. Feature flag tests:\n   - Create test modules that conditionally compile based on the feature flag\n   - Verify both behaviors (single token vs. two tokens) with appropriate test cases\n\n5. Integration tests:\n   - Test the lexer in the context of the full parser\n   - Verify that expressions using the pipeline operator are correctly parsed\n\n6. Regression tests:\n   - Run the existing test suite with the feature disabled to ensure no regressions\n   - Create a comprehensive test suite that passes regardless of feature flag state",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-08-23T01:27:51.072Z",
-      "updated": "2025-08-23T01:27:51.072Z",
+      "updated": "2025-08-24T00:59:34.814Z",
       "description": "Tasks for master context"
     }
   }

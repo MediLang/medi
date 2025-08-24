@@ -227,6 +227,9 @@ impl<'a> StreamingLexer<'a> {
             LogosToken::LOINC(code) => TokenType::LOINC(InternedString::from(&code[..])),
             LogosToken::SNOMED(code) => TokenType::SNOMED(InternedString::from(&code[..])),
             LogosToken::CPT(code) => TokenType::CPT(InternedString::from(&code[..])),
+            // Function-like medical literals
+            LogosToken::PatientIdFunc(pid) => TokenType::PatientId(InternedString::from(&pid[..])),
+            LogosToken::ICD10Func(code) => TokenType::ICD10(InternedString::from(&code[..])),
 
             // Keywords
             LogosToken::Module => TokenType::Module,

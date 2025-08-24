@@ -17,6 +17,127 @@ fn init_test_logger() {
 }
 
 #[test]
+fn test_long_tokens_and_performance_smoke() {
+    // Very long identifier and string should tokenize without errors or stack overflow
+    let long_ident = "a".repeat(2_000);
+    let long_string_inner = "b".repeat(3_000);
+    let long_string = format!("\"{}\"", long_string_inner);
+    let input = format!("{}\n{}", long_ident, long_string);
+
+    let lexer = ChunkedLexer::from_reader(std::io::Cursor::new(input), Default::default());
+    let tokens: Vec<_> = lexer.collect();
+
+    // Expect two tokens (identifier and string)
+    pretty_assert_eq!(tokens.len(), 2);
+    assert!(matches!(tokens[0].token_type, TokenType::Identifier(_)));
+    assert!(matches!(tokens[1].token_type, TokenType::String(_)));
+}
+
+#[test]
+fn test_lex_prd_phase1_examples_no_errors() {
+    // Lex the PRD Phase 1 fenced code blocks (skip prose) to ensure no lexer errors are emitted
+    let prd_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join(".taskmaster")
+        .join("docs")
+        .join("PRD-Phase-1.txt");
+
+    let content = std::fs::read_to_string(&prd_path).expect(&format!(
+        "Failed to read PRD file at {}",
+        prd_path.display()
+    ));
+
+    // Extract fenced code blocks ``` ... ```
+    let mut in_block = false;
+    let mut code = String::new();
+    let mut blocks_found = 0usize;
+    for line in content.lines() {
+        if line.trim_start().starts_with("```") {
+            in_block = !in_block;
+            if !in_block {
+                // Block ended
+                blocks_found += 1;
+                code.push('\n');
+            }
+            continue;
+        }
+        if in_block {
+            code.push_str(line);
+            code.push('\n');
+        }
+    }
+
+    assert!(
+        blocks_found > 0,
+        "No fenced code blocks found in PRD Phase 1 file"
+    );
+
+    let lexer = ChunkedLexer::from_reader(std::io::Cursor::new(code), Default::default());
+    let tokens: Vec<_> = lexer.collect();
+
+    // Ensure we got some tokens and none are errors
+    assert!(
+        !tokens.is_empty(),
+        "PRD code block lexing produced no tokens"
+    );
+    for t in &tokens {
+        assert!(
+            !matches!(t.token_type, TokenType::Error(_)),
+            "Lexer error token encountered at {}:{} offset {}: {:?}",
+            t.location.line,
+            t.location.column,
+            t.location.offset,
+            t.lexeme.as_str()
+        );
+    }
+}
+
+#[test]
+fn test_crlf_and_cr_normalization_positions() {
+    // Mix of CRLF and CR only. Columns should not advance on '\r'.
+    let input = "let\r\nx = 1\ry\n";
+    // Tokens by lexeme (skipping whitespace): let, x, =, 1, y
+    let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+    let tokens: Vec<_> = lexer.collect();
+
+    let lexemes: Vec<&str> = tokens.iter().map(|t| t.lexeme.as_str()).collect();
+    pretty_assert_eq!(lexemes, vec!["let", "x", "=", "1", "y"]);
+
+    // Ensure line increments only on \n
+    // 'let' at line 1
+    pretty_assert_eq!(tokens[0].location.line, 1);
+    // After CRLF, 'x' starts at line 2, column 1
+    pretty_assert_eq!(tokens[1].location.line, 2);
+    pretty_assert_eq!(tokens[1].location.column, 1);
+    // '=' follows 'x ' on same line
+    pretty_assert_eq!(tokens[2].location.line, 2);
+    // After CR only, no new line until \n; 'y' remains on line 2
+    pretty_assert_eq!(tokens[4].location.line, 2);
+}
+
+#[test]
+fn test_function_like_medical_literals() {
+    let input = r#"pid("PT-123") icd10("A00.1")"#;
+    let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+    let tokens: Vec<_> = lexer.collect();
+
+    pretty_assert_eq!(tokens.len(), 2);
+
+    match &tokens[0].token_type {
+        TokenType::PatientId(s) => pretty_assert_eq!(s.as_str(), "PT-123"),
+        other => panic!("Expected PatientId, got: {other:?}"),
+    }
+    pretty_assert_eq!(tokens[0].lexeme.as_str(), "pid(\"PT-123\")");
+
+    match &tokens[1].token_type {
+        TokenType::ICD10(s) => pretty_assert_eq!(s.as_str(), "A00.1"),
+        other => panic!("Expected ICD10, got: {other:?}"),
+    }
+    pretty_assert_eq!(tokens[1].lexeme.as_str(), "icd10(\"A00.1\")");
+}
+
+#[test]
 fn test_pipeline_operator_not_tokenized() {
     // `|>` must NOT be tokenized as a single pipeline operator in v0.1.
     // Expect two tokens: '|' (BitOr) and '>' (Greater).
@@ -206,7 +327,6 @@ mod position_tests {
 }
 
 #[test]
-#[ignore = "Temporarily disabled - needs investigation for infinite loop"]
 fn test_invalid_numeric_literals() {
     // Enable debug logging for the test
     std::env::set_var("RUST_LOG", "debug");
