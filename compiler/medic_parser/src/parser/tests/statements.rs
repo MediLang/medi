@@ -87,3 +87,95 @@ mod statements_test {
         assert!(parse_assignment_statement(token_slice).is_err());
     }
 }
+
+#[cfg(test)]
+mod functions_test {
+    use super::*;
+    use medic_ast::ast::{StatementNode, ExpressionNode};
+
+    #[test]
+    fn test_fn_empty_params() {
+        let input = "fn foo() { return 1; }";
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_function_declaration(ts).expect("should parse fn decl");
+        match stmt {
+            StatementNode::Function(func) => {
+                assert_eq!(func.name.name, "foo");
+                assert!(func.params.is_empty());
+                assert!(func.return_type.is_none());
+                // Body should contain a return
+                assert!(!func.body.statements.is_empty());
+            }
+            _ => panic!("expected function node"),
+        }
+    }
+
+    #[test]
+    fn test_fn_typed_params() {
+        let input = "fn calc(x: int, y: float) { }";
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_function_declaration(ts).expect("should parse typed params");
+        match stmt {
+            StatementNode::Function(func) => {
+                assert_eq!(func.name.name, "calc");
+                assert_eq!(func.params.len(), 2);
+                assert_eq!(func.params[0].name.name, "x");
+                assert!(func.params[0].type_annotation.is_some());
+                assert_eq!(func.params[1].name.name, "y");
+                assert!(func.params[1].type_annotation.is_some());
+            }
+            _ => panic!("expected function node"),
+        }
+    }
+
+    #[test]
+    fn test_fn_with_return_type() {
+        let input = "fn answer() -> int { return 42; }";
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_function_declaration(ts).expect("should parse return type");
+        match stmt {
+            StatementNode::Function(func) => {
+                assert!(func.return_type.is_some());
+            }
+            _ => panic!("expected function node"),
+        }
+    }
+
+    #[test]
+    fn test_fn_nested_body_and_missing_semis_tolerated() {
+        // let without semicolon is tolerated by parser; return without semicolon at end of block is also allowed
+        let input = r#"
+            fn flow(a: int) {
+                let x = a + 1
+                if a { return a }
+            }
+        "#;
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_function_declaration(ts).expect("should parse nested body");
+        match stmt {
+            StatementNode::Function(func) => {
+                assert_eq!(func.name.name, "flow");
+                assert_eq!(func.params.len(), 1);
+                assert!(func.return_type.is_none());
+                assert!(func.body.statements.len() >= 2);
+            }
+            _ => panic!("expected function node"),
+        }
+    }
+
+    #[test]
+    fn test_fn_rejects_default_param() {
+        // Defaults are not supported by current grammar
+        let input = "fn f(x = 1) {}";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_function_declaration(ts).is_err());
+    }
+
+    #[test]
+    fn test_fn_rejects_variadic_like_ellipsis() {
+        // No variadic/ellipsis supported
+        let input = "fn f(x, ...) {}";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_function_declaration(ts).is_err());
+    }
+}

@@ -196,6 +196,8 @@ impl<'a> Lexer<'a> {
             LogosToken::QuestionColon => TokenType::QuestionColon,
             LogosToken::Range => TokenType::Range,
             LogosToken::RangeInclusive => TokenType::RangeInclusive,
+            // Unit conversion Unicode arrow (→)
+            LogosToken::UnitConversionArrow => TokenType::UnitConversionArrow,
 
             // Delimiters
             LogosToken::LeftParen => TokenType::LeftParen,

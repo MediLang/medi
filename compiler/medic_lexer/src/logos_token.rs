@@ -455,6 +455,10 @@ pub enum LogosToken {
     #[token("**")]
     DoubleStar,
 
+    /// Unit conversion operator (`→`, Unicode U+2192)
+    #[token("→")]
+    UnitConversionArrow,
+
     // Assignment operators
     /// Assignment operator (`=`)
     #[token("=")]

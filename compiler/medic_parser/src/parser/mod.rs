@@ -899,7 +899,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
         // Medical operators
         TokenType::Of => Some((BinaryOperator::Of, false)),
         TokenType::Per => Some((BinaryOperator::Per, false)),
-        TokenType::Arrow => Some((BinaryOperator::UnitConversion, true)),
+        TokenType::UnitConversionArrow => Some((BinaryOperator::UnitConversion, true)),
 
         // Standard operators
         TokenType::Plus => Some((BinaryOperator::Add, false)),

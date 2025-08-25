@@ -1280,6 +1280,12 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                     log::debug!("Found 'while' statement");
                     parse_while_statement(input)
                 }
+                TokenType::LeftBrace => {
+                    // Nested block as a statement
+                    log::debug!("Found nested block statement '{{'");
+                    let (next, block) = parse_block(input)?;
+                    Ok((next, StatementNode::Block(block)))
+                }
                 _ => {
                     log::debug!("No statement keyword found, trying expression statement");
                     log::debug!("No concise match syntax found, trying expression statement");

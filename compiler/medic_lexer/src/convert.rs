@@ -103,6 +103,7 @@ pub fn convert_logos_to_token(
         LogosToken::PercentEqual => TokenType::PercentEqual,
         LogosToken::DoubleStar => TokenType::DoubleStar,
         LogosToken::DoubleStarAssign => TokenType::DoubleStarAssign,
+        LogosToken::UnitConversionArrow => TokenType::UnitConversionArrow,
         LogosToken::BitAnd => TokenType::BitAnd,
         LogosToken::BitAndAssign => TokenType::BitAndAssign,
         LogosToken::BitOr => TokenType::BitOr,

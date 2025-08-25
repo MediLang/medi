@@ -1,0 +1,82 @@
+[
+  {
+    "kind": "func",
+    "size": "256k",
+    "bytes": 262200,
+    "ok": true,
+    "stmts": 1725,
+    "time_ms": 10.503666666666666
+  },
+  {
+    "kind": "func",
+    "size": "512k",
+    "bytes": 524400,
+    "ok": true,
+    "stmts": 3450,
+    "time_ms": 20.612333333333332
+  },
+  {
+    "kind": "func",
+    "size": "2m",
+    "bytes": 2097296,
+    "ok": true,
+    "stmts": 13798,
+    "time_ms": 83.318
+  },
+  {
+    "kind": "func",
+    "size": "4m",
+    "bytes": 4194440,
+    "ok": true,
+    "stmts": 27595,
+    "time_ms": 164.85933333333335
+  },
+  {
+    "kind": "func",
+    "size": "8m",
+    "bytes": 8388728,
+    "ok": true,
+    "stmts": 55189,
+    "time_ms": 329.50866666666667
+  },
+  {
+    "kind": "expr",
+    "size": "256k",
+    "bytes": 262268,
+    "ok": true,
+    "stmts": 758,
+    "time_ms": 9.39
+  },
+  {
+    "kind": "expr",
+    "size": "512k",
+    "bytes": 524536,
+    "ok": true,
+    "stmts": 1516,
+    "time_ms": 18.69533333333333
+  },
+  {
+    "kind": "expr",
+    "size": "2m",
+    "bytes": 2097452,
+    "ok": true,
+    "stmts": 6062,
+    "time_ms": 76.33233333333332
+  },
+  {
+    "kind": "expr",
+    "size": "4m",
+    "bytes": 4194558,
+    "ok": true,
+    "stmts": 12123,
+    "time_ms": 155.12233333333333
+  },
+  {
+    "kind": "expr",
+    "size": "8m",
+    "bytes": 8388770,
+    "ok": true,
+    "stmts": 24245,
+    "time_ms": 309.149
+  }
+]

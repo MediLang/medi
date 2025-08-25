@@ -105,10 +105,49 @@ unary          → ( "!" | "-" ) unary | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")"
                | IDENTIFIER
-               | "match" expression "{" match_arm* "}" ;
+               | "match" expression "{" match_arm* "}"
+               | IDENTIFIER "{" match_arm* "}"  ; // concise match syntax (expressions too)
 match_arm      → pattern "=>" expression ","? ;
 pattern        → IDENTIFIER | "_" | literal ;
 ```
+
+### Concise Match Syntax
+
+In addition to the keyword form `match <expr> { ... }`, Medi supports a concise form when matching directly on an identifier. This concise form is supported in both statement and expression contexts:
+
+```
+x {
+  1 => "one",
+  2 => "two",
+  _ => "other"
+}
+```
+
+The parser recognizes both forms in statements and expressions:
+- See `parse_match_statement()` in `compiler/medic_parser/src/parser/statements/mod.rs` for statement context
+- See `parse_match_expression()` in `compiler/medic_parser/src/parser/expressions/mod.rs` for expression context
+
+Patterns supported in arms include identifiers, `_` wildcard, and literals (int, float, string, bool). Trailing commas are allowed after the last arm, and missing commas between arms produce a parse error. Nested match expressions and block bodies inside arms are also supported.
+
+## Function Declarations
+
+Functions are parsed by `parse_function_declaration()` in `compiler/medic_parser/src/parser/statements/mod.rs`.
+
+### Grammar
+
+```ebnf
+function_decl   → "fn" IDENTIFIER "(" param_list? ")" return_type? block ;
+param_list      → param ( "," param )* ;
+param           → IDENTIFIER ( ":" type_ident )? ;
+return_type     → "->" type_ident ;
+type_ident      → IDENTIFIER ; // simple identifiers only (no generics yet)
+```
+
+Notes:
+- Parameters may optionally include a simple type annotation after `:`.
+- Default parameter values and variadic parameters (e.g., `...`) are not supported.
+- Return type is optional; omit `-> T` for no declared return type.
+- The function body is a standard block; statement semicolons are tolerated in some contexts (e.g., missing `;` after `let` emits a warning; `return` may omit `;` at end of block).
 
 ## Error Handling
 

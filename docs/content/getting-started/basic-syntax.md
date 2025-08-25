@@ -106,6 +106,14 @@ match patient_status {
   "stable" => log("Patient is stable"),
   _ => log("Unknown status"),
 }
+
+// Concise match expression syntax in expression context
+// Equivalent to: match status { ... }
+status {
+  "ok" => 1,
+  "warn" => 2,
+  _ => 0,
+}
 ```
 
 ## Functions

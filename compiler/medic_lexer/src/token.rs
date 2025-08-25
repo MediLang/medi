@@ -148,6 +148,8 @@ pub enum TokenType {
     Per,
 
     // Punctuation
+    /// `→` - unit conversion operator (Unicode U+2192)
+    UnitConversionArrow,
     /// `.` operator - member access
     Dot,
     /// `..` operator - range (exclusive)
@@ -335,6 +337,7 @@ impl PartialEq for TokenType {
             (TokenType::Per, TokenType::Per) => true,
 
             // Punctuation
+            (TokenType::UnitConversionArrow, TokenType::UnitConversionArrow) => true,
             (TokenType::Dot, TokenType::Dot) => true,
             (TokenType::DotDot, TokenType::DotDot) => true,
             (TokenType::DotDotDot, TokenType::DotDotDot) => true,

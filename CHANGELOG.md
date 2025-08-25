@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Parser: Match Expression Tests & Docs (2025-08-25)
+- **Added**
+  - Comprehensive tests for match expressions in expression context, covering:
+    - Trailing commas after the last arm
+    - Missing comma error between arms
+    - Nested match expressions in arm bodies
+    - Block bodies as arm expressions
+    - Literal pattern variants: int, float, string, bool
+  - Example of concise match expression syntax in getting-started docs.
+- **Changed**
+  - Parser architecture docs updated to explicitly document concise match expression in expressions and supported pattern forms.
+
 ### Lexer Benchmarks and File Extension Standardization (2025-05-30)
 - **Added**
   - Comprehensive benchmarking suite for lexer performance
