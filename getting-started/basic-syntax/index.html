@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon-placeholder.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
     
     
       
@@ -1514,6 +1514,14 @@
 <a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>  &quot;stable&quot; =&gt; log(&quot;Patient is stable&quot;),
 <a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>  _ =&gt; log(&quot;Unknown status&quot;),
 <a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>}
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>// Concise match expression syntax in expression context
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>// Equivalent to: match status { ... }
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>status {
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>  &quot;ok&quot; =&gt; 1,
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>  &quot;warn&quot; =&gt; 2,
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>  _ =&gt; 0,
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>}
 </code></pre></div>
 <h2 id="functions">Functions</h2>
 <p>Functions are declared with the <code>fn</code> keyword:</p>
@@ -1620,7 +1628,8 @@
   
 </div>
       
-        <div class="md-social">
+        
+<div class="md-social">
   
     
     
