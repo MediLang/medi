@@ -6,6 +6,17 @@
 use crate::visit::{VisitResult, Visitable, Visitor};
 use serde::{Deserialize, Serialize};
 
+// Feature-gated type aliases for identifier names and node lists
+#[cfg(feature = "interning")]
+pub type IdentifierName = medic_lexer::InternedString;
+#[cfg(not(feature = "interning"))]
+pub type IdentifierName = String;
+
+#[cfg(feature = "smallvec_optimization")]
+pub type NodeList<T> = smallvec::SmallVec<[T; 4]>;
+#[cfg(not(feature = "smallvec_optimization"))]
+pub type NodeList<T> = Vec<T>;
+
 /// Implement Visitable for String to handle string literals
 impl Visitable for String {
     fn accept<V: Visitor + ?Sized>(&self, _visitor: &mut V) -> VisitResult<V::Output> {
@@ -222,7 +233,7 @@ impl std::fmt::Display for BinaryOperator {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CallExpressionNode {
     pub callee: ExpressionNode,
-    pub arguments: Vec<ExpressionNode>,
+    pub arguments: NodeList<ExpressionNode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -234,7 +245,7 @@ pub struct MemberExpressionNode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HealthcareQueryNode {
     pub query_type: String,
-    pub arguments: Vec<ExpressionNode>,
+    pub arguments: NodeList<ExpressionNode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -243,7 +254,7 @@ pub enum StatementNode {
     Let(Box<LetStatementNode>),
     Assignment(Box<AssignmentNode>),
     Expr(ExpressionNode),
-    Block(BlockNode),
+    Block(Box<BlockNode>),
     If(Box<IfNode>),
     While(Box<WhileNode>),
     For(Box<ForNode>),
@@ -268,7 +279,7 @@ pub struct AssignmentNode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlockNode {
-    pub statements: Vec<StatementNode>,
+    pub statements: NodeList<StatementNode>,
     pub span: Span,
 }
 
@@ -334,7 +345,7 @@ pub struct ForNode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MatchNode {
     pub expr: Box<ExpressionNode>,
-    pub arms: Vec<MatchArmNode>,
+    pub arms: NodeList<MatchArmNode>,
     pub span: Span,
 }
 
@@ -354,7 +365,7 @@ pub struct ParameterNode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FunctionNode {
     pub name: IdentifierNode,
-    pub params: Vec<ParameterNode>,
+    pub params: NodeList<ParameterNode>,
     pub return_type: Option<ExpressionNode>,
     pub body: BlockNode,
     pub span: Span,
@@ -365,35 +376,73 @@ use std::hash::Hash;
 /// Represents a field in a struct literal
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructField {
-    pub name: String,
+    pub name: IdentifierName,
     pub value: ExpressionNode,
 }
 
 /// Represents a struct literal expression (e.g., `Patient { id: 1, name: "John" }`)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructLiteralNode {
-    pub type_name: String,
-    pub fields: Vec<StructField>,
+    pub type_name: IdentifierName,
+    pub fields: NodeList<StructField>,
 }
 
 /// Represents an array literal expression (e.g., `[1, 2, 3]`)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ArrayLiteralNode {
-    pub elements: Vec<ExpressionNode>,
+    pub elements: NodeList<ExpressionNode>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IdentifierNode {
-    pub name: String,
+    pub name: IdentifierName,
 }
 
 impl IdentifierNode {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: IdentifierName) -> Self {
         Self { name }
     }
 
+    /// Construct an IdentifierNode from an owned String regardless of features.
+    pub fn from_string(name: String) -> Self {
+        #[cfg(feature = "interning")]
+        {
+            Self {
+                name: medic_lexer::InternedString::from_string(name),
+            }
+        }
+        #[cfg(not(feature = "interning"))]
+        {
+            Self { name }
+        }
+    }
+
+    /// Construct an IdentifierNode from a &str regardless of features.
+    /// Prefer using `std::str::FromStr` (`"foo".parse::<IdentifierNode>()`) or `From<&str>` if implemented.
+    pub fn from_str_name(name: &str) -> Self {
+        #[cfg(feature = "interning")]
+        {
+            Self {
+                name: medic_lexer::InternedString::from(name),
+            }
+        }
+        #[cfg(not(feature = "interning"))]
+        {
+            Self {
+                name: name.to_string(),
+            }
+        }
+    }
+
     pub fn name(&self) -> &str {
-        &self.name
+        #[cfg(feature = "interning")]
+        {
+            self.name.as_str()
+        }
+        #[cfg(not(feature = "interning"))]
+        {
+            &self.name
+        }
     }
 }
 
@@ -405,21 +454,21 @@ pub enum PatternNode {
     Wildcard,                   // Represents the '_' pattern
     Variant {
         // Represents a variant pattern like Some(x)
-        name: String,            // The variant name (e.g., "Some")
+        name: IdentifierName,    // The variant name (e.g., "Some")
         inner: Box<PatternNode>, // The inner pattern (e.g., the x in Some(x))
     },
     Struct {
         // Represents a struct pattern like Point { x, y }
-        type_name: String,               // The struct type name
-        fields: Vec<StructFieldPattern>, // The field patterns
+        type_name: IdentifierName,            // The struct type name
+        fields: NodeList<StructFieldPattern>, // The field patterns
     },
 }
 
 /// Represents a field pattern in a struct pattern
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructFieldPattern {
-    pub name: String,         // The field name
-    pub pattern: PatternNode, // The pattern for this field
+    pub name: IdentifierName,      // The field name
+    pub pattern: Box<PatternNode>, // The pattern for this field
 }
 
 impl std::fmt::Display for PatternNode {
@@ -450,7 +499,7 @@ pub struct MatchArmNode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProgramNode {
-    pub statements: Vec<StatementNode>,
+    pub statements: NodeList<StatementNode>,
 }
 
 // Implement Visitable for all AST nodes

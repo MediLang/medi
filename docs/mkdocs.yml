@@ -113,6 +113,8 @@ nav:
     - Overview: examples/index.md
   - Technical Documentation:
     - Architecture: technical/architecture.md
+    - Diagnostics: technical/diagnostics-snippets.md
+    - Common Errors: technical/common-errors.md
   - Reference:
     - Standard Library: reference/index.md
   - Roadmap: roadmap/index.md

@@ -13,6 +13,7 @@ categories = ["parsing", "parser-implementations"]
 log = { version = "0.4.27", optional = true }
 logos = { version = "0.14.4", default-features = false, features = ["export_derive"] }
 lazy_static = "1.4.0"
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 # For precise memory usage tracking
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
@@ -30,6 +31,7 @@ pretty_assertions = "1.4.0"  # For better test failure output
 [features]
 default = ["logging"]
 logging = ["log"]
+serde = ["dep:serde"]
 jemalloc = ["jemallocator", "jemalloc-ctl"]
 bench = []
 
@@ -46,3 +48,4 @@ opt-level = 1  # Faster builds with some optimization
 [profile.release]
 lto = true      # Enable link-time optimization
 codegen-units = 1  # Slower builds but better optimization
+

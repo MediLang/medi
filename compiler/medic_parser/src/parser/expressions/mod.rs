@@ -977,7 +977,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             }
 
             // Create a block statement node
-            let stmt = StatementNode::Block(block);
+            let stmt = StatementNode::Block(Box::new(block));
 
             // Convert the statement to an expression
             // This will create an expression containing the statement

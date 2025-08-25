@@ -48,7 +48,7 @@
               3
             ],
             "details": "Acceptance Criteria:\n- Well-defined AST node types for all language constructs\n- Visitor pattern implementation for AST traversal\n- Position information preserved in AST nodes\n- Memory-efficient AST representation\n- Serialization/deserialization support\n- Unit tests for AST generation and traversal\nEstimated Complexity: High - requires careful design of node types and efficient memory management.",
-            "status": "in-progress"
+            "status": "done"
           },
           {
             "id": 5,
@@ -60,7 +60,7 @@
               4
             ],
             "details": "Acceptance Criteria:\n- Clear error messages with line and column information\n- Context-aware error suggestions\n- Categorization of errors by severity\n- Recovery mechanisms to continue parsing after errors\n- Visual highlighting of error locations in source\n- Documentation of common errors and solutions\n- User testing with clinical staff\nEstimated Complexity: High - requires natural language generation and deep understanding of common user mistakes.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 6,
@@ -858,6 +858,18 @@
         ],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Clinician User Testing and Feedback Integration (Diagnostics)",
+        "description": "Plan and conduct clinician user testing for diagnostic output; collect feedback; integrate improvements into severity mapping, wording, help text, and snippet visuals.",
+        "details": "Acceptance Criteria:\n- Recruit 3–5 clinicians or clinician-adjacent users\n- Prepare test scripts with representative error scenarios and snippet outputs\n- Run moderated sessions (remote or in-person); capture notes and key observations\n- Aggregate feedback into an actionable report with prioritized recommendations\n- Create tracked issues/tasks for the top findings (e.g., severity tuning, messages, guidance)\n- Implement at least 3 high-impact improvements and corresponding tests\n- Update docs with a section informed by user findings (examples, guidance)\nDeliverables:\n- Test plan, session notes, and summary report\n- Issue list with priorities and owners\n- PRs implementing improvements and updated tests",
+        "testStrategy": "User-research task. Verify via artifacts (plan, notes, report), created issues, and merged PRs with passing tests.",
+        "priority": "medium",
+        "dependencies": [
+          5
+        ],
+        "status": "pending"
       }
     ],
     "metadata": {

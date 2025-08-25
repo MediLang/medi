@@ -12,13 +12,19 @@ categories = ["parser-implementations", "compilers"]
 
 [features]
 default = ["serde"]
-serde = ["dep:serde", "dep:serde_json"]
+# Enable serde in this crate and forward-enable serde for medic_lexer so InternedString can serialize/deserialize
+serde = ["dep:serde", "dep:serde_json", "medic_lexer/serde"]
+# Use InternedString for identifier names
+interning = []
+# Use SmallVec for small AST node collections
+smallvec_optimization = ["dep:smallvec"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 thiserror = "1.0"
 medic_lexer = { path = "../medic_lexer" }
+smallvec = { version = "1.13", features = ["serde"], optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.0"

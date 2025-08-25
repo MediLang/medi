@@ -75,7 +75,7 @@ pub mod statements;
 pub mod test_utils;
 
 // Re-export commonly used functions from submodules
-pub use diagnostics::{diagnostic_from_nom_error, Diagnostic, Severity};
+pub use diagnostics::{diagnostic_from_nom_error, render_snippet, Diagnostic, Severity};
 pub use expressions::{parse_expression, *};
 pub use identifiers::*;
 pub use literals::*;
@@ -689,6 +689,8 @@ fn recover_to_sync<'a>(
 ) -> TokenSlice<'a> {
     // Build base diagnostic from the underlying nom error
     let mut diag = diagnostics::diagnostic_from_nom_error(err);
+    // Since we can recover and continue parsing after this error, downgrade to a warning
+    diag.severity = Severity::Warning;
 
     // Attach recovery action help text
     let recovery_help = "I skipped ahead to the next ';' or '}' to continue parsing this ";
@@ -698,6 +700,19 @@ fn recover_to_sync<'a>(
     };
     diag.help = Some(combined_help);
     diagnostics.push(diag);
+
+    // Emit a standalone note to inform users that recovery was applied
+    diagnostics.push(Diagnostic {
+        severity: Severity::Note,
+        message: format!("Parser recovered and continued: {context}"),
+        span: Span {
+            start: 0,
+            end: 0,
+            line: 1,
+            column: 1,
+        },
+        help: Some("Informational: no change needed unless behavior is unexpected.".into()),
+    });
 
     // Skip tokens until a synchronization point
     loop {
@@ -819,6 +834,34 @@ pub fn parse_block_with_recovery<'a>(
         input.peek().map(|t| &t.token_type),
         Some(TokenType::RightBrace)
     ) {
+        // Early-handle lexer error tokens to emit diagnostics and continue
+        while let Some(TokenType::Error(_)) = input.peek().map(|t| &t.token_type) {
+            if let Some(tok) = input.first() {
+                let mut diag =
+                    Diagnostic::at_token(tok, format!("Unrecognized token: '{}'", tok.lexeme));
+                // Ensure we have a concise help if none is attached
+                if diag.help.is_none() {
+                    diag.help = Some("This text is not valid Medi syntax. Remove it or replace with a valid symbol/keyword.".to_string());
+                }
+                diagnostics.push(diag);
+            }
+            // Advance past the error token and continue attempting to parse
+            input = input.advance();
+            // Skip any stray semicolons after an error to reach the next statement cleanly
+            while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                let (new_input, _) =
+                    take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+                input = new_input;
+            }
+            // Stop if the next token closes the block
+            if matches!(
+                input.peek().map(|t| &t.token_type),
+                Some(TokenType::RightBrace)
+            ) {
+                break;
+            }
+        }
+
         match parse_statement(input) {
             Ok((next, stmt)) => {
                 input = next;
@@ -1116,6 +1159,35 @@ pub fn parse_program_recovering<'a>(
 
     while !input.is_empty() {
         input = input.skip_whitespace();
+        if input.is_empty() {
+            break;
+        }
+
+        // Early-handle lexer error tokens to emit diagnostics and continue
+        while let Some(TokenType::Error(_)) = input.peek().map(|t| &t.token_type) {
+            if let Some(tok) = input.first() {
+                let mut diag =
+                    Diagnostic::at_token(tok, format!("Unrecognized token: '{}'", tok.lexeme));
+                // Lexer error tokens are actionable syntax errors
+                diag.severity = Severity::Error;
+                if diag.help.is_none() {
+                    diag.help = Some(
+                        "This text is not valid Medi syntax. Remove it or replace with a valid symbol/keyword.".to_string(),
+                    );
+                }
+                diagnostics.push(diag);
+            }
+            // Advance past the error token and continue attempting to parse
+            input = input.advance();
+            // Skip any stray semicolons after an error to reach the next statement cleanly
+            while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
+                let (new_input, _) =
+                    take_token_if(|t| matches!(t, TokenType::Semicolon), ErrorKind::Tag)(input)?;
+                input = new_input;
+            }
+        }
+
+        // If we consumed error tokens and reached EOF, stop cleanly
         if input.is_empty() {
             break;
         }

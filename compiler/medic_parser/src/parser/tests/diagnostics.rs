@@ -1,5 +1,8 @@
 use super::*;
-use crate::parser::{parse_program_with_diagnostics, Severity, TokenSlice};
+use crate::parser::{
+    parse_block_with_recovery, parse_program_recovering, parse_program_with_diagnostics,
+    render_snippet, Diagnostic, Severity, TokenSlice,
+};
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
 
@@ -111,5 +114,320 @@ mod diagnostics_tests {
             err.help.as_deref(),
             Some("'per' expresses rates (e.g., 'mg per kg'). Ensure units are valid")
         );
+    }
+
+    #[test]
+    fn test_recovering_parser_handles_lexer_errors_and_continues() {
+        // Two lexer errors '@' around valid statements should yield diagnostics and continue
+        let (slice, _tokens) = str_to_token_slice("@ let a = 1; @ let b = 2;");
+
+        let mut diags = Vec::new();
+        let (_rest, program) =
+            parse_program_recovering(slice, &mut diags).expect("recovering parse should succeed");
+
+        // Both let statements should be parsed despite the error tokens
+        assert_eq!(program.statements.len(), 2);
+        // At least two diagnostics for the two error tokens
+        assert!(diags.len() >= 2);
+        assert!(diags
+            .iter()
+            .any(|d| d.message.starts_with("Unrecognized token")));
+    }
+
+    #[test]
+    fn test_multiple_consecutive_lexer_errors_top_level() {
+        // Multiple consecutive invalid tokens before a valid statement
+        let (slice, tokens) = str_to_token_slice("@ @ @@ let x = 1;");
+
+        // Count how many lexer error tokens the lexer produced to set a lower bound
+        let err_count = tokens
+            .iter()
+            .filter(|t| matches!(t.token_type, medic_lexer::token::TokenType::Error(_)))
+            .count();
+
+        let mut diags = Vec::new();
+        let (_rest, program) =
+            parse_program_recovering(slice, &mut diags).expect("recovering parse should succeed");
+
+        assert_eq!(program.statements.len(), 1);
+        assert!(diags.len() >= err_count);
+        assert!(diags
+            .iter()
+            .all(|d| d.message.starts_with("Unrecognized token")));
+    }
+
+    #[test]
+    fn test_lexer_error_token_at_eof_top_level() {
+        // A single invalid token at EOF should emit a diagnostic and finish cleanly
+        let (slice, _tokens) = str_to_token_slice("@");
+
+        let mut diags = Vec::new();
+        let (_rest, program) =
+            parse_program_recovering(slice, &mut diags).expect("recovering parse should succeed");
+
+        assert_eq!(program.statements.len(), 0);
+        assert!(diags
+            .iter()
+            .any(|d| d.message.starts_with("Unrecognized token")));
+    }
+
+    #[test]
+    fn test_lexer_error_immediately_before_closing_brace_in_block() {
+        // Use the recovering block parser to ensure graceful handling before '}'
+        let (slice, _tokens) = str_to_token_slice("{ let a = 1; @ }");
+
+        let mut diags = Vec::new();
+        let (_rest, block) =
+            parse_block_with_recovery(slice, &mut diags).expect("block parse should succeed");
+
+        assert_eq!(block.statements.len(), 1);
+        assert!(diags
+            .iter()
+            .any(|d| d.message.starts_with("Unrecognized token")));
+    }
+
+    #[test]
+    fn test_multiple_consecutive_lexer_errors_inside_block() {
+        let (slice, tokens) = str_to_token_slice("{ @ @ let b = 2; }");
+
+        let err_count = tokens
+            .iter()
+            .filter(|t| matches!(t.token_type, medic_lexer::token::TokenType::Error(_)))
+            .count();
+
+        let mut diags = Vec::new();
+        let (_rest, block) =
+            parse_block_with_recovery(slice, &mut diags).expect("block parse should succeed");
+
+        assert_eq!(block.statements.len(), 1);
+        assert!(diags.len() >= err_count);
+        assert!(diags
+            .iter()
+            .all(|d| d.message.starts_with("Unrecognized token")));
+    }
+
+    #[test]
+    fn test_recovering_parser_skips_semicolons_after_lexer_error() {
+        // Error token followed by stray semicolons should be skipped to next statement
+        let (slice, _tokens) = str_to_token_slice("@ ;; let x = 3; ;");
+
+        let mut diags = Vec::new();
+        let (_rest, program) =
+            parse_program_recovering(slice, &mut diags).expect("recovering parse should succeed");
+
+        assert_eq!(program.statements.len(), 1);
+        assert!(diags
+            .iter()
+            .any(|d| d.message.starts_with("Unrecognized token")));
+    }
+
+    #[test]
+    fn test_render_snippet_single_char_span_caret() {
+        let source = "=";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let err = parse_program_with_diagnostics(slice).expect_err("expected error for '='");
+
+        let snippet = render_snippet(&err, source);
+        assert!(snippet.contains("error:"));
+        assert!(snippet.contains(" --> line 1, col 1"));
+        assert!(snippet.contains("1 | ="));
+        // underline should include a caret for single-char span
+        assert!(snippet.contains("^"));
+    }
+
+    #[test]
+    fn test_render_snippet_multi_char_span_tildes() {
+        let source = "==";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let err = parse_program_with_diagnostics(slice).expect_err("expected error for '=='");
+
+        let snippet = render_snippet(&err, source);
+        assert!(snippet.contains("error:"));
+        assert!(snippet.contains("1 | =="));
+        // underline should include multiple tildes for multi-char span
+        assert!(snippet.contains("~~"));
+    }
+
+    #[test]
+    fn test_render_snippet_info_severity_label() {
+        use medic_ast::visit::Span;
+        // Construct an info diagnostic manually at a simple span
+        let span = Span {
+            start: 0,
+            end: 1,
+            line: 1,
+            column: 1,
+        };
+        let diag = Diagnostic::at_span(span, "Informational message").with_severity(Severity::Info);
+        let snippet = render_snippet(&diag, "x");
+        assert!(snippet.starts_with("info:"));
+        assert!(snippet.contains("1 | x"));
+    }
+
+    #[test]
+    fn test_render_snippet_span_at_line_start_explicit() {
+        use medic_ast::visit::Span;
+        let source = "xyz";
+        let span = Span {
+            start: 0,
+            end: 1,
+            line: 1,
+            column: 1,
+        };
+        let diag = Diagnostic::at_span(span, "Start of line");
+        let snippet = render_snippet(&diag, source);
+        assert!(snippet.contains("1 | xyz"));
+        // caret should start immediately under 'x'
+        assert!(snippet.contains("  | ^"));
+    }
+
+    #[test]
+    fn test_render_snippet_span_at_line_end() {
+        use medic_ast::visit::Span;
+        let source = "abc";
+        // highlight last character 'c'
+        let span = Span {
+            start: 2,
+            end: 3,
+            line: 1,
+            column: 3,
+        };
+        let diag = Diagnostic::at_span(span, "End of line");
+        let snippet = render_snippet(&diag, source);
+        assert!(snippet.contains("1 | abc"));
+        // After gutter '  | ' there should be two spaces then '^'
+        assert!(snippet.contains("  |   ^"));
+    }
+
+    #[test]
+    fn test_render_snippet_multiline_span_on_second_line() {
+        let source = "let x = 1;\n==";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let err =
+            parse_program_with_diagnostics(slice).expect_err("expected error on second line '=='");
+
+        let snippet = render_snippet(&err, source);
+        assert!(snippet.contains(" --> line 2, col 1"));
+        assert!(snippet.contains("2 | =="));
+    }
+
+    #[test]
+    fn test_render_snippet_help_and_no_help() {
+        use medic_ast::visit::Span;
+        // No-help diagnostic
+        let span = Span {
+            start: 0,
+            end: 1,
+            line: 1,
+            column: 1,
+        };
+        let diag_no_help = Diagnostic::at_span(span, "No help here");
+        let out_no_help = render_snippet(&diag_no_help, "x");
+        assert!(!out_no_help.contains("help:"));
+
+        // With-help diagnostic
+        let diag_with_help = Diagnostic::at_span(span, "Has help").with_help("Try adding ';'");
+        let out_with_help = render_snippet(&diag_with_help, "x");
+        assert!(out_with_help.contains("help: Try adding ';'"));
+    }
+
+    #[test]
+    fn test_recovered_parse_error_is_warning() {
+        // Intentionally malformed inside a block to trigger recovery
+        // e.g., missing expression after 'let'
+        let source = "{ let ; }";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let mut diags = Vec::new();
+        let _ = parse_block_with_recovery(slice, &mut diags);
+        // Expect at least one diagnostic and ensure at least one is a warning
+        assert!(!diags.is_empty());
+        assert!(diags
+            .iter()
+            .any(|d| matches!(d.severity, Severity::Warning)));
+    }
+
+    #[test]
+    fn test_lexer_error_token_is_error() {
+        // Use an invalid character sequence to force a lexer error token
+        let source = "\u{0000}"; // NUL often becomes a lexer error
+        let (slice, _tokens) = str_to_token_slice(source);
+        let mut diags = Vec::new();
+        let _ = parse_program_recovering(slice, &mut diags);
+        // At least one diagnostic should be an Error from lexer error token handling
+        assert!(diags.iter().any(|d| matches!(d.severity, Severity::Error)));
+    }
+
+    #[test]
+    fn test_render_snippet_note_severity_label() {
+        use medic_ast::visit::Span;
+        let span = Span {
+            start: 0,
+            end: 1,
+            line: 1,
+            column: 1,
+        };
+        let diag = Diagnostic::at_span(span, "FYI").with_severity(Severity::Note);
+        let snippet = render_snippet(&diag, "x");
+        assert!(snippet.starts_with("note:"));
+    }
+
+    #[test]
+    fn test_render_snippet_info_severity_label_secondary() {
+        use medic_ast::visit::Span;
+        let span = Span {
+            start: 0,
+            end: 1,
+            line: 1,
+            column: 1,
+        };
+        let diag = Diagnostic::at_span(span, "Style hint").with_severity(Severity::Info);
+        let snippet = render_snippet(&diag, "x");
+        assert!(snippet.starts_with("info:"));
+    }
+
+    #[test]
+    fn test_recovery_emits_note_with_help() {
+        // Trigger recovery and ensure we also emit a Note diagnostic with help
+        let source = "{ let ; }";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let mut diags = Vec::new();
+        let _ = parse_block_with_recovery(slice, &mut diags);
+        // There should be a Note with the expected message and help
+        let note = diags
+            .iter()
+            .find(|d| matches!(d.severity, Severity::Note))
+            .expect("expected a Note diagnostic");
+        assert!(note.message.contains("Parser recovered and continued"));
+        assert!(note.help.as_deref().unwrap_or("").contains("Informational"));
+    }
+
+    #[test]
+    fn test_recovery_warning_contains_recovery_help_in_snippet() {
+        // Ensure the Warning includes our recovery help text when rendered
+        let source = "{ let ; }";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let mut diags = Vec::new();
+        let _ = parse_block_with_recovery(slice, &mut diags);
+        let warn = diags
+            .iter()
+            .find(|d| matches!(d.severity, Severity::Warning))
+            .expect("expected a Warning diagnostic");
+        let snippet = render_snippet(warn, source);
+        assert!(snippet.contains("skipped ahead to the next ';' or '}'"));
+    }
+
+    #[test]
+    fn test_lexer_error_snippet_includes_domain_help() {
+        // Force lexer error and ensure snippet shows help guidance
+        let source = "\u{0000}";
+        let (slice, _tokens) = str_to_token_slice(source);
+        let mut diags = Vec::new();
+        let _ = parse_program_recovering(slice, &mut diags);
+        let err = diags
+            .iter()
+            .find(|d| matches!(d.severity, Severity::Error))
+            .expect("expected an Error diagnostic");
+        let snippet = render_snippet(err, source);
+        assert!(snippet.contains("help:"));
     }
 }

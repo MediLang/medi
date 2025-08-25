@@ -529,7 +529,7 @@ pub fn parse_if_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stat
             // It's an else block
             let (new_input, else_block) = parse_block(input)?;
             end_span = else_block.span;
-            else_branch = Some(Box::new(StatementNode::Block(else_block)));
+            else_branch = Some(Box::new(StatementNode::Block(Box::new(else_block))));
             input = new_input;
         }
     }
@@ -1284,7 +1284,7 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                     // Nested block as a statement
                     log::debug!("Found nested block statement '{{'");
                     let (next, block) = parse_block(input)?;
-                    Ok((next, StatementNode::Block(block)))
+                    Ok((next, StatementNode::Block(Box::new(block))))
                 }
                 _ => {
                     log::debug!("No statement keyword found, trying expression statement");

@@ -8,6 +8,8 @@ use nom::Err as NomErr;
 pub enum Severity {
     Error,
     Warning,
+    /// Informational message (non-actionable, general guidance)
+    Info,
     Note,
 }
 
@@ -47,8 +49,8 @@ impl Diagnostic {
         let span = token.map(span_from_token).unwrap_or_else(|| Span {
             start: 0,
             end: 0,
-            line: 0,
-            column: 0,
+            line: 1,   // File-level default when no token is available
+            column: 1, // Point to the start of file to avoid 0/0 coordinates
         });
         Self {
             severity: Severity::Error,
@@ -56,6 +58,18 @@ impl Diagnostic {
             span,
             help,
         }
+    }
+
+    /// Set the severity level on this diagnostic.
+    pub fn with_severity(mut self, severity: Severity) -> Self {
+        self.severity = severity;
+        self
+    }
+
+    /// Set or replace the help text on this diagnostic.
+    pub fn with_help<T: Into<String>>(mut self, help: T) -> Self {
+        self.help = Some(help.into());
+        self
     }
 }
 
@@ -73,8 +87,8 @@ pub fn diagnostic_from_nom_error<'a>(
             span: Span {
                 start: 0,
                 end: 0,
-                line: 0,
-                column: 0,
+                line: 1,   // File-level default
+                column: 1, // Start of file
             },
             help: Some("The parser expected more input. Did the file end unexpectedly?".into()),
         },
@@ -100,6 +114,9 @@ fn default_help_for_token(tt: &TokenType) -> Option<String> {
         QuestionQuestion => Some("'??' provides a default when the left side is missing (null)".to_string()),
         QuestionColon => Some("'?:' chooses the left value unless it is missing (Elvis operator)".to_string()),
         Range | RangeInclusive | DotDot | DotDotEq | DotDotDot => Some("Ranges use '..' or '..=' between bounds".to_string()),
+
+        // Lexer error token
+        Error(_) => Some("Unrecognized text. This is not a valid Medi token. Remove it or replace it with a valid symbol/keyword (e.g., '=' vs '==', proper unit operators like 'per').".to_string()),
 
         // Domain-specific tokens
         Of => Some("'of' is used in clinical expressions (e.g., '2 of doses'). Ensure it's in the right place".to_string()),
@@ -211,6 +228,104 @@ pub fn end_column_exclusive_from_token(token: &Token) -> u32 {
     token.location.column as u32 + token.lexeme.as_str().chars().count() as u32
 }
 
+/// Render a single-line annotated snippet for a diagnostic.
+///
+/// This formatter shows the source line and underlines the span using carets/tiles with
+/// a left gutter that includes the line number and a guidance message when available.
+/// If the span cannot be precisely located, it falls back to showing only the message.
+pub fn render_snippet(diag: &Diagnostic, source: &str) -> String {
+    // Map severity to a human-friendly lowercase label
+    let severity_label = match diag.severity {
+        Severity::Error => "error",
+        Severity::Warning => "warning",
+        Severity::Info => "info",
+        Severity::Note => "note",
+    };
+
+    // Attempt to get the line text for the diagnostic span
+    let line_idx = if diag.span.line > 0 {
+        (diag.span.line - 1) as usize
+    } else {
+        0
+    };
+    let mut acc: usize = 0; // running byte offset
+    let mut line_text: Option<(&str, usize)> = None; // (line_str, line_start_byte_offset)
+    for (idx, line) in source.split_inclusive('\n').enumerate() {
+        let line_start = acc;
+        let line_end = acc + line.len();
+        if idx == line_idx {
+            // remove trailing newline for display
+            let display_line = if let Some(stripped) = line.strip_suffix('\n') {
+                stripped
+            } else {
+                line
+            };
+            line_text = Some((display_line, line_start));
+            break;
+        }
+        acc = line_end;
+    }
+
+    let mut out = String::new();
+    use std::fmt::Write as _;
+    let _ = write!(
+        out,
+        "{sev}: {msg}\n --> line {line}, col {col}\n",
+        sev = severity_label,
+        msg = diag.message,
+        line = diag.span.line.max(1),
+        col = diag.span.column.max(1)
+    );
+
+    if let Some((line_str, line_start)) = line_text {
+        // Compute start/end columns using UTF-8 char boundaries within this line
+        let start_byte_in_line = diag.span.start.saturating_sub(line_start);
+        let end_byte_in_line = diag.span.end.saturating_sub(line_start).min(line_str.len());
+
+        // Convert to character indices for caret placement
+        let prefix_char_count = line_str[..start_byte_in_line.min(line_str.len())]
+            .chars()
+            .count();
+        let highlight_char_count = if end_byte_in_line > start_byte_in_line {
+            line_str[start_byte_in_line..end_byte_in_line]
+                .chars()
+                .count()
+        } else {
+            1
+        };
+
+        // Gutter with line number
+        let _ = write!(
+            out,
+            "  |\n{ln:>2} | {text}\n  | ",
+            ln = diag.span.line.max(1),
+            text = line_str
+        );
+        // Underline with carets/tiles
+        for _ in 0..prefix_char_count {
+            let _ = write!(out, " ");
+        }
+        if highlight_char_count == 1 {
+            let _ = write!(out, "^");
+        } else {
+            for _ in 0..highlight_char_count {
+                let _ = write!(out, "~");
+            }
+        }
+        if let Some(help) = &diag.help {
+            let _ = write!(out, "  help: {help}");
+        }
+        let _ = writeln!(out);
+    } else {
+        // Fallback when we cannot pinpoint the line
+        if let Some(help) = &diag.help {
+            let _ = writeln!(out, "help: {help}");
+        }
+    }
+
+    out
+}
+
 // Optional mapping from expression-specific errors if/when used by expression parser
 #[allow(dead_code)]
 impl From<crate::parser::expressions::nested::ExpressionError> for Diagnostic {
@@ -221,8 +336,8 @@ impl From<crate::parser::expressions::nested::ExpressionError> for Diagnostic {
             span: Span {
                 start: 0,
                 end: 0,
-                line: 0,
-                column: 0,
+                line: 1,   // File-level default when no precise token is available
+                column: 1, // Avoid 0/0 coordinates
             },
             help: None,
         }

@@ -1,9 +1,33 @@
 use lazy_static::lazy_static;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 lazy_static! {
     static ref GLOBAL_INTERNER: Mutex<StringInterner> = Mutex::new(StringInterner::default());
+}
+
+// Serde support: serialize as a plain string, and deserialize by reinterning.
+#[cfg(feature = "serde")]
+impl Serialize for InternedString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for InternedString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(InternedString::from_string(s))
+    }
 }
 
 /// A thread-safe string interner for deduplicating string literals and identifiers
