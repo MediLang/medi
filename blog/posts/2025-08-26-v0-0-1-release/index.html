@@ -6,32 +6,28 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Documentation for the Medi healthcare programming language">
+        <meta name="description" content="Our first cut: end-to-end lexing, parsing, AST generation, and clinician-focused error reporting. Plus a feature-gated pipeline operator plan.">
       
       
         <meta name="author" content="The Medi Team">
       
       
       
-        <link rel="prev" href="..">
       
       
-        <link rel="next" href="posts/2025-05-24-nested-expressions/">
-      
-      
-      <link rel="icon" href="../assets/images/favicon-placeholder.png">
+      <link rel="icon" href="../../../assets/images/favicon-placeholder.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
     
     
       
-        <title>Overview - The Medi Book</title>
+        <title>MediLang v0.0.1: Lexer, Parser, AST, and Clinician‑Friendly Errors - The Medi Book</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.7e37652d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#medilang-blog" class="md-skip">
+        <a href="#medilang-v001-released" class="md-skip">
           Skip to content
         </a>
       
@@ -96,9 +92,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../../.." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
       
-  <img src="../assets/medi-logo.png" alt="logo">
+  <img src="../../../assets/medi-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -115,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              MediLang v0.0.1: Lexer, Parser, AST, and Clinician‑Friendly Errors
             
           </span>
         </div>
@@ -228,7 +224,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -245,13 +241,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../" class="md-tabs__link">
           
   
   
@@ -271,7 +265,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../getting-started/" class="md-tabs__link">
+        <a href="../../../getting-started/" class="md-tabs__link">
           
   
   
@@ -291,7 +285,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../key-features/" class="md-tabs__link">
+        <a href="../../../key-features/" class="md-tabs__link">
           
   
   
@@ -311,7 +305,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../examples/" class="md-tabs__link">
+        <a href="../../../examples/" class="md-tabs__link">
           
   
   
@@ -331,7 +325,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../technical/architecture/" class="md-tabs__link">
+        <a href="../../../technical/architecture/" class="md-tabs__link">
           
   
   
@@ -351,7 +345,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
   
@@ -369,7 +363,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../roadmap/" class="md-tabs__link">
+      <a href="../../../roadmap/" class="md-tabs__link">
         
   
   
@@ -388,7 +382,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../contributing/" class="md-tabs__link">
+      <a href="../../../contributing/" class="md-tabs__link">
         
   
   
@@ -407,7 +401,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../community/" class="md-tabs__link">
+      <a href="../../../community/" class="md-tabs__link">
         
   
   
@@ -442,9 +436,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../../.." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
       
-  <img src="../assets/medi-logo.png" alt="logo">
+  <img src="../../../assets/medi-logo.png" alt="logo">
 
     </a>
     The Medi Book
@@ -471,7 +465,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -490,31 +484,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
             
   
   
@@ -527,7 +518,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             Blog
@@ -538,32 +529,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
         
   
   
@@ -574,95 +543,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#latest-posts" class="md-nav__link">
-    <span class="md-ellipsis">
-      Latest Posts
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Latest Posts">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#medilang-v001-released-lexer-parser-ast-and-clinicianfriendly-errors" class="md-nav__link">
-    <span class="md-ellipsis">
-      MediLang v0.0.1 Released: Lexer, Parser, AST, and Clinician‑Friendly Errors
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#journey-to-nested-expressions-building-a-medical-specific-language-feature" class="md-nav__link">
-    <span class="md-ellipsis">
-      Journey to Nested Expressions: Building a Medical-Specific Language Feature
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#categories" class="md-nav__link">
-    <span class="md-ellipsis">
-      Categories
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tags" class="md-nav__link">
-    <span class="md-ellipsis">
-      Tags
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#stay-updated" class="md-nav__link">
-    <span class="md-ellipsis">
-      Stay Updated
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#search" class="md-nav__link">
-    <span class="md-ellipsis">
-      Search
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -681,13 +561,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -696,7 +573,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
         
           
-          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
             
   
   
@@ -723,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="posts/2025-05-24-nested-expressions/" class="md-nav__link">
+      <a href="../2025-05-24-nested-expressions/" class="md-nav__link">
         
   
   
@@ -806,7 +683,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../../getting-started/" class="md-nav__link">
         
   
   
@@ -829,7 +706,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/installation/" class="md-nav__link">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -852,7 +729,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/basic-syntax/" class="md-nav__link">
+      <a href="../../../getting-started/basic-syntax/" class="md-nav__link">
         
   
   
@@ -875,7 +752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/first-program/" class="md-nav__link">
+      <a href="../../../getting-started/first-program/" class="md-nav__link">
         
   
   
@@ -950,7 +827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../key-features/" class="md-nav__link">
+      <a href="../../../key-features/" class="md-nav__link">
         
   
   
@@ -973,7 +850,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../key-features/medical-data-science/" class="md-nav__link">
+      <a href="../../../key-features/medical-data-science/" class="md-nav__link">
         
   
   
@@ -1048,7 +925,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/" class="md-nav__link">
+      <a href="../../../examples/" class="md-nav__link">
         
   
   
@@ -1123,7 +1000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../technical/architecture/" class="md-nav__link">
+      <a href="../../../technical/architecture/" class="md-nav__link">
         
   
   
@@ -1146,7 +1023,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../technical/diagnostics-snippets/" class="md-nav__link">
+      <a href="../../../technical/diagnostics-snippets/" class="md-nav__link">
         
   
   
@@ -1169,7 +1046,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../technical/common-errors/" class="md-nav__link">
+      <a href="../../../technical/common-errors/" class="md-nav__link">
         
   
   
@@ -1244,7 +1121,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   
@@ -1274,7 +1151,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../roadmap/" class="md-nav__link">
+      <a href="../../../roadmap/" class="md-nav__link">
         
   
   
@@ -1296,7 +1173,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   
@@ -1318,7 +1195,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../community/" class="md-nav__link">
+      <a href="../../../community/" class="md-nav__link">
         
   
   
@@ -1360,69 +1237,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#latest-posts" class="md-nav__link">
+  <a href="#highlights" class="md-nav__link">
     <span class="md-ellipsis">
-      Latest Posts
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Latest Posts">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#medilang-v001-released-lexer-parser-ast-and-clinicianfriendly-errors" class="md-nav__link">
-    <span class="md-ellipsis">
-      MediLang v0.0.1 Released: Lexer, Parser, AST, and Clinician‑Friendly Errors
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#journey-to-nested-expressions-building-a-medical-specific-language-feature" class="md-nav__link">
-    <span class="md-ellipsis">
-      Journey to Nested Expressions: Building a Medical-Specific Language Feature
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#categories" class="md-nav__link">
-    <span class="md-ellipsis">
-      Categories
+      Highlights
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#tags" class="md-nav__link">
+  <a href="#whats-in-v001" class="md-nav__link">
     <span class="md-ellipsis">
-      Tags
+      What’s in v0.0.1
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#stay-updated" class="md-nav__link">
+  <a href="#enabling-the-optional-pipeline-operator" class="md-nav__link">
     <span class="md-ellipsis">
-      Stay Updated
+      Enabling the optional pipeline operator
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#search" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
-      Search
+      Getting Started
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#looking-ahead" class="md-nav__link">
+    <span class="md-ellipsis">
+      Looking Ahead
     </span>
   </a>
   
@@ -1447,43 +1300,61 @@
   
 
 
-<h1 id="medilang-blog">MediLang Blog</h1>
-<p>Welcome to the MediLang blog! Here you'll find the latest updates, technical deep dives, and announcements about the Medi programming language.</p>
-<h2 id="latest-posts">Latest Posts</h2>
-<h3 id="medilang-v001-released-lexer-parser-ast-and-clinicianfriendly-errors"><a href="posts/2025-08-26-v0-0-1-release/">MediLang v0.0.1 Released: Lexer, Parser, AST, and Clinician‑Friendly Errors</a></h3>
-<p><em>August 26, 2025</em><br />
-Our first milestone with end-to-end lexing, parsing, AST generation, clinician-focused errors, and a feature-gated pipeline operator plan.</p>
-<h3 id="journey-to-nested-expressions-building-a-medical-specific-language-feature"><a href="posts/2025-05-24-nested-expressions/">Journey to Nested Expressions: Building a Medical-Specific Language Feature</a></h3>
-<p><em>May 24, 2025</em><br />
-A deep dive into implementing nested expressions and medical operators in MediLang</p>
-<hr />
-<h2 id="categories">Categories</h2>
+<h1 id="medilang-v001-released">MediLang v0.0.1 Released</h1>
+<p>We’re excited to announce MediLang v0.0.1 — our first milestone with an end-to-end toolchain for healthcare-oriented programming.</p>
+<h2 id="highlights">Highlights</h2>
 <ul>
-<li><a href="/blog/categories/development/">Development</a></li>
-<li><a href="/blog/categories/technical/">Technical</a></li>
+<li>Core lexer and parser aligned with <code>LANG_SPEC.md</code></li>
+<li>Unicode-aware source locations and robust streaming/chunked lexing</li>
+<li>Abstract Syntax Tree (AST) generation with position preservation and traversal</li>
+<li>Clinician-friendly error reporting with clear, contextual messages and recovery paths</li>
+<li>Feature-gated plan for a pipeline operator (<code>|&gt;</code>) — default off, fully backward compatible</li>
 </ul>
-<h2 id="tags">Tags</h2>
+<h2 id="whats-in-v001">What’s in v0.0.1</h2>
 <ul>
-<li><a href="/blog/tags/programming/">programming</a></li>
-<li><a href="/blog/tags/language-design/">language-design</a></li>
-<li><a href="/blog/tags/medical-computing/">medical-computing</a></li>
-<li><a href="/blog/tags/nested-expressions/">nested-expressions</a></li>
-<li><a href="/blog/tags/technical-deep-dive/">technical-deep-dive</a></li>
+<li>Lexer</li>
+<li>Healthcare-aware tokens and medical literals (e.g., <code>pid("PT123")</code>, <code>icd10("A00.0")</code>)</li>
+<li>UTF‑8 and cross‑platform newline normalization, standardized error tokens</li>
+<li>Streaming/chunked modes for large inputs with bounded memory</li>
+<li>Parser</li>
+<li>Recursive descent covering core grammar and healthcare constructs</li>
+<li>Operator precedence, nested expressions, and resilient error handling</li>
+<li>AST</li>
+<li>Well-defined nodes, preserved locations, visitors, and tests</li>
+<li>Errors</li>
+<li>Clear messages suitable for clinicians; recovery to continue parsing; test coverage</li>
+<li>Pipeline operator plan</li>
+<li>Design for optional single-token <code>|&gt;</code> behind <code>pipeline_op</code> Cargo feature</li>
+<li>Default behavior unchanged: <code>|&gt;</code> lexes as <code>|</code> + <code>&gt;</code>; tests pass in both modes</li>
 </ul>
-<h2 id="stay-updated">Stay Updated</h2>
+<h2 id="enabling-the-optional-pipeline-operator">Enabling the optional pipeline operator</h2>
+<p>By default, <code>|&gt;</code> is not a single token. To experiment with the feature-gated variant:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-p<span class="w"> </span>medic_lexer<span class="w"> </span>--features<span class="w"> </span>pipeline_op
+</code></pre></div>
+<p>This recognizes <code>|&gt;</code> as a single token across streaming and chunked lexers, including cross-chunk boundaries.</p>
+<h2 id="getting-started">Getting Started</h2>
 <ul>
-<li>Subscribe to our <a href="/blog/feed_rss_created.xml">RSS feed</a></li>
-<li>Follow us on <a href="https://github.com/MediLang">GitHub</a></li>
-<li>Join our <a href="/community/">community</a> for discussions</li>
+<li>Read the language docs in <code>docs/</code></li>
+<li>Try the examples and run the test suite:</li>
 </ul>
-<h2 id="search">Search</h2>
-<p>Use the search bar at the top to find specific blog posts.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--all
+</code></pre></div>
+<h2 id="looking-ahead">Looking Ahead</h2>
+<ul>
+<li>Broader type system capabilities for healthcare data</li>
+<li>Continued performance work and more diagnostics polish</li>
+<li>Community feedback to guide next features</li>
+</ul>
+<p>Thanks for following along — and thank you to contributors testing and profiling the early runtime!</p>
 
 
 
 
 
 
+
+  
+  
 
 
 
@@ -1559,10 +1430,10 @@ A deep dive into implementing nested expressions and medical operators in MediLa
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.92b07e13.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.92b07e13.min.js"></script>
       
     
   </body>
