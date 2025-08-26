@@ -116,6 +116,8 @@ pub fn convert_logos_to_token(
         LogosToken::ShrAssign => TokenType::ShrAssign,
         LogosToken::QuestionQuestion => TokenType::QuestionQuestion,
         LogosToken::QuestionColon => TokenType::QuestionColon,
+        #[cfg(feature = "pipeline_op")]
+        LogosToken::PipeGreater => TokenType::PipeGreater,
         LogosToken::Range => TokenType::Range,
         LogosToken::RangeInclusive => TokenType::RangeInclusive,
 

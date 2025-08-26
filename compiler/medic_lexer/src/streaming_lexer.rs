@@ -294,6 +294,8 @@ impl<'a> StreamingLexer<'a> {
             LogosToken::RangeInclusive => TokenType::RangeInclusive,
             LogosToken::QuestionQuestion => TokenType::QuestionQuestion,
             LogosToken::QuestionColon => TokenType::QuestionColon,
+            #[cfg(feature = "pipeline_op")]
+            LogosToken::PipeGreater => TokenType::PipeGreater,
 
             // Assignment operators
             LogosToken::PlusEqual => TokenType::PlusEqual,
@@ -424,6 +426,7 @@ mod tests {
         assert_eq!(tokens[4].lexeme.as_str(), "y");
     }
 
+    #[cfg(not(feature = "pipeline_op"))]
     #[test]
     fn test_pipeline_operator_not_tokenized_streaming() {
         let source = "|>";
@@ -435,5 +438,21 @@ mod tests {
         assert_eq!(tokens[1].lexeme.as_str(), ">");
         assert!(matches!(tokens[0].token_type, TokenType::BitOr));
         assert!(matches!(tokens[1].token_type, TokenType::Greater));
+    }
+
+    #[cfg(feature = "pipeline_op")]
+    #[test]
+    fn test_pipeline_operator_tokenized_streaming_when_enabled() {
+        let source = "|>";
+        let lexer = StreamingLexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+
+        assert_eq!(
+            tokens.len(),
+            1,
+            "Expected 1 token for '|>' with feature enabled"
+        );
+        assert_eq!(tokens[0].lexeme.as_str(), "|>");
+        assert!(matches!(tokens[0].token_type, TokenType::PipeGreater));
     }
 }

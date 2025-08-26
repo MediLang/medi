@@ -223,7 +223,7 @@ fn test_match_expression_full_syntax_basic() {
                         ExpressionNode::Identifier(Spanned {
                             node: IdentifierNode { name },
                             ..
-                        }) if name == "x" => {}
+                        }) if name.as_str() == "x" => {}
                         other => panic!("Expected identifier 'x', got {other:?}"),
                     }
                     assert_eq!(m.arms.len(), 2);
@@ -267,7 +267,7 @@ fn test_match_expression_concise_syntax_basic() {
                         ExpressionNode::Identifier(Spanned {
                             node: IdentifierNode { name },
                             ..
-                        }) if name == "x" => {}
+                        }) if name.as_str() == "x" => {}
                         other => panic!("Expected identifier 'x', got {other:?}"),
                     }
                     assert_eq!(m.arms.len(), 2);
@@ -379,7 +379,7 @@ fn test_match_expression_in_binary_context() {
                     ExpressionNode::Identifier(Spanned {
                         node: IdentifierNode { name },
                         ..
-                    }) if name == "a" => {}
+                    }) if name.as_str() == "a" => {}
                     other => panic!("Expected identifier 'a' on left, got {other:?}"),
                 }
                 // right should be a match statement wrapped as expression

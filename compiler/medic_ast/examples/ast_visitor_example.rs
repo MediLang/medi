@@ -159,7 +159,7 @@ impl Visitor for VariableCollector {
     type Output = ();
 
     fn visit_identifier(&mut self, node: &IdentifierNode) -> VisitResult<Self::Output> {
-        self.variables.push(node.name.clone());
+        self.variables.push(node.name.to_string());
         Ok(())
     }
 
@@ -292,23 +292,17 @@ fn create_sample_ast() -> ProgramNode {
     // y
 
     let stmt1 = StatementNode::Let(Box::new(LetStatementNode {
-        name: IdentifierNode {
-            name: "x".to_string(),
-        },
+        name: IdentifierNode::from_str_name("x"),
         value: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span)),
         span,
     }));
 
     let stmt2 = StatementNode::Let(Box::new(LetStatementNode {
-        name: IdentifierNode {
-            name: "y".to_string(),
-        },
+        name: IdentifierNode::from_str_name("y"),
         value: ExpressionNode::Binary(Spanned::new(
             Box::new(BinaryExpressionNode {
                 left: ExpressionNode::Identifier(Spanned::new(
-                    IdentifierNode {
-                        name: "x".to_string(),
-                    },
+                    IdentifierNode::from_str_name("x"),
                     span,
                 )),
                 operator: BinaryOperator::Add,
@@ -320,13 +314,11 @@ fn create_sample_ast() -> ProgramNode {
     }));
 
     let stmt3 = StatementNode::Expr(ExpressionNode::Identifier(Spanned::new(
-        IdentifierNode {
-            name: "y".to_string(),
-        },
+        IdentifierNode::from_str_name("y"),
         span,
     )));
 
     ProgramNode {
-        statements: vec![stmt1, stmt2, stmt3],
+        statements: vec![stmt1, stmt2, stmt3].into(),
     }
 }

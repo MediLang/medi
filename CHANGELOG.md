@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.0.1] - 2025-08-26
+
+### Added
+- Core lexer and parser for Medi with healthcare-aware tokens and constructs, per `LANG_SPEC.md`.
+- Unicode-aware location tracking and robust streaming/chunked lexing paths.
+- Abstract Syntax Tree (AST) generation with position preservation and traversal utilities.
+- Clinician-friendly error reporting with clear messages and recovery mechanisms.
+- Pipeline operator planning: feature-gated design for `|>` with default-off behavior, docs, and tests.
+
+### Changed
+- Documentation updates across docs/ to reflect current syntax, testing strategy, and benchmarks.
+- Parser collections migrated to feature-agnostic `NodeList<T>` where applicable (e.g., match arms, call arguments) to align with `medic_ast` type aliases.
+
+### Fixed
+- Stability and performance improvements in chunked lexer; test coverage for edge cases.
+- Replaced raw `String`/`Vec` usages in parser with feature-agnostic types and constructors:
+  - `IdentifierNode::from_string`/`from_str_name` used consistently to avoid `IdentifierName` mismatches across features.
+  - Example code updated to construct identifiers via `from_str_name`.
+
 ### Parser: Match Expression Tests & Docs (2025-08-25)
 - **Added**
   - Comprehensive tests for match expressions in expression context, covering:

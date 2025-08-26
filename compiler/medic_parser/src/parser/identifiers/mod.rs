@@ -63,9 +63,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                 log::debug!("Successfully parsed identifier: {name}");
 
                 // Create a new identifier node with span information
-                let id_node = IdentifierNode {
-                    name: name.to_string(),
-                };
+                let id_node = IdentifierNode::from_str_name(name.as_str());
 
                 // Create a Spanned wrapper for the identifier
                 let span: Span = token.location.into();
@@ -89,7 +87,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                     take_token_if(|t| matches!(t, TokenType::Patient), ErrorKind::Tag)(input)?;
 
                 // Create a Spanned identifier node for 'patient' keyword
-                let ident_node = IdentifierNode::new("patient".to_string());
+                let ident_node = IdentifierNode::from_str_name("patient");
                 let span: Span = token.location.into();
                 let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
 
@@ -108,7 +106,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                     take_token_if(|t| matches!(t, TokenType::Observation), ErrorKind::Tag)(input)?;
 
                 // Create a Spanned identifier node for 'observation' keyword
-                let ident_node = IdentifierNode::new("observation".to_string());
+                let ident_node = IdentifierNode::from_str_name("observation");
                 let span: Span = token.location.into();
                 let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
 
@@ -126,7 +124,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                     take_token_if(|t| matches!(t, TokenType::Medication), ErrorKind::Tag)(input)?;
 
                 // Create a Spanned identifier node for 'medication' keyword
-                let ident_node = IdentifierNode::new("medication".to_string());
+                let ident_node = IdentifierNode::from_str_name("medication");
                 let span: Span = token.location.into();
                 let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
 
@@ -144,7 +142,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                     take_token_if(|t| matches!(t, TokenType::If), ErrorKind::Tag)(input)?;
 
                 // Create a Spanned identifier node for 'if' keyword
-                let ident_node = IdentifierNode::new("if".to_string());
+                let ident_node = IdentifierNode::from_str_name("if");
                 let span: Span = token.location.into();
                 let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
 
@@ -162,7 +160,7 @@ pub fn parse_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expres
                     take_token_if(|t| matches!(t, TokenType::Else), ErrorKind::Tag)(input)?;
 
                 // Create a Spanned identifier node for 'else' keyword
-                let ident_node = IdentifierNode::new("else".to_string());
+                let ident_node = IdentifierNode::from_str_name("else");
                 let span: Span = token.location.into();
                 let expr = ExpressionNode::Identifier(Spanned::new(ident_node, span));
 
@@ -246,11 +244,11 @@ pub fn parse_member_expression(
                 )(input)?;
 
                 let name = match &token.token_type {
-                    TokenType::Identifier(name) => name.to_string(),
+                    TokenType::Identifier(name) => IdentifierNode::from_str_name(name.as_str()),
                     _ => unreachable!("Expected identifier token"),
                 };
 
-                let ident_node = IdentifierNode::new(name);
+                let ident_node = name;
                 let spanned_ident = Spanned::new(ident_node, token.location.into());
                 (input, spanned_ident)
             }
@@ -295,7 +293,7 @@ pub fn parse_member_expression(
                     _ => unreachable!(),
                 };
 
-                let ident_node = IdentifierNode::new(name.to_string());
+                let ident_node = IdentifierNode::from_str_name(name);
                 let spanned_ident = Spanned::new(ident_node, token.location.into());
                 (input, spanned_ident)
             }

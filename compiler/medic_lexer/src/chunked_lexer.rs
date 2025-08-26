@@ -26,6 +26,7 @@
 //! for token in ChunkedLexer::from_reader(cursor, config) {
 //!     println!("Token: {:?}", token);
 //! }
+
 //! ```
 //!
 //! Processing a large file:
@@ -88,6 +89,10 @@ pub struct ChunkedLexer {
     eof: bool,
     /// Internal buffer for partial tokens across chunks
     partial_token: Option<PartialToken>,
+    /// When pipeline_op feature is enabled, remember a trailing '|' at the very end
+    /// of the previous chunk so we can merge with a leading '>' of the next chunk.
+    #[cfg(feature = "pipeline_op")]
+    pending_pipe_start: Option<Position>,
 }
 
 /// Tracks the current position in the source code
@@ -175,6 +180,8 @@ impl ChunkedLexer {
             },
             eof: false,
             partial_token: None,
+            #[cfg(feature = "pipeline_op")]
+            pending_pipe_start: None,
         }
     }
 
@@ -235,17 +242,16 @@ impl ChunkedLexer {
                     let mut i = err_start;
                     let mut _consumed_any = false;
 
-                    // Hex prefix 0x/0X handling: consume 0x[hex]+ as one invalid token
+                    // Special-case: when encountering "0x"/"0X" we must NOT consume the 'x'.
+                    // The non-chunked lexer emits Error("0") then Identifier("x") for inputs like
+                    // "0x" or "0x..." that do not form a valid numeric literal in Medi.
+                    // So only include the leading '0' in the error lexeme.
                     if i + 1 < n
                         && bytes[i] == b'0'
                         && (bytes[i + 1] == b'x' || bytes[i + 1] == b'X')
                     {
-                        i += 2;
-                        _consumed_any = true;
-                        while i < n && (bytes[i].is_ascii_hexdigit()) {
-                            i += 1;
-                        }
-                        err_end = i; // stop before '.' or any non-hex continuation
+                        i += 1; // include only '0'
+                        err_end = i;
                     } else {
                         // General numeric attempt state machine
                         // States: 0 start, 1 int run, 2 seen '.', 3 frac run, 4 seen 'e/E', 5 seen exp sign
@@ -356,6 +362,12 @@ impl ChunkedLexer {
                     tokens_with_spans.push((err_tok, span.start));
                     last_token_pushed = true;
                     last_span_start = Some(span.start);
+                    // Important: update last_span_end to the end of the emitted error token's span
+                    // so that trailing remainder detection does not incorrectly treat the error
+                    // token's own lexeme as leftover content to be deferred across chunks. This
+                    // keeps parity with the non-chunked lexer (e.g., "0" followed by "x" should
+                    // produce Error("0"), Identifier("x"), not Error("0x")).
+                    last_span_end = span.end;
                     last_token_can_extend = false;
                     continue;
                 }
@@ -724,6 +736,28 @@ impl ChunkedLexer {
                 }
                 used_end = cut_idx.min(used_end);
                 partial_string = Some(chunk[cut_idx..].to_string());
+            }
+
+            // Special-case: defer a trailing lone '?' at the end of a non-final chunk so that
+            // a subsequent leading '?' in the next chunk can form the '??' coalescing operator.
+            // This preserves parity with the non-chunked lexer which recognizes '??' as a single token
+            // but treats a solitary '?' as an error. If no '?' follows in the next chunk, the deferred
+            // '?' will still be emitted as an error there.
+            if partial_string.is_none() {
+                if let Some((tok, start)) = tokens_with_spans.last() {
+                    let is_err_qmark = matches!(tok.token_type, TokenType::Error(ref s) if s.as_str().contains("?"));
+                    // Ensure the raw chunk truly ends with '?' and that the error token begins at that '?'.
+                    if is_err_qmark && bytes.last() == Some(&b'?') {
+                        let cut_idx = *start;
+                        let tail = &chunk[cut_idx..];
+                        if tail == "?" {
+                            // Remove the trailing error token and defer it to next chunk
+                            tokens_with_spans.pop();
+                            used_end = cut_idx.min(used_end);
+                            partial_string = Some("?".to_string());
+                        }
+                    }
+                }
             }
 
             if partial_string.is_none() {
@@ -1371,8 +1405,53 @@ impl ChunkedLexer {
         // Determine if this is the final chunk (no more bytes to read and no UTF-8 remainders)
         let is_final_chunk = self.eof && remainder_bytes.is_empty();
 
+        // tokens is only mutated when the pipeline_op feature is enabled (to merge '|>' across chunks).
+        // Use cfg-gated bindings to avoid an unnecessary `mut` warning when the feature is disabled.
+        #[cfg(feature = "pipeline_op")]
+        let (mut tokens, new_pos, partial_str) =
+            self.tokenize_chunk(chunk_str, start_pos, is_final_chunk);
+        #[cfg(not(feature = "pipeline_op"))]
         let (tokens, new_pos, partial_str) =
             self.tokenize_chunk(chunk_str, start_pos, is_final_chunk);
+
+        // Record whether tokenize_chunk produced no partial string before we move it
+        // Name is cfg-gated to avoid an unused warning when the feature is disabled.
+        #[cfg(feature = "pipeline_op")]
+        let no_partial_yet = partial_str.is_none();
+        #[cfg(not(feature = "pipeline_op"))]
+        let _no_partial_yet = partial_str.is_none();
+
+        // Feature-gated: if previous chunk ended with a '|' at its very end, and this
+        // chunk begins immediately with '>' (no leading whitespace), merge into PipeGreater.
+        #[cfg(feature = "pipeline_op")]
+        {
+            if let Some(pipe_start) = self.pending_pipe_start.take() {
+                // Only merge if the first token is a Greater located exactly at start_pos
+                let starts_with_gt = chunk_str.as_bytes().first().copied() == Some(b'>');
+                if starts_with_gt
+                    && !tokens.is_empty()
+                    && matches!(tokens[0].token_type, TokenType::Greater)
+                    && tokens[0].location.offset == start_pos.offset
+                {
+                    // Replace the first token with a single PipeGreater
+                    let merged = Token::new(
+                        TokenType::PipeGreater,
+                        "|>",
+                        crate::token::Location {
+                            line: pipe_start.line,
+                            column: pipe_start.column,
+                            offset: pipe_start.offset,
+                        },
+                    );
+                    // Remove the leading Greater and insert the merged token at front
+                    tokens.remove(0);
+                    tokens.insert(0, merged);
+                } else {
+                    // Not directly adjacent '>', drop pending state (whitespace/comments or different char)
+                    self.pending_pipe_start = None;
+                }
+            }
+        }
 
         let mut next_partial_bytes = partial_str.map_or(Vec::new(), |s| s.into_bytes());
         next_partial_bytes.extend_from_slice(remainder_bytes);
@@ -1386,6 +1465,35 @@ impl ChunkedLexer {
             self.partial_token = None;
         }
         self.position = new_pos;
+
+        // Feature-gated: if there is no deferral and the last emitted token is a standalone
+        // BitOr whose lexeme ends exactly at the end of this chunk, remember its start
+        // so the next chunk can merge a leading '>' into a PipeGreater.
+        #[cfg(feature = "pipeline_op")]
+        {
+            if no_partial_yet {
+                if let Some(last_tok) = tokens.last() {
+                    let last_end = last_tok.location.offset + last_tok.lexeme.as_str().len();
+                    let chunk_end_offset = start_pos.offset + chunk_str.len();
+                    if matches!(last_tok.token_type, TokenType::BitOr)
+                        && last_tok.lexeme.as_str() == "|"
+                        && last_end == chunk_end_offset
+                    {
+                        self.pending_pipe_start = Some(Position {
+                            line: last_tok.location.line,
+                            column: last_tok.location.column,
+                            offset: last_tok.location.offset,
+                        });
+                    } else {
+                        self.pending_pipe_start = None;
+                    }
+                } else {
+                    self.pending_pipe_start = None;
+                }
+            } else {
+                self.pending_pipe_start = None;
+            }
+        }
 
         Some(tokens)
     }

@@ -4,6 +4,11 @@ Welcome to the MediLang blog! Here you'll find the latest updates, technical dee
 
 ## Latest Posts
 
+### [MediLang v0.0.1 Released: Lexer, Parser, AST, and Clinician‑Friendly Errors](posts/2025-08-26-v0-0-1-release.md)
+
+*August 26, 2025*  
+Our first milestone with end-to-end lexing, parsing, AST generation, clinician-focused errors, and a feature-gated pipeline operator plan.
+
 ### [Journey to Nested Expressions: Building a Medical-Specific Language Feature](posts/2025-05-24-nested-expressions.md)
 
 *May 24, 2025*  

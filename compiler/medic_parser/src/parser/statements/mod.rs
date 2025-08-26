@@ -10,6 +10,7 @@ use crate::parser::{
     TokenType,
 };
 
+use medic_ast::ast::NodeList;
 use medic_ast::ast::{
     AssignmentNode, BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode,
     ExpressionNode, FunctionNode, IdentifierNode, IfNode, LetStatementNode, LiteralNode,
@@ -31,15 +32,12 @@ fn parse_type_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expre
         ErrorKind::Alpha,
     )(input)?;
     let name = if let TokenType::Identifier(n) = &tok.token_type {
-        n.to_string()
+        IdentifierNode::from_str_name(n.as_str())
     } else {
         unreachable!()
     };
     let span: Span = tok.location.into();
-    Ok((
-        input,
-        ExpressionNode::Identifier(Spanned::new(IdentifierNode { name }, span)),
-    ))
+    Ok((input, ExpressionNode::Identifier(Spanned::new(name, span))))
 }
 
 /// Parses a `let` statement from the input token stream.
@@ -782,9 +780,7 @@ pub(crate) fn parse_match_statement(
             log::debug!("Found identifier: {id}");
             let span = input.0[0].location.into();
             let expr = ExpressionNode::Identifier(Spanned::new(
-                IdentifierNode {
-                    name: id.to_string(),
-                },
+                IdentifierNode::from_str_name(id.as_str()),
                 span,
             ));
             // Only consume the identifier here; leave the '{' for the common brace-consumption logic below
@@ -830,11 +826,11 @@ pub(crate) fn parse_match_statement(
     ) {
         Ok((input, _)) => {
             log::debug!("Found empty match block");
-            (input, Vec::new())
+            (input, Default::default())
         }
         Err(_) => {
             // Parse match arms
-            let mut arms = Vec::new();
+            let mut arms: NodeList<MatchArmNode> = Default::default();
             let mut input = input;
 
             loop {
@@ -852,15 +848,14 @@ pub(crate) fn parse_match_statement(
                                 .is_some_and(|t| t.token_type == TokenType::LeftParen)
                             {
                                 log::debug!("Found variant pattern: {id}");
-                                let variant_name = id.to_string();
+                                let variant_name = IdentifierNode::from_str_name(id.as_str()).name;
                                 let inner_rest = &rest[1..];
                                 if let Some((inner_token, inner_rest)) = inner_rest.split_first() {
                                     match &inner_token.token_type {
                                         TokenType::Identifier(inner_id) => {
-                                            let inner_pattern =
-                                                PatternNode::Identifier(IdentifierNode {
-                                                    name: inner_id.to_string(),
-                                                });
+                                            let inner_pattern = PatternNode::Identifier(
+                                                IdentifierNode::from_str_name(inner_id.as_str()),
+                                            );
                                             if let Some((close_paren, rest_after_paren)) =
                                                 inner_rest.split_first()
                                             {
@@ -915,9 +910,9 @@ pub(crate) fn parse_match_statement(
                                 log::debug!("Found identifier pattern: {id}");
                                 (
                                     TokenSlice(rest),
-                                    PatternNode::Identifier(IdentifierNode {
-                                        name: id.to_string(),
-                                    }),
+                                    PatternNode::Identifier(IdentifierNode::from_str_name(
+                                        id.as_str(),
+                                    )),
                                 )
                             }
                         }
@@ -1067,9 +1062,7 @@ pub fn parse_function_declaration(input: TokenSlice<'_>) -> IResult<TokenSlice<'
         ErrorKind::Alpha,
     )(input)?;
     let name = if let TokenType::Identifier(n) = &name_tok.token_type {
-        IdentifierNode {
-            name: n.to_string(),
-        }
+        IdentifierNode::from_str_name(n.as_str())
     } else {
         unreachable!()
     };
@@ -1085,7 +1078,7 @@ pub fn parse_function_declaration(input: TokenSlice<'_>) -> IResult<TokenSlice<'
     println!("parse_function_declaration: after '(', next token = {next_tok_after_lparen:?}");
 
     // parameters
-    let mut params: Vec<ParameterNode> = Vec::new();
+    let mut params: NodeList<ParameterNode> = Default::default();
     // Empty parameter list?
     if let Ok((i, _)) =
         take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Char)(input)
@@ -1106,7 +1099,7 @@ pub fn parse_function_declaration(input: TokenSlice<'_>) -> IResult<TokenSlice<'
                 param_ident_tok.token_type
             );
             let pname = if let TokenType::Identifier(s) = &param_ident_tok.token_type {
-                s.to_string()
+                IdentifierNode::from_str_name(s.as_str())
             } else {
                 unreachable!()
             };
@@ -1137,7 +1130,7 @@ pub fn parse_function_declaration(input: TokenSlice<'_>) -> IResult<TokenSlice<'
                 column: pstart.column,
             };
             params.push(ParameterNode {
-                name: IdentifierNode { name: pname },
+                name: pname,
                 type_annotation,
                 span: pspan,
             });
