@@ -34,6 +34,9 @@ logging = ["log"]
 serde = ["dep:serde"]
 jemalloc = ["jemallocator", "jemalloc-ctl"]
 bench = []
+# Optional support for single-token pipeline operator `|>`.
+# When enabled, the lexer emits a dedicated token for `|>` instead of two tokens ('|' and '>').
+pipeline_op = []
 
 [lib]
 bench = false

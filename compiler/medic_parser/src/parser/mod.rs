@@ -61,8 +61,8 @@ use log::debug;
 
 use medic_ast::ast::{
     BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode, ExpressionNode, ForNode,
-    IdentifierNode, LiteralNode, MatchArmNode, MatchNode, MemberExpressionNode, PatternNode,
-    ProgramNode, StatementNode,
+    IdentifierNode, LiteralNode, MatchArmNode, MatchNode, MemberExpressionNode, NodeList,
+    PatternNode, ProgramNode, StatementNode,
 };
 use medic_lexer::token::{Token, TokenType};
 
@@ -770,7 +770,7 @@ pub fn parse_block(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, BlockNode> 
         take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
     let start_span: Span = left_brace.location.into();
 
-    let mut statements = Vec::new();
+    let mut statements: NodeList<StatementNode> = NodeList::new();
 
     // Skip any leading semicolons before the first statement
     while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
@@ -820,7 +820,7 @@ pub fn parse_block_with_recovery<'a>(
         take_token_if(|t| matches!(t, TokenType::LeftBrace), ErrorKind::Tag)(input)?;
     let start_span: Span = left_brace.location.into();
 
-    let mut statements = Vec::new();
+    let mut statements: NodeList<StatementNode> = NodeList::new();
 
     // Skip any leading semicolons before the first statement
     while let Some(TokenType::Semicolon) = input.peek().map(|t| &t.token_type) {
@@ -1061,7 +1061,7 @@ pub fn get_operator_precedence(op: &BinaryOperator) -> u8 {
 /// ```
 pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNode> {
     log::debug!("=== parse_program ===");
-    log::debug!("Initial tokens: {}", input.0.len());
+    // Begin with a whitespace-trimmed slice and accumulate statements as we go
 
     if !input.0.is_empty() {
         log::debug!(
@@ -1075,7 +1075,7 @@ pub fn parse_program(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ProgramNo
     // Strict parsing: require all tokens to be consumed by statements.
     // Stop on the first error and surface it (instead of silently returning leftover tokens).
     let mut input = input.skip_whitespace();
-    let mut statements = Vec::new();
+    let mut statements: NodeList<StatementNode> = NodeList::new();
 
     while !input.is_empty() {
         // Skip any inter-statement whitespace
@@ -1155,7 +1155,7 @@ pub fn parse_program_recovering<'a>(
 ) -> IResult<TokenSlice<'a>, ProgramNode> {
     log::debug!("=== parse_program_recovering ===");
     let mut input = input.skip_whitespace();
-    let mut statements = Vec::new();
+    let mut statements: NodeList<StatementNode> = NodeList::new();
 
     while !input.is_empty() {
         input = input.skip_whitespace();
@@ -1357,7 +1357,7 @@ pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNo
                 return Ok((
                     input,
                     PatternNode::Variant {
-                        name: variant_name.to_string(),
+                        name: IdentifierNode::from_str_name(variant_name.as_str()).name,
                         inner: Box::new(inner_pattern),
                     },
                 ));
@@ -1365,9 +1365,7 @@ pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNo
                 // It's just a simple identifier pattern
                 return Ok((
                     input,
-                    PatternNode::Identifier(IdentifierNode {
-                        name: variant_name.to_string(),
-                    }),
+                    PatternNode::Identifier(IdentifierNode::from_str_name(variant_name.as_str())),
                 ));
             }
         }
@@ -1382,9 +1380,7 @@ pub fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNo
         if let TokenType::Identifier(name) = &ident.token_type {
             return Ok((
                 input,
-                PatternNode::Identifier(IdentifierNode {
-                    name: name.to_string(),
-                }),
+                PatternNode::Identifier(IdentifierNode::from_str_name(name.as_str())),
             ));
         }
     }
@@ -1441,13 +1437,12 @@ pub fn parse_for_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
         ErrorKind::Alpha,
     )(input)?;
 
-    let var_name = if let TokenType::Identifier(name) = &ident_tok.token_type {
-        name.to_string()
+    let variable = if let TokenType::Identifier(name) = &ident_tok.token_type {
+        IdentifierNode::from_str_name(name.as_str())
     } else {
         // Safety: guarded by matcher above
         unreachable!()
     };
-    let variable = IdentifierNode { name: var_name };
 
     // Expect 'in'
     let input = input_after_ident.skip_whitespace();
@@ -1637,12 +1632,12 @@ pub fn parse_match_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, S
                     "Remaining after empty match block: {:?}",
                     input.0.iter().map(|t| &t.token_type).collect::<Vec<_>>()
                 );
-                (input, Vec::new())
+                (input, NodeList::new())
             }
             Err(e) => {
                 debug!("No empty match block found: {e:?}");
                 // Parse match arms
-                let mut arms = Vec::new();
+                let mut arms: NodeList<MatchArmNode> = NodeList::new();
                 let mut input = input;
 
                 // Parse match arms until we hit a closing brace

@@ -12,7 +12,7 @@ use crate::parser::{
     parse_expression, take_token_if, ExpressionNode, IdentifierNode, Span, Token, TokenSlice,
     TokenType,
 };
-use medic_ast::ast::{StructField, StructLiteralNode};
+use medic_ast::ast::{NodeList, StructField, StructLiteralNode};
 use medic_ast::Spanned;
 
 /// Parses a struct field in the format `name: expression`
@@ -37,7 +37,7 @@ pub fn parse_struct_field(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stru
     )(input)?;
 
     let name = match &name_token.token_type {
-        TokenType::Identifier(name) => name.to_string(),
+        TokenType::Identifier(name) => IdentifierNode::from_str_name(name.as_str()).name,
         _ => unreachable!(), // We already checked this in the take_token_if
     };
 
@@ -122,7 +122,7 @@ pub fn parse_struct_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Ex
     let type_name = match &type_name_token.token_type {
         TokenType::Identifier(name) => {
             log::debug!("Type name: {name}");
-            name.to_string()
+            IdentifierNode::from_str_name(name.as_str()).name
         }
         _ => unreachable!(), // We already checked this in the take_token_if
     };
@@ -146,7 +146,7 @@ pub fn parse_struct_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Ex
 
     // Parse the fields (comma-separated)
     log::debug!("Parsing struct fields...");
-    let (input, fields) = match separated_list0(
+    let (input, fields_vec) = match separated_list0(
         |input| {
             let (input, _) = take_token_if(
                 |t| matches!(t, TokenType::Comma),
@@ -167,6 +167,9 @@ pub fn parse_struct_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Ex
             return Err(e);
         }
     };
+
+    // Convert to NodeList
+    let fields: NodeList<StructField> = fields_vec.into_iter().collect();
 
     // Parse the closing brace
     log::debug!("Looking for closing brace...");
@@ -313,10 +316,10 @@ mod tests {
 
         match expr {
             ExpressionNode::Struct(Spanned { node: s, .. }) => {
-                assert_eq!(s.type_name, "Point");
+                assert_eq!(s.type_name.as_str(), "Point");
                 assert_eq!(s.fields.len(), 2);
-                assert_eq!(s.fields[0].name, "x");
-                assert_eq!(s.fields[1].name, "y");
+                assert_eq!(s.fields[0].name.as_str(), "x");
+                assert_eq!(s.fields[1].name.as_str(), "y");
             }
             _ => panic!("Expected Struct variant"),
         }

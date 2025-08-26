@@ -9,7 +9,7 @@
         "testStrategy": "Create unit tests for lexer and parser components. Test with valid and invalid Medi code samples, including all healthcare-specific constructs from the PRD examples. Verify correct AST generation for each language construct. Test error reporting with various syntax errors to ensure messages are clear and clinician-friendly.",
         "priority": "high",
         "dependencies": [],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -67,7 +67,7 @@
             "title": "Plan pipeline operator lexer design (no behavior change in v0.1)",
             "description": "Design the approach for optional single-token pipeline operator '|>' recognition across lexers without changing v0.1 behavior by default.\\n\\nScope:\\n- Define feature flag name (e.g., 'pipeline_op') in compiler/medic_lexer/Cargo.toml; disabled by default.\\n- Add planned variants: LogosToken::PipeGreater and TokenType::PipeGreater (gated usage).\\n- Plan updates to convert_logos_to_token() to map PipeGreater when feature enabled.\\n- Plan recognition paths in lexers: lexer/mod.rs, streaming_lexer.rs, chunked_lexer.rs, including chunk-boundary handling.\\n- Ensure position tracking and performance unchanged.\\n\\nTests to plan:\\n- Default (no feature): '|>' tokenizes as BitOr, Greater in all lexers (keep existing tests).\\n- With feature: '|>' tokenizes as single PipeGreater in all lexers, including across chunk boundaries.\\n- Conversion mapping and Location correctness.\\n\\nDocs to plan:\\n- Update LANG_SPEC.md to document the operator and feature gating.\\n- Note backward compatibility and default-off behavior.\\n\\nAcceptance Notes:\\n- This subtask is planning-only; no behavior change for v0.1.\\n- Output: a brief design note and checklist to implement in the follow-up task.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 1
           }

@@ -16,6 +16,42 @@ fn init_test_logger() {
         .try_init();
 }
 
+#[cfg(feature = "pipeline_op")]
+#[test]
+fn test_pipeline_operator_tokenized_when_enabled() {
+    // With feature enabled, '|>' should be a single token
+    let input = "|>";
+    let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
+    let tokens: Vec<_> = lexer.collect();
+
+    // Expect exactly one token PipeGreater
+    pretty_assert_eq!(
+        tokens.len(),
+        1,
+        "Expected 1 token for '|>' with feature enabled"
+    );
+    pretty_assert_eq!(tokens[0].lexeme.as_str(), "|>");
+    pretty_assert_eq!(tokens[0].token_type, TokenType::PipeGreater);
+}
+
+#[cfg(feature = "pipeline_op")]
+#[test]
+fn test_pipeline_operator_cross_chunk_merge() {
+    // Ensure merging across chunk boundary works: '|' at end of chunk, '>' at start of next
+    let input = "|>";
+    let config = ChunkedLexerConfig { chunk_size: 1 }; // force 1-byte chunks
+    let lexer = ChunkedLexer::from_reader(input.as_bytes(), config);
+    let tokens: Vec<_> = lexer.collect();
+
+    pretty_assert_eq!(
+        tokens.len(),
+        1,
+        "Expected 1 merged token across chunks for '|>'"
+    );
+    pretty_assert_eq!(tokens[0].lexeme.as_str(), "|>");
+    pretty_assert_eq!(tokens[0].token_type, TokenType::PipeGreater);
+}
+
 #[test]
 fn test_long_tokens_and_performance_smoke() {
     // Very long identifier and string should tokenize without errors or stack overflow
@@ -137,6 +173,7 @@ fn test_function_like_medical_literals() {
     pretty_assert_eq!(tokens[1].lexeme.as_str(), "icd10(\"A00.1\")");
 }
 
+#[cfg(not(feature = "pipeline_op"))]
 #[test]
 fn test_pipeline_operator_not_tokenized() {
     // `|>` must NOT be tokenized as a single pipeline operator in v0.1.

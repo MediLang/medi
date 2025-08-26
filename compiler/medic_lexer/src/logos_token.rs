@@ -402,21 +402,13 @@ pub enum LogosToken {
     /// Less than or equal operator (`<=`)
     #[token("<=")]
     LessEqual,
+
     /// Greater than operator (`>`)
     #[token(">")]
     Greater,
     /// Greater than or equal operator (`>=`)
     #[token(">=")]
     GreaterEqual,
-
-    /// Bitwise OR operator (`|`)
-    /// Also used as pattern matching pipe
-    #[token("|")]
-    BitOr,
-
-    /// Bitwise XOR operator (`^`)
-    #[token("^")]
-    BitXor,
 
     /// Bitwise AND operator (`&`)
     #[token("&")]
@@ -428,6 +420,19 @@ pub enum LogosToken {
     /// Right shift operator (`>>`)
     #[token(">>")]
     Shr,
+
+    /// Bitwise OR operator (`|`)
+    #[token("|")]
+    BitOr,
+    /// Bitwise XOR operator (`^`)
+    #[token("^")]
+    BitXor,
+
+    // Pipeline operator (feature-gated)
+    /// Pipeline operator (`|>`) as a single token when feature is enabled
+    #[cfg(feature = "pipeline_op")]
+    #[token("|>", priority = 200)]
+    PipeGreater,
 
     // Addition/Subtraction
     /// Addition operator (`+`)

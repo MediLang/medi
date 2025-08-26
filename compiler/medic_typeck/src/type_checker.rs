@@ -44,7 +44,7 @@ impl<'a> TypeChecker<'a> {
             | ExpressionNode::SnomedCode(Spanned { node: _, .. }) => MediType::String,
             ExpressionNode::Identifier(Spanned { node: name, .. }) => self
                 .env
-                .get(&name.name)
+                .get(name.name())
                 .cloned()
                 .unwrap_or(MediType::Unknown),
             ExpressionNode::Literal(Spanned { node: lit, .. }) => match lit {
@@ -254,7 +254,8 @@ impl<'a> TypeChecker<'a> {
                 let mut fields = std::collections::HashMap::new();
                 for field in &struct_lit.fields {
                     let field_type = self.check_expr(&field.value);
-                    fields.insert(field.name.clone(), field_type);
+                    // Convert IdentifierName to String for the Struct type map
+                    fields.insert(field.name.to_string(), field_type);
                 }
                 MediType::Struct(fields)
             }

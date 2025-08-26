@@ -3,6 +3,7 @@ use nom::IResult;
 
 use crate::parser::{parse_expression, take_token_if, ExpressionNode, Span, TokenSlice, TokenType};
 use medic_ast::ast::ArrayLiteralNode;
+use medic_ast::ast::NodeList;
 use medic_ast::Spanned;
 
 /// Parses an array literal in the format `[expr1, expr2, ...]`
@@ -33,7 +34,7 @@ pub fn parse_array_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Exp
 
     // Parse zero or more comma-separated expressions until a right bracket
     log::debug!("Parsing array elements...");
-    let mut elements: Vec<ExpressionNode> = Vec::new();
+    let mut elements: NodeList<ExpressionNode> = NodeList::new();
 
     // Early check for empty array: next token is RightBracket
     if let Some(tok) = input.0.first() {

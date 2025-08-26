@@ -146,6 +146,9 @@ pub enum TokenType {
     Of,
     /// `per` operator - used in unit expressions
     Per,
+    /// Pipeline operator `|>` (feature-gated)
+    #[cfg(feature = "pipeline_op")]
+    PipeGreater,
 
     // Punctuation
     /// `→` - unit conversion operator (Unicode U+2192)
@@ -335,6 +338,8 @@ impl PartialEq for TokenType {
             (TokenType::DoubleStarAssign, TokenType::DoubleStarAssign) => true,
             (TokenType::Of, TokenType::Of) => true,
             (TokenType::Per, TokenType::Per) => true,
+            #[cfg(feature = "pipeline_op")]
+            (TokenType::PipeGreater, TokenType::PipeGreater) => true,
 
             // Punctuation
             (TokenType::UnitConversionArrow, TokenType::UnitConversionArrow) => true,

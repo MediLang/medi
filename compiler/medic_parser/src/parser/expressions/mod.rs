@@ -58,10 +58,7 @@ use crate::parser::{
 use medic_lexer::Location;
 
 use super::{identifiers::parse_identifier, literals::parse_literal};
-
-use medic_ast::ast::ExpressionNode as AstExpressionNode;
-use medic_ast::ast::MatchNode as AstMatchNode;
-use medic_ast::ast::StatementNode as AstStatementNode;
+use medic_ast::ast::NodeList;
 
 /// Parses a single match arm in the format: <pattern> => <expression>
 fn parse_match_arm(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, MatchArmNode> {
@@ -134,7 +131,7 @@ fn parse_pattern(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, PatternNode> 
     if let TokenType::Identifier(ident) = &input.0[0].token_type {
         // Create a simple identifier node without span for now
         // The AST will handle the span during a later phase
-        let ident_node = IdentifierNode::new(ident.to_string());
+        let ident_node = IdentifierNode::from_string(ident.to_string());
         return Ok((input.advance(), PatternNode::Identifier(ident_node)));
     }
 
@@ -248,7 +245,7 @@ pub fn parse_match_expression(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, 
     let (input, _) = take_token_if(|tt| *tt == TokenType::LeftBrace, ErrorKind::Tag)(input)?;
 
     // Parse match arms
-    let mut arms = Vec::new();
+    let mut arms: NodeList<MatchArmNode> = NodeList::new();
     let mut input = input.skip_whitespace();
 
     // Keep parsing arms until we hit the closing brace
@@ -754,7 +751,7 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                         after_lparen = after_lparen.skip_whitespace();
 
                         // Parse arguments
-                        let mut args: Vec<ExpressionNode> = Vec::new();
+                        let mut args: NodeList<ExpressionNode> = NodeList::new();
                         // Empty args: directly right paren
                         if let Some(tp) = after_lparen.peek() {
                             if matches!(tp.token_type, TokenType::RightParen) {
