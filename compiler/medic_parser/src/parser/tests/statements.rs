@@ -89,6 +89,52 @@ mod statements_test {
 }
 
 #[cfg(test)]
+mod type_decls_test {
+    use super::*;
+    use medic_ast::ast::{StatementNode, ExpressionNode, IdentifierNode};
+
+    #[test]
+    fn test_parse_type_declaration_basic() {
+        let input = "type Person { name: String, age: Int }";
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_type_declaration(ts).expect("should parse type decl");
+        match stmt {
+            StatementNode::TypeDecl(td) => {
+                assert_eq!(td.name.name, "Person");
+                assert_eq!(td.fields.len(), 2);
+                assert_eq!(td.fields[0].name, "name");
+                assert!(matches!(td.fields[0].type_annotation, ExpressionNode::Identifier(_)));
+                assert_eq!(td.fields[1].name, "age");
+                assert!(matches!(td.fields[1].type_annotation, ExpressionNode::Identifier(_)));
+            }
+            _ => panic!("expected type decl"),
+        }
+    }
+
+    #[test]
+    fn test_parse_type_declaration_with_semicolon() {
+        let input = "type Vital { value: Float, unit: String };";
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_type_declaration(ts).expect("should parse type decl with semicolon");
+        if let StatementNode::TypeDecl(td) = stmt { 
+            assert_eq!(td.name.name, "Vital");
+            assert_eq!(td.fields.len(), 2);
+        } else { panic!("expected type decl"); }
+    }
+
+    #[test]
+    fn test_parse_empty_type_declaration() {
+        let input = "type Empty { }";
+        let (ts, _tokens) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_type_declaration(ts).expect("should parse empty type decl");
+        if let StatementNode::TypeDecl(td) = stmt { 
+            assert_eq!(td.name.name, "Empty");
+            assert!(td.fields.is_empty());
+        } else { panic!("expected type decl"); }
+    }
+}
+
+#[cfg(test)]
 mod functions_test {
     use super::*;
     use medic_ast::ast::{StatementNode, ExpressionNode};

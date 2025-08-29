@@ -83,7 +83,7 @@
         "dependencies": [
           1
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -91,7 +91,7 @@
             "description": "Implement the core type system infrastructure including primitive types, type declarations, and basic type checking mechanisms.",
             "dependencies": [],
             "details": "Implement primitive types (string, number, boolean), type declarations syntax, type annotations, and basic type checking mechanisms. Create the TypeChecker class that will interface with the parser. Develop unit tests for each primitive type and basic type operations. Integration points: Receive AST from parser and attach type information to nodes.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 2,
@@ -123,6 +123,26 @@
               3
             ],
             "details": "Implement privacy annotation types (PHI, Anonymized, Authorized). Create access control type checking for patient data. Develop data flow analysis to track sensitive information. Implement HIPAA compliance type checks. Test with privacy violation scenarios. Integration points: Integrate with error reporting system and provide safety verification API for the runtime.",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Let-Statement Type Annotations",
+            "description": "Implement explicit type annotations for let statements in the AST, parser, and type checker.",
+            "dependencies": [
+              1
+            ],
+            "details": "Extend the AST to support optional type annotations in let statements. Update the parser to recognize and parse type annotations in the form 'let x: Type = value;'. Modify the type checker to validate that the inferred type of the initializer matches the explicit type annotation. Implement proper error reporting for type mismatches between annotations and initializers. Add support for type checking let statements without initializers but with type annotations.",
+            "status": "pending"
+          },
+          {
+            "id": 6,
+            "title": "Type Annotation Tests",
+            "description": "Create comprehensive tests for type annotations in let statements, covering match, mismatch, and inference scenarios.",
+            "dependencies": [
+              5
+            ],
+            "details": "Develop unit tests for successful type matching between annotations and initializers. Create tests for type mismatches to verify error reporting. Test type inference when annotations are omitted. Implement tests for healthcare-specific type annotations. Create tests for complex nested type annotations. Add tests for side type table assertions to verify the internal state of the type checker after processing annotations.",
             "status": "pending"
           }
         ]
@@ -869,7 +889,8 @@
         "dependencies": [
           5
         ],
-        "status": "pending"
+        "status": "pending",
+        "subtasks": []
       }
     ],
     "metadata": {

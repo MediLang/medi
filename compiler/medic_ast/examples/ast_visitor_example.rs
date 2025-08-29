@@ -165,7 +165,13 @@ impl Visitor for VariableCollector {
 
     fn visit_let_stmt(&mut self, node: &LetStatementNode) -> VisitResult<Self::Output> {
         // Don't visit the name node directly to avoid double-counting
-        node.value.accept(self)
+        if let Some(ann) = &node.type_annotation {
+            ann.accept(self)?;
+        }
+        if let Some(val) = &node.value {
+            val.accept(self)?;
+        }
+        Ok(())
     }
 }
 
@@ -248,8 +254,19 @@ impl Visitor for AstPrinter {
         self.write_line("Let statement:");
         self.with_indent(|this| {
             this.write_line(&format!("Name: {}", node.name.name));
+            if let Some(ann) = &node.type_annotation {
+                this.write_line("Annotation:");
+                this.with_indent(|this| ann.accept(this))?;
+            }
             this.write_line("Value:");
-            this.with_indent(|this| node.value.accept(this))
+            if let Some(val) = &node.value {
+                this.with_indent(|this| val.accept(this))
+            } else {
+                this.with_indent(|this| {
+                    this.write_line("<none>");
+                    Ok(())
+                })
+            }
         })
     }
 
@@ -293,13 +310,18 @@ fn create_sample_ast() -> ProgramNode {
 
     let stmt1 = StatementNode::Let(Box::new(LetStatementNode {
         name: IdentifierNode::from_str_name("x"),
-        value: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span)),
+        type_annotation: None,
+        value: Some(ExpressionNode::Literal(Spanned::new(
+            LiteralNode::Int(42),
+            span,
+        ))),
         span,
     }));
 
     let stmt2 = StatementNode::Let(Box::new(LetStatementNode {
         name: IdentifierNode::from_str_name("y"),
-        value: ExpressionNode::Binary(Spanned::new(
+        type_annotation: None,
+        value: Some(ExpressionNode::Binary(Spanned::new(
             Box::new(BinaryExpressionNode {
                 left: ExpressionNode::Identifier(Spanned::new(
                     IdentifierNode::from_str_name("x"),
@@ -309,7 +331,7 @@ fn create_sample_ast() -> ProgramNode {
                 right: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), span)),
             }),
             span,
-        )),
+        ))),
         span,
     }));
 

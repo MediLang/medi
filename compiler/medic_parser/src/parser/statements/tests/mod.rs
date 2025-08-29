@@ -32,13 +32,17 @@ mod statements_test {
 
         if let StatementNode::Let(let_stmt) = stmt {
             assert_eq!(let_stmt.name.name, "x");
-            if let ExpressionNode::Literal(Spanned { node: lit, .. }) = &let_stmt.value {
+            let val = let_stmt
+                .value
+                .as_ref()
+                .expect("let value must be present in this test");
+            if let ExpressionNode::Literal(Spanned { node: lit, .. }) = val {
                 assert!(
                     matches!(lit, LiteralNode::Int(42)),
                     "Expected literal 42, got {lit:?}"
                 );
             } else {
-                panic!("Expected a literal value, got: {:?}", let_stmt.value);
+                panic!("Expected a literal value, got: {:?}", val);
             }
         } else {
             panic!("Expected a let statement, got: {stmt:?}");

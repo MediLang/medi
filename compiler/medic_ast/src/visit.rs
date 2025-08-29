@@ -137,6 +137,11 @@ pub trait Visitor {
         self.visit_children(node)
     }
 
+    // Type declarations
+    fn visit_type_decl(&mut self, node: &TypeDeclNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
     // Program
     fn visit_program(&mut self, node: &ProgramNode) -> VisitResult<Self::Output> {
         self.visit_children(node)

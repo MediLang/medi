@@ -292,6 +292,9 @@ Statement      ::= ExprStmt | LetStmt | ConstStmt | ReturnStmt
 
 Expression     ::= Literal | Identifier | CallExpr | BinaryExpr
                  | UnaryExpr | BlockExpr | IfExpr | MatchExpr
+
+// Let statements
+LetStmt        ::= 'let' Identifier (':' Type)? ('=' Expression)? ';'? 
 ```
 
 ### Healthcare-Specific Syntax

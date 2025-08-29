@@ -9,6 +9,7 @@ pub enum MediType {
     Float,
     Bool,
     String,
+    /// Absence of a value
     Void,
     Unknown,
     Range(Box<MediType>),
@@ -18,7 +19,14 @@ pub enum MediType {
     Record(Vec<(String, MediType)>),
     // For lists/arrays
     List(Box<MediType>),
+    /// Generic healthcare entity bucket (kept for backward-compatibility)
     HealthcareEntity(HealthcareEntityKind),
+    /// Domain-specific first-class types
+    PatientId,
+    Vital,
+    LabResult,
+    FHIRPatient,
+    Observation,
     Function {
         params: Vec<MediType>,
         return_type: Box<MediType>,
@@ -63,6 +71,18 @@ impl MediType {
             // Same types can be compared
             (a, b) if a == b => true,
             // Other types are not comparable
+            _ => false,
+        }
+    }
+
+    /// Simple assignability relation used by the basic type checker.
+    /// Currently allows exact type matches and Int -> Float widening.
+    pub fn is_assignable_to(&self, target: &Self) -> bool {
+        match (self, target) {
+            // Exact match
+            (a, b) if a == b => true,
+            // Widening conversion: Int to Float
+            (MediType::Int, MediType::Float) => true,
             _ => false,
         }
     }

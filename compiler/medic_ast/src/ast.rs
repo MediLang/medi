@@ -261,12 +261,15 @@ pub enum StatementNode {
     Match(Box<MatchNode>),
     Return(Box<ReturnNode>),
     Function(Box<FunctionNode>),
+    /// A user-defined type declaration, e.g., `type Patient { id: Int, name: String }`
+    TypeDecl(Box<TypeDeclNode>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LetStatementNode {
     pub name: IdentifierNode,
-    pub value: ExpressionNode,
+    pub type_annotation: Option<ExpressionNode>,
+    pub value: Option<ExpressionNode>,
     pub span: Span,
 }
 
@@ -371,7 +374,43 @@ pub struct FunctionNode {
     pub span: Span,
 }
 
+/// Represents a field inside a user-defined type declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeField {
+    pub name: IdentifierName,
+    pub type_annotation: ExpressionNode,
+}
+
+/// Represents a user-defined type declaration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeDeclNode {
+    pub name: IdentifierNode,
+    pub fields: NodeList<TypeField>,
+    pub span: Span,
+}
+
 use std::hash::Hash;
+
+impl Visitable for TypeField {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        // The field itself has no children except its type annotation
+        self.type_annotation.accept(visitor)
+    }
+}
+
+impl Visitable for TypeDeclNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_type_decl(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.name.accept(visitor)?;
+        for f in &self.fields {
+            f.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
 
 /// Represents a field in a struct literal
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -595,6 +634,7 @@ impl Visitable for StatementNode {
             StatementNode::Match(stmt) => stmt.accept(visitor),
             StatementNode::Return(stmt) => stmt.accept(visitor),
             StatementNode::Function(stmt) => stmt.accept(visitor),
+            StatementNode::TypeDecl(stmt) => stmt.accept(visitor),
         }
     }
 
@@ -610,6 +650,7 @@ impl Visitable for StatementNode {
             StatementNode::Match(stmt) => stmt.visit_children(visitor),
             StatementNode::Return(stmt) => stmt.visit_children(visitor),
             StatementNode::Function(stmt) => stmt.visit_children(visitor),
+            StatementNode::TypeDecl(stmt) => stmt.visit_children(visitor),
         }
     }
 }
@@ -628,6 +669,7 @@ impl StatementNode {
             StatementNode::Match(stmt) => &stmt.span,
             StatementNode::Return(stmt) => &stmt.span,
             StatementNode::Function(stmt) => &stmt.span,
+            StatementNode::TypeDecl(stmt) => &stmt.span,
         }
     }
 }
@@ -670,7 +712,13 @@ impl Visitable for LetStatementNode {
 
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.name.accept(visitor)?;
-        self.value.accept(visitor)
+        if let Some(ann) = &self.type_annotation {
+            ann.accept(visitor)?;
+        }
+        if let Some(val) = &self.value {
+            val.accept(visitor)?;
+        }
+        Ok(Default::default())
     }
 }
 
@@ -882,7 +930,20 @@ impl ExpressionNode {
 impl std::fmt::Display for StatementNode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            StatementNode::Let(stmt) => write!(f, "let {} = {};", stmt.name.name, stmt.value),
+            StatementNode::Let(stmt) => {
+                if let Some(val) = &stmt.value {
+                    if let Some(ann) = &stmt.type_annotation {
+                        write!(f, "let {}: {} = {};", stmt.name.name, ann, val)
+                    } else {
+                        write!(f, "let {} = {};", stmt.name.name, val)
+                    }
+                } else if let Some(ann) = &stmt.type_annotation {
+                    write!(f, "let {}: {};", stmt.name.name, ann)
+                } else {
+                    // Fallback (shouldn't generally occur): name only
+                    write!(f, "let {};", stmt.name.name)
+                }
+            }
             StatementNode::Assignment(assign) => write!(f, "{} = {};", assign.target, assign.value),
             StatementNode::Expr(expr) => write!(f, "{expr};"),
             StatementNode::Block(block) => {
@@ -945,6 +1006,16 @@ impl std::fmt::Display for StatementNode {
                     write!(f, " -> {ret}")?;
                 }
                 write!(f, " {}", fun.body)
+            }
+            StatementNode::TypeDecl(td) => {
+                write!(f, "type {} {{ ", td.name.name)?;
+                for (i, field) in td.fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", field.name, field.type_annotation)?;
+                }
+                write!(f, " }};")
             }
         }
     }
