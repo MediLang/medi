@@ -4,6 +4,7 @@
 use medic_ast::ast::*;
 use medic_ast::visit::Span;
 use medic_env::env::TypeEnv;
+use medic_type::traits::{ValidationCtx, ValidationError};
 use medic_type::types::*;
 use std::collections::HashMap;
 
@@ -11,6 +12,10 @@ pub struct TypeChecker<'a> {
     env: &'a mut TypeEnv,
     /// Side type table: maps (start,end) byte offsets of an expression span to its computed type
     type_table: HashMap<(usize, usize), MediType>,
+    /// Optional validation context for UCUM/LOINC/SNOMED checks
+    validation_ctx: Option<&'a ValidationCtx>,
+    /// Collected validation/type errors encountered during expression checks
+    errors: Vec<TypeError>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -18,7 +23,25 @@ impl<'a> TypeChecker<'a> {
         TypeChecker {
             env,
             type_table: HashMap::new(),
+            validation_ctx: None,
+            errors: Vec::new(),
         }
+    }
+
+    /// Provide a validation context for UCUM/LOINC/SNOMED-aware checks.
+    pub fn with_validation_ctx(mut self, ctx: &'a ValidationCtx) -> Self {
+        self.validation_ctx = Some(ctx);
+        self
+    }
+
+    /// Borrow collected errors
+    pub fn errors(&self) -> &Vec<TypeError> {
+        &self.errors
+    }
+
+    /// Drain and return collected errors
+    pub fn take_errors(&mut self) -> Vec<TypeError> {
+        std::mem::take(&mut self.errors)
     }
 
     /// Returns an immutable view of the side type table.
@@ -45,6 +68,9 @@ impl<'a> TypeChecker<'a> {
             "LabResult" | "lab_result" => Some(MediType::LabResult),
             "FHIRPatient" => Some(MediType::FHIRPatient),
             "Observation" => Some(MediType::Observation),
+            "Diagnosis" | "diagnosis" => Some(MediType::Diagnosis),
+            "Medication" | "medication" => Some(MediType::Medication),
+            "MedicalRecord" | "medical_record" => Some(MediType::MedicalRecord),
             _ => None,
         }
     }
@@ -80,7 +106,7 @@ impl<'a> TypeChecker<'a> {
     /// use medic_type::types::MediType;
     /// use medic_typeck::type_checker::TypeChecker;
     ///
-    /// let mut env = TypeEnv::new();
+    /// let mut env = TypeEnv::with_prelude();
     /// env.insert("x".to_string(), MediType::Int);
     /// let mut checker = TypeChecker::new(&mut env);
     /// let id = Spanned::new(
@@ -93,8 +119,20 @@ impl<'a> TypeChecker<'a> {
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
         let ty = match expr {
             ExpressionNode::IcdCode(Spanned { node: _, .. })
-            | ExpressionNode::CptCode(Spanned { node: _, .. })
-            | ExpressionNode::SnomedCode(Spanned { node: _, .. }) => MediType::String,
+            | ExpressionNode::CptCode(Spanned { node: _, .. }) => MediType::String,
+            ExpressionNode::SnomedCode(Spanned { node: code, .. }) => {
+                if let Some(ctx) = self.validation_ctx {
+                    if !ctx.is_valid_snomed(code) {
+                        self.errors.push(TypeError::ValidationFailed(
+                            ValidationError::UnknownCode {
+                                system: "SNOMED",
+                                code: code.clone(),
+                            },
+                        ));
+                    }
+                }
+                MediType::String
+            }
             ExpressionNode::Identifier(Spanned { node: name, .. }) => self
                 .env
                 .get(name.name())
@@ -311,6 +349,83 @@ impl<'a> TypeChecker<'a> {
                     // Convert IdentifierName to String for the Struct type map
                     fields.insert(field.name.to_string(), field_type);
                 }
+                // Heuristic: if fields contain (code: String, value: number, unit: String),
+                // and a ValidationCtx is present, perform LOINC/UCUM/reference checks.
+                if let Some(ctx) = self.validation_ctx {
+                    use medic_ast::ast::LiteralNode;
+                    let mut code_val: Option<String> = None;
+                    let mut unit_val: Option<String> = None;
+                    let mut value_num: Option<f64> = None;
+                    for f in &struct_lit.fields {
+                        match (f.name.as_str(), &f.value) {
+                            (
+                                "code",
+                                ExpressionNode::Literal(Spanned {
+                                    node: LiteralNode::String(s),
+                                    ..
+                                }),
+                            ) => {
+                                code_val = Some(s.clone());
+                            }
+                            (
+                                "unit",
+                                ExpressionNode::Literal(Spanned {
+                                    node: LiteralNode::String(s),
+                                    ..
+                                }),
+                            ) => {
+                                unit_val = Some(s.clone());
+                            }
+                            (
+                                "value",
+                                ExpressionNode::Literal(Spanned {
+                                    node: LiteralNode::Float(n),
+                                    ..
+                                }),
+                            ) => {
+                                value_num = Some(*n);
+                            }
+                            (
+                                "value",
+                                ExpressionNode::Literal(Spanned {
+                                    node: LiteralNode::Int(n),
+                                    ..
+                                }),
+                            ) => {
+                                value_num = Some(*n as f64);
+                            }
+                            _ => {}
+                        }
+                    }
+                    if let (Some(code), Some(unit), Some(val)) = (code_val, unit_val, value_num) {
+                        if !ctx.is_valid_loinc(&code) {
+                            self.errors.push(TypeError::ValidationFailed(
+                                ValidationError::UnknownCode {
+                                    system: "LOINC",
+                                    code: code.clone(),
+                                },
+                            ));
+                        }
+                        if !ctx.is_valid_ucum(&unit) {
+                            self.errors.push(TypeError::ValidationFailed(
+                                ValidationError::InvalidUnit { unit: unit.clone() },
+                            ));
+                        }
+                        if let Some((min, max)) = ctx.reference_range(&code, &unit) {
+                            if val < min || val > max {
+                                self.errors.push(TypeError::ValidationFailed(
+                                    ValidationError::OutOfReferenceRange {
+                                        code: code.clone(),
+                                        unit: unit.clone(),
+                                        min,
+                                        max,
+                                        actual: val,
+                                    },
+                                ));
+                            }
+                        }
+                    }
+                }
                 MediType::Struct(fields)
             }
         };
@@ -401,9 +516,14 @@ impl<'a> TypeChecker<'a> {
                 let parent = self.env.clone();
                 let mut child = TypeEnv::with_parent(parent);
                 let mut nested = TypeChecker::new(&mut child);
+                if let Some(ctx) = self.validation_ctx {
+                    nested = nested.with_validation_ctx(ctx);
+                }
                 for s in &block.statements {
                     nested.check_stmt(s)?;
                 }
+                // merge nested validation errors
+                self.errors.extend(nested.take_errors());
                 Ok(())
             }
             StatementNode::If(if_node) => {
@@ -415,15 +535,23 @@ impl<'a> TypeChecker<'a> {
                 let parent = self.env.clone();
                 let mut then_env = TypeEnv::with_parent(parent);
                 let mut then_ck = TypeChecker::new(&mut then_env);
+                if let Some(ctx) = self.validation_ctx {
+                    then_ck = then_ck.with_validation_ctx(ctx);
+                }
                 for s in &if_node.then_branch.statements {
                     then_ck.check_stmt(s)?;
                 }
+                self.errors.extend(then_ck.take_errors());
                 // else branch (if present) - treat generically
                 if let Some(else_stmt) = &if_node.else_branch {
                     let parent = self.env.clone();
                     let mut else_env = TypeEnv::with_parent(parent);
                     let mut else_ck = TypeChecker::new(&mut else_env);
+                    if let Some(ctx) = self.validation_ctx {
+                        else_ck = else_ck.with_validation_ctx(ctx);
+                    }
                     else_ck.check_stmt(else_stmt)?;
+                    self.errors.extend(else_ck.take_errors());
                 }
                 Ok(())
             }
@@ -435,9 +563,13 @@ impl<'a> TypeChecker<'a> {
                 let parent = self.env.clone();
                 let mut child = TypeEnv::with_parent(parent);
                 let mut ck = TypeChecker::new(&mut child);
+                if let Some(ctx) = self.validation_ctx {
+                    ck = ck.with_validation_ctx(ctx);
+                }
                 for s in &while_node.body.statements {
                     ck.check_stmt(s)?;
                 }
+                self.errors.extend(ck.take_errors());
                 Ok(())
             }
             StatementNode::For(for_node) => {
@@ -447,9 +579,13 @@ impl<'a> TypeChecker<'a> {
                     let mut child = TypeEnv::with_parent(parent);
                     child.insert(for_node.variable.name().to_string(), *elem);
                     let mut ck = TypeChecker::new(&mut child);
+                    if let Some(ctx) = self.validation_ctx {
+                        ck = ck.with_validation_ctx(ctx);
+                    }
                     for s in &for_node.body.statements {
                         ck.check_stmt(s)?;
                     }
+                    self.errors.extend(ck.take_errors());
                     Ok(())
                 } else {
                     Err(TypeError::TypeMismatch {
@@ -499,9 +635,13 @@ impl<'a> TypeChecker<'a> {
                     child.insert(p.name.name().to_string(), ty);
                 }
                 let mut ck = TypeChecker::new(&mut child);
+                if let Some(ctx) = self.validation_ctx {
+                    ck = ck.with_validation_ctx(ctx);
+                }
                 for s in &fun.body.statements {
                     ck.check_stmt(s)?;
                 }
+                self.errors.extend(ck.take_errors());
                 Ok(())
             }
         }
@@ -523,9 +663,14 @@ impl<'a> TypeChecker<'a> {
 pub enum TypeError {
     UnknownIdentifier(String),
     UnknownTypeName(String),
-    TypeMismatch { expected: MediType, found: MediType },
+    TypeMismatch {
+        expected: MediType,
+        found: MediType,
+    },
     InvalidAssignmentTarget,
     ConditionNotBool(MediType),
+    /// Validation errors coming from UCUM/LOINC/SNOMED checks
+    ValidationFailed(ValidationError),
 }
 
 impl std::fmt::Display for TypeError {
@@ -545,6 +690,9 @@ impl std::fmt::Display for TypeError {
             TypeError::ConditionNotBool(found) => {
                 write!(f, "Condition must be Bool, found {found:?}.")
             }
+            TypeError::ValidationFailed(err) => {
+                write!(f, "Validation failed: {err}")
+            }
         }
     }
 }
@@ -556,7 +704,7 @@ mod tests {
 
     #[test]
     fn let_infers_and_binds() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
         let stmt = StatementNode::Let(Box::new(LetStatementNode {
             name: IdentifierNode::from_str_name("x"),
@@ -573,7 +721,7 @@ mod tests {
 
     #[test]
     fn if_requires_bool_condition() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
         let stmt = StatementNode::If(Box::new(IfNode {
             condition: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), Span::default())),
@@ -590,7 +738,7 @@ mod tests {
 
     #[test]
     fn function_registration_and_body_scope() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
         let fun = StatementNode::Function(Box::new(FunctionNode {
             name: IdentifierNode::from_str_name("add"),
@@ -644,7 +792,7 @@ mod tests {
 
     #[test]
     fn primitive_ops_and_comparisons() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
 
         // 1 + 2 -> Int
@@ -746,7 +894,7 @@ mod tests {
 
     #[test]
     fn type_table_records_computed_types() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
 
         // Build (1 + 2) with distinct spans for children and parent
@@ -813,7 +961,7 @@ mod tests {
 
     #[test]
     fn let_with_matching_annotation_binds_annotated_type() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
 
         // let x: Int = 1;
@@ -840,7 +988,7 @@ mod tests {
 
     #[test]
     fn let_with_mismatching_annotation_errors() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
 
         // let x: String = 1; -> mismatch
@@ -872,7 +1020,7 @@ mod tests {
 
     #[test]
     fn let_without_annotation_infers_from_initializer() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut tc = TypeChecker::new(&mut env);
 
         // let y = 2.0;
@@ -897,7 +1045,7 @@ mod tests {
 
     #[test]
     fn call_type_checking_and_type_table() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         // Register a function type: add(Int, Int) -> Int
         env.insert(
             "add".to_string(),

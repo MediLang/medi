@@ -14,7 +14,7 @@ fn test_patient_record_declaration_valid() {
         }
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
-    let mut env = TypeEnv::new();
+    let mut env = TypeEnv::with_prelude();
     env.insert("Int".to_string(), medi::types::MediType::Int);
     env.insert("String".to_string(), medi::types::MediType::String);
     let mut checker = DefaultTypeChecker::new_with_env(env);
@@ -32,7 +32,7 @@ fn test_patient_record_declaration_invalid_type() {
         }
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
-    let mut env = TypeEnv::new();
+    let mut env = TypeEnv::with_prelude();
     env.insert("Int".to_string(), medi::types::MediType::Int);
     env.insert("String".to_string(), medi::types::MediType::String);
     let mut checker = DefaultTypeChecker::new_with_env(env);
@@ -58,7 +58,7 @@ fn test_clinical_rule_valid() {
         }
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
-    let mut env = TypeEnv::new();
+    let mut env = TypeEnv::with_prelude();
     let mut patient_fields = HashMap::new();
     patient_fields.insert("bp".to_string(), medi::types::MediType::Int);
     env.insert("patient".to_string(), medi::types::MediType::Struct(patient_fields));
@@ -82,7 +82,7 @@ fn test_clinical_rule_invalid_condition() {
         }
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
-    let mut env = TypeEnv::new();
+    let mut env = TypeEnv::with_prelude();
     env.insert("patient".to_string(), medi::types::MediType::Struct(Default::default()));
     env.insert("alert".to_string(), medi::types::MediType::String);
     env.insert("String".to_string(), medi::types::MediType::String);
@@ -105,7 +105,7 @@ fn test_medical_transformation_valid() {
         }
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
-    let mut env = TypeEnv::new();
+    let mut env = TypeEnv::with_prelude();
     env.insert("patient".to_string(), medi::types::MediType::Int);
     env.insert("NormalizeBP".to_string(), medi::types::MediType::Function { params: vec![medi::types::MediType::Int], return_type: Box::new(medi::types::MediType::Int) });
     let mut checker = DefaultTypeChecker::new_with_env(env);
@@ -125,7 +125,7 @@ fn test_medical_transformation_wrong_input() {
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
     println!("[DEBUG] AST for medical transformation wrong input: {:#?}", stmts);
-    let mut env = TypeEnv::new();
+    let mut env = TypeEnv::with_prelude();
     env.insert("patient".to_string(), medi::types::MediType::String);
     env.insert("NormalizeBP".to_string(), medi::types::MediType::Function { params: vec![medi::types::MediType::Int], return_type: Box::new(medi::types::MediType::Int) });
     let mut type_checker = DefaultTypeChecker::new_with_env(env);

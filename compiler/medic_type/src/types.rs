@@ -23,10 +23,16 @@ pub enum MediType {
     HealthcareEntity(HealthcareEntityKind),
     /// Domain-specific first-class types
     PatientId,
+    /// Electronic health record or chart abstraction
+    MedicalRecord,
     Vital,
     LabResult,
     FHIRPatient,
     Observation,
+    /// Clinical diagnosis type
+    Diagnosis,
+    /// Medication entity (order/administration)
+    Medication,
     Function {
         params: Vec<MediType>,
         return_type: Box<MediType>,

@@ -15,7 +15,7 @@ mod tests {
 
     #[test]
     fn test_type_env_insert_and_get() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         env.insert("x".to_string(), MediType::Int);
         assert_eq!(env.get("x"), Some(&MediType::Int));
         assert_eq!(env.get("y"), None);
@@ -23,7 +23,7 @@ mod tests {
 
     #[test]
     fn test_type_checker_literal() {
-        let mut env = TypeEnv::new();
+        let mut env = TypeEnv::with_prelude();
         let mut checker = TypeChecker::new(&mut env);
         let expr = ExpressionNode::Literal(LiteralNode::Int(42));
         assert_eq!(checker.check_expr(&expr), MediType::Int);
