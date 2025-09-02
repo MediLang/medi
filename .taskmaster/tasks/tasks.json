@@ -133,7 +133,7 @@
               1
             ],
             "details": "Extend the AST to support optional type annotations in let statements. Update the parser to recognize and parse type annotations in the form 'let x: Type = value;'. Modify the type checker to validate that the inferred type of the initializer matches the explicit type annotation. Implement proper error reporting for type mismatches between annotations and initializers. Add support for type checking let statements without initializers but with type annotations.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 6,

@@ -33,6 +33,157 @@ mod statements_test {
     }
 
     #[test]
+    fn test_let_with_annotation_and_initializer() {
+        let input = "let x: Int = 1;";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, stmt) = parse_let_statement(token_slice).unwrap();
+        match stmt {
+            StatementNode::Let(let_stmt) => {
+                assert!(let_stmt.type_annotation.is_some());
+                assert!(matches!(
+                    let_stmt.value,
+                    ExpressionNode::Literal(LiteralNode::Int(1))
+                ));
+            }
+            _ => panic!("Expected Let statement, got: {:?}", stmt),
+        }
+    }
+
+    #[test]
+    fn test_let_with_annotation_no_initializer() {
+        let input = "let x: Int;";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_, stmt) = parse_let_statement(token_slice).unwrap();
+        match stmt {
+            StatementNode::Let(let_stmt) => {
+                assert!(let_stmt.type_annotation.is_some());
+                assert!(let_stmt.value.is_none());
+            }
+            _ => panic!("Expected Let statement, got: {:?}", stmt),
+        }
+    }
+
+    #[test]
+    fn test_let_with_annotation_and_initializer_missing_semicolon() {
+        // Parser intentionally tolerates missing semicolon after let
+        let input = "let x: Int = 1";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let res = parse_let_statement(token_slice);
+        assert!(res.is_ok());
+    }
+
+    // Negative and edge-case tests for malformed annotations
+    #[test]
+    fn test_let_annotation_missing_type_after_colon() {
+        let input = "let x: = 1;";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_let_statement(ts).is_err());
+    }
+
+    #[test]
+    fn test_let_annotation_missing_name_before_colon() {
+        let input = "let : Int = 1;";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_let_statement(ts).is_err());
+    }
+
+    #[test]
+    fn test_let_annotation_double_colon() {
+        let input = "let x:: Int = 1;";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_let_statement(ts).is_err());
+    }
+
+    #[test]
+    fn test_let_annotation_missing_colon_between_name_and_type() {
+        let input = "let x Int = 1;";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_let_statement(ts).is_err());
+    }
+
+    #[test]
+    fn test_let_annotation_extra_tokens_in_annotation() {
+        // Extra identifier after a valid type annotation should cause parse error
+        let input = "let x: Int Int = 1;";
+        let (ts, _tokens) = str_to_token_slice(input);
+        assert!(parse_let_statement(ts).is_err());
+    }
+
+    // Additional coverage per request
+    #[test]
+    fn test_let_annotation_unknown_type_identifier_parses_ok() {
+        // Parser only checks syntax; unknown type names are for the type checker
+        let input = "let x: Foo = 1;";
+        let (ts, _toks) = str_to_token_slice(input);
+        let (_rem, stmt) = parse_let_statement(ts).expect("parser should accept unknown type name");
+        if let StatementNode::Let(let_stmt) = stmt {
+            match let_stmt.type_annotation {
+                Some(ExpressionNode::Identifier(id)) => assert_eq!(id.name, "Foo"),
+                other => panic!("expected identifier type ann, got {other:?}"),
+            }
+        } else {
+            panic!("expected let stmt");
+        }
+    }
+
+    #[test]
+    fn test_let_annotation_allows_whitespace_after_colon() {
+        let input = "let x:    Int = 1;";
+        let (ts, _toks) = str_to_token_slice(input);
+        let res = parse_let_statement(ts);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_let_annotation_only_whitespace_then_semicolon_errors() {
+        let input = "let x:   ;";
+        let (ts, _toks) = str_to_token_slice(input);
+        assert!(parse_let_statement(ts).is_err());
+    }
+
+    #[test]
+    fn test_let_annotation_trailing_comma_leaves_remaining_tokens() {
+        let input = "let x: Int, = 1;";
+        let (ts, _toks) = str_to_token_slice(input);
+        let (rem, stmt) = parse_let_statement(ts).expect("parser should produce let stmt");
+        if let StatementNode::Let(let_stmt) = stmt {
+            assert!(matches!(let_stmt.type_annotation, Some(ExpressionNode::Identifier(_))));
+        } else { panic!("expected let stmt"); }
+        // Ensure comma remains for caller to handle
+        assert!(matches!(rem.peek().map(|t| &t.token_type), Some(medic_lexer::token::TokenType::Comma)));
+    }
+
+    #[test]
+    fn test_let_annotation_complex_brackets_not_consumed() {
+        // Only simple identifier is parsed as type; '[' remains
+        let input = "let x: List[Int] = [];";
+        let (ts, _toks) = str_to_token_slice(input);
+        let (rem, stmt) = parse_let_statement(ts).expect("parser should accept simple id type");
+        if let StatementNode::Let(let_stmt) = stmt {
+            match let_stmt.type_annotation {
+                Some(ExpressionNode::Identifier(id)) => assert_eq!(id.name, "List"),
+                other => panic!("expected identifier type ann, got {other:?}"),
+            }
+        } else { panic!("expected let stmt"); }
+        assert!(matches!(rem.peek().map(|t| &t.token_type), Some(medic_lexer::token::TokenType::LeftBracket)));
+    }
+
+    #[test]
+    fn test_let_annotation_complex_generics_not_consumed() {
+        // Only simple identifier is parsed as type; '<' remains
+        let input = "let x: List<Int>;";
+        let (ts, _toks) = str_to_token_slice(input);
+        let (rem, stmt) = parse_let_statement(ts).expect("parser should accept simple id type");
+        if let StatementNode::Let(let_stmt) = stmt {
+            match let_stmt.type_annotation {
+                Some(ExpressionNode::Identifier(id)) => assert_eq!(id.name, "List"),
+                other => panic!("expected identifier type ann, got {other:?}"),
+            }
+        } else { panic!("expected let stmt"); }
+        assert!(matches!(rem.peek().map(|t| &t.token_type), Some(medic_lexer::token::TokenType::Less)));
+    }
+
+    #[test]
     fn test_assignment_statement() {
         let input = "x = 42;";
         let (token_slice, _tokens) = str_to_token_slice(input);
