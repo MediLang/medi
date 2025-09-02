@@ -2,11 +2,13 @@ use std::env;
 use std::fs;
 use std::io::{self, Read};
 
+use medic_env::env::TypeEnv;
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
 use medic_parser::parser::{
     parse_program_recovering, parse_program_with_diagnostics, render_snippet, TokenSlice,
 };
+use medic_typeck::type_checker::TypeChecker;
 
 fn main() {
     // Read source either from first CLI argument (file path) or stdin
@@ -34,12 +36,26 @@ fn main() {
 
     // First, try strict parse that returns a single diagnostic on error
     match parse_program_with_diagnostics(input) {
-        Ok(_program) => {
+        Ok(program) => {
             // Also run the recovering path to surface non-fatal diagnostics (e.g., lexer errors)
             let mut diags = Vec::new();
             let _ = parse_program_recovering(TokenSlice::new(&tokens), &mut diags);
             for d in diags {
                 eprintln!("{}", render_snippet(&d, &source));
+            }
+
+            // Run type checking and inference over the parsed program
+            let mut env = TypeEnv::with_prelude();
+            let mut checker = TypeChecker::new(&mut env);
+            let mut type_errors = checker.check_program(&program);
+            // Include any collected validation/type errors from expression checks
+            type_errors.extend(checker.take_errors());
+
+            if !type_errors.is_empty() {
+                for err in &type_errors {
+                    eprintln!("type error: {err}");
+                }
+                std::process::exit(1);
             }
         }
         Err(diag) => {

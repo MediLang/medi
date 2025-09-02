@@ -13,6 +13,8 @@ pub enum MediType {
     Void,
     Unknown,
     Range(Box<MediType>),
+    /// Quantity wrapper for numeric values, e.g., results of medical operators like 'of'
+    Quantity(Box<MediType>),
     // For struct-like types (member access)
     Struct(HashMap<String, MediType>),
     // For records (named fields, e.g. healthcare queries)
@@ -51,7 +53,11 @@ impl MediType {
     /// assert!(!MediType::Bool.is_numeric());
     /// ```
     pub fn is_numeric(&self) -> bool {
-        matches!(self, MediType::Int | MediType::Float)
+        match self {
+            MediType::Int | MediType::Float => true,
+            MediType::Quantity(inner) => inner.is_numeric(),
+            _ => false,
+        }
     }
 
     /// Determines whether two `MediType` values can be compared.
@@ -89,6 +95,10 @@ impl MediType {
             (a, b) if a == b => true,
             // Widening conversion: Int to Float
             (MediType::Int, MediType::Float) => true,
+            // Quantity assignability (structurally): Quantity(T) -> Quantity(U) if T -> U
+            (MediType::Quantity(inner_s), MediType::Quantity(inner_t)) => {
+                inner_s.is_assignable_to(inner_t)
+            }
             _ => false,
         }
     }

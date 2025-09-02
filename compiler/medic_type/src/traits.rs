@@ -27,6 +27,8 @@ pub struct ValidationCtx {
     pub snomed_codes: std::collections::HashSet<String>,
     /// Reference ranges keyed by (code, unit) -> (min, max)
     pub reference_ranges: std::collections::HashMap<(String, String), (f64, f64)>,
+    /// Known contraindicated medication pairs (stored in case-insensitive, sorted order)
+    pub contraindicated_meds: std::collections::HashSet<(String, String)>,
 }
 
 impl ValidationCtx {
@@ -62,11 +64,27 @@ impl ValidationCtx {
         reference_ranges.insert(("2345-7".into(), "mg/dL".into()), (70.0, 99.0));
         reference_ranges.insert(("2345-7".into(), "mmol/L".into()), (3.9, 5.5));
 
+        // Demo contraindicated medication pairs
+        let mut contraindicated_meds: HashSet<(String, String)> = HashSet::new();
+        // Store pairs sorted case-insensitively for easy lookup
+        let norm_pair = |a: &str, b: &str| -> (String, String) {
+            let a_l = a.to_ascii_lowercase();
+            let b_l = b.to_ascii_lowercase();
+            if a_l <= b_l {
+                (a_l, b_l)
+            } else {
+                (b_l, a_l)
+            }
+        };
+        contraindicated_meds.insert(norm_pair("warfarin", "ibuprofen"));
+        contraindicated_meds.insert(norm_pair("nitroglycerin", "sildenafil"));
+
         ValidationCtx {
             ucum_units,
             loinc_to_units,
             snomed_codes,
             reference_ranges,
+            contraindicated_meds,
         }
     }
 
@@ -90,6 +108,15 @@ impl ValidationCtx {
         self.reference_ranges
             .get(&(code.to_string(), unit.to_string()))
             .cloned()
+    }
+
+    /// Returns true if the two medication names form a known contraindicated pair.
+    /// Matching is case-insensitive and order-insensitive.
+    pub fn is_contraindicated_meds(&self, a: &str, b: &str) -> bool {
+        let a_l = a.to_ascii_lowercase();
+        let b_l = b.to_ascii_lowercase();
+        let key = if a_l <= b_l { (a_l, b_l) } else { (b_l, a_l) };
+        self.contraindicated_meds.contains(&key)
     }
 }
 
