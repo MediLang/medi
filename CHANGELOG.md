@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Comprehensive type annotation tests for `let` statements in `tests/src/let_annotations.rs`:
+  - Match, mismatch, and inference scenarios
+  - Healthcare-specific annotations (e.g., `PatientId`)
+  - Complex nested struct annotations across `type` declarations
+  - Side type-table assertions via `TypeChecker::type_table()`
+
+- Healthcare-specific type system capabilities:
+  - Core medical types: `PatientId`, `Vital`, `LabResult`, `FHIRPatient`, `Observation`, etc.
+  - Type inference for local `let` bindings and expressions
+  - Privacy annotations and enforcement (e.g., `PHI`, `Pseudonymized`, `Anonymized`, `Authorized`, `AuthorizedFor`)
+  - Environment-driven sink/de-identification recognition (`TypeEnv::{get_sink_fn,is_deid_fn}` integration)
+  - HIPAA-style privacy/data-flow checks with detailed diagnostics
+  - Unit tests covering healthcare types and privacy flows (see `tests/src/hipaa.rs`)
+
+### Changed
+- Aligned tests with current checker semantics for unknown annotations: `let y: Foo;` binds `Unknown` and records it in the type table (no error).
+- Minor test construction fixes to match current `medic_ast` shapes (boxed nodes and span placement) and avoid borrow conflicts when reading `TypeChecker` side tables.
+
 ## [v0.0.1] - 2025-08-26
 
 ### Added

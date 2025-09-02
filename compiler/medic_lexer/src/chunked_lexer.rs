@@ -2094,7 +2094,7 @@ mod tests {
             // strings (keep simple and valid)
             "\"hello\"",
             "\"a\\\"b\"",
-            "\"line1\nline2\"",
+            "\"line1\\nline2\"",
             "\"unicode 😀\"",
             // whitespace and comments (skipped by lexer)
             " ",
