@@ -4,6 +4,11 @@ Welcome to the MediLang blog! Here you'll find the latest updates, technical dee
 
 ## Latest Posts
 
+### [MediLang v0.0.2 Released: Healthcare Types, Type Annotation Tests, and Privacy Flows](posts/2025-09-02-v0-0-2-release.md)
+
+*September 2, 2025*  
+Type annotation tests for let bindings, healthcare-native types, HIPAA-style privacy flows, and lexer reliability improvements.
+
 ### [MediLang v0.0.1 Released: Lexer, Parser, AST, and Clinician‑Friendly Errors](posts/2025-08-26-v0-0-1-release.md)
 
 *August 26, 2025*  
