@@ -57,8 +57,8 @@ fn test_long_tokens_and_performance_smoke() {
     // Very long identifier and string should tokenize without errors or stack overflow
     let long_ident = "a".repeat(2_000);
     let long_string_inner = "b".repeat(3_000);
-    let long_string = format!("\"{}\"", long_string_inner);
-    let input = format!("{}\n{}", long_ident, long_string);
+    let long_string = format!("\"{long_string_inner}\"");
+    let input = format!("{long_ident}\n{long_string}");
 
     let lexer = ChunkedLexer::from_reader(std::io::Cursor::new(input), Default::default());
     let tokens: Vec<_> = lexer.collect();
@@ -79,10 +79,8 @@ fn test_lex_prd_phase1_examples_no_errors() {
         .join("docs")
         .join("PRD-Phase-1.txt");
 
-    let content = std::fs::read_to_string(&prd_path).expect(&format!(
-        "Failed to read PRD file at {}",
-        prd_path.display()
-    ));
+    let content = std::fs::read_to_string(&prd_path)
+        .unwrap_or_else(|_| panic!("Failed to read PRD file at {}", prd_path.display()));
 
     // Extract fenced code blocks ``` ... ```
     let mut in_block = false;

@@ -42,7 +42,7 @@ mod statements_test {
                     "Expected literal 42, got {lit:?}"
                 );
             } else {
-                panic!("Expected a literal value, got: {:?}", val);
+                panic!("Expected a literal value, got: {val:?}");
             }
         } else {
             panic!("Expected a let statement, got: {stmt:?}");
@@ -73,8 +73,8 @@ mod statements_test {
                 assert_eq!(ident.name, "x");
             } else {
                 panic!(
-                    "Expected identifier 'x' as match expression, got {:?}",
-                    match_stmt.expr
+                    "Expected identifier 'x' as match expression, got {expr:?}",
+                    expr = match_stmt.expr
                 );
             }
 
@@ -87,8 +87,8 @@ mod statements_test {
                     // Pattern matches 1
                 }
                 _ => panic!(
-                    "Expected literal pattern in first arm, got {:?}",
-                    match_stmt.arms[0].pattern
+                    "Expected literal pattern in first arm, got {pat:?}",
+                    pat = match_stmt.arms[0].pattern
                 ),
             }
 
@@ -110,8 +110,8 @@ mod statements_test {
                     }
                 }
                 _ => panic!(
-                    "Expected wildcard pattern in second arm, got {:?}",
-                    match_stmt.arms[1].pattern
+                    "Expected wildcard pattern in second arm, got {pat:?}",
+                    pat = match_stmt.arms[1].pattern
                 ),
             }
         } else {
@@ -134,8 +134,8 @@ mod statements_test {
                     assert_eq!(ident.name, "x");
                 } else {
                     panic!(
-                        "Expected 'x' as left operand of binary expression, got {:?}",
-                        bin_expr.left
+                        "Expected 'x' as left operand of binary expression, got {left:?}",
+                        left = bin_expr.left
                     );
                 }
                 assert_eq!(bin_expr.operator.to_string(), "+");
@@ -151,14 +151,14 @@ mod statements_test {
                     assert_eq!(ident.name, "1");
                 } else {
                     panic!(
-                        "Expected 1 as right operand of binary expression, got {:?}",
-                        bin_expr.right
+                        "Expected 1 as right operand of binary expression, got {right:?}",
+                        right = bin_expr.right
                     );
                 }
             } else {
                 panic!(
-                    "Expected binary expression as match expression, got {:?}",
-                    match_stmt.expr
+                    "Expected binary expression as match expression, got {expr:?}",
+                    expr = match_stmt.expr
                 );
             }
         } else {

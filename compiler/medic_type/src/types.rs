@@ -104,6 +104,66 @@ impl MediType {
     }
 }
 
+/// Coarse sink categories used for contextual authorization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SinkClass {
+    Log,
+    Print,
+    Export,
+    Network,
+    File,
+}
+
+/// Privacy label for data classification and access control.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrivacyAnnotation {
+    /// Protected Health Information; sensitive by default
+    PHI,
+    /// Pseudonymized data (identifiers replaced, but still potentially re-identifiable)
+    Pseudonymized,
+    /// De-identified / anonymized data
+    Anonymized,
+    /// PHI that has explicit authorization for the current flow
+    Authorized,
+    /// PHI with explicit authorization limited to the specified sink class
+    AuthorizedFor(SinkClass),
+}
+
+impl PrivacyAnnotation {
+    /// Conservative join of two privacy labels for data-flow propagation.
+    /// Rules:
+    /// - PHI with anything -> PHI (most restrictive dominates)
+    /// - Authorized with Authorized -> Authorized
+    /// - Authorized with Anonymized -> Authorized (still PHI-capable)
+    /// - Authorized with Pseudonymized -> PHI (conservatively treat as PHI)
+    /// - Pseudonymized with Pseudonymized -> Pseudonymized
+    /// - Pseudonymized with Anonymized -> Pseudonymized
+    /// - Anonymized with Anonymized -> Anonymized
+    pub fn join(self, other: PrivacyAnnotation) -> PrivacyAnnotation {
+        use PrivacyAnnotation::*;
+        match (self, other) {
+            (PHI, _) | (_, PHI) => PHI,
+            (Authorized, Authorized) => Authorized,
+            (Authorized, Anonymized) | (Anonymized, Authorized) => Authorized,
+            (Authorized, Pseudonymized) | (Pseudonymized, Authorized) => PHI,
+            // AuthorizedFor joins
+            (AuthorizedFor(a), AuthorizedFor(b)) => {
+                if a == b {
+                    AuthorizedFor(a)
+                } else {
+                    PHI
+                }
+            }
+            (AuthorizedFor(_a), Authorized) | (Authorized, AuthorizedFor(_a)) => Authorized,
+            (AuthorizedFor(_a), Anonymized) | (Anonymized, AuthorizedFor(_a)) => AuthorizedFor(_a),
+            (AuthorizedFor(_), Pseudonymized) | (Pseudonymized, AuthorizedFor(_)) => PHI,
+            (Pseudonymized, Pseudonymized) => Pseudonymized,
+            (Pseudonymized, Anonymized) | (Anonymized, Pseudonymized) => Pseudonymized,
+            (Anonymized, Anonymized) => Anonymized,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum HealthcareEntityKind {
     Patient,

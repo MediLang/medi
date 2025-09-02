@@ -3,7 +3,7 @@
 
 use medic_ast::ast::*;
 use medic_ast::visit::Span;
-use medic_env::env::TypeEnv;
+use medic_env::env::{SinkKind, TypeEnv};
 use medic_type::traits::{ValidationCtx, ValidationError};
 use medic_type::types::*;
 use std::collections::HashMap;
@@ -16,6 +16,8 @@ pub struct TypeChecker<'a> {
     validation_ctx: Option<&'a ValidationCtx>,
     /// Collected validation/type errors encountered during expression checks
     errors: Vec<TypeError>,
+    /// Side privacy table: maps (start,end) of expression span to its inferred privacy label
+    privacy_table: HashMap<(usize, usize), PrivacyAnnotation>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -25,6 +27,7 @@ impl<'a> TypeChecker<'a> {
             type_table: HashMap::new(),
             validation_ctx: None,
             errors: Vec::new(),
+            privacy_table: HashMap::new(),
         }
     }
 
@@ -52,6 +55,16 @@ impl<'a> TypeChecker<'a> {
     /// Looks up a computed type by a `Span` key.
     pub fn get_type_at_span(&self, span: &Span) -> Option<&MediType> {
         self.type_table.get(&(span.start, span.end))
+    }
+
+    /// Looks up a computed privacy label by a `Span` key.
+    pub fn get_privacy_at_span(&self, span: &Span) -> Option<&PrivacyAnnotation> {
+        self.privacy_table.get(&(span.start, span.end))
+    }
+
+    /// Returns an immutable view of the side privacy table.
+    pub fn privacy_table_map(&self) -> &HashMap<(usize, usize), PrivacyAnnotation> {
+        &self.privacy_table
     }
 
     /// Resolve known builtin type names (primitives and common healthcare types)
@@ -93,6 +106,243 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
+    /// Resolve a privacy annotation from an identifier type annotation, e.g., `: PHI`.
+    fn resolve_privacy_annotation(ty_expr: &ExpressionNode) -> Option<PrivacyAnnotation> {
+        if let ExpressionNode::Identifier(Spanned { node: ident, .. }) = ty_expr {
+            match ident.name() {
+                "PHI" | "Phi" | "phi" => Some(PrivacyAnnotation::PHI),
+                "Pseudonymized" | "Pseudonymised" | "Pseudo" | "pseudonymized" => {
+                    Some(PrivacyAnnotation::Pseudonymized)
+                }
+                "Anonymized" | "Anon" | "anon" | "Deidentified" => {
+                    Some(PrivacyAnnotation::Anonymized)
+                }
+                "Authorized" | "Auth" | "authorized" => Some(PrivacyAnnotation::Authorized),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Returns whether information can legally flow from src to dst privacy label.
+    fn privacy_flow_allowed(src: PrivacyAnnotation, dst: PrivacyAnnotation) -> bool {
+        use PrivacyAnnotation::*;
+        match (src, dst) {
+            // Anonymized can flow anywhere
+            (Anonymized, _) => true,
+            // Pseudonymized can flow to Pseudonymized or PHI; cannot implicitly downgrade to Anonymized
+            (Pseudonymized, Pseudonymized) => true,
+            (Pseudonymized, PHI) => true,
+            (Pseudonymized, Authorized) => false,
+            (Pseudonymized, Anonymized) => false,
+            // Authorized can flow to Authorized, and remain Authorized; cannot downgrade to Anonymized
+            (Authorized, Authorized) => true,
+            (Authorized, Anonymized) => false,
+            (Authorized, Pseudonymized) => false,
+            (Authorized, PHI) => true, // becoming stricter is fine
+            // AuthorizedFor(kind): can flow to same AuthorizedFor(kind) or broader Authorized; cannot flow to different AuthorizedFor or downgrade to Anonymized
+            (PrivacyAnnotation::AuthorizedFor(a), PrivacyAnnotation::AuthorizedFor(b)) => a == b,
+            (PrivacyAnnotation::AuthorizedFor(_), Authorized) => true,
+            (PrivacyAnnotation::AuthorizedFor(_), Anonymized) => false,
+            (PrivacyAnnotation::AuthorizedFor(_), Pseudonymized) => false,
+            (PrivacyAnnotation::AuthorizedFor(_), PHI) => true,
+            // Flows to AuthorizedFor(dest): only allowed if source is AuthorizedFor(same) or Authorized (broader)
+            (Pseudonymized, PrivacyAnnotation::AuthorizedFor(_)) => false,
+            (Authorized, PrivacyAnnotation::AuthorizedFor(_)) => true,
+            (PHI, PrivacyAnnotation::AuthorizedFor(_)) => false,
+            // PHI can flow only to PHI; not to Authorized or Anonymized without explicit authorization context
+            (PHI, PHI) => true,
+            (PHI, Authorized) => false,
+            (PHI, Anonymized) => false,
+            (PHI, Pseudonymized) => false,
+        }
+    }
+
+    /// Infer privacy label of an expression and record it.
+    fn check_expr_privacy(&mut self, expr: &ExpressionNode) -> PrivacyAnnotation {
+        use PrivacyAnnotation::*;
+        let label = match expr {
+            ExpressionNode::Identifier(Spanned { node: name, .. }) => {
+                self.env.get_privacy(name.name()).unwrap_or(Anonymized)
+            }
+            ExpressionNode::Literal(_) => Anonymized,
+            ExpressionNode::IcdCode(_)
+            | ExpressionNode::CptCode(_)
+            | ExpressionNode::SnomedCode(_) => PHI,
+            ExpressionNode::Member(Spanned { node: mem, .. }) => {
+                self.check_expr_privacy(&mem.object)
+            }
+            ExpressionNode::Binary(Spanned { node: bin, .. }) => {
+                let l = self.check_expr_privacy(&bin.left);
+                let r = self.check_expr_privacy(&bin.right);
+                l.join(r)
+            }
+            ExpressionNode::Call(Spanned { node: call, .. }) => {
+                // Recognize callee name for special handling
+                let callee_name = Self::extract_identifier_name(&call.callee);
+
+                // Conservative: start with join of callee and args
+                let mut acc = self.check_expr_privacy(&call.callee);
+                for a in &call.arguments {
+                    acc = acc.join(self.check_expr_privacy(a));
+                }
+
+                // Determine de-identification via env metadata first, fallback to known names
+                let env_deid = callee_name
+                    .as_deref()
+                    .map(|n| self.env.is_deid_fn(n))
+                    .unwrap_or(false);
+                let fallback_deid = matches!(
+                    callee_name.as_deref(),
+                    Some("deidentify")
+                        | Some("anonymize")
+                        | Some("deidentify_patient")
+                        | Some("deid")
+                );
+                if env_deid || fallback_deid {
+                    acc = Anonymized;
+                }
+
+                // Fallback: pseudonymization routines produce Pseudonymized
+                let is_pseudo = matches!(
+                    callee_name.as_deref(),
+                    Some("pseudonymize") | Some("pseudonymise") | Some("pseudo")
+                );
+                if is_pseudo {
+                    acc = PrivacyAnnotation::Pseudonymized;
+                }
+
+                // Determine sink via env metadata first, fallback to known names
+                let env_sink_kind: Option<SinkKind> =
+                    callee_name.as_deref().and_then(|n| self.env.get_sink_fn(n));
+                let fallback_is_sink = matches!(
+                    callee_name.as_deref(),
+                    Some("print")
+                        | Some("println")
+                        | Some("log")
+                        | Some("debug")
+                        | Some("trace")
+                        | Some("export")
+                        | Some("writeFile")
+                        | Some("write_file")
+                        | Some("save")
+                        | Some("send_http")
+                        | Some("http_post")
+                        | Some("http_get")
+                        | Some("network_send")
+                        | Some("send")
+                );
+
+                if env_sink_kind.is_some() || fallback_is_sink {
+                    // Determine sink kind and class
+                    let kind = env_sink_kind;
+                    // Policy: per-sink and per-kind minimum requirement
+                    if let Some(k) = kind {
+                        if let Some(min) = self
+                            .env
+                            .get_sink_min_privacy(callee_name.as_deref().unwrap_or(""))
+                            .or_else(|| self.env.get_sink_kind_min_privacy(k))
+                        {
+                            if !crate::runtime::meets_min(acc, min) {
+                                let name = callee_name.as_deref().unwrap_or("<unknown>");
+                                self.errors.push(TypeError::PolicyViolation {
+                                    reason: format!(
+                                        "label {acc:?} does not meet minimum {min:?} for sink '{name}'"
+                                    ),
+                                });
+                            }
+                        }
+                    }
+
+                    // HIPAA core restrictions
+                    let is_violation = match acc {
+                        PHI => true,
+                        PrivacyAnnotation::Pseudonymized => {
+                            matches!(kind, Some(SinkKind::Network) | Some(SinkKind::File))
+                        }
+                        PrivacyAnnotation::AuthorizedFor(c) => match kind {
+                            Some(SinkKind::Log) if c == medic_type::types::SinkClass::Log => false,
+                            Some(SinkKind::Print) if c == medic_type::types::SinkClass::Print => {
+                                false
+                            }
+                            Some(SinkKind::Export) if c == medic_type::types::SinkClass::Export => {
+                                false
+                            }
+                            Some(SinkKind::Network)
+                                if c == medic_type::types::SinkClass::Network =>
+                            {
+                                false
+                            }
+                            Some(SinkKind::File) if c == medic_type::types::SinkClass::File => {
+                                false
+                            }
+                            Some(_) => true,
+                            None => true,
+                        },
+                        _ => false,
+                    };
+                    if is_violation {
+                        let name = callee_name.as_deref().unwrap_or("<unknown>");
+                        let kind_str = env_sink_kind
+                            .map(|k| match k {
+                                SinkKind::Log => "log",
+                                SinkKind::Print => "print",
+                                SinkKind::Export => "export",
+                                SinkKind::Network => "network",
+                                SinkKind::File => "file",
+                            })
+                            .unwrap_or("sink");
+                        self.errors.push(TypeError::PrivacyViolation {
+                            reason: format!(
+                                "HIPAA violation: {acc:?} passed to {kind_str} '{name}'",
+                            ),
+                        });
+                    }
+                }
+
+                acc
+            }
+            ExpressionNode::HealthcareQuery(_) => PHI,
+            ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                let mut acc = Anonymized;
+                for el in &arr.elements {
+                    acc = acc.join(self.check_expr_privacy(el));
+                }
+                acc
+            }
+            ExpressionNode::Struct(Spanned { node: s, .. }) => {
+                // Heuristic: if any field appears PHI-like, mark PHI; otherwise anonymized
+                let mut acc = Anonymized;
+                for f in &s.fields {
+                    acc = acc.join(self.check_expr_privacy(&f.value));
+                }
+                acc
+            }
+            ExpressionNode::Statement(Spanned { node: stmt, .. }) => match &**stmt {
+                StatementNode::Expr(e) => self.check_expr_privacy(e),
+                _ => Anonymized,
+            },
+        };
+        let sp = expr.span();
+        self.privacy_table.insert((sp.start, sp.end), label);
+        label
+    }
+
+    /// Helper: best-effort extract identifier name from an expression (Identifier or Member callee).
+    fn extract_identifier_name(expr: &ExpressionNode) -> Option<String> {
+        match expr {
+            ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
+                Some(ident.name().to_string())
+            }
+            ExpressionNode::Member(Spanned { node: mem, .. }) => {
+                // Use property name as the callee if method call style
+                Some(mem.property.name().to_string())
+            }
+            _ => None,
+        }
+    }
+
     /// Infers and returns the type of a given expression node in the Medic language.
     ///
     /// This method analyzes the provided expression node and determines its type according to Medic's type system rules. It supports literals, identifiers, binary operations (including arithmetic, comparison, logical, medical, range, unit conversion, bitwise, and null-coalescing operators), function calls, member access on structs, and healthcare-specific query expressions. If the type cannot be determined or is unsupported, `MediType::Unknown` is returned.
@@ -117,6 +367,8 @@ impl<'a> TypeChecker<'a> {
     /// assert_eq!(checker.check_expr(&expr), MediType::Int);
     /// ```
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
+        // Always compute privacy label alongside type
+        let _privacy = self.check_expr_privacy(expr);
         let ty = match expr {
             ExpressionNode::IcdCode(Spanned { node: _, .. })
             | ExpressionNode::CptCode(Spanned { node: _, .. }) => MediType::String,
@@ -457,8 +709,42 @@ impl<'a> TypeChecker<'a> {
                     .as_ref()
                     .map(|e| self.resolve_annotation_type(e));
 
+                // If annotation corresponds to a privacy label, set it for the binding
+                if let Some(ann) = let_stmt
+                    .type_annotation
+                    .as_ref()
+                    .and_then(Self::resolve_privacy_annotation)
+                {
+                    self.env.set_privacy(let_stmt.name.name().to_string(), ann);
+                }
+
                 // Check optional initializer
                 let init_ty = let_stmt.value.as_ref().map(|expr| self.check_expr(expr));
+                // Privacy of initializer
+                let init_priv = let_stmt
+                    .value
+                    .as_ref()
+                    .map(|expr| self.check_expr_privacy(expr));
+
+                // If binding already has a privacy label, enforce flow from initializer
+                if let Some(dst_label) = self.env.get_privacy(let_stmt.name.name()) {
+                    if let Some(src_label) = init_priv {
+                        if !Self::privacy_flow_allowed(src_label, dst_label) {
+                            self.errors.push(TypeError::PrivacyViolation {
+                                reason: format!(
+                                    "Illegal data flow: {:?} -> {:?} for binding '{}'",
+                                    src_label,
+                                    dst_label,
+                                    let_stmt.name.name()
+                                ),
+                            });
+                        }
+                    }
+                } else if let Some(src_label) = init_priv {
+                    // Default: set privacy to source label on first definition
+                    self.env
+                        .set_privacy(let_stmt.name.name().to_string(), src_label);
+                }
 
                 // If both present, ensure compatibility
                 if let (Some(exp), Some(found)) = (annotated_ty.clone(), init_ty.clone()) {
@@ -485,10 +771,27 @@ impl<'a> TypeChecker<'a> {
             }
             StatementNode::Assignment(assign) => {
                 let value_ty = self.check_expr(&assign.value);
+                let value_priv = self.check_expr_privacy(&assign.value);
                 match &assign.target {
                     ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
                         if let Some(target_ty) = self.env.get(ident.name()) {
                             if value_ty.is_assignable_to(target_ty) {
+                                // Privacy enforcement
+                                if let Some(dst_priv) = self.env.get_privacy(ident.name()) {
+                                    if !Self::privacy_flow_allowed(value_priv, dst_priv) {
+                                        self.errors.push(TypeError::PrivacyViolation {
+                                            reason: format!(
+                                                "Illegal data flow: {:?} -> {:?} for '{}')",
+                                                value_priv,
+                                                dst_priv,
+                                                ident.name()
+                                            ),
+                                        });
+                                    }
+                                } else {
+                                    // If target had no privacy, inherit from source
+                                    self.env.set_privacy(ident.name().to_string(), value_priv);
+                                }
                                 Ok(())
                             } else {
                                 Err(TypeError::TypeMismatch {
@@ -506,6 +809,19 @@ impl<'a> TypeChecker<'a> {
                     }
                     _ => Err(TypeError::InvalidAssignmentTarget),
                 }
+            }
+            StatementNode::Return(ret) => {
+                if let Some(expr) = &ret.value {
+                    let privy = self.check_expr_privacy(expr);
+                    if matches!(privy, PrivacyAnnotation::PHI) {
+                        self.errors.push(TypeError::PrivacyViolation {
+                            reason: "HIPAA violation: returning PHI across function boundary"
+                                .to_string(),
+                        });
+                    }
+                    let _ = self.check_expr(expr);
+                }
+                Ok(())
             }
             StatementNode::Expr(expr) => {
                 let _ = self.check_expr(expr);
@@ -598,12 +914,6 @@ impl<'a> TypeChecker<'a> {
                 // Minimal stub
                 Ok(())
             }
-            StatementNode::Return(ret) => {
-                if let Some(expr) = &ret.value {
-                    let _ = self.check_expr(expr);
-                }
-                Ok(())
-            }
             StatementNode::Function(fun) => {
                 // Build param types
                 let mut param_tys = Vec::new();
@@ -669,6 +979,14 @@ pub enum TypeError {
     },
     InvalidAssignmentTarget,
     ConditionNotBool(MediType),
+    /// Privacy/access-control violations (e.g., PHI -> Anonymized flow)
+    PrivacyViolation {
+        reason: String,
+    },
+    /// Policy violations (environment-configured minimums, etc.)
+    PolicyViolation {
+        reason: String,
+    },
     /// Validation errors coming from UCUM/LOINC/SNOMED checks
     ValidationFailed(ValidationError),
 }
@@ -690,6 +1008,8 @@ impl std::fmt::Display for TypeError {
             TypeError::ConditionNotBool(found) => {
                 write!(f, "Condition must be Bool, found {found:?}.")
             }
+            TypeError::PrivacyViolation { reason } => write!(f, "Privacy violation: {reason}"),
+            TypeError::PolicyViolation { reason } => write!(f, "Policy violation: {reason}"),
             TypeError::ValidationFailed(err) => {
                 write!(f, "Validation failed: {err}")
             }

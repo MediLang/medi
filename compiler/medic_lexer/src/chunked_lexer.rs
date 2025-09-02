@@ -1901,11 +1901,7 @@ mod tests {
                 )
                 .collect::<Vec<_>>(),
             );
-            assert_eq!(
-                chunked, plain,
-                "mismatch at chunk_size={} for '{}'",
-                cs, input
-            );
+            assert_eq!(chunked, plain, "mismatch at chunk_size={cs} for '{input}'",);
         }
     }
 
@@ -1922,11 +1918,7 @@ mod tests {
                     )
                     .collect::<Vec<_>>(),
                 );
-                assert_eq!(
-                    chunked, plain,
-                    "mismatch at chunk_size={} for '{}'",
-                    cs, input
-                );
+                assert_eq!(chunked, plain, "mismatch at chunk_size={cs} for '{input}'",);
             }
         }
     }
@@ -1938,13 +1930,11 @@ mod tests {
             let res =
                 ChunkedLexer::from_reader(Cursor::new(input), ChunkedLexerConfig { chunk_size: 2 })
                     .tokenize();
-            assert!(res.is_err(), "expected error for '{}'", input);
+            assert!(res.is_err(), "expected error for '{input}'");
             let err = res.err().unwrap();
             assert!(
                 err.contains(input),
-                "error message '{}' does not contain expected lexeme '{}'",
-                err,
-                input
+                "error message '{err}' does not contain expected lexeme '{input}'",
             );
         }
     }
@@ -1966,11 +1956,7 @@ mod tests {
                 )
                 .collect::<Vec<_>>(),
             );
-            assert_eq!(
-                chunked, plain,
-                "mismatch at chunk_size={} for '{}'",
-                cs, input
-            );
+            assert_eq!(chunked, plain, "mismatch at chunk_size={cs} for '{input}'",);
         }
     }
 
@@ -2008,8 +1994,7 @@ mod tests {
                 );
                 assert_eq!(
                     chunked, plain,
-                    "mismatch at chunk_size={} for input=\n{}",
-                    cs, input
+                    "mismatch at chunk_size={cs} for input=\n{input}",
                 );
             }
         }

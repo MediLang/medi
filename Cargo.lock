@@ -469,6 +469,8 @@ dependencies = [
  "medic_parser",
  "medic_type",
  "medic_typeck",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -856,6 +858,12 @@ dependencies = [
 [[package]]
 name = "tests"
 version = "0.1.0"
+dependencies = [
+ "medic_ast",
+ "medic_env",
+ "medic_type",
+ "medic_typeck",
+]
 
 [[package]]
 name = "thiserror"

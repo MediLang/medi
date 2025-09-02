@@ -123,7 +123,7 @@
               3
             ],
             "details": "Implement privacy annotation types (PHI, Anonymized, Authorized). Create access control type checking for patient data. Develop data flow analysis to track sensitive information. Implement HIPAA compliance type checks. Test with privacy violation scenarios. Integration points: Integrate with error reporting system and provide safety verification API for the runtime.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 5,

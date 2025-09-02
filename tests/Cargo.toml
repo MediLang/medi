@@ -6,3 +6,7 @@ edition = "2021"
 description = "Integration and system tests for the Medic compiler."
 
 [dependencies]
+medic_ast = { path = "../compiler/medic_ast" }
+medic_env = { path = "../compiler/medic_env" }
+medic_type = { path = "../compiler/medic_type" }
+medic_typeck = { path = "../compiler/medic_typeck" }
