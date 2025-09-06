@@ -12,4 +12,9 @@ medic_type = { path = "../medic_type" }
 medic_typeck = { path = "../medic_typeck" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+medic_codegen_llvm = { path = "../medic_codegen_llvm", optional = true }
+
+[features]
+# Enable the LLVM backend integration (requires system LLVM 15.x)
+llvm-backend = ["medic_codegen_llvm/llvm"]
 

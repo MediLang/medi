@@ -341,6 +341,6 @@ fn create_sample_ast() -> ProgramNode {
     )));
 
     ProgramNode {
-        statements: vec![stmt1, stmt2, stmt3].into(),
+        statements: vec![stmt1, stmt2, stmt3],
     }
 }

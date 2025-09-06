@@ -10,13 +10,13 @@ cargo fmt -- --check --color always
 # Install clippy if not already installed
 rustup component add clippy 2>/dev/null || true
 
-# Run clippy
-cargo clippy -- -D warnings
+# Run clippy (default features only; feature-heavy builds should be tested in CI)
+cargo clippy --workspace --all-targets -- -D warnings
 
-# Run cargo check
-cargo check --all-targets --all-features
+# Run cargo check (avoid --all-features to keep optional backends optional locally)
+cargo check --workspace --all-targets
 
 # Run tests
-cargo test --all-targets --all-features
+cargo test --workspace --all-targets
 
 echo "All checks passed!"

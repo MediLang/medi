@@ -8,6 +8,7 @@ members = [
     "medic_parser",
     "medic_type",
     "medic_typeck",
+    "medic_codegen_llvm",
     "benches"
 ]
 

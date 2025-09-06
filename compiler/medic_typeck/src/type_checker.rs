@@ -1046,7 +1046,7 @@ mod tests {
         let stmt = StatementNode::If(Box::new(IfNode {
             condition: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), Span::default())),
             then_branch: BlockNode {
-                statements: vec![].into(),
+                statements: vec![],
                 span: Span::default(),
             },
             else_branch: None,
@@ -1079,8 +1079,7 @@ mod tests {
                     ))),
                     span: Span::default(),
                 },
-            ]
-            .into(),
+            ],
             return_type: Some(ExpressionNode::Identifier(Spanned::new(
                 IdentifierNode::from_str_name("Int"),
                 Span::default(),
@@ -1094,8 +1093,7 @@ mod tests {
                         Span::default(),
                     ))),
                     span: Span::default(),
-                }))]
-                .into(),
+                }))],
                 span: Span::default(),
             },
             span: Span::default(),
@@ -1409,8 +1407,7 @@ mod tests {
                 arguments: vec![
                     ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), arg1_span)),
                     ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), arg2_span)),
-                ]
-                .into(),
+                ],
             }),
             call_span,
         ));

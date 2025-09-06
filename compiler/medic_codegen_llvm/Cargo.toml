@@ -1,0 +1,16 @@
+[package]
+name = "medic_codegen_llvm"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+# Enable LLVM backend using Inkwell against LLVM 15.x
+llvm = ["dep:inkwell", "inkwell/llvm15-0"]
+
+[dependencies]
+thiserror = "1.0"
+# Inkwell is optional so the workspace builds on machines without LLVM installed.
+inkwell = { version = "0.2", optional = true, default-features = false }
+
+[package.metadata]
+# Documentation hint: Requires LLVM 15.x when enabling the `llvm` feature.

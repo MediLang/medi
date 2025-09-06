@@ -10,6 +10,9 @@ use medic_parser::parser::{
 };
 use medic_typeck::type_checker::TypeChecker;
 
+#[cfg(feature = "llvm-backend")]
+use medic_codegen_llvm::TargetKind;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OutputMode {
     Text,
@@ -21,9 +24,35 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut mode = OutputMode::Text;
     let mut path_arg: Option<String> = None;
+    #[cfg(feature = "llvm-backend")]
+    let mut emit_target: Option<TargetKind> = None;
+    #[cfg(feature = "llvm-backend")]
+    let mut out_path: Option<String> = None;
     for a in args.iter().skip(1) {
         match a.as_str() {
             "--json" | "-j" => mode = OutputMode::Json,
+            #[cfg(feature = "llvm-backend")]
+            s if s == "--emit" || s == "-E" => {
+                // Next arg should be a target
+                // We'll parse it in a second pass if needed; for now just skip here.
+            }
+            #[cfg(feature = "llvm-backend")]
+            s if s.starts_with("--emit=") => {
+                let val = s.splitn(2, '=').nth(1).unwrap_or("");
+                emit_target = match val {
+                    "x86_64" => Some(TargetKind::X86_64),
+                    "wasm32" => Some(TargetKind::Wasm32),
+                    "riscv32" => Some(TargetKind::RiscV32),
+                    other => {
+                        eprintln!("warning: unknown emit target '{other}', expected x86_64|wasm32|riscv32");
+                        None
+                    }
+                };
+            }
+            #[cfg(feature = "llvm-backend")]
+            s if s.starts_with("--out=") => {
+                out_path = s.splitn(2, '=').nth(1).map(|s| s.to_string());
+            }
             s if s.starts_with('-') => {
                 eprintln!("warning: unknown flag '{s}'");
             }
@@ -78,6 +107,36 @@ fn main() {
                             eprintln!("type error: {err}");
                         }
                         std::process::exit(1);
+                    }
+
+                    // Optional: code emission when llvm-backend is enabled
+                    #[cfg(feature = "llvm-backend")]
+                    if let Some(target) = emit_target {
+                        // For now, we invoke the skeleton backend functions as a smoke test.
+                        match medic_codegen_llvm::generate_llvm_ir("/* TODO: pass real AST */")
+                            .and_then(|_| medic_codegen_llvm::optimize_module(0))
+                            .and_then(|_| medic_codegen_llvm::generate_target_code(target))
+                        {
+                            Ok(bytes) => {
+                                if let Some(path) = out_path {
+                                    if let Err(e) = fs::write(&path, &bytes) {
+                                        eprintln!(
+                                            "error: failed to write output file '{path}': {e}"
+                                        );
+                                        std::process::exit(2);
+                                    } else {
+                                        eprintln!("emitted {} bytes to {path}", bytes.len());
+                                    }
+                                } else {
+                                    // If no path provided, write to stdout as binary may be messy; informively print size
+                                    eprintln!("emitted {} bytes (no --out provided)", bytes.len());
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("error: codegen failed: {e}");
+                                std::process::exit(2);
+                            }
+                        }
                     }
                 }
                 OutputMode::Json => {

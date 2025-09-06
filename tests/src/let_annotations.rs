@@ -69,8 +69,7 @@ fn complex_nested_type_annotations_across_typedecls() {
                 name: IdentifierNode::from_str_name("unit").name,
                 type_annotation: fld_unit_ann,
             },
-        ]
-        .into(),
+        ],
         span: type_span,
     }));
 
@@ -95,8 +94,7 @@ fn complex_nested_type_annotations_across_typedecls() {
         fields: vec![TypeField {
             name: IdentifierNode::from_str_name("reading").name,
             type_annotation: reading_ann,
-        }]
-        .into(),
+        }],
         span: outer_span,
     }));
 
@@ -144,8 +142,7 @@ fn complex_nested_type_annotations_across_typedecls() {
                         },
                     )),
                 },
-            ]
-            .into(),
+            ],
         }),
         let_span,
     ));
@@ -155,8 +152,7 @@ fn complex_nested_type_annotations_across_typedecls() {
             fields: vec![StructField {
                 name: IdentifierNode::from_str_name("reading").name,
                 value: inner_struct,
-            }]
-            .into(),
+            }],
         }),
         let_span,
     ));
@@ -242,7 +238,10 @@ fn inference_without_annotation_uses_initializer_type_and_records_side_table() {
         line: 2,
         column: 9,
     };
-    let val = ExpressionNode::Literal(Spanned::new(LiteralNode::Float(3.14), val_span));
+    let val = ExpressionNode::Literal(Spanned::new(
+        LiteralNode::Float(std::f64::consts::PI),
+        val_span,
+    ));
     let stmt = StatementNode::Let(Box::new(LetStatementNode {
         name: IdentifierNode::from_str_name("y"),
         type_annotation: None,
@@ -339,8 +338,7 @@ fn struct_annotation_via_typedecl_and_matching_initializer() {
                 name: IdentifierNode::from_str_name("unit").name,
                 type_annotation: field_unit_ann,
             },
-        ]
-        .into(),
+        ],
         span: type_span,
     }));
 
@@ -388,8 +386,7 @@ fn struct_annotation_via_typedecl_and_matching_initializer() {
                         },
                     )),
                 },
-            ]
-            .into(),
+            ],
         }),
         let_span,
     ));
