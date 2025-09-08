@@ -111,25 +111,20 @@ fn main() {
 
                     // Optional: code emission when llvm-backend is enabled
                     #[cfg(feature = "llvm-backend")]
-                    if let Some(target) = emit_target {
-                        // For now, we invoke the skeleton backend functions as a smoke test.
-                        match medic_codegen_llvm::generate_llvm_ir("/* TODO: pass real AST */")
-                            .and_then(|_| medic_codegen_llvm::optimize_module(0))
-                            .and_then(|_| medic_codegen_llvm::generate_target_code(target))
-                        {
-                            Ok(bytes) => {
+                    if let Some(_target) = emit_target {
+                        // Translate parsed AST to LLVM IR text for now.
+                        match medic_codegen_llvm::generate_ir_string(&program) {
+                            Ok(ir) => {
                                 if let Some(path) = out_path {
-                                    if let Err(e) = fs::write(&path, &bytes) {
-                                        eprintln!(
-                                            "error: failed to write output file '{path}': {e}"
-                                        );
+                                    if let Err(e) = fs::write(&path, ir.as_bytes()) {
+                                        eprintln!("error: failed to write IR file '{path}': {e}");
                                         std::process::exit(2);
                                     } else {
-                                        eprintln!("emitted {} bytes to {path}", bytes.len());
+                                        eprintln!("wrote LLVM IR to {path} ({} bytes)", ir.len());
                                     }
                                 } else {
-                                    // If no path provided, write to stdout as binary may be messy; informively print size
-                                    eprintln!("emitted {} bytes (no --out provided)", bytes.len());
+                                    // Print IR to stdout when no path is provided
+                                    println!("{ir}");
                                 }
                             }
                             Err(e) => {

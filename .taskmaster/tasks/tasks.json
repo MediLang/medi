@@ -176,7 +176,7 @@
               1
             ],
             "details": "Create visitor pattern for AST traversal, implement IR generation for expressions (arithmetic, logical, comparison), handle variable declarations and assignments, implement control flow structures (if/else, loops, functions), manage memory allocations, and ensure proper scope handling for variables",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 3,

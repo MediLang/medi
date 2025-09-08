@@ -11,6 +11,7 @@ llvm = ["dep:inkwell", "inkwell/llvm15-0"]
 thiserror = "1.0"
 # Inkwell is optional so the workspace builds on machines without LLVM installed.
 inkwell = { version = "0.2", optional = true, default-features = false }
+medic_ast = { path = "../medic_ast" }
 
 [package.metadata]
 # Documentation hint: Requires LLVM 15.x when enabling the `llvm` feature.

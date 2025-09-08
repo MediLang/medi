@@ -962,6 +962,7 @@ pub fn get_binary_operator(token_type: &TokenType) -> Option<(BinaryOperator, bo
         TokenType::LessEqual => Some((BinaryOperator::Le, false)),
         TokenType::Greater => Some((BinaryOperator::Gt, false)),
         TokenType::GreaterEqual => Some((BinaryOperator::Ge, false)),
+        TokenType::Arrow => Some((BinaryOperator::UnitConversion, false)),
         TokenType::QuestionQuestion => Some((BinaryOperator::NullCoalesce, true)),
         TokenType::QuestionColon => Some((BinaryOperator::Elvis, true)),
         TokenType::Range => Some((BinaryOperator::Range, false)),

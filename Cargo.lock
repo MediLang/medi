@@ -539,6 +539,7 @@ name = "medic_codegen_llvm"
 version = "0.1.0"
 dependencies = [
  "inkwell",
+ "medic_ast",
  "thiserror 1.0.69",
 ]
 
@@ -961,7 +962,10 @@ name = "tests"
 version = "0.1.0"
 dependencies = [
  "medic_ast",
+ "medic_codegen_llvm",
  "medic_env",
+ "medic_lexer",
+ "medic_parser",
  "medic_type",
  "medic_typeck",
 ]
