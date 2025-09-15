@@ -387,6 +387,45 @@ Run all tests for all crates:
 cargo test --workspace
 ```
 
+### Codegen CLI flags (x86-64)
+
+When building with the LLVM backend feature, the `medic` CLI can emit x86-64 ELF object files and provides tuning flags for optimization, CPU, and features.
+
+Basic usage:
+
+```sh
+medic --emit=x86_64 --out=program.o path/to/source.medi
+```
+
+Available flags:
+
+- `--emit=x86_64`
+- `--out=<file>`
+- `--opt=0|1|2|3`  (0=None, 1=Less, 2=Default, 3=Aggressive)
+- `--cpu=<name>`   (e.g., `haswell`)
+- `--features=<csv>` (e.g., `+avx2,+sse4.2`)
+- `--opt-pipeline=minimal|default` (selects a pass pipeline profile; default is `minimal`)
+
+Examples:
+
+```sh
+# Default optimization/profile, generic x86-64
+medic --emit=x86_64 --out=a.o input.medi
+
+# Haswell with AVX2 at -O3 using the default (richer) pipeline
+medic --emit=x86_64 --out=a.o \
+  --opt=3 --cpu=haswell --features=+avx2,+sse4.2 \
+  --opt-pipeline=default input.medi
+
+# No optimization (useful for debugging generated code)
+medic --emit=x86_64 --out=a.o --opt=0 input.medi
+```
+
+Notes:
+
+- Register allocation is handled by LLVM’s x86 backend. The `--opt`, `--cpu`, and `--features` flags influence the pass pipeline and instruction selection, indirectly affecting RA.
+- Object emission is performed by the x86-64 `TargetMachine`; the module’s data layout is configured from the target for correct alignment.
+
 ### Directory Purposes
 - `compiler/`: Rust crate for the Medic compiler (`medic`). All Rust source files go directly here.
 - `library/`: Rust crate(s) for the Medic standard library.
@@ -394,6 +433,33 @@ cargo test --workspace
 - `tests/`: Integration/system tests (Rust or other frameworks).
 
 This structure closely follows the Rust project layout inspiration.
+
+## Developer Notes
+
+### Quantity IR (experimental, dev-only)
+
+Medi supports an experimental, feature-flagged Quantity IR that represents quantities as a concrete LLVM struct `%Quantity = { double value, i32 unit_id }`. This is disabled by default and intended for development and experiments with unit-aware codegen.
+
+Enable and test (requires LLVM 15.x available and backend enabled):
+
+```bash
+# Build the backend crate with Quantity IR enabled
+cargo build -p medic_codegen_llvm --features "llvm,quantity_ir"
+
+# Or run feature-guarded tests that exercise the Quantity IR paths
+cargo test -p tests -p medic_codegen_llvm --features "llvm,quantity_ir" -- --nocapture
+```
+
+Current semantics under `quantity_ir`:
+
+- Quantities lower to `%Quantity` with per-module interned unit ids.
+- Known unit conversions lower to a multiply on the value field and update the unit id.
+- Unknown conversions call a runtime shim `medi_convert_q(%Quantity, i32 to_unit_id)`.
+- Arithmetic is conservative for now:
+  - Add/Sub require both operands to have the same unit (same unit id). Otherwise, convert explicitly first using `->`.
+  - Mul/Div and comparisons on quantities are currently disallowed until dimensional analysis is introduced.
+
+When `quantity_ir` is disabled (default), quantities lower to plain `f64` and unit metadata is tracked in side tables for type checking and diagnostics. Known conversions compile to `fmul` and unknown pairs call `medi_convert(double, i32, i32)`.
 
 ## Contributing
 

@@ -40,6 +40,33 @@ cargo build -p medic_codegen_llvm --features llvm
 cargo build -p medic --features llvm-backend
 ```
 
+## Quantity IR (experimental)
+
+A feature-flagged path is available to represent quantities explicitly in IR as a struct
+`{ double value, i32 unit_id }`. This is disabled by default and intended for development
+and experimentation.
+
+Enable both the LLVM backend and Quantity IR when building or testing:
+
+```bash
+# Build the backend with Quantity IR enabled
+cargo build -p medic_codegen_llvm --features "llvm,quantity_ir"
+
+# Run IR tests that are guarded by the feature flags
+cargo test -p tests --features "llvm,quantity_ir" -- --nocapture
+```
+
+Notes:
+
+- With `quantity_ir` disabled (default), quantities lower to plain `f64` and unit metadata is
+  tracked in side tables for type checking and diagnostics.
+- With `quantity_ir` enabled, quantities lower to a `%Quantity` struct and unit conversion is
+  applied either at compile-time (known pairs) or via a fallback runtime function
+  `medi_convert_q(%Quantity, i32 to_unit_id)`.
+- For now, arithmetic on quantities is conservative: Add/Sub require matching units; Mul/Div
+  and comparisons are disallowed until dimensional analysis is introduced. Convert explicitly
+  first using the `->` operator.
+
 ## What’s implemented
 
 - Target initialization for x86_64, wasm32, and riscv32

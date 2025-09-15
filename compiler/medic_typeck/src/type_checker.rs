@@ -1,6 +1,7 @@
 // Type checker for Medic language in Rust
 // This is a basic structure; expand with more rules as needed
 
+use crate::units;
 use medic_ast::ast::*;
 use medic_ast::visit::Span;
 use medic_env::env::{SinkKind, TypeEnv};
@@ -18,6 +19,330 @@ pub struct TypeChecker<'a> {
     errors: Vec<TypeError>,
     /// Side privacy table: maps (start,end) of expression span to its inferred privacy label
     privacy_table: HashMap<(usize, usize), PrivacyAnnotation>,
+    /// Side unit metadata: maps (start,end) span of an expression to its unit symbol (e.g., "mg")
+    quantity_units: HashMap<(usize, usize), String>,
+    /// Optional per-function parameter unit expectations: (function_name, param_index) -> unit
+    param_unit_expectations: HashMap<(String, usize), String>,
+    /// Optional per-function return unit expectation: function_name -> unit
+    return_unit_expectations: HashMap<String, String>,
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+
+    #[test]
+    fn unit_conversion_known_factor_records_unit_and_returns_float() {
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        // Build (5 mg) -> g
+        let span_qty = Span {
+            start: 0,
+            end: 3,
+            line: 1,
+            column: 1,
+        };
+        let qty = ExpressionNode::Quantity(Spanned::new(
+            Box::new(QuantityLiteralNode {
+                value: LiteralNode::Int(5),
+                unit: IdentifierNode::from_str_name("mg"),
+            }),
+            span_qty,
+        ));
+        let span_rhs = Span {
+            start: 7,
+            end: 8,
+            line: 1,
+            column: 8,
+        };
+        let rhs =
+            ExpressionNode::Identifier(Spanned::new(IdentifierNode::from_str_name("g"), span_rhs));
+        let span_parent = Span {
+            start: 0,
+            end: 8,
+            line: 1,
+            column: 1,
+        };
+        let expr = ExpressionNode::Binary(Spanned::new(
+            Box::new(BinaryExpressionNode {
+                left: qty,
+                operator: BinaryOperator::UnitConversion,
+                right: rhs,
+            }),
+            span_parent,
+        ));
+
+        let ty = tc.check_expr(&expr);
+        assert_eq!(ty, MediType::Quantity(Box::new(MediType::Float)));
+        // Unit metadata should record target unit at parent span
+        assert_eq!(tc.get_unit_at_span(&span_parent), Some(&"g".to_string()));
+        // No errors
+        assert!(tc.errors().is_empty());
+    }
+
+    // Note: expectation setters are implemented on TypeChecker impl for test use
+
+    #[test]
+    fn unit_conversion_unknown_unit_produces_error() {
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        // (5 mg) -> zzz (unknown)
+        let span_qty = Span {
+            start: 0,
+            end: 3,
+            line: 1,
+            column: 1,
+        };
+        let qty = ExpressionNode::Quantity(Spanned::new(
+            Box::new(QuantityLiteralNode {
+                value: LiteralNode::Int(5),
+                unit: IdentifierNode::from_str_name("mg"),
+            }),
+            span_qty,
+        ));
+        let span_rhs = Span {
+            start: 7,
+            end: 10,
+            line: 1,
+            column: 8,
+        };
+        let rhs = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("zzz"),
+            span_rhs,
+        ));
+        let span_parent = Span {
+            start: 0,
+            end: 10,
+            line: 1,
+            column: 1,
+        };
+        let expr = ExpressionNode::Binary(Spanned::new(
+            Box::new(BinaryExpressionNode {
+                left: qty,
+                operator: BinaryOperator::UnitConversion,
+                right: rhs,
+            }),
+            span_parent,
+        ));
+
+        let _ = tc.check_expr(&expr);
+        let errs = tc.take_errors();
+        assert!(!errs.is_empty());
+    }
+
+    #[test]
+    fn unit_conversion_dimension_mismatch_produces_error() {
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        // (5 cm) -> s (Length -> Time)
+        let span_qty = Span {
+            start: 0,
+            end: 3,
+            line: 1,
+            column: 1,
+        };
+        let qty = ExpressionNode::Quantity(Spanned::new(
+            Box::new(QuantityLiteralNode {
+                value: LiteralNode::Int(5),
+                unit: IdentifierNode::from_str_name("cm"),
+            }),
+            span_qty,
+        ));
+        let span_rhs = Span {
+            start: 7,
+            end: 8,
+            line: 1,
+            column: 8,
+        };
+        let rhs =
+            ExpressionNode::Identifier(Spanned::new(IdentifierNode::from_str_name("s"), span_rhs));
+        let span_parent = Span {
+            start: 0,
+            end: 8,
+            line: 1,
+            column: 1,
+        };
+        let expr = ExpressionNode::Binary(Spanned::new(
+            Box::new(BinaryExpressionNode {
+                left: qty,
+                operator: BinaryOperator::UnitConversion,
+                right: rhs,
+            }),
+            span_parent,
+        ));
+
+        let _ = tc.check_expr(&expr);
+        let errs = tc.take_errors();
+        assert!(!errs.is_empty());
+    }
+
+    #[test]
+    fn call_param_unit_expectation_success_and_return_unit_recorded() {
+        let mut env = TypeEnv::with_prelude();
+        // Register a function expecting a quantity param and returning Float
+        env.insert(
+            "dose_norm".to_string(),
+            MediType::Function {
+                params: vec![MediType::Quantity(Box::new(MediType::Float))],
+                return_type: Box::new(MediType::Float),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+        tc.set_param_unit_expectation("dose_norm", 0, "mg");
+        tc.set_return_unit_expectation("dose_norm", "mg");
+
+        // Build dose_norm(5 mg)
+        let callee_span = Span {
+            start: 0,
+            end: 8,
+            line: 1,
+            column: 1,
+        };
+        let callee = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("dose_norm"),
+            callee_span,
+        ));
+        let arg_span = Span {
+            start: 9,
+            end: 14,
+            line: 1,
+            column: 10,
+        };
+        let arg = ExpressionNode::Quantity(Spanned::new(
+            Box::new(QuantityLiteralNode {
+                value: LiteralNode::Int(5),
+                unit: IdentifierNode::from_str_name("mg"),
+            }),
+            arg_span,
+        ));
+        let call_span = Span {
+            start: 0,
+            end: 14,
+            line: 1,
+            column: 1,
+        };
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee,
+                arguments: vec![arg],
+            }),
+            call_span,
+        ));
+
+        let ty = tc.check_expr(&call);
+        assert_eq!(ty, MediType::Quantity(Box::new(MediType::Float)));
+        // Return unit expectation should be recorded at call span
+        assert_eq!(tc.get_unit_at_span(&call_span), Some(&"mg".to_string()));
+        assert!(tc.errors().is_empty());
+    }
+
+    #[test]
+    fn call_param_unit_expectation_dimension_mismatch_errors() {
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "f".to_string(),
+            MediType::Function {
+                params: vec![MediType::Quantity(Box::new(MediType::Float))],
+                return_type: Box::new(MediType::Float),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+        // Expect time unit, but provide a length quantity
+        tc.set_param_unit_expectation("f", 0, "s");
+
+        let callee = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("f"),
+            Span {
+                start: 0,
+                end: 1,
+                line: 1,
+                column: 1,
+            },
+        ));
+        let arg = ExpressionNode::Quantity(Spanned::new(
+            Box::new(QuantityLiteralNode {
+                value: LiteralNode::Int(5),
+                unit: IdentifierNode::from_str_name("cm"),
+            }),
+            Span {
+                start: 3,
+                end: 6,
+                line: 1,
+                column: 4,
+            },
+        ));
+        let call_span = Span {
+            start: 0,
+            end: 6,
+            line: 1,
+            column: 1,
+        };
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee,
+                arguments: vec![arg],
+            }),
+            call_span,
+        ));
+
+        let _ = tc.check_expr(&call);
+        let errs = tc.take_errors();
+        assert!(!errs.is_empty());
+    }
+
+    #[test]
+    fn call_param_unit_expectation_missing_unit_errors() {
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "g".to_string(),
+            MediType::Function {
+                params: vec![MediType::Quantity(Box::new(MediType::Float))],
+                return_type: Box::new(MediType::Float),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+        tc.set_param_unit_expectation("g", 0, "mg");
+
+        let callee = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("g"),
+            Span {
+                start: 0,
+                end: 1,
+                line: 1,
+                column: 1,
+            },
+        ));
+        // Arg is numeric literal without unit
+        let arg = ExpressionNode::Literal(Spanned::new(
+            LiteralNode::Float(5.0),
+            Span {
+                start: 3,
+                end: 4,
+                line: 1,
+                column: 4,
+            },
+        ));
+        let call_span = Span {
+            start: 0,
+            end: 4,
+            line: 1,
+            column: 1,
+        };
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee,
+                arguments: vec![arg],
+            }),
+            call_span,
+        ));
+
+        let _ = tc.check_expr(&call);
+        let errs = tc.take_errors();
+        assert!(!errs.is_empty());
+    }
 }
 
 impl<'a> TypeChecker<'a> {
@@ -28,7 +353,22 @@ impl<'a> TypeChecker<'a> {
             validation_ctx: None,
             errors: Vec::new(),
             privacy_table: HashMap::new(),
+            quantity_units: HashMap::new(),
+            param_unit_expectations: HashMap::new(),
+            return_unit_expectations: HashMap::new(),
         }
+    }
+
+    /// Set expected unit for a function parameter (by function name and param index).
+    pub fn set_param_unit_expectation(&mut self, func: &str, index: usize, unit: &str) {
+        self.param_unit_expectations
+            .insert((func.to_string(), index), unit.to_string());
+    }
+
+    /// Set expected unit for a function return value (by function name).
+    pub fn set_return_unit_expectation(&mut self, func: &str, unit: &str) {
+        self.return_unit_expectations
+            .insert(func.to_string(), unit.to_string());
     }
 
     /// Provide a validation context for UCUM/LOINC/SNOMED-aware checks.
@@ -65,6 +405,53 @@ impl<'a> TypeChecker<'a> {
     /// Returns an immutable view of the side privacy table.
     pub fn privacy_table_map(&self) -> &HashMap<(usize, usize), PrivacyAnnotation> {
         &self.privacy_table
+    }
+
+    /// Looks up a recorded unit string by a `Span` key.
+    pub fn get_unit_at_span(&self, span: &Span) -> Option<&String> {
+        self.quantity_units.get(&(span.start, span.end))
+    }
+
+    /// Records a unit for a given expression span.
+    fn set_unit_at_span(&mut self, span: &Span, unit: &str) {
+        self.quantity_units
+            .insert((span.start, span.end), unit.to_string());
+    }
+
+    /// Attempts to extract a quantity unit from an expression (Quantity literal or implicit mul like `5 mg`).
+    fn extract_quantity_unit(expr: &ExpressionNode) -> Option<String> {
+        match expr {
+            ExpressionNode::Quantity(Spanned { node: q, .. }) => Some(q.unit.name().to_string()),
+            ExpressionNode::Binary(Spanned { node: bin, .. }) => {
+                if let BinaryOperator::Mul = bin.operator {
+                    match (&bin.left, &bin.right) {
+                        (
+                            ExpressionNode::Literal(Spanned {
+                                node: LiteralNode::Int(_),
+                                ..
+                            })
+                            | ExpressionNode::Literal(Spanned {
+                                node: LiteralNode::Float(_),
+                                ..
+                            }),
+                            ExpressionNode::Identifier(Spanned { node: id, .. }),
+                        ) => Some(id.name().to_string()),
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    #[cfg(feature = "quantity_ir")]
+    /// Attempts to extract a DimVec for an expression when it denotes a quantity with a unit.
+    fn extract_dimvec(expr: &ExpressionNode) -> Option<units::DimVec> {
+        let u = Self::extract_quantity_unit(expr)?;
+        let info = units::lookup_unit(&u)?;
+        Some(units::dimvec_of(info.dim))
     }
 
     /// Resolve known builtin type names (primitives and common healthcare types)
@@ -167,6 +554,7 @@ impl<'a> TypeChecker<'a> {
                 self.env.get_privacy(name.name()).unwrap_or(Anonymized)
             }
             ExpressionNode::Literal(_) => Anonymized,
+            ExpressionNode::Quantity(_) => Anonymized,
             ExpressionNode::IcdCode(_)
             | ExpressionNode::CptCode(_)
             | ExpressionNode::SnomedCode(_) => PHI,
@@ -391,6 +779,10 @@ impl<'a> TypeChecker<'a> {
                 .cloned()
                 .or_else(|| Self::builtin_type_by_name(name.name()))
                 .unwrap_or(MediType::Unknown),
+            // Quantity literal: use Quantity(Float) as a wrapper; unit tracked in side table
+            ExpressionNode::Quantity(Spanned { .. }) => {
+                MediType::Quantity(Box::new(MediType::Float))
+            }
             ExpressionNode::Literal(Spanned { node: lit, .. }) => match lit {
                 LiteralNode::Int(_) => MediType::Int,
                 LiteralNode::Float(_) => MediType::Float,
@@ -409,6 +801,57 @@ impl<'a> TypeChecker<'a> {
                     | BinaryOperator::Mod
                     | BinaryOperator::Shl
                     | BinaryOperator::Shr => {
+                        // quantity_ir: preliminary quantity rules (feature-gated)
+                        #[cfg(feature = "quantity_ir")]
+                        {
+                            use BinaryOperator as Op;
+                            // Enforce same-unit add/sub
+                            if matches!(bin.operator, Op::Add | Op::Sub) {
+                                let lu = Self::extract_quantity_unit(&bin.left);
+                                let ru = Self::extract_quantity_unit(&bin.right);
+                                match (lu, ru) {
+                                    (Some(lu), Some(ru)) => {
+                                        if lu != ru {
+                                            self.errors.push(TypeError::ValidationFailed(
+                                                ValidationError::InvalidUnit { unit: format!(
+                                                    "quantity add/sub requires same units; found '{lu}' vs '{ru}'"
+                                                )},
+                                            ));
+                                            return MediType::Unknown;
+                                        }
+                                    }
+                                    (Some(_), None) | (None, Some(_)) => {
+                                        self.errors.push(TypeError::ValidationFailed(
+                                            ValidationError::InvalidUnit { unit: "quantity add/sub requires both operands to be quantities".into() },
+                                        ));
+                                        return MediType::Unknown;
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            // Allow Mul/Div over quantities by computing resulting dimension vector (for future use)
+                            if matches!(bin.operator, Op::Mul | Op::Div) {
+                                let ld = Self::extract_dimvec(&bin.left);
+                                let rd = Self::extract_dimvec(&bin.right);
+                                match (ld, rd) {
+                                    (Some(ld), Some(rd)) => {
+                                        let _res = if bin.operator == Op::Mul {
+                                            units::combine_dims_mul(ld, rd)
+                                        } else {
+                                            units::combine_dims_div(ld, rd)
+                                        };
+                                        // Result is still a quantity value
+                                        return MediType::Quantity(Box::new(MediType::Float));
+                                    }
+                                    // quantity with scalar: retain quantity dimension
+                                    (Some(_), None) | (None, Some(_)) => {
+                                        return MediType::Quantity(Box::new(MediType::Float));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
                         if left == MediType::Int && right == MediType::Int {
                             MediType::Int
                         } else if left.is_numeric() && right.is_numeric() {
@@ -432,6 +875,33 @@ impl<'a> TypeChecker<'a> {
                     | BinaryOperator::Gt
                     | BinaryOperator::Le
                     | BinaryOperator::Ge => {
+                        // quantity_ir: allow comparisons when dimensions match
+                        #[cfg(feature = "quantity_ir")]
+                        {
+                            let ld = Self::extract_dimvec(&bin.left);
+                            let rd = Self::extract_dimvec(&bin.right);
+                            match (ld, rd) {
+                                (Some(ld), Some(rd)) => {
+                                    if !units::dims_equal(ld, rd) {
+                                        self.errors.push(TypeError::ValidationFailed(
+                                            ValidationError::InvalidUnit { unit: "quantity comparisons require compatible dimensions".into() },
+                                        ));
+                                        return MediType::Unknown;
+                                    }
+                                }
+                                // If only one side is quantity, reject
+                                (Some(_), None) | (None, Some(_)) => {
+                                    self.errors.push(TypeError::ValidationFailed(
+                                        ValidationError::InvalidUnit {
+                                            unit: "cannot compare quantity with non-quantity"
+                                                .into(),
+                                        },
+                                    ));
+                                    return MediType::Unknown;
+                                }
+                                _ => {}
+                            }
+                        }
                         if left.is_comparable_with(&right) {
                             MediType::Bool
                         } else {
@@ -463,9 +933,34 @@ impl<'a> TypeChecker<'a> {
                     }
                     // Unit conversion operator
                     BinaryOperator::UnitConversion => {
-                        // Check if both sides are unit types that can be converted
-                        // For now, just return the right-hand type
-                        right
+                        // Extract units: left must be a quantity, right an identifier unit
+                        let lhs_unit = Self::extract_quantity_unit(&bin.left);
+                        let rhs_unit = match &bin.right {
+                            ExpressionNode::Identifier(Spanned { node: id, .. }) => {
+                                Some(id.name().to_string())
+                            }
+                            _ => None,
+                        };
+
+                        if let (Some(from_u), Some(to_u)) = (lhs_unit, rhs_unit) {
+                            match units::factor_from_to(&from_u, &to_u) {
+                                Ok(_factor) => {
+                                    // Record resulting unit on this expression span
+                                    // Result type: Quantity(Float)
+                                    self.set_unit_at_span(expr.span(), &to_u);
+                                    MediType::Quantity(Box::new(MediType::Float))
+                                }
+                                Err(msg) => {
+                                    self.errors.push(TypeError::ValidationFailed(
+                                        ValidationError::InvalidUnit { unit: msg },
+                                    ));
+                                    MediType::Unknown
+                                }
+                            }
+                        } else {
+                            // If units are not both provided as expected, fall back to right-hand type
+                            right
+                        }
                     }
                     // Bitwise operators
                     BinaryOperator::BitAnd | BinaryOperator::BitOr | BinaryOperator::BitXor => {
@@ -507,21 +1002,83 @@ impl<'a> TypeChecker<'a> {
                     }
                 }
             }
-            ExpressionNode::Call(Spanned { node: call, .. }) => {
+            ExpressionNode::Call(Spanned {
+                node: call,
+                span: call_span,
+            }) => {
                 let callee_type = self.check_expr(&call.callee);
+                let callee_name = Self::extract_identifier_name(&call.callee);
                 if let MediType::Function {
                     params,
                     return_type,
                 } = callee_type
                 {
                     if params.len() == call.arguments.len() {
-                        // Check argument types
-                        for (arg, param_type) in call.arguments.iter().zip(params.iter()) {
+                        // Check argument types and enforce unit expectations when provided
+                        for (idx, (arg, param_type)) in
+                            call.arguments.iter().zip(params.iter()).enumerate()
+                        {
                             let arg_type = self.check_expr(arg);
-                            if arg_type != *param_type {
+                            // Permit numeric scalar when a quantity is expected, so we can surface a missing-unit error
+                            let expects_quantity = matches!(
+                                param_type,
+                                MediType::Quantity(inner) if **inner == MediType::Float
+                            );
+                            if expects_quantity {
+                                let arg_ok = matches!(
+                                    arg_type,
+                                    MediType::Quantity(_) | MediType::Float | MediType::Int
+                                );
+                                if !arg_ok {
+                                    return MediType::Unknown;
+                                }
+                            } else if arg_type != *param_type {
                                 return MediType::Unknown;
                             }
+
+                            // Enforce unit expectation, if any
+                            if let Some(fname) = &callee_name {
+                                if let Some(exp_unit) = self
+                                    .param_unit_expectations
+                                    .get(&(fname.clone(), idx))
+                                    .cloned()
+                                {
+                                    if let Some(actual_unit) = Self::extract_quantity_unit(arg) {
+                                        if let Err(msg) =
+                                            units::factor_from_to(&actual_unit, &exp_unit)
+                                        {
+                                            self.errors.push(TypeError::ValidationFailed(
+                                                ValidationError::InvalidUnit { unit: msg },
+                                            ));
+                                            return MediType::Unknown;
+                                        } else {
+                                            // Record normalized unit on the argument span
+                                            self.set_unit_at_span(arg.span(), &exp_unit);
+                                        }
+                                    } else {
+                                        // Missing unit on quantity-expected parameter
+                                        self.errors.push(TypeError::ValidationFailed(
+                                            ValidationError::InvalidUnit {
+                                                unit: format!(
+                                                    "missing unit for parameter {idx} of '{fname}' (expected '{exp_unit}')"
+                                                ),
+                                            },
+                                        ));
+                                        return MediType::Unknown;
+                                    }
+                                }
+                            }
                         }
+
+                        // Handle return unit expectation
+                        if let Some(fname) = &callee_name {
+                            if let Some(exp_ret) = self.return_unit_expectations.get(fname).cloned()
+                            {
+                                self.set_unit_at_span(call_span, &exp_ret);
+                                return MediType::Quantity(Box::new(MediType::Float));
+                            }
+                        }
+
                         *return_type
                     } else {
                         MediType::Unknown

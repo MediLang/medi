@@ -321,7 +321,9 @@ impl<'a> StreamingLexer<'a> {
             LogosToken::RightBrace => TokenType::RightBrace,
             LogosToken::LeftBracket => TokenType::LeftBracket,
             LogosToken::RightBracket => TokenType::RightBracket,
+            LogosToken::UnitConversionArrow => TokenType::UnitConversionArrow,
             LogosToken::Arrow => TokenType::Arrow,
+            LogosToken::FatArrow => TokenType::FatArrow,
             LogosToken::Underscore => TokenType::Underscore,
 
             // All LogosToken variants should be handled above.

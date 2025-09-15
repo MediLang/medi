@@ -11,7 +11,9 @@ use medic_parser::parser::{
 use medic_typeck::type_checker::TypeChecker;
 
 #[cfg(feature = "llvm-backend")]
-use medic_codegen_llvm::TargetKind;
+use medic_codegen_llvm::{
+    generate_x86_64_object_default, generate_x86_64_object_with_opts, TargetKind,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OutputMode {
@@ -52,6 +54,42 @@ fn main() {
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--out=") => {
                 out_path = s.splitn(2, '=').nth(1).map(|s| s.to_string());
+            }
+            #[cfg(feature = "llvm-backend")]
+            s if s.starts_with("--opt=") => {
+                // Parse integer 0..=3
+                if let Some(val) = s.splitn(2, '=').nth(1) {
+                    if let Ok(n) = val.parse::<u8>() {
+                        // stash in env vars for simplicity; we will read below
+                        std::env::set_var("MEDI_LLVM_OPT", n.to_string());
+                    }
+                }
+            }
+            #[cfg(feature = "llvm-backend")]
+            s if s.starts_with("--cpu=") => {
+                if let Some(val) = s.splitn(2, '=').nth(1) {
+                    std::env::set_var("MEDI_LLVM_CPU", val);
+                }
+            }
+            #[cfg(feature = "llvm-backend")]
+            s if s.starts_with("--features=") => {
+                if let Some(val) = s.splitn(2, '=').nth(1) {
+                    std::env::set_var("MEDI_LLVM_FEATURES", val);
+                }
+            }
+            #[cfg(feature = "llvm-backend")]
+            s if s.starts_with("--opt-pipeline=") => {
+                if let Some(val) = s.splitn(2, '=').nth(1) {
+                    // Allowed values: minimal (default), default, aggressive, debug
+                    let v = match val {
+                        "default" | "minimal" | "aggressive" | "debug" => val,
+                        other => {
+                            eprintln!("warning: unknown opt pipeline '{other}', expected minimal|default|aggressive|debug; using minimal");
+                            "minimal"
+                        }
+                    };
+                    std::env::set_var("MEDI_LLVM_PIPE", v);
+                }
             }
             s if s.starts_with('-') => {
                 eprintln!("warning: unknown flag '{s}'");
@@ -111,25 +149,112 @@ fn main() {
 
                     // Optional: code emission when llvm-backend is enabled
                     #[cfg(feature = "llvm-backend")]
-                    if let Some(_target) = emit_target {
-                        // Translate parsed AST to LLVM IR text for now.
-                        match medic_codegen_llvm::generate_ir_string(&program) {
-                            Ok(ir) => {
-                                if let Some(path) = out_path {
-                                    if let Err(e) = fs::write(&path, ir.as_bytes()) {
-                                        eprintln!("error: failed to write IR file '{path}': {e}");
-                                        std::process::exit(2);
-                                    } else {
-                                        eprintln!("wrote LLVM IR to {path} ({} bytes)", ir.len());
+                    if let Some(target) = emit_target {
+                        match target {
+                            TargetKind::X86_64 => {
+                                // Check optional overrides from env
+                                let mut opt = std::env::var("MEDI_LLVM_OPT")
+                                    .ok()
+                                    .and_then(|s| s.parse::<u8>().ok());
+                                let mut cpu = std::env::var("MEDI_LLVM_CPU").ok();
+                                let mut feats = std::env::var("MEDI_LLVM_FEATURES").ok();
+                                // If not provided, choose sensible defaults based on build profile
+                                if opt.is_none() {
+                                    // Debug builds default to lower opts; release builds to higher
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        opt = Some(1);
                                     }
-                                } else {
-                                    // Print IR to stdout when no path is provided
-                                    println!("{ir}");
+                                    #[cfg(not(debug_assertions))]
+                                    {
+                                        opt = Some(3);
+                                    }
+                                }
+                                if std::env::var("MEDI_LLVM_PIPE").is_err() {
+                                    // Default pipeline: debug build => debug; release => default
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        std::env::set_var("MEDI_LLVM_PIPE", "debug");
+                                    }
+                                    #[cfg(not(debug_assertions))]
+                                    {
+                                        std::env::set_var("MEDI_LLVM_PIPE", "default");
+                                    }
+                                }
+                                if cpu.is_none() {
+                                    cpu = Some("x86-64".to_string());
+                                }
+                                if feats.is_none() {
+                                    feats = Some("".to_string());
+                                }
+                                let result = {
+                                    let opt = opt.unwrap_or(2);
+                                    let cpu = cpu.unwrap_or_else(|| "x86-64".to_string());
+                                    let feats = feats.unwrap_or_else(|| "".to_string());
+                                    generate_x86_64_object_with_opts(&program, opt, &cpu, &feats)
+                                };
+                                match result {
+                                    Ok(obj) => {
+                                        if let Some(path) = out_path {
+                                            if let Err(e) = fs::write(&path, &obj) {
+                                                eprintln!("error: failed to write object file '{path}': {e}");
+                                                std::process::exit(2);
+                                            } else {
+                                                // Report config used
+                                                let opt_used = std::env::var("MEDI_LLVM_OPT")
+                                                    .unwrap_or_else(|_| "2".into());
+                                                let cpu_used = std::env::var("MEDI_LLVM_CPU")
+                                                    .unwrap_or_else(|_| "x86-64".into());
+                                                let feats_used =
+                                                    std::env::var("MEDI_LLVM_FEATURES")
+                                                        .unwrap_or_else(|_| "".into());
+                                                eprintln!(
+                                                    "wrote x86_64 object to {path} ({} bytes) [opt={}, cpu='{}', features='{}']",
+                                                    obj.len(), opt_used, cpu_used, feats_used
+                                                );
+                                            }
+                                        } else {
+                                            eprintln!("note: no --out=path provided; printing LLVM IR instead");
+                                            match medic_codegen_llvm::generate_ir_string(&program) {
+                                                Ok(ir) => println!("{ir}"),
+                                                Err(e) => {
+                                                    eprintln!("error: IR generation failed: {e}");
+                                                    std::process::exit(2);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("error: x86_64 code emission failed: {e}");
+                                        std::process::exit(2);
+                                    }
                                 }
                             }
-                            Err(e) => {
-                                eprintln!("error: codegen failed: {e}");
-                                std::process::exit(2);
+                            _ => {
+                                // Fallback: just emit IR for other targets until implemented
+                                match medic_codegen_llvm::generate_ir_string(&program) {
+                                    Ok(ir) => {
+                                        if let Some(path) = out_path {
+                                            if let Err(e) = fs::write(&path, ir.as_bytes()) {
+                                                eprintln!(
+                                                    "error: failed to write IR file '{path}': {e}"
+                                                );
+                                                std::process::exit(2);
+                                            } else {
+                                                eprintln!(
+                                                    "wrote LLVM IR to {path} ({} bytes)",
+                                                    ir.len()
+                                                );
+                                            }
+                                        } else {
+                                            println!("{ir}");
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("error: IR generation failed: {e}");
+                                        std::process::exit(2);
+                                    }
+                                }
                             }
                         }
                     }

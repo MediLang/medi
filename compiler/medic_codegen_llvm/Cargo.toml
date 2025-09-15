@@ -6,12 +6,15 @@ edition = "2021"
 [features]
 # Enable LLVM backend using Inkwell against LLVM 15.x
 llvm = ["dep:inkwell", "inkwell/llvm15-0"]
+# Experimental: represent quantities as { double, i32 unit_id } in IR
+quantity_ir = []
 
 [dependencies]
 thiserror = "1.0"
 # Inkwell is optional so the workspace builds on machines without LLVM installed.
 inkwell = { version = "0.2", optional = true, default-features = false }
 medic_ast = { path = "../medic_ast" }
+medic_typeck = { path = "../medic_typeck" }
 
 [package.metadata]
 # Documentation hint: Requires LLVM 15.x when enabling the `llvm` feature.

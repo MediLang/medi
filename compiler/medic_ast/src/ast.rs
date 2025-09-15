@@ -94,6 +94,8 @@ pub enum ExpressionNode {
     Struct(Spanned<Box<StructLiteralNode>>),
     /// An array literal (e.g., `[1, 2, 3]`)
     Array(Spanned<Box<ArrayLiteralNode>>),
+    /// A quantity literal formed by a numeric value and a unit identifier (e.g., `5 mg`)
+    Quantity(Spanned<Box<QuantityLiteralNode>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -432,6 +434,13 @@ pub struct ArrayLiteralNode {
     pub elements: NodeList<ExpressionNode>,
 }
 
+/// Represents a quantity literal like `5 mg` or `3.5 kg`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct QuantityLiteralNode {
+    pub value: LiteralNode,
+    pub unit: IdentifierNode,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IdentifierNode {
     pub name: IdentifierName,
@@ -554,6 +563,7 @@ impl Visitable for ExpressionNode {
             ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => query.accept(visitor),
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.accept(visitor),
             ExpressionNode::Array(Spanned { node: arr, .. }) => arr.accept(visitor),
+            ExpressionNode::Quantity(Spanned { node: q, .. }) => (*q).accept(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.accept(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.accept(visitor),
             ExpressionNode::SnomedCode(spanned) => spanned.node.accept(visitor),
@@ -575,6 +585,7 @@ impl Visitable for ExpressionNode {
             }
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.visit_children(visitor),
             ExpressionNode::Array(Spanned { node: arr, .. }) => arr.visit_children(visitor),
+            ExpressionNode::Quantity(Spanned { node: q, .. }) => (*q).visit_children(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::SnomedCode(spanned) => spanned.node.visit_children(visitor),
@@ -843,6 +854,17 @@ impl Visitable for ArrayLiteralNode {
     }
 }
 
+impl Visitable for QuantityLiteralNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_quantity_literal(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.value.accept(visitor)?;
+        self.unit.accept(visitor)
+    }
+}
+
 impl Visitable for IdentifierNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_identifier(self)
@@ -912,6 +934,7 @@ impl ExpressionNode {
             ExpressionNode::Statement(span) => &span.span,
             ExpressionNode::Struct(span) => &span.span,
             ExpressionNode::Array(span) => &span.span,
+            ExpressionNode::Quantity(span) => &span.span,
         }
     }
 
@@ -1076,6 +1099,9 @@ impl std::fmt::Display for ExpressionNode {
                     write!(f, "{el}")?;
                 }
                 write!(f, "]")
+            }
+            ExpressionNode::Quantity(Spanned { node: q, .. }) => {
+                write!(f, "{} {}", q.value, q.unit.name())
             }
         }
     }

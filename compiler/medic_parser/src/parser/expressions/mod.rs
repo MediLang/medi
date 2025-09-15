@@ -44,6 +44,7 @@
 //! ```
 
 use crate::parser::Span;
+use medic_ast::ast::QuantityLiteralNode;
 use medic_ast::Spanned;
 use nom::error::ErrorKind;
 use nom::Err;
@@ -703,6 +704,8 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             let lit = Spanned::new(LiteralNode::String(code.to_string()), span);
             Ok((input.advance(), ExpressionNode::Literal(lit)))
         }
+        // Handle identifiers, numbers, strings, booleans, parentheses, arrays, blocks below
+
         // Handle identifiers that might be part of a match expression, struct literal, or regular identifier
         TokenType::Identifier(_) => {
             if let TokenType::Identifier(s) = &input.0[0].token_type {
@@ -860,28 +863,43 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                     let (new_input, right) = parse_identifier(input)?;
                     input = new_input;
 
-                    // Clone right before moving it into the BinaryExpressionNode
-                    let right_clone = right.clone();
+                    // quantity_ir: fold `number identifier` into a Quantity literal
+                    {
+                        if let ExpressionNode::Identifier(idsp) = &right {
+                            let span = Span {
+                                start: lit.span.start,
+                                end: idsp.span.end,
+                                line: lit.span.line,
+                                column: lit.span.column,
+                            };
+                            let q = QuantityLiteralNode {
+                                value: lit.node,
+                                unit: idsp.node.clone(),
+                            };
+                            return Ok((
+                                input,
+                                ExpressionNode::Quantity(Spanned::new(Box::new(q), span)),
+                            ));
+                        }
+                    }
 
-                    // Create a Spanned BinaryExpressionNode
+                    // Default (feature disabled): build implicit multiplication `number * identifier`
+                    let right_clone = right.clone();
                     let bin_expr = BinaryExpressionNode {
                         left: ExpressionNode::Literal(Spanned::new(lit.node, lit.span)),
                         operator: BinaryOperator::Mul,
                         right: right_clone,
                     };
-
-                    // Create a span that covers the entire binary expression
                     let span = Span {
                         start: lit.span.start,
                         end: match &right {
                             ExpressionNode::Identifier(i) => i.span.end,
                             ExpressionNode::Literal(l) => l.span.end,
-                            _ => lit.span.end, // Fallback
+                            _ => lit.span.end,
                         },
                         line: lit.span.line,
                         column: lit.span.column,
                     };
-
                     return Ok((
                         input,
                         ExpressionNode::Binary(Spanned::new(Box::new(bin_expr), span)),

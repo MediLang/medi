@@ -214,37 +214,24 @@ mod medical_operators_test {
             ExpressionNode::Binary(Spanned { node: bin, .. }) => {
                 assert_eq!(bin.operator, BinaryOperator::Per);
 
-                // The left side should be a binary expression with multiplication
+                // The left side should be a quantity literal (5 mg)
                 match &bin.left {
-                    ExpressionNode::Binary(Spanned { node: left_bin, .. }) => {
-                        assert_eq!(left_bin.operator, BinaryOperator::Mul);
-
-                        // The left side of the multiplication should be a literal integer 5
-                        match &left_bin.left {
-                            ExpressionNode::Literal(Spanned {
-                                node: LiteralNode::Int(5),
-                                ..
-                            }) => {
+                    ExpressionNode::Quantity(Spanned { node: qty, .. }) => {
+                        // Check the value is 5
+                        match &qty.value {
+                            LiteralNode::Int(5) => {
                                 // Correct
                             }
                             _ => panic!(
-                                "Expected literal integer 5 on left of multiplication, got {:?}",
-                                left_bin.left
+                                "Expected literal integer 5 in quantity, got {:?}",
+                                qty.value
                             ),
                         }
 
-                        // The right side of the multiplication should be an identifier "mg"
-                        match &left_bin.right {
-                            ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
-                                assert_eq!(ident.name, "mg");
-                            }
-                            _ => panic!(
-                                "Expected identifier 'mg' on right of multiplication, got {:?}",
-                                left_bin.right
-                            ),
-                        }
+                        // Check the unit is "mg"
+                        assert_eq!(qty.unit.name, "mg");
                     }
-                    _ => panic!("Expected binary expression on left, got {:?}", bin.left),
+                    _ => panic!("Expected quantity literal on left, got {:?}", bin.left),
                 }
 
                 // The right side should be an identifier "day"

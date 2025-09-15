@@ -540,6 +540,7 @@ version = "0.1.0"
 dependencies = [
  "inkwell",
  "medic_ast",
+ "medic_typeck",
  "thiserror 1.0.69",
 ]
 
@@ -593,6 +594,7 @@ dependencies = [
  "medic_ast",
  "medic_env",
  "medic_type",
+ "once_cell",
 ]
 
 [[package]]
