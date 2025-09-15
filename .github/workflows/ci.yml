@@ -18,9 +18,44 @@ jobs:
           toolchain: stable
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
+      - name: Install LLVM 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libllvm15 llvm-15-runtime clang-15
+          sudo ln -sf /usr/bin/llvm-config-15 /usr/bin/llvm-config
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - name: Set LLVM environment variables
+        run: |
+          echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+          echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
       - name: Install nightly for rustfmt (if needed)
         run: rustup component add rustfmt
       - name: Rustfmt check
         run: cargo fmt --all -- --check
       - name: Clippy check
         run: RUST_BACKTRACE=1 cargo clippy --all -- -A warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+      - name: Install LLVM 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libllvm15 llvm-15-runtime clang-15
+          sudo ln -sf /usr/bin/llvm-config-15 /usr/bin/llvm-config
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - name: Set LLVM environment variables
+        run: |
+          echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+          echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+      - name: Run tests
+        run: cargo test --workspace
