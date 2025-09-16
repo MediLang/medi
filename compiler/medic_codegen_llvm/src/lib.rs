@@ -655,6 +655,11 @@ impl<'ctx> CodeGen<'ctx> {
             ExpressionNode::Identifier(sp) => {
                 let name = sp.node.name();
 
+                // First check if this identifier exists in scope (regular variable/parameter)
+                if let Some((ptr, elem_ty, _info)) = self.scope.get(name) {
+                    return Ok(self.builder.build_load(elem_ty, ptr, name));
+                }
+
                 // Check if this identifier is a unit
                 #[cfg(feature = "quantity_ir")]
                 if let Some(_unit_info) = medic_typeck::units::lookup_unit(name) {
@@ -662,11 +667,7 @@ impl<'ctx> CodeGen<'ctx> {
                     return Ok(self.const_quantity(1.0, name));
                 }
 
-                let (ptr, elem_ty, _info) = self
-                    .scope
-                    .get(name)
-                    .ok_or_else(|| CodeGenError::Llvm(format!("unknown identifier '{name}'")))?;
-                Ok(self.builder.build_load(elem_ty, ptr, name))
+                Err(CodeGenError::Llvm(format!("unknown identifier '{name}'")))
             }
             ExpressionNode::Binary(sp) => {
                 let be = &sp.node;

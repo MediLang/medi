@@ -1,0 +1,4 @@
+fn test(a: int, b: int) -> int {
+  let x = a * b;
+  return x
+}
