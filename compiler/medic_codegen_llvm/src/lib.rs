@@ -343,15 +343,6 @@ impl<'ctx> CodeGen<'ctx> {
         }
     }
     /// Ensure the runtime conversion function exists: double medi_convert(double, i32, i32)
-    fn get_or_declare_medi_convert(&self) -> FunctionValue<'ctx> {
-        if let Some(f) = self.module.get_function("medi_convert") {
-            return f;
-        }
-        let f64t = self.f64;
-        let i32t = self.context.i32_type();
-        let fn_ty = f64t.fn_type(&[f64t.into(), i32t.into(), i32t.into()], false);
-        self.module.add_function("medi_convert", fn_ty, None)
-    }
     fn new(context: &'ctx Context, module_name: &str) -> Self {
         let module = context.create_module(module_name);
         let builder = context.create_builder();
@@ -663,6 +654,14 @@ impl<'ctx> CodeGen<'ctx> {
             }
             ExpressionNode::Identifier(sp) => {
                 let name = sp.node.name();
+
+                // Check if this identifier is a unit
+                #[cfg(feature = "quantity_ir")]
+                if let Some(_unit_info) = medic_typeck::units::lookup_unit(name) {
+                    // Treat unit identifiers as quantity constants with value 1.0
+                    return Ok(self.const_quantity(1.0, name));
+                }
+
                 let (ptr, elem_ty, _info) = self
                     .scope
                     .get(name)
@@ -717,14 +716,36 @@ impl<'ctx> CodeGen<'ctx> {
                     let lhs_unit = match &be.left {
                         ExpressionNode::Quantity(qsp) => Some(qsp.node.unit.name().to_string()),
                         ExpressionNode::Binary(bsp) => {
-                            if let BinaryOperator::Mul = bsp.node.operator {
-                                match (&bsp.node.left, &bsp.node.right) {
+                            match bsp.node.operator {
+                                BinaryOperator::Mul => match (&bsp.node.left, &bsp.node.right) {
                                     (
                                         ExpressionNode::Literal(_),
-                                        ExpressionNode::Identifier(idsp),
-                                    ) => Some(idsp.node.name().to_string()),
+                                        ExpressionNode::Identifier(var_id),
+                                    ) => Some(var_id.node.name().to_string()),
+                                    (
+                                        ExpressionNode::Identifier(var_id),
+                                        ExpressionNode::Literal(_),
+                                    ) => Some(var_id.node.name().to_string()),
+                                    (
+                                        ExpressionNode::Identifier(_),
+                                        ExpressionNode::Identifier(var_id),
+                                    ) => Some(var_id.node.name().to_string()),
                                     _ => None,
+                                },
+                                BinaryOperator::UnitConversion => {
+                                    // For chained conversions, extract the target unit from the RHS
+                                    if let ExpressionNode::Identifier(id) = &bsp.node.right {
+                                        Some(id.node.name().to_string())
+                                    } else {
+                                        None
+                                    }
                                 }
+                                _ => None,
+                            }
+                        }
+                        ExpressionNode::Identifier(idsp) => {
+                            if medic_typeck::units::lookup_unit(idsp.node.name()).is_some() {
+                                Some(idsp.node.name().to_string())
                             } else {
                                 None
                             }
@@ -736,8 +757,20 @@ impl<'ctx> CodeGen<'ctx> {
                         _ => None,
                     };
 
-                    if let (Some(from_u), Some(to_u)) = (lhs_unit, rhs_unit) {
-                        if let Ok(factor) = medic_typeck::units::factor_from_to(&from_u, &to_u) {
+                    if let (Some(from_u), Some(to_u)) = (&lhs_unit, &rhs_unit) {
+                        // Check for dimension compatibility first
+                        if let (Some(from_info), Some(to_info)) = (
+                            medic_typeck::units::lookup_unit(from_u),
+                            medic_typeck::units::lookup_unit(to_u),
+                        ) {
+                            if from_info.dim != to_info.dim {
+                                return Err(CodeGenError::Llvm(format!(
+                                    "cannot convert between incompatible dimensions: {from_u} and {to_u}"
+                                )));
+                            }
+                        }
+
+                        if let Ok(factor) = medic_typeck::units::factor_from_to(from_u, to_u) {
                             let lhs_val = self.codegen_expr(&be.left)?;
                             match lhs_val {
                                 BasicValueEnum::FloatValue(lf) => {
@@ -758,9 +791,63 @@ impl<'ctx> CodeGen<'ctx> {
                                         .build_float_mul(lf, fac, "uconv.fi")
                                         .into());
                                 }
+                                BasicValueEnum::StructValue(sv) => {
+                                    // Handle quantity struct conversion
+                                    #[cfg(feature = "quantity_ir")]
+                                    {
+                                        // Extract value from quantity struct
+                                        let qty_value = self
+                                            .builder
+                                            .build_extract_value(sv, 0, "qty.val")
+                                            .unwrap()
+                                            .into_float_value();
+                                        let fac = self.f64.const_float(factor);
+                                        let converted_value = self.builder.build_float_mul(
+                                            qty_value,
+                                            fac,
+                                            "uconv.qty",
+                                        );
+
+                                        // Create new quantity struct with converted value and target unit
+                                        let qty_ty = self.quantity_type();
+                                        let target_uid = self.context.i32_type().const_int(
+                                            to_u.as_bytes().iter().fold(0u64, |acc, &b| {
+                                                acc.wrapping_mul(31).wrapping_add(b as u64)
+                                            }),
+                                            false,
+                                        );
+                                        let qty_undef = qty_ty.get_undef();
+                                        let qty_with_val = self
+                                            .builder
+                                            .build_insert_value(
+                                                qty_undef,
+                                                converted_value,
+                                                0,
+                                                "conv.val",
+                                            )
+                                            .unwrap();
+                                        let qty_final = self
+                                            .builder
+                                            .build_insert_value(
+                                                qty_with_val,
+                                                target_uid,
+                                                1,
+                                                "conv.unit",
+                                            )
+                                            .unwrap();
+                                        return Ok(qty_final.as_basic_value_enum());
+                                    }
+                                    #[cfg(not(feature = "quantity_ir"))]
+                                    {
+                                        return Err(CodeGenError::Llvm(
+                                            "quantity struct conversion not supported without quantity_ir feature".into(),
+                                        ));
+                                    }
+                                }
                                 _ => {
                                     return Err(CodeGenError::Llvm(
-                                        "unit conversion requires numeric LHS".into(),
+                                        "unit conversion requires numeric LHS or quantity struct"
+                                            .into(),
                                     ))
                                 }
                             }
@@ -772,19 +859,36 @@ impl<'ctx> CodeGen<'ctx> {
                                 BasicValueEnum::IntValue(iv) => {
                                     self.builder.build_signed_int_to_float(iv, self.f64, "si2f")
                                 }
+                                BasicValueEnum::StructValue(sv) => {
+                                    // Handle quantity struct in runtime conversion
+                                    #[cfg(feature = "quantity_ir")]
+                                    {
+                                        self.builder
+                                            .build_extract_value(sv, 0, "qty.val")
+                                            .unwrap()
+                                            .into_float_value()
+                                    }
+                                    #[cfg(not(feature = "quantity_ir"))]
+                                    {
+                                        return Err(CodeGenError::Llvm(
+                                            "quantity struct conversion not supported without quantity_ir feature".into(),
+                                        ));
+                                    }
+                                }
                                 _ => {
                                     return Err(CodeGenError::Llvm(
-                                        "unit conversion requires numeric LHS".into(),
+                                        "unit conversion requires numeric LHS or quantity struct"
+                                            .into(),
                                     ))
                                 }
                             };
-                            let callee = self.get_or_declare_medi_convert();
+                            let callee = self.get_or_declare_medi_convert_q();
                             let i32t = self.context.i32_type();
                             let z = i32t.const_int(0, false);
                             let call_site = self.builder.build_call(
                                 callee,
                                 &[lf.into(), z.into(), z.into()],
-                                "medi_convert.call",
+                                "medi_convert_q.call",
                             );
                             let ret = call_site.try_as_basic_value().left().ok_or_else(|| {
                                 CodeGenError::Llvm("expected value from medi_convert".into())
@@ -812,11 +916,65 @@ impl<'ctx> CodeGen<'ctx> {
                                             .build_float_mul(lf, fac, "uconv.f")
                                             .into());
                                     }
-                                    _ => {
-                                        return Err(CodeGenError::Llvm(
-                                            "unit conversion requires numeric LHS".into(),
-                                        ))
+                                    BasicValueEnum::StructValue(sv) => {
+                                        // Handle quantity struct conversion
+                                        #[cfg(feature = "quantity_ir")]
+                                        {
+                                            let qty_value = self
+                                                .builder
+                                                .build_extract_value(sv, 0, "qty.val")
+                                                .unwrap()
+                                                .into_float_value();
+                                            let fac = self.f64.const_float(*i as f64);
+                                            let converted_value = self.builder.build_float_mul(
+                                                qty_value,
+                                                fac,
+                                                "uconv.qty",
+                                            );
+
+                                            // Create new quantity struct with converted value and target unit
+                                            let qty_ty = self.quantity_type();
+                                            let target_uid = self.context.i32_type().const_int(
+                                                rhs_unit.as_ref().unwrap().as_bytes().iter().fold(
+                                                    0u64,
+                                                    |acc, &b| {
+                                                        acc.wrapping_mul(31).wrapping_add(b as u64)
+                                                    },
+                                                ),
+                                                false,
+                                            );
+                                            let qty_undef = qty_ty.get_undef();
+                                            let qty_with_val = self
+                                                .builder
+                                                .build_insert_value(
+                                                    qty_undef,
+                                                    converted_value,
+                                                    0,
+                                                    "conv.val",
+                                                )
+                                                .unwrap();
+                                            let qty_final = self
+                                                .builder
+                                                .build_insert_value(
+                                                    qty_with_val,
+                                                    target_uid,
+                                                    1,
+                                                    "conv.unit",
+                                                )
+                                                .unwrap();
+                                            return Ok(qty_final.as_basic_value_enum());
+                                        }
+                                        #[cfg(not(feature = "quantity_ir"))]
+                                        {
+                                            return Err(CodeGenError::Llvm(
+                                                "quantity struct conversion not supported without quantity_ir feature".into(),
+                                            ));
+                                        }
                                     }
+                                    _ => return Err(CodeGenError::Llvm(
+                                        "unit conversion requires numeric LHS or quantity struct"
+                                            .into(),
+                                    )),
                                 },
                                 LiteralNode::Float(f) => {
                                     let lhs = match self.codegen_expr(&be.left)? {
@@ -824,9 +982,22 @@ impl<'ctx> CodeGen<'ctx> {
                                         BasicValueEnum::IntValue(li) => self
                                             .builder
                                             .build_signed_int_to_float(li, self.f64, "si2f"),
+                                        BasicValueEnum::StructValue(sv) => {
+                                            // Handle quantity struct conversion
+                                            #[cfg(feature = "quantity_ir")]
+                                            {
+                                                self.builder.build_extract_value(sv, 0, "qty.val").unwrap().into_float_value()
+                                            }
+                                            #[cfg(not(feature = "quantity_ir"))]
+                                            {
+                                                return Err(CodeGenError::Llvm(
+                                                    "quantity struct conversion not supported without quantity_ir feature".into(),
+                                                ));
+                                            }
+                                        }
                                         _ => {
                                             return Err(CodeGenError::Llvm(
-                                                "unit conversion requires numeric LHS".into(),
+                                                "unit conversion requires numeric LHS or quantity struct".into(),
                                             ))
                                         }
                                     };
@@ -847,19 +1018,36 @@ impl<'ctx> CodeGen<'ctx> {
                                 BasicValueEnum::IntValue(iv) => {
                                     self.builder.build_signed_int_to_float(iv, self.f64, "si2f")
                                 }
+                                BasicValueEnum::StructValue(sv) => {
+                                    // Handle quantity struct in runtime conversion
+                                    #[cfg(feature = "quantity_ir")]
+                                    {
+                                        self.builder
+                                            .build_extract_value(sv, 0, "qty.val")
+                                            .unwrap()
+                                            .into_float_value()
+                                    }
+                                    #[cfg(not(feature = "quantity_ir"))]
+                                    {
+                                        return Err(CodeGenError::Llvm(
+                                            "quantity struct conversion not supported without quantity_ir feature".into(),
+                                        ));
+                                    }
+                                }
                                 _ => {
                                     return Err(CodeGenError::Llvm(
-                                        "unit conversion requires numeric LHS".into(),
+                                        "unit conversion requires numeric LHS or quantity struct"
+                                            .into(),
                                     ))
                                 }
                             };
-                            let callee = self.get_or_declare_medi_convert();
+                            let callee = self.get_or_declare_medi_convert_q();
                             let i32t = self.context.i32_type();
                             let z = i32t.const_int(0, false);
                             let call_site = self.builder.build_call(
                                 callee,
                                 &[lf.into(), z.into(), z.into()],
-                                "medi_convert.call",
+                                "medi_convert_q.call",
                             );
                             let ret = call_site.try_as_basic_value().left().ok_or_else(|| {
                                 CodeGenError::Llvm("expected value from medi_convert".into())
@@ -869,10 +1057,231 @@ impl<'ctx> CodeGen<'ctx> {
                     }
                 }
 
-                // quantity_ir: enforce quantity arithmetic rules
+                // quantity_ir: handle quantity creation and arithmetic rules
                 #[cfg(feature = "quantity_ir")]
                 {
                     use medic_ast::ast::BinaryOperator as Op;
+
+                    // Check for quantity creation: numeric * unit or unit * numeric
+                    if be.operator == Op::Mul {
+                        let is_left_unit = matches!(&be.left, ExpressionNode::Identifier(id)
+                            if medic_typeck::units::lookup_unit(id.node.name()).is_some());
+                        let is_right_unit = matches!(&be.right, ExpressionNode::Identifier(id)
+                            if medic_typeck::units::lookup_unit(id.node.name()).is_some());
+
+                        if is_left_unit && !is_right_unit {
+                            // unit * numeric -> quantity
+                            let unit_name = if let ExpressionNode::Identifier(id) = &be.left {
+                                id.node.name()
+                            } else {
+                                unreachable!()
+                            };
+                            let numeric_val = self.codegen_expr(&be.right)?;
+                            // For quantity creation, we need to build a dynamic quantity struct
+                            let qty_ty = self.quantity_type();
+                            let float_val = match numeric_val {
+                                BasicValueEnum::FloatValue(f) => f,
+                                BasicValueEnum::IntValue(i) => {
+                                    self.builder.build_signed_int_to_float(i, self.f64, "i2f")
+                                }
+                                _ => {
+                                    return Err(CodeGenError::Llvm(
+                                        "quantity creation requires numeric value".into(),
+                                    ))
+                                }
+                            };
+                            let uid = self.context.i32_type().const_int(
+                                unit_name.as_bytes().iter().fold(0u64, |acc, &b| {
+                                    acc.wrapping_mul(31).wrapping_add(b as u64)
+                                }),
+                                false,
+                            );
+                            let qty_undef = qty_ty.get_undef();
+                            let qty_with_val = self
+                                .builder
+                                .build_insert_value(qty_undef, float_val, 0, "qty.val")
+                                .unwrap();
+                            let qty_final = self
+                                .builder
+                                .build_insert_value(qty_with_val, uid, 1, "qty.unit")
+                                .unwrap();
+                            return Ok(qty_final.as_basic_value_enum());
+                        } else if !is_left_unit && is_right_unit {
+                            // numeric * unit -> quantity
+                            let unit_name = if let ExpressionNode::Identifier(id) = &be.right {
+                                id.node.name()
+                            } else {
+                                unreachable!()
+                            };
+                            let numeric_val = self.codegen_expr(&be.left)?;
+                            // For quantity creation, we need to build a dynamic quantity struct
+                            let qty_ty = self.quantity_type();
+                            let float_val = match numeric_val {
+                                BasicValueEnum::FloatValue(f) => f,
+                                BasicValueEnum::IntValue(i) => {
+                                    self.builder.build_signed_int_to_float(i, self.f64, "i2f")
+                                }
+                                _ => {
+                                    return Err(CodeGenError::Llvm(
+                                        "quantity creation requires numeric value".into(),
+                                    ))
+                                }
+                            };
+                            let uid = self.context.i32_type().const_int(
+                                unit_name.as_bytes().iter().fold(0u64, |acc, &b| {
+                                    acc.wrapping_mul(31).wrapping_add(b as u64)
+                                }),
+                                false,
+                            );
+                            let qty_undef = qty_ty.get_undef();
+                            let qty_with_val = self
+                                .builder
+                                .build_insert_value(qty_undef, float_val, 0, "qty.val")
+                                .unwrap();
+                            let qty_final = self
+                                .builder
+                                .build_insert_value(qty_with_val, uid, 1, "qty.unit")
+                                .unwrap();
+                            return Ok(qty_final.as_basic_value_enum());
+                        }
+                    }
+                    // Handle quantity arithmetic operations
+                    if be.operator == Op::Add || be.operator == Op::Sub {
+                        // Check if we're dealing with quantities (either from literals or from multiplication)
+                        let produces_quantity = |expr: &ExpressionNode| -> bool {
+                            match expr {
+                                ExpressionNode::Quantity(_) => true,
+                                ExpressionNode::Binary(bsp) => {
+                                    match bsp.node.operator {
+                                        BinaryOperator::Mul => {
+                                            // Check for numeric * unit or unit * numeric patterns
+                                            matches!(
+                                                (&bsp.node.left, &bsp.node.right),
+                                                (
+                                                    ExpressionNode::Literal(_),
+                                                    ExpressionNode::Identifier(_)
+                                                ) | (
+                                                    ExpressionNode::Identifier(_),
+                                                    ExpressionNode::Literal(_)
+                                                ) | (
+                                                    ExpressionNode::Identifier(_),
+                                                    ExpressionNode::Identifier(_)
+                                                )
+                                            )
+                                        }
+                                        BinaryOperator::UnitConversion => {
+                                            // Unit conversions produce quantities
+                                            true
+                                        }
+                                        _ => false,
+                                    }
+                                }
+                                _ => false,
+                            }
+                        };
+
+                        if produces_quantity(&be.left) && produces_quantity(&be.right) {
+                            // Extract unit names for compatibility checking
+                            let extract_unit_name = |expr: &ExpressionNode| -> Option<String> {
+                                match expr {
+                                    ExpressionNode::Quantity(qsp) => {
+                                        Some(qsp.node.unit.name().to_string())
+                                    }
+                                    ExpressionNode::Binary(bsp) => {
+                                        match bsp.node.operator {
+                                            BinaryOperator::Mul => {
+                                                // Check for numeric * unit or unit * numeric patterns
+                                                if let ExpressionNode::Identifier(id) =
+                                                    &bsp.node.right
+                                                {
+                                                    Some(id.node.name().to_string())
+                                                } else if let ExpressionNode::Identifier(id) =
+                                                    &bsp.node.left
+                                                {
+                                                    Some(id.node.name().to_string())
+                                                } else {
+                                                    None
+                                                }
+                                            }
+                                            BinaryOperator::UnitConversion => {
+                                                // For conversions, extract the target unit (RHS)
+                                                if let ExpressionNode::Identifier(id) =
+                                                    &bsp.node.right
+                                                {
+                                                    Some(id.node.name().to_string())
+                                                } else {
+                                                    None
+                                                }
+                                            }
+                                            _ => None,
+                                        }
+                                    }
+                                    ExpressionNode::Identifier(id) => {
+                                        Some(id.node.name().to_string())
+                                    }
+                                    _ => None,
+                                }
+                            };
+
+                            let left_unit = extract_unit_name(&be.left);
+                            let right_unit = extract_unit_name(&be.right);
+
+                            // Check unit compatibility - require exact unit match for addition/subtraction
+                            if let (Some(l_unit), Some(r_unit)) = (&left_unit, &right_unit) {
+                                if l_unit != r_unit {
+                                    return Err(CodeGenError::Llvm(
+                                        format!("cannot add/subtract quantities with different units: {l_unit} and {r_unit}")
+                                    ));
+                                }
+                            }
+
+                            // Generate IR for quantity addition/subtraction
+                            let lhs_val = self.codegen_expr(&be.left)?;
+                            let rhs_val = self.codegen_expr(&be.right)?;
+
+                            // Extract values and unit IDs from quantity structs
+                            let lhs_value = self
+                                .builder
+                                .build_extract_value(lhs_val.into_struct_value(), 0, "lhs.val")
+                                .unwrap()
+                                .into_float_value();
+                            let lhs_unit = self
+                                .builder
+                                .build_extract_value(lhs_val.into_struct_value(), 1, "lhs.unit")
+                                .unwrap()
+                                .into_int_value();
+                            let rhs_value = self
+                                .builder
+                                .build_extract_value(rhs_val.into_struct_value(), 0, "rhs.val")
+                                .unwrap()
+                                .into_float_value();
+
+                            // Perform the arithmetic operation on values
+                            let result_value = match be.operator {
+                                Op::Add => {
+                                    self.builder.build_float_add(lhs_value, rhs_value, "q.add")
+                                }
+                                Op::Sub => {
+                                    self.builder.build_float_sub(lhs_value, rhs_value, "q.sub")
+                                }
+                                _ => unreachable!(),
+                            };
+
+                            // Build result quantity struct with left-hand side unit
+                            let qty_ty = self.quantity_type();
+                            let qty_undef = qty_ty.get_undef();
+                            let qty_with_val = self
+                                .builder
+                                .build_insert_value(qty_undef, result_value, 0, "result.val")
+                                .unwrap();
+                            let qty_final = self
+                                .builder
+                                .build_insert_value(qty_with_val, lhs_unit, 1, "result.unit")
+                                .unwrap();
+                            return Ok(qty_final.as_basic_value_enum());
+                        }
+                    }
+
                     // If both operands are Quantity literals and operator is Add/Sub
                     if (matches!(&be.left, ExpressionNode::Quantity(_))
                         || matches!(&be.right, ExpressionNode::Quantity(_)))

@@ -12,4 +12,4 @@ medic_type = { path = "../compiler/medic_type" }
 medic_typeck = { path = "../compiler/medic_typeck" }
 medic_lexer = { path = "../compiler/medic_lexer" }
 medic_parser = { path = "../compiler/medic_parser" }
-medic_codegen_llvm = { path = "../compiler/medic_codegen_llvm", features = ["llvm"] }
+medic_codegen_llvm = { path = "../compiler/medic_codegen_llvm", features = ["llvm", "quantity_ir"] }

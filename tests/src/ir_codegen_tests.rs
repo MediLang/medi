@@ -1,3 +1,4 @@
+use medic_ast::ast::StatementNode;
 use medic_codegen_llvm::generate_ir_string;
 use medic_lexer::streaming_lexer::StreamingLexer;
 use medic_lexer::token::Token;
@@ -19,14 +20,14 @@ mod quantity_ir_tests {
     #[test]
     fn quantity_known_conversion_implicit_pattern() {
         let src = r#"
-fn conv() {
-  // implicit quantity pattern: (5 * mg) -> g
-  (5 * mg) -> g;
+fn conv(a: int) {
+  // implicit quantity pattern: (a * mg) -> g
+  (a * mg) -> g;
 }
 "#;
         let ir = ir_for(src);
         // Expect a multiply on the value field for conversion
-        assert!(ir.contains("q.mul"));
+        assert!(ir.contains("uconv.qty"));
         // Should not call runtime quantity conversion for a known pair
         assert!(!ir.contains("medi_convert_q"));
     }
@@ -45,8 +46,8 @@ fn conv_unknown() {
     #[test]
     fn quantity_add_same_units_emits_q_add() {
         let src = r#"
-fn addq() {
-  (5 * mg) + (3 * mg);
+fn addq(a: int, b: int) {
+  (a * mg) + (b * mg);
 }
 "#;
         let ir = ir_for(src);
@@ -73,8 +74,8 @@ fn addq_bad() {
     #[test]
     fn quantity_sub_same_units_emits_q_sub() {
         let src = r#"
-fn subq() {
-  (5 * mg) - (3 * mg);
+fn subq(a: int, b: int) {
+  (a * mg) - (b * mg);
 }
 "#;
         let ir = ir_for(src);
@@ -99,17 +100,17 @@ fn cmpq() {
     #[test]
     fn quantity_conversion_chain_known_pairs_two_multiplies() {
         let src = r#"
-fn chain() {
+fn chain(a: int) {
   // Known conversions chained: mg -> g -> mg
-  ((5 * mg) -> g) -> mg;
+  ((a * mg) -> g) -> mg;
 }
 "#;
         let ir = ir_for(src);
         // Expect two multiplies and no runtime quantity conversion
-        let count = ir.match_indices("q.mul").count();
+        let count = ir.match_indices("uconv.qty").count();
         assert!(
             count >= 2,
-            "expected at least two q.mul in chained conversions, got {count}\nIR:\n{ir}"
+            "expected at least two uconv.qty in chained conversions, got {count}\nIR:\n{ir}"
         );
         assert!(!ir.contains("medi_convert_q"));
     }
@@ -117,16 +118,16 @@ fn chain() {
     #[test]
     fn quantity_conversion_chain_mg_to_g_to_kg() {
         let src = r#"
-fn chain2() {
+fn chain2(a: int) {
   // Known conversions chained: mg -> g -> kg
-  ((5 * mg) -> g) -> kg;
+  ((a * mg) -> g) -> kg;
 }
 "#;
         let ir = ir_for(src);
-        let count = ir.match_indices("q.mul").count();
+        let count = ir.match_indices("uconv.qty").count();
         assert!(
             count >= 2,
-            "expected at least two q.mul in chained conversions, got {count}\nIR:\n{ir}"
+            "expected at least two uconv.qty in chained conversions, got {count}\nIR:\n{ir}"
         );
         assert!(!ir.contains("medi_convert_q"));
     }
