@@ -9,6 +9,8 @@ pub enum MediType {
     Float,
     Bool,
     String,
+    /// Type variable for generics (e.g., T, U)
+    TypeVar(String),
     /// Absence of a value
     Void,
     Unknown,

@@ -114,6 +114,30 @@ impl TypeEnv {
         }
     }
 
+    /// Collect all function symbols (name, MediType) visible in this environment (including parents).
+    /// If a symbol is shadowed in a child env, the child's binding wins.
+    pub fn collect_function_types(&self) -> Vec<(String, MediType)> {
+        use std::collections::HashSet;
+        let mut out: Vec<(String, MediType)> = Vec::new();
+        let mut seen: HashSet<String> = HashSet::new();
+
+        // Walk chain from child to parent so child bindings shadow
+        let mut cur: Option<&TypeEnv> = Some(self);
+        while let Some(env) = cur {
+            for (k, v) in env.symbols.iter() {
+                if seen.contains(k) {
+                    continue;
+                }
+                if let MediType::Function { .. } = v {
+                    out.push((k.clone(), v.clone()));
+                    seen.insert(k.clone());
+                }
+            }
+            cur = env.parent.as_deref();
+        }
+        out
+    }
+
     /// Set a privacy label for a symbol in the current scope
     pub fn set_privacy(&mut self, name: String, label: PrivacyAnnotation) {
         self.privacy.insert(name, label);

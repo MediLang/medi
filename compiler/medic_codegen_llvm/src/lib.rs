@@ -44,6 +44,8 @@ use inkwell::OptimizationLevel;
 
 #[cfg(feature = "llvm")]
 use medic_ast::ast::*;
+#[cfg(feature = "llvm")]
+use medic_type::types::MediType;
 
 #[derive(Debug, Error)]
 pub enum CodeGenError {
@@ -52,6 +54,232 @@ pub enum CodeGenError {
     #[cfg(feature = "llvm")]
     #[error("LLVM error: {0}")]
     Llvm(String),
+}
+
+/// Like generate_x86_64_object_with_opts_types, but also registers concrete specializations.
+#[cfg(feature = "llvm")]
+pub fn generate_x86_64_object_with_opts_types_and_specs(
+    program: &ProgramNode,
+    opt_level: u8,
+    cpu: &str,
+    features: &str,
+    types: &[(String, MediType)],
+    specializations: &[(String, Vec<MediType>, MediType)],
+) -> Result<Vec<u8>, CodeGenError> {
+    let lvl = match opt_level {
+        0 => OptimizationLevel::None,
+        1 => OptimizationLevel::Less,
+        3 => OptimizationLevel::Aggressive,
+        _ => OptimizationLevel::Default,
+    };
+
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+    cg.predeclare_user_functions(program);
+    for (base, params, ret) in specializations.iter() {
+        let _ = cg.register_specialized_function(base, params, ret)?;
+    }
+
+    // Lower program (same as other emission path)
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        let main_ty = cg.i64.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", main_ty, None);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        cg.builder.build_return(Some(&cg.i64.const_zero()));
+        cg.current_fn = prev;
+    }
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+
+    // Target machine and emission
+    use inkwell::targets::{InitializationConfig, Target};
+    Target::initialize_all(&InitializationConfig::default());
+    let triple = TargetTriple::create("x86_64-unknown-linux-gnu");
+    let target = Target::from_triple(&triple)
+        .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+    let tm = target
+        .create_target_machine(
+            &triple,
+            cpu,
+            features,
+            lvl,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+    cg.module.set_triple(&triple);
+    let dl = tm.get_target_data().get_data_layout();
+    cg.module.set_data_layout(&dl);
+
+    let pm = PassManager::create(());
+    match (
+        std::env::var("MEDI_LLVM_PIPE")
+            .as_deref()
+            .unwrap_or("minimal"),
+        lvl,
+    ) {
+        ("default", _) | ("minimal", OptimizationLevel::None) => {
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_cfg_simplification_pass();
+        }
+        ("debug", _) => {
+            pm.add_cfg_simplification_pass();
+        }
+        ("aggressive", _) => {
+            pm.add_basic_alias_analysis_pass();
+            pm.add_promote_memory_to_register_pass();
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_gvn_pass();
+            pm.add_cfg_simplification_pass();
+            pm.add_licm_pass();
+            pm.add_loop_vectorize_pass();
+            pm.add_slp_vectorize_pass();
+        }
+        _ => {}
+    }
+    pm.run_on(&cg.module);
+
+    let obj = tm
+        .write_to_memory_buffer(&cg.module, FileType::Object)
+        .map_err(|e| CodeGenError::Llvm(format!("object emission failed: {e}")))?;
+    Ok(obj.as_slice().to_vec())
+}
+
+/// Like generate_x86_64_object_with_opts, but first registers function type information.
+#[cfg(feature = "llvm")]
+pub fn generate_x86_64_object_with_opts_types(
+    program: &ProgramNode,
+    opt_level: u8,
+    cpu: &str,
+    features: &str,
+    types: &[(String, MediType)],
+) -> Result<Vec<u8>, CodeGenError> {
+    let lvl = match opt_level {
+        0 => OptimizationLevel::None,
+        1 => OptimizationLevel::Less,
+        3 => OptimizationLevel::Aggressive,
+        _ => OptimizationLevel::Default,
+    };
+
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+
+    // Predeclare non-generic user functions so that top-level calls can reference them
+    cg.predeclare_user_functions(program);
+
+    // Lower program (mirrors generate_ir_string path)
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        let main_ty = cg.i64.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", main_ty, None);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        cg.builder.build_return(Some(&cg.i64.const_zero()));
+        cg.current_fn = prev;
+    }
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+
+    // 2) Create target machine and emit object (reuse existing logic but inline to set CPU/features)
+    use inkwell::targets::{InitializationConfig, Target};
+    Target::initialize_all(&InitializationConfig::default());
+    let triple = TargetTriple::create("x86_64-unknown-linux-gnu");
+    let target = Target::from_triple(&triple)
+        .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+    let tm = target
+        .create_target_machine(
+            &triple,
+            cpu,
+            features,
+            lvl,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+    cg.module.set_triple(&triple);
+    let dl = tm.get_target_data().get_data_layout();
+    cg.module.set_data_layout(&dl);
+
+    // 3) Run minimal pass pipeline matching current opt settings (reuse existing function)
+    {
+        let pm = PassManager::create(());
+        // Very small pipeline; follow same switch as cpu_features variant
+        match (
+            std::env::var("MEDI_LLVM_PIPE")
+                .as_deref()
+                .unwrap_or("minimal"),
+            lvl,
+        ) {
+            ("default", _) | ("minimal", OptimizationLevel::None) => {
+                pm.add_instruction_combining_pass();
+                pm.add_reassociate_pass();
+                pm.add_cfg_simplification_pass();
+            }
+            ("debug", _) => {
+                // keep IR readable: minimal passes
+                pm.add_cfg_simplification_pass();
+            }
+            ("aggressive", _) => {
+                pm.add_basic_alias_analysis_pass();
+                pm.add_promote_memory_to_register_pass();
+                pm.add_instruction_combining_pass();
+                pm.add_reassociate_pass();
+                pm.add_gvn_pass();
+                pm.add_cfg_simplification_pass();
+                pm.add_licm_pass();
+                pm.add_loop_vectorize_pass();
+                pm.add_slp_vectorize_pass();
+            }
+            _ => {}
+        }
+        pm.run_on(&cg.module);
+    }
+
+    // 4) Emit object
+    let obj = tm
+        .write_to_memory_buffer(&cg.module, FileType::Object)
+        .map_err(|e| CodeGenError::Llvm(format!("object emission failed: {e}")))?;
+    Ok(obj.as_slice().to_vec())
 }
 
 /// Abstraction for a codegen context.
@@ -293,6 +521,12 @@ pub struct CodeGen<'ctx> {
     sret_fns: std::collections::HashMap<String, BasicTypeEnum<'ctx>>,
     /// Track byval aggregate parameters per function: fn name -> vec of (param_index, agg_type)
     byval_params: std::collections::HashMap<String, Vec<(usize, BasicTypeEnum<'ctx>)>>,
+    /// Optional registry of MediType function types provided by the type system/env
+    func_types: std::collections::HashMap<String, MediType>,
+    /// Registry of monomorphized/specialized functions by mangled name
+    monomorph_fns: std::collections::HashMap<String, FunctionValue<'ctx>>,
+    /// Metadata for specializations: mangled -> (base, params, ret)
+    monomorph_meta: std::collections::HashMap<String, (String, Vec<MediType>, MediType)>,
 }
 
 #[cfg(feature = "llvm")]
@@ -304,6 +538,7 @@ impl<'ctx> CodeGen<'ctx> {
     }
     // Data layout is applied in object emission; for sizes here, prefer type.size_of()
     #[cfg(feature = "quantity_ir")]
+    #[allow(dead_code)]
     fn get_or_declare_medi_convert_q(&self) -> FunctionValue<'ctx> {
         if let Some(f) = self.module.get_function("medi_convert_q") {
             return f;
@@ -350,7 +585,7 @@ impl<'ctx> CodeGen<'ctx> {
         let f64 = context.f64_type();
         let i1 = context.bool_type();
         let void = context.void_type();
-        Self {
+        let this = Self {
             context,
             module,
             builder,
@@ -366,6 +601,453 @@ impl<'ctx> CodeGen<'ctx> {
             unit_ids: std::collections::HashMap::new(),
             sret_fns: std::collections::HashMap::new(),
             byval_params: std::collections::HashMap::new(),
+            func_types: std::collections::HashMap::new(),
+            monomorph_fns: std::collections::HashMap::new(),
+            monomorph_meta: std::collections::HashMap::new(),
+        };
+        // Best-effort: apply a default target triple and data layout for ABI correctness.
+        // If this fails (e.g., missing target), continue with LLVM defaults.
+        let _ = this.set_target_triple_and_datalayout("x86_64-unknown-linux-gnu");
+        this
+    }
+
+    /// Map Medi type system types to LLVM types for backend consumption.
+    /// This enables tighter integration between the front-end `MediType` and LLVM lowering.
+    /// Not all Medi types are first-class in LLVM; where appropriate we pick pragmatic encodings.
+    pub fn llvm_type_from_medi(&self, mt: &MediType) -> Option<BasicTypeEnum<'ctx>> {
+        match mt {
+            MediType::Int => Some(self.i64.into()),
+            MediType::Float => Some(self.f64.into()),
+            MediType::Bool => Some(self.i1.into()),
+            // Strings are represented as `i8*` for now (opaque C-style pointer)
+            MediType::String => Some(
+                self.context
+                    .i8_type()
+                    .ptr_type(AddressSpace::from(0))
+                    .into(),
+            ),
+            MediType::Void => None, // true void
+            MediType::Unknown => None,
+            MediType::Quantity(_inner) => {
+                // Encode quantity as a struct { f64 value, i32 unit_id } when quantity_ir is on; otherwise use f64
+                #[cfg(feature = "quantity_ir")]
+                {
+                    Some(self.quantity_type().into())
+                }
+                #[cfg(not(feature = "quantity_ir"))]
+                {
+                    Some(self.f64.into())
+                }
+            }
+            MediType::Range(inner) => {
+                // Encode range<T> as { T start, T end }
+                let elem = self.llvm_type_from_medi(inner)?;
+                let st = self.context.struct_type(&[elem, elem], false);
+                Some(st.into())
+            }
+            MediType::List(inner) => {
+                // Variable-sized lists are encoded as pointer-to-element for ABI simplicity
+                let elem = self.llvm_type_from_medi(inner)?;
+                Some(elem.ptr_type(AddressSpace::from(0)).into())
+            }
+            MediType::Struct(fields) => {
+                // Create an anonymous struct with deterministic field order (sorted by name)
+                let mut kv: Vec<(&String, &MediType)> = fields.iter().collect();
+                kv.sort_by(|a, b| a.0.cmp(b.0));
+                let mut tys: Vec<BasicTypeEnum> = Vec::with_capacity(kv.len());
+                for (_name, ty) in kv.into_iter() {
+                    let lt = self.llvm_type_from_medi(ty)?;
+                    tys.push(lt);
+                }
+                Some(self.context.struct_type(&tys, false).into())
+            }
+            MediType::Record(fields) => {
+                // Records carry an ordered schema already
+                let mut tys: Vec<BasicTypeEnum> = Vec::with_capacity(fields.len());
+                for (_name, ty) in fields.iter() {
+                    let lt = self.llvm_type_from_medi(ty)?;
+                    tys.push(lt);
+                }
+                Some(self.context.struct_type(&tys, false).into())
+            }
+            MediType::HealthcareEntity(_)
+            | MediType::PatientId
+            | MediType::MedicalRecord
+            | MediType::Vital
+            | MediType::LabResult
+            | MediType::FHIRPatient
+            | MediType::Observation
+            | MediType::Diagnosis
+            | MediType::Medication => {
+                // Represent domain entities as opaque pointers for now
+                Some(
+                    self.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::from(0))
+                        .into(),
+                )
+            }
+            MediType::Function { .. } => None, // Use `function_signature_from_medi`
+            MediType::TypeVar(_) => None, // generic type variables are not first-class in LLVM; must be specialized
+        }
+    }
+
+    /// Build a function signature (return + params) from a `MediType::Function`.
+    /// Returns (is_void, return_type, param_types)
+    pub fn function_signature_from_medi(
+        &self,
+        f: &MediType,
+    ) -> Option<(bool, Option<BasicTypeEnum<'ctx>>, Vec<BasicTypeEnum<'ctx>>)> {
+        if let MediType::Function {
+            params,
+            return_type,
+        } = f
+        {
+            // Map params
+            let mut llparams: Vec<BasicTypeEnum<'ctx>> = Vec::with_capacity(params.len());
+            for p in params.iter() {
+                let pt = self.llvm_type_from_medi(p)?;
+                llparams.push(pt);
+            }
+            // Map return
+            let ret = self.llvm_type_from_medi(return_type.as_ref());
+            let is_void = ret.is_none();
+            Some((is_void, ret, llparams))
+        } else {
+            None
+        }
+    }
+
+    /// Very small placeholder for generic specialization: given a type and a substitution table,
+    /// produce a monomorphized `MediType`. The current `MediType` does not model type variables,
+    /// so this is a no-op passthrough reserved for future integration.
+    pub fn specialize_generics(
+        &self,
+        t: &MediType,
+        _subs: &std::collections::HashMap<String, MediType>,
+    ) -> MediType {
+        t.clone()
+    }
+
+    /// Configure target triple and apply the target data layout to the current module,
+    /// ensuring sizes/alignments match the selected target ABI.
+    pub fn set_target_triple_and_datalayout(&self, triple_str: &str) -> Result<(), CodeGenError> {
+        let triple = TargetTriple::create(triple_str);
+        let target = Target::from_triple(&triple)
+            .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+        // Use default CPU/features and a reasonable opt level
+        let tm = target
+            .create_target_machine(
+                &triple,
+                "generic",
+                "",
+                OptimizationLevel::Default,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+        // Apply target triple and data layout to module
+        self.module.set_triple(&triple);
+        let dl = tm.get_target_data().get_data_layout();
+        self.module.set_data_layout(&dl);
+        Ok(())
+    }
+
+    /// Register an externally provided function type description from the type system/environment.
+    pub fn register_function_type(&mut self, name: &str, ty: MediType) {
+        self.func_types.insert(name.to_string(), ty);
+    }
+
+    /// Clear all registered function type descriptions.
+    pub fn clear_function_types(&mut self) {
+        self.func_types.clear();
+    }
+
+    /// Return true if the MediType tree contains any TypeVar
+    fn type_contains_typevar(t: &MediType) -> bool {
+        use MediType as MT;
+        match t {
+            MT::TypeVar(_) => true,
+            MT::Range(inner) | MT::Quantity(inner) | MT::List(inner) => {
+                Self::type_contains_typevar(inner)
+            }
+            MT::Struct(m) => m.values().any(Self::type_contains_typevar),
+            MT::Record(fields) => fields.iter().any(|(_, v)| Self::type_contains_typevar(v)),
+            MT::Function {
+                params,
+                return_type,
+            } => {
+                params.iter().any(Self::type_contains_typevar)
+                    || Self::type_contains_typevar(return_type)
+            }
+            _ => false,
+        }
+    }
+
+    /// Predeclare user-defined functions that have concrete (non-generic) MediType signatures.
+    /// Uses func_types entries to decide which functions can be declared.
+    fn predeclare_user_functions(&mut self, program: &ProgramNode) {
+        for s in &program.statements {
+            if let StatementNode::Function(fun) = s {
+                let name = fun.name.name().to_string();
+                if let Some(mt) = self.func_types.get(&name) {
+                    if let MediType::Function { .. } = mt {
+                        if !Self::type_contains_typevar(mt) {
+                            if let Some((_is_void, ret_opt, params)) =
+                                self.function_signature_from_medi(mt)
+                            {
+                                // Convert params to metadata types
+                                let params_md: Vec<BasicMetadataTypeEnum> =
+                                    params.iter().map(|p| (*p).into()).collect();
+                                let fn_ty = if let Some(ret_bt) = ret_opt {
+                                    match ret_bt {
+                                        BasicTypeEnum::IntType(t) => t.fn_type(&params_md, false),
+                                        BasicTypeEnum::FloatType(t) => t.fn_type(&params_md, false),
+                                        BasicTypeEnum::PointerType(t) => {
+                                            t.fn_type(&params_md, false)
+                                        }
+                                        BasicTypeEnum::ArrayType(t) => t.fn_type(&params_md, false),
+                                        BasicTypeEnum::StructType(t) => {
+                                            t.fn_type(&params_md, false)
+                                        }
+                                        BasicTypeEnum::VectorType(t) => {
+                                            t.fn_type(&params_md, false)
+                                        }
+                                    }
+                                } else {
+                                    self.void.fn_type(&params_md, false)
+                                };
+                                if self.module.get_function(&name).is_none() {
+                                    let _ = self.module.add_function(&name, fn_ty, None);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------------------------
+    // Monomorphization scaffolding
+    // ---------------------------
+    #[allow(clippy::only_used_in_recursion)]
+    fn mangle_type(&self, t: &MediType) -> String {
+        use MediType as MT;
+        match t {
+            MT::Int => "i64".into(),
+            MT::Float => "f64".into(),
+            MT::Bool => "i1".into(),
+            MT::String => "str".into(),
+            MT::Void => "void".into(),
+            MT::Unknown => "unknown".into(),
+            MT::TypeVar(n) => format!("tvar_{n}"),
+            MT::Quantity(inner) => format!("qty_{}", self.mangle_type(inner)),
+            MT::Range(inner) => format!("range_{}", self.mangle_type(inner)),
+            MT::List(inner) => format!("list_{}", self.mangle_type(inner)),
+            MT::Struct(fields) => {
+                // Stable order by field name for determinism
+                let mut kv: Vec<_> = fields.iter().collect();
+                kv.sort_by(|a, b| a.0.cmp(b.0));
+                let parts: Vec<String> = kv
+                    .into_iter()
+                    .map(|(k, v)| format!("{}:{}", k, self.mangle_type(v)))
+                    .collect();
+                format!("struct{{{}}}", parts.join(","))
+            }
+            MT::Record(fields) => {
+                let parts: Vec<String> = fields
+                    .iter()
+                    .map(|(k, v)| format!("{}:{}", k, self.mangle_type(v)))
+                    .collect();
+                // Records preserve declared order
+                format!("record{{{}}}", parts.join(","))
+            }
+            MT::HealthcareEntity(_)
+            | MT::PatientId
+            | MT::MedicalRecord
+            | MT::Vital
+            | MT::LabResult
+            | MT::FHIRPatient
+            | MT::Observation
+            | MT::Diagnosis
+            | MT::Medication => "opaque".into(),
+            MT::Function {
+                params,
+                return_type,
+            } => {
+                let ps: Vec<String> = params.iter().map(|p| self.mangle_type(p)).collect();
+                format!("fn({})->{}", ps.join("_"), self.mangle_type(return_type))
+            }
+        }
+    }
+
+    fn mangle_name(&self, base: &str, params: &[MediType], ret: &MediType) -> String {
+        let ps: Vec<String> = params.iter().map(|p| self.mangle_type(p)).collect();
+        format!("{}$p:{}$r:{}", base, ps.join("-"), self.mangle_type(ret))
+    }
+
+    /// Predeclare a specialized function for given concrete MediTypes and return the LLVM FunctionValue.
+    /// Note: This is scaffolding; actual selection of specializations at call sites will come from the type checker.
+    #[allow(clippy::uninlined_format_args)]
+    pub fn register_specialized_function(
+        &mut self,
+        base_name: &str,
+        params: &[MediType],
+        ret: &MediType,
+    ) -> Result<FunctionValue<'ctx>, CodeGenError> {
+        let mangled = self.mangle_name(base_name, params, ret);
+        if let Some(f) = self.monomorph_fns.get(&mangled) {
+            return Ok(*f);
+        }
+
+        // Build LLVM parameter types from MediType params
+        let mut llparams: Vec<BasicMetadataTypeEnum<'ctx>> = Vec::with_capacity(params.len());
+        for p in params {
+            let bt = self
+                .llvm_type_from_medi(p)
+                .ok_or(CodeGenError::Llvm(format!(
+                    "cannot lower param type in specialization for {}",
+                    base_name
+                )))?;
+            llparams.push(bt.into());
+        }
+
+        // Build function type from return MediType
+        let ret_bt = self
+            .llvm_type_from_medi(ret)
+            .ok_or(CodeGenError::Llvm(format!(
+                "cannot lower return type in specialization for {}",
+                base_name
+            )))?;
+        let fnty = match ret_bt {
+            BasicTypeEnum::IntType(t) => t.fn_type(&llparams, false),
+            BasicTypeEnum::FloatType(t) => t.fn_type(&llparams, false),
+            BasicTypeEnum::PointerType(t) => t.fn_type(&llparams, false),
+            BasicTypeEnum::ArrayType(t) => t.fn_type(&llparams, false),
+            BasicTypeEnum::StructType(t) => t.fn_type(&llparams, false),
+            BasicTypeEnum::VectorType(t) => t.fn_type(&llparams, false),
+        };
+
+        let f = self.module.add_function(&mangled, fnty, None);
+        self.monomorph_meta.insert(
+            mangled.clone(),
+            (base_name.to_string(), params.to_vec(), ret.clone()),
+        );
+        self.monomorph_fns.insert(mangled, f);
+        Ok(f)
+    }
+
+    fn infer_medi_from_llvm_type(&self, v: &BasicValueEnum<'ctx>) -> Option<MediType> {
+        match v {
+            BasicValueEnum::IntValue(iv) => {
+                let bw = iv.get_type().get_bit_width();
+                if bw == 1 {
+                    Some(MediType::Bool)
+                } else if bw == 64 {
+                    Some(MediType::Int)
+                } else {
+                    None
+                }
+            }
+            BasicValueEnum::FloatValue(_fv) => Some(MediType::Float),
+            BasicValueEnum::PointerValue(_pv) => {
+                // Modern LLVM pointer types may be opaque; skip heuristics and do not infer.
+                None
+            }
+            _ => None,
+        }
+    }
+
+    fn pick_specialized_callee(
+        &self,
+        base: &str,
+        args: &[BasicValueEnum<'ctx>],
+    ) -> Option<FunctionValue<'ctx>> {
+        // Try to infer simple MediTypes from LLVM values and match an existing specialization exactly.
+        let inferred: Option<Vec<MediType>> = args
+            .iter()
+            .map(|a| self.infer_medi_from_llvm_type(a))
+            .collect();
+        let inferred = inferred?;
+        for (mangled, (b, params, _ret)) in self.monomorph_meta.iter() {
+            if b == base && *params == inferred {
+                if let Some(f) = self.monomorph_fns.get(mangled) {
+                    return Some(*f);
+                }
+            }
+        }
+        None
+    }
+
+    /// Ensure medi_convert(double, i32, i32) is declared and return it. Used for quantity/unit conversion fallback
+    /// when the quantity_ir feature is NOT enabled.
+    fn get_or_declare_medi_convert(&mut self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_convert") {
+            return f;
+        }
+        let i32t = self.context.i32_type();
+        let fn_ty = self
+            .f64
+            .fn_type(&[self.f64.into(), i32t.into(), i32t.into()], false);
+        self.module.add_function("medi_convert", fn_ty, None)
+    }
+
+    /// Coerce a runtime value to an expected LLVM type where possible.
+    /// Handles common promotions/demotions used at call boundaries.
+    fn coerce_to_type(
+        &self,
+        expected: BasicTypeEnum<'ctx>,
+        v: BasicValueEnum<'ctx>,
+    ) -> Result<BasicValueEnum<'ctx>, CodeGenError> {
+        use BasicTypeEnum as BT;
+        match (expected, v) {
+            (BT::FloatType(ft), BasicValueEnum::IntValue(iv)) => Ok(self
+                .builder
+                .build_signed_int_to_float(iv, ft, "sitofp")
+                .into()),
+            (BT::IntType(it), BasicValueEnum::FloatValue(fv)) => Ok(self
+                .builder
+                .build_float_to_signed_int(fv, it, "fptosi")
+                .into()),
+            // Normalize booleans from wider ints
+            (BT::IntType(it), BasicValueEnum::IntValue(iv)) if it.get_bit_width() == 1 => {
+                let cmp = self.builder.build_int_compare(
+                    inkwell::IntPredicate::NE,
+                    iv,
+                    iv.get_type().const_zero(),
+                    "tobool.i",
+                );
+                Ok(cmp.into())
+            }
+            // Zero/sign extend or truncate ints as needed
+            (BT::IntType(it), BasicValueEnum::IntValue(iv)) => {
+                let src_bw = iv.get_type().get_bit_width();
+                let dst_bw = it.get_bit_width();
+                if src_bw == dst_bw {
+                    Ok(iv.into())
+                } else if src_bw < dst_bw {
+                    Ok(self.builder.build_int_s_extend(iv, it, "sext").into())
+                } else {
+                    Ok(self.builder.build_int_truncate(iv, it, "trunc").into())
+                }
+            }
+            // If callee expects a pointer but we have a value, spill to stack and pass its address
+            (BT::PointerType(pt), other) => match other {
+                BasicValueEnum::PointerValue(pv) => {
+                    let cast = self.builder.build_pointer_cast(pv, pt, "ptr.cast");
+                    Ok(cast.into())
+                }
+                other => {
+                    let ety = Self::basic_type_of_value(&other);
+                    let tmp = self.create_entry_alloca("arg.spill", ety);
+                    self.builder.build_store(tmp, other);
+                    let cast = self.builder.build_pointer_cast(tmp, pt, "spill.cast");
+                    Ok(cast.into())
+                }
+            },
+            // Types already match (or we let LLVM catch it)
+            (_exp, val) => Ok(val),
         }
     }
 
@@ -883,7 +1565,7 @@ impl<'ctx> CodeGen<'ctx> {
                                     ))
                                 }
                             };
-                            let callee = self.get_or_declare_medi_convert_q();
+                            let callee = self.get_or_declare_medi_convert();
                             let i32t = self.context.i32_type();
                             let z = i32t.const_int(0, false);
                             let call_site = self.builder.build_call(
@@ -1042,7 +1724,7 @@ impl<'ctx> CodeGen<'ctx> {
                                     ))
                                 }
                             };
-                            let callee = self.get_or_declare_medi_convert_q();
+                            let callee = self.get_or_declare_medi_convert();
                             let i32t = self.context.i32_type();
                             let z = i32t.const_int(0, false);
                             let call_site = self.builder.build_call(
@@ -2173,6 +2855,17 @@ impl<'ctx> CodeGen<'ctx> {
                         func = Some(f);
                     }
                 }
+                // Optional: prefer a registered specialized callee if argument shapes match
+                // Gather raw argument values (without coercion) for inference
+                let raw_args: Vec<BasicValueEnum<'ctx>> = call
+                    .arguments
+                    .iter()
+                    .map(|a| self.codegen_expr(a))
+                    .collect::<Result<Vec<_>, _>>()?;
+                if let Some(spec) = self.pick_specialized_callee(&callee_name, &raw_args) {
+                    func = Some(spec);
+                }
+
                 let func = func.ok_or_else(|| {
                     CodeGenError::Llvm(format!("unknown function '{callee_name}'"))
                 })?;
@@ -2243,32 +2936,14 @@ impl<'ctx> CodeGen<'ctx> {
                     }
                 } else {
                     for (i, a) in call.arguments.iter().enumerate() {
-                        let mut v = self.codegen_expr(a)?;
-                        // If the callee expects f64 but we have int, cast it for math intrinsics convenience
-                        if let Some(BasicTypeEnum::FloatType(fty)) =
-                            callee_param_tys.get(start_idx + i)
-                        {
-                            if let BasicValueEnum::IntValue(iv) = v {
-                                let casted =
-                                    self.builder
-                                        .build_signed_int_to_float(iv, *fty, "sitofp.f64");
-                                v = casted.into();
-                            }
-                        }
-                        let expected = callee_param_tys
+                        let v = self.codegen_expr(a)?;
+                        let expected_md = callee_param_tys
                             .get(start_idx + i)
                             .copied()
                             .ok_or_else(|| CodeGenError::Llvm("arg index out of bounds".into()))?;
-                        match expected {
-                            BasicTypeEnum::PointerType(_) => {
-                                // Needs an address; create a temp and store the value
-                                let elem_ty = Self::basic_type_of_value(&v);
-                                let tmp = self.create_entry_alloca("arg.tmp", elem_ty);
-                                self.builder.build_store(tmp, v);
-                                args.push(tmp.into());
-                            }
-                            _ => args.push(v.into()),
-                        }
+                        let expected = expected_md.as_basic_type_enum();
+                        let v = self.coerce_to_type(expected, v)?;
+                        args.push(v.into());
                     }
                 }
 
@@ -2928,26 +3603,112 @@ impl<'ctx> CodeGen<'ctx> {
                 Ok(())
             }
             StatementNode::Function(func) => {
-                // Determine parameter and return types from annotations when available
-                // Apply SysV ABI basics: use sret for aggregate returns; byval for aggregate params
+                // Prefer MediType-driven function signature if available; else use AST annotations.
+                // Apply SysV ABI basics: use sret for aggregate returns; byval for aggregate params.
                 let mut is_sret = false;
                 let mut ret_agg_ty: Option<BasicTypeEnum> = None;
                 let mut lowered_param_tys: Vec<BasicMetadataTypeEnum> = Vec::new();
+                let name = func.name.name();
 
-                // Potential sret lowering
-                let orig_ret_ty: Option<BasicTypeEnum> = if let Some(ret_ann) = &func.return_type {
-                    self.type_from_annotation(ret_ann)
-                } else {
-                    None
-                };
+                // If env has a generic function type for this name, skip emitting a base body.
+                if let Some(mty) = self.func_types.get(name) {
+                    if Self::type_contains_typevar(mty) {
+                        // Do not emit a generic base definition. Specializations (if any) will be called directly.
+                        return Ok(());
+                    }
+                }
 
-                // First, handle sret decision
+                // Second guard: if any specialization has been registered for this base,
+                // do not emit a base definition (avoid duplicate or incorrect generic bodies).
+                if self
+                    .monomorph_meta
+                    .values()
+                    .any(|(base, _params, _ret)| base == name)
+                {
+                    return Ok(());
+                }
+
+                // Defensive guard: if AST annotations contain unknown/non-builtin identifiers (e.g., 'T'),
+                // treat this as a generic function and skip emitting the base body.
+                let mut ast_looks_generic = false;
+                if let Some(ret_ann) = &func.return_type {
+                    // If we cannot map annotation to a concrete LLVM type AND it's an identifier, treat as generic
+                    if self.type_from_annotation(ret_ann).is_none() {
+                        if let ExpressionNode::Identifier(_) = ret_ann {
+                            ast_looks_generic = true;
+                        }
+                    }
+                }
+                for p in &func.params {
+                    if let Some(ann) = &p.type_annotation {
+                        if self.type_from_annotation(ann).is_none() {
+                            if let ExpressionNode::Identifier(_) = ann {
+                                ast_looks_generic = true;
+                            }
+                        }
+                    }
+                }
+                if ast_looks_generic {
+                    return Ok(());
+                }
+
+                // Determine function signature source
+                let (orig_ret_ty, param_source_tys): (Option<BasicTypeEnum>, Vec<BasicTypeEnum>) =
+                    if let Some(mty) = self.func_types.get(name) {
+                        if let Some((is_void, ret_opt, params_md)) =
+                            self.function_signature_from_medi(mty)
+                        {
+                            // Convert BasicMetadataTypeEnum -> BasicTypeEnum
+                            let params_bt: Vec<BasicTypeEnum> = params_md
+                                .into_iter()
+                                .map(|md| md.as_basic_type_enum())
+                                .collect();
+                            let ret_bt = if is_void { None } else { ret_opt };
+                            (ret_bt, params_bt)
+                        } else {
+                            // Fallback to annotations if not a function type
+                            let r = if let Some(ret_ann) = &func.return_type {
+                                self.type_from_annotation(ret_ann)
+                            } else {
+                                None
+                            };
+                            let ps: Vec<BasicTypeEnum> = func
+                                .params
+                                .iter()
+                                .map(|p| {
+                                    p.type_annotation
+                                        .as_ref()
+                                        .and_then(|ann| self.type_from_annotation(ann))
+                                        .unwrap_or(self.i64.into())
+                                })
+                                .collect();
+                            (r, ps)
+                        }
+                    } else {
+                        let r = if let Some(ret_ann) = &func.return_type {
+                            self.type_from_annotation(ret_ann)
+                        } else {
+                            None
+                        };
+                        let ps: Vec<BasicTypeEnum> = func
+                            .params
+                            .iter()
+                            .map(|p| {
+                                p.type_annotation
+                                    .as_ref()
+                                    .and_then(|ann| self.type_from_annotation(ann))
+                                    .unwrap_or(self.i64.into())
+                            })
+                            .collect();
+                        (r, ps)
+                    };
+
+                // SRet decision based on return type
                 if let Some(rty) = orig_ret_ty {
                     match rty {
                         BasicTypeEnum::StructType(_) | BasicTypeEnum::ArrayType(_) => {
                             is_sret = true;
                             ret_agg_ty = Some(rty);
-                            // Hidden first parameter: pointer to return aggregate
                             let ret_ptr_ty = match rty {
                                 BasicTypeEnum::StructType(st) => {
                                     st.ptr_type(AddressSpace::from(0)).as_basic_type_enum()
@@ -2963,15 +3724,9 @@ impl<'ctx> CodeGen<'ctx> {
                     }
                 }
 
-                // Now handle parameters: byval for aggregate params
-                // We currently pass values; for aggregates, we will pass pointers and add byval attribute
+                // Parameters: pass aggregates as pointers and mark byval later
                 let mut param_byval: Vec<(usize, BasicTypeEnum)> = Vec::new();
-                for p in &func.params {
-                    let ty = if let Some(ann) = &p.type_annotation {
-                        self.type_from_annotation(ann).unwrap_or(self.i64.into())
-                    } else {
-                        self.i64.into()
-                    };
+                for ty in param_source_tys.into_iter() {
                     match ty {
                         BasicTypeEnum::StructType(st) => {
                             let pty = st.ptr_type(AddressSpace::from(0)).as_basic_type_enum();
@@ -3002,7 +3757,6 @@ impl<'ctx> CodeGen<'ctx> {
                 } else {
                     self.void.fn_type(&lowered_param_tys, false)
                 };
-                let name = func.name.name();
                 let function = self.module.add_function(name, fn_type, None);
                 // Use C calling convention (0) to align with x86-64 System V ABI
                 function.set_call_conventions(0u32);
@@ -3403,6 +4157,8 @@ pub fn generate_ir_string(program: &ProgramNode) -> Result<String, CodeGenError>
         .statements
         .iter()
         .any(|s| !matches!(s, StatementNode::Function(_)));
+    // Predeclare non-generic user functions if we have their types registered
+    cg.predeclare_user_functions(program);
     if has_top_stmts {
         // int main()
         let fn_type = cg.i64.fn_type(&[], false);
@@ -3447,6 +4203,111 @@ pub fn generate_ir_string(program: &ProgramNode) -> Result<String, CodeGenError>
         cg.emit_meta_global("tile.cond.marker", "tile.cond");
         cg.emit_meta_global("tile.inner.body.marker", "tile.inner.body");
         // Run metadata-driven tiling/interchange pass so IR contains real tiled blocks
+        run_loop_metadata_tiling_pass(&cg.module);
+    }
+    Ok(cg.module.print_to_string().to_string())
+}
+
+/// Generate IR text and pre-register both (name -> MediType::Function) and concrete specializations.
+#[cfg(feature = "llvm")]
+pub fn generate_ir_string_with_types_and_specs(
+    program: &ProgramNode,
+    types: &[(String, MediType)],
+    specializations: &[(String, Vec<MediType>, MediType)],
+) -> Result<String, CodeGenError> {
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+    // Predeclare non-generic user functions for top-level calls
+    cg.predeclare_user_functions(program);
+    for (base, params, ret) in specializations.iter() {
+        let _ = cg.register_specialized_function(base, params, ret)?;
+    }
+
+    // Mirror lowering from generate_ir_string_with_types
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        let main_ty = cg.i64.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", main_ty, None);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        cg.builder.build_return(Some(&cg.i64.const_zero()));
+        cg.current_fn = prev;
+    }
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+    Ok(cg.module.print_to_string().to_string())
+}
+
+/// Generate IR text for a parsed Medi program, registering function type information first.
+#[cfg(feature = "llvm")]
+pub fn generate_ir_string_with_types(
+    program: &ProgramNode,
+    types: &[(String, MediType)],
+) -> Result<String, CodeGenError> {
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+    // Register MediType function signatures (only Function types are meaningful here)
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+    // Predeclare non-generic user functions so that top-level calls can reference them
+    cg.predeclare_user_functions(program);
+
+    // Top-level: allow function declarations and statements within an implicit main()
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        // int main()
+        let main_ty = cg.i64.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", main_ty, None);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        // default return 0
+        cg.builder.build_return(Some(&cg.i64.const_zero()));
+        cg.current_fn = prev;
+    }
+
+    // Emit free-standing function definitions
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+
+    // Optional metadata-driven tiling markers
+    let pipe = std::env::var("MEDI_LLVM_PIPE").unwrap_or_else(|_| "minimal".to_string());
+    if pipe == "aggressive" {
+        cg.emit_meta_global("tile.cond.marker", "tile.cond");
+        cg.emit_meta_global("tile.inner.body.marker", "tile.inner.body");
         run_loop_metadata_tiling_pass(&cg.module);
     }
     Ok(cg.module.print_to_string().to_string())

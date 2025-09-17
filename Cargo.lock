@@ -540,6 +540,7 @@ version = "0.1.0"
 dependencies = [
  "inkwell",
  "medic_ast",
+ "medic_type",
  "medic_typeck",
  "thiserror 1.0.69",
 ]

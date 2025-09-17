@@ -81,6 +81,194 @@ mod unit_tests {
         assert!(tc.errors().is_empty());
     }
 
+    #[test]
+    fn collect_generic_specializations_for_literal_calls() {
+        use medic_ast::visit::Span;
+        // env: f: fn(T) -> T
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "f".to_string(),
+            MediType::Function {
+                params: vec![MediType::TypeVar("T".to_string())],
+                return_type: Box::new(MediType::TypeVar("T".to_string())),
+            },
+        );
+
+        // Build AST: fn f(x: T) -> T { x }
+        let f_fn = StatementNode::Function(Box::new(FunctionNode {
+            name: IdentifierNode::from_str_name("f"),
+            params: vec![ParameterNode {
+                name: IdentifierNode::from_str_name("x"),
+                type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("T"),
+                    Span {
+                        start: 0,
+                        end: 1,
+                        line: 1,
+                        column: 1,
+                    },
+                ))),
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 1,
+                    column: 1,
+                },
+            }],
+            return_type: Some(ExpressionNode::Identifier(Spanned::new(
+                IdentifierNode::from_str_name("T"),
+                Span {
+                    start: 0,
+                    end: 1,
+                    line: 1,
+                    column: 1,
+                },
+            ))),
+            body: BlockNode {
+                statements: vec![StatementNode::Return(Box::new(ReturnNode {
+                    value: Some(ExpressionNode::Identifier(Spanned::new(
+                        IdentifierNode::from_str_name("x"),
+                        Span {
+                            start: 0,
+                            end: 1,
+                            line: 1,
+                            column: 1,
+                        },
+                    ))),
+                    span: Span {
+                        start: 0,
+                        end: 0,
+                        line: 1,
+                        column: 1,
+                    },
+                }))],
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 1,
+                    column: 1,
+                },
+            },
+            span: Span {
+                start: 0,
+                end: 0,
+                line: 1,
+                column: 1,
+            },
+        }));
+
+        // fn test() { let a = f(1); let b = f(1.0); }
+        let test_fn = StatementNode::Function(Box::new(FunctionNode {
+            name: IdentifierNode::from_str_name("test"),
+            params: vec![],
+            return_type: None,
+            body: BlockNode {
+                statements: vec![
+                    StatementNode::Let(Box::new(LetStatementNode {
+                        name: IdentifierNode::from_str_name("a"),
+                        type_annotation: None,
+                        value: Some(ExpressionNode::Call(Spanned::new(
+                            Box::new(CallExpressionNode {
+                                callee: ExpressionNode::Identifier(Spanned::new(
+                                    IdentifierNode::from_str_name("f"),
+                                    Span {
+                                        start: 0,
+                                        end: 1,
+                                        line: 1,
+                                        column: 1,
+                                    },
+                                )),
+                                arguments: vec![ExpressionNode::Literal(Spanned::new(
+                                    LiteralNode::Int(1),
+                                    Span {
+                                        start: 2,
+                                        end: 3,
+                                        line: 1,
+                                        column: 3,
+                                    },
+                                ))],
+                            }),
+                            Span {
+                                start: 0,
+                                end: 3,
+                                line: 1,
+                                column: 1,
+                            },
+                        ))),
+                        span: Span {
+                            start: 0,
+                            end: 0,
+                            line: 1,
+                            column: 1,
+                        },
+                    })),
+                    StatementNode::Let(Box::new(LetStatementNode {
+                        name: IdentifierNode::from_str_name("b"),
+                        type_annotation: None,
+                        value: Some(ExpressionNode::Call(Spanned::new(
+                            Box::new(CallExpressionNode {
+                                callee: ExpressionNode::Identifier(Spanned::new(
+                                    IdentifierNode::from_str_name("f"),
+                                    Span {
+                                        start: 0,
+                                        end: 1,
+                                        line: 1,
+                                        column: 1,
+                                    },
+                                )),
+                                arguments: vec![ExpressionNode::Literal(Spanned::new(
+                                    LiteralNode::Float(1.0),
+                                    Span {
+                                        start: 2,
+                                        end: 5,
+                                        line: 1,
+                                        column: 3,
+                                    },
+                                ))],
+                            }),
+                            Span {
+                                start: 0,
+                                end: 5,
+                                line: 1,
+                                column: 1,
+                            },
+                        ))),
+                        span: Span {
+                            start: 0,
+                            end: 0,
+                            line: 1,
+                            column: 1,
+                        },
+                    })),
+                ],
+                span: Span {
+                    start: 0,
+                    end: 0,
+                    line: 1,
+                    column: 1,
+                },
+            },
+            span: Span {
+                start: 0,
+                end: 0,
+                line: 1,
+                column: 1,
+            },
+        }));
+
+        let program = ProgramNode {
+            statements: vec![f_fn, test_fn],
+        };
+
+        let tc = TypeChecker::new(&mut env);
+        let specs = tc.collect_function_specializations(&program);
+        // Expect two concrete specializations: (f, [Int], Int) and (f, [Float], Float)
+        assert!(specs.contains(&("f".to_string(), vec![MediType::Int], MediType::Int,)));
+        assert!(specs.contains(&("f".to_string(), vec![MediType::Float], MediType::Float,)));
+    }
+
+    // Removed duplicate collect_function_specializations helper from test module; use the impl method below.
+
     // Note: expectation setters are implemented on TypeChecker impl for test use
 
     #[test]
@@ -416,6 +604,215 @@ impl<'a> TypeChecker<'a> {
     fn set_unit_at_span(&mut self, span: &Span, unit: &str) {
         self.quantity_units
             .insert((span.start, span.end), unit.to_string());
+    }
+
+    /// Walk the program to collect concrete function specializations derived from generic function types.
+    /// For each call f(args...), if env has f: Function with type variables (TypeVar), attempt to unify
+    /// formal params with actual argument types and produce concrete param/return MediTypes.
+    /// Returns unique list of (function_name, concrete_params, concrete_return).
+    pub fn collect_function_specializations(
+        &self,
+        program: &ProgramNode,
+    ) -> Vec<(String, Vec<MediType>, MediType)> {
+        use std::collections::HashMap;
+
+        fn apply_subs(t: &MediType, subs: &HashMap<String, MediType>) -> MediType {
+            use MediType as MT;
+            match t {
+                MT::TypeVar(n) => subs.get(n).cloned().unwrap_or(MT::Unknown),
+                MT::Range(inner) => MT::Range(Box::new(apply_subs(inner, subs))),
+                MT::Quantity(inner) => MT::Quantity(Box::new(apply_subs(inner, subs))),
+                MT::List(inner) => MT::List(Box::new(apply_subs(inner, subs))),
+                MT::Struct(fields) => {
+                    let mut m = HashMap::new();
+                    for (k, v) in fields.iter() {
+                        m.insert(k.clone(), apply_subs(v, subs));
+                    }
+                    MT::Struct(m)
+                }
+                MT::Record(fields) => MT::Record(
+                    fields
+                        .iter()
+                        .map(|(k, v)| (k.clone(), apply_subs(v, subs)))
+                        .collect(),
+                ),
+                MT::Function {
+                    params,
+                    return_type,
+                } => MT::Function {
+                    params: params.iter().map(|p| apply_subs(p, subs)).collect(),
+                    return_type: Box::new(apply_subs(return_type, subs)),
+                },
+                _ => t.clone(),
+            }
+        }
+
+        fn unify(
+            formal: &MediType,
+            actual: &MediType,
+            subs: &mut HashMap<String, MediType>,
+        ) -> bool {
+            use MediType as MT;
+            match (formal, actual) {
+                (MT::TypeVar(n), a) => {
+                    if let Some(prev) = subs.get(n) {
+                        prev == a
+                    } else {
+                        subs.insert(n.clone(), a.clone());
+                        true
+                    }
+                }
+                (MT::Range(f), MT::Range(a)) | (MT::Quantity(f), MT::Quantity(a)) => {
+                    unify(f, a, subs)
+                }
+                (MT::List(f), MT::List(a)) => unify(f, a, subs),
+                (MT::Struct(fs), MT::Struct(as_)) => {
+                    if fs.len() != as_.len() {
+                        return false;
+                    }
+                    for (k, fv) in fs.iter() {
+                        if let Some(av) = as_.get(k) {
+                            if !unify(fv, av, subs) {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                    true
+                }
+                (MT::Record(fr), MT::Record(ar)) => {
+                    if fr.len() != ar.len() {
+                        return false;
+                    }
+                    for ((fk, fv), (ak, av)) in fr.iter().zip(ar.iter()) {
+                        if fk != ak || !unify(fv, av, subs) {
+                            return false;
+                        }
+                    }
+                    true
+                }
+                (f, a) => f == a,
+            }
+        }
+
+        struct Collector<'a> {
+            tc: &'a TypeChecker<'a>,
+            specs: Vec<(String, Vec<MediType>, MediType)>,
+        }
+        impl<'a> Collector<'a> {
+            fn simple_infer_expr_type(&self, e: &ExpressionNode) -> Option<MediType> {
+                match e {
+                    ExpressionNode::Literal(Spanned { node: lit, .. }) => match lit {
+                        LiteralNode::Int(_) => Some(MediType::Int),
+                        LiteralNode::Float(_) => Some(MediType::Float),
+                        LiteralNode::Bool(_) => Some(MediType::Bool),
+                        LiteralNode::String(_) => Some(MediType::String),
+                    },
+                    _ => None,
+                }
+            }
+        }
+        impl<'a> Collector<'a> {
+            fn visit_expr(&mut self, e: &ExpressionNode) {
+                match e {
+                    ExpressionNode::Call(Spanned { node: call, .. }) => {
+                        if let Some(name) = TypeChecker::extract_identifier_name(&call.callee) {
+                            if let Some(MediType::Function {
+                                params,
+                                return_type,
+                            }) = self.tc.env.get(&name)
+                            {
+                                let is_generic =
+                                    params.iter().any(|p| matches!(p, MediType::TypeVar(_)))
+                                        || matches!(return_type.as_ref(), MediType::TypeVar(_));
+                                if is_generic && params.len() == call.arguments.len() {
+                                    let mut subs = HashMap::new();
+                                    let mut ok = true;
+                                    for (pi, arg) in call.arguments.iter().enumerate() {
+                                        let at = self
+                                            .simple_infer_expr_type(arg)
+                                            .or_else(|| {
+                                                self.tc.get_type_at_span(arg.span()).cloned()
+                                            })
+                                            .unwrap_or(MediType::Unknown);
+                                        if !unify(&params[pi], &at, &mut subs) {
+                                            ok = false;
+                                            break;
+                                        }
+                                    }
+                                    if ok {
+                                        let concr_params: Vec<MediType> =
+                                            params.iter().map(|p| apply_subs(p, &subs)).collect();
+                                        let concr_ret = apply_subs(return_type, &subs);
+                                        let item = (name, concr_params, concr_ret);
+                                        if !self.specs.iter().any(|x| x == &item) {
+                                            self.specs.push(item);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        self.visit_expr(&call.callee);
+                        for a in &call.arguments {
+                            self.visit_expr(a);
+                        }
+                    }
+                    ExpressionNode::Binary(Spanned { node: b, .. }) => {
+                        self.visit_expr(&b.left);
+                        self.visit_expr(&b.right);
+                    }
+                    ExpressionNode::Member(Spanned { node: m, .. }) => {
+                        self.visit_expr(&m.object);
+                    }
+                    ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                        for el in &arr.elements {
+                            self.visit_expr(el);
+                        }
+                    }
+                    ExpressionNode::Struct(Spanned { node: s, .. }) => {
+                        for f in &s.fields {
+                            self.visit_expr(&f.value);
+                        }
+                    }
+                    ExpressionNode::Statement(Spanned { node: stmt, .. }) => {
+                        self.visit_stmt(stmt);
+                    }
+                    _ => {}
+                }
+            }
+            fn visit_stmt(&mut self, s: &StatementNode) {
+                match s {
+                    StatementNode::Expr(e) => self.visit_expr(e),
+                    StatementNode::Let(ln) => {
+                        if let Some(init) = &ln.value {
+                            self.visit_expr(init);
+                        }
+                    }
+                    StatementNode::Return(rn) => {
+                        if let Some(v) = &rn.value {
+                            self.visit_expr(v);
+                        }
+                    }
+                    StatementNode::Function(fnnode) => {
+                        for st in &fnnode.body.statements {
+                            self.visit_stmt(st);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        let mut coll = Collector {
+            tc: self,
+            specs: Vec::new(),
+        };
+        for st in &program.statements {
+            coll.visit_stmt(st);
+        }
+        coll.specs.sort_by(|a, b| a.0.cmp(&b.0));
+        coll.specs
     }
 
     /// Attempts to extract a quantity unit from an expression (Quantity literal or implicit mul like `5 mg`).

@@ -207,7 +207,7 @@
               2
             ],
             "details": "Map language primitive types to LLVM types, implement struct and array type representations, handle function types and signatures, implement generic type specialization for LLVM, manage ABI-compliant data layout, and ensure proper type conversions and promotions",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 6,

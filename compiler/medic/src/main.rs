@@ -9,10 +9,12 @@ use medic_parser::parser::{
     parse_program_recovering, parse_program_with_diagnostics, render_snippet, TokenSlice,
 };
 use medic_typeck::type_checker::TypeChecker;
+use serde_json::Value as JsonValue;
 
 #[cfg(feature = "llvm-backend")]
 use medic_codegen_llvm::{
-    generate_x86_64_object_default, generate_x86_64_object_with_opts, TargetKind,
+    generate_ir_string_with_types_and_specs, generate_x86_64_object_default,
+    generate_x86_64_object_with_opts, generate_x86_64_object_with_opts_types_and_specs, TargetKind,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,11 +23,85 @@ enum OutputMode {
     Json,
 }
 
+fn parse_medi_type_str(s: &str) -> Option<medic_type::types::MediType> {
+    use medic_type::types::MediType as MT;
+    match s {
+        "Int" | "int" => Some(MT::Int),
+        "Float" | "float" => Some(MT::Float),
+        "Bool" | "bool" => Some(MT::Bool),
+        "String" | "string" => Some(MT::String),
+        "Void" | "void" => Some(MT::Void),
+        "Unknown" | "unknown" => Some(MT::Unknown),
+        other if other.starts_with("TypeVar:") => Some(MT::TypeVar(other[8..].to_string())),
+        _ => None,
+    }
+}
+
+fn load_types_json(env: &mut TypeEnv, json_text: &str) -> Result<(), String> {
+    let v: JsonValue = serde_json::from_str(json_text).map_err(|e| e.to_string())?;
+    // Accept either {"functions":[{"name":"f","params":[..],"return":".."}]} or {"f":{"params":[..],"return":".."}}
+    if let Some(funcs) = v.get("functions").and_then(|x| x.as_array()) {
+        for f in funcs {
+            let name = f
+                .get("name")
+                .and_then(|n| n.as_str())
+                .ok_or("function missing name")?;
+            let params = f
+                .get("params")
+                .and_then(|p| p.as_array())
+                .ok_or("function missing params")?;
+            let ret = f
+                .get("return")
+                .and_then(|r| r.as_str())
+                .ok_or("function missing return")?;
+            let params_mt: Option<Vec<_>> = params
+                .iter()
+                .map(|s| s.as_str().and_then(parse_medi_type_str))
+                .collect();
+            let params_mt = params_mt.ok_or("invalid param type string")?;
+            let ret_mt = parse_medi_type_str(ret).ok_or("invalid return type string")?;
+            env.insert(
+                name.to_string(),
+                medic_type::types::MediType::Function {
+                    params: params_mt,
+                    return_type: Box::new(ret_mt),
+                },
+            );
+        }
+        return Ok(());
+    }
+
+    if let Some(obj) = v.as_object() {
+        for (name, def) in obj {
+            if let Some(params) = def.get("params").and_then(|p| p.as_array()) {
+                if let Some(ret_s) = def.get("return").and_then(|r| r.as_str()) {
+                    let params_mt: Option<Vec<_>> = params
+                        .iter()
+                        .map(|s| s.as_str().and_then(parse_medi_type_str))
+                        .collect();
+                    let params_mt = params_mt.ok_or("invalid param type string")?;
+                    let ret_mt = parse_medi_type_str(ret_s).ok_or("invalid return type string")?;
+                    env.insert(
+                        name.to_string(),
+                        medic_type::types::MediType::Function {
+                            params: params_mt,
+                            return_type: Box::new(ret_mt),
+                        },
+                    );
+                }
+            }
+        }
+        return Ok(());
+    }
+    Err("unsupported types json format".into())
+}
+
 fn main() {
     // Read source either from file arg or stdin; recognize --json flag
     let args: Vec<String> = env::args().collect();
     let mut mode = OutputMode::Text;
     let mut path_arg: Option<String> = None;
+    let mut types_json_path: Option<String> = None;
     #[cfg(feature = "llvm-backend")]
     let mut emit_target: Option<TargetKind> = None;
     #[cfg(feature = "llvm-backend")]
@@ -76,6 +152,9 @@ fn main() {
                 if let Some(val) = s.splitn(2, '=').nth(1) {
                     std::env::set_var("MEDI_LLVM_FEATURES", val);
                 }
+            }
+            s if s.starts_with("--types-json=") => {
+                types_json_path = s.split_once('=').map(|x| x.1.to_string());
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--opt-pipeline=") => {
@@ -135,6 +214,21 @@ fn main() {
 
                     // Run type checking and inference over the parsed program
                     let mut env = TypeEnv::with_prelude();
+                    // Optional: load function types from a JSON file to seed generics like fn(T)->T
+                    if let Some(ref p) = types_json_path {
+                        match fs::read_to_string(p) {
+                            Ok(text) => {
+                                if let Err(e) = load_types_json(&mut env, &text) {
+                                    eprintln!(
+                                        "warning: failed to load --types-json file '{p}': {e}"
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("warning: cannot read --types-json file '{p}': {e}");
+                            }
+                        }
+                    }
                     let mut checker = TypeChecker::new(&mut env);
                     let mut type_errors = checker.check_program(&program);
                     // Include any collected validation/type errors from expression checks
@@ -150,6 +244,11 @@ fn main() {
                     // Optional: code emission when llvm-backend is enabled
                     #[cfg(feature = "llvm-backend")]
                     if let Some(target) = emit_target {
+                        // Compute concrete specializations now (checker holds mutable borrow of env)
+                        let specs = checker.collect_function_specializations(&program);
+                        // Release checker (and its &mut env) before immutably borrowing env for function types
+                        drop(checker);
+                        let fun_tys = env.collect_function_types();
                         match target {
                             TargetKind::X86_64 => {
                                 // Check optional overrides from env
@@ -191,7 +290,10 @@ fn main() {
                                     let opt = opt.unwrap_or(2);
                                     let cpu = cpu.unwrap_or_else(|| "x86-64".to_string());
                                     let feats = feats.unwrap_or_else(|| "".to_string());
-                                    generate_x86_64_object_with_opts(&program, opt, &cpu, &feats)
+                                    // Use the new API that registers MediType function signatures and specializations first.
+                                    generate_x86_64_object_with_opts_types_and_specs(
+                                        &program, opt, &cpu, &feats, &fun_tys, &specs,
+                                    )
                                 };
                                 match result {
                                     Ok(obj) => {
@@ -215,7 +317,9 @@ fn main() {
                                             }
                                         } else {
                                             eprintln!("note: no --out=path provided; printing LLVM IR instead");
-                                            match medic_codegen_llvm::generate_ir_string(&program) {
+                                            match generate_ir_string_with_types_and_specs(
+                                                &program, &fun_tys, &specs,
+                                            ) {
                                                 Ok(ir) => println!("{ir}"),
                                                 Err(e) => {
                                                     eprintln!("error: IR generation failed: {e}");
@@ -232,7 +336,9 @@ fn main() {
                             }
                             _ => {
                                 // Fallback: just emit IR for other targets until implemented
-                                match medic_codegen_llvm::generate_ir_string(&program) {
+                                match generate_ir_string_with_types_and_specs(
+                                    &program, &fun_tys, &specs,
+                                ) {
                                     Ok(ir) => {
                                         if let Some(path) = out_path {
                                             if let Err(e) = fs::write(&path, ir.as_bytes()) {
