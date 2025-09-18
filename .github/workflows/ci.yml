@@ -124,6 +124,7 @@ jobs:
           LIBCLANG_PATH: ${{ env.LIBCLANG_PATH }}
           PATH: ${{ env.PATH }}
           INKWELL_LLVM_VERSION: "15"
+          LLVM_SYS_150_IGNORE_MARKER: "YES"
         run: cargo test --workspace
 
       - name: Run tests (non-Windows)
