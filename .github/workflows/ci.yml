@@ -88,16 +88,22 @@ jobs:
           fi
 
       # Windows: install LLVM via Chocolatey
-      - name: Install LLVM (Windows)
+      - name: Install LLVM 15 (Windows)
         if: runner.os == 'Windows'
-        run: |
-          # Allow downgrade if a newer LLVM is already present; if install still fails, continue
-          choco install -y llvm --version=15.0.7 --allow-downgrade
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "LLVM install downgrade failed or newer present; proceeding with preinstalled LLVM"
-            $global:LASTEXITCODE = 0
-          }
         shell: powershell
+        run: |
+          choco list --local-only | Select-String -Pattern '^llvm ' | ForEach-Object { $_.ToString() }
+          $installed = choco list --local-only | Select-String -Pattern '^llvm ' | ForEach-Object { $_.ToString() }
+          if ($installed -and ($installed -notmatch '15\.')) {
+            Write-Host "Found non-15 LLVM installed. Uninstalling..."
+            choco uninstall -y llvm
+          }
+          Write-Host "Installing LLVM 15.0.7 via Chocolatey..."
+          choco install -y llvm --version=15.0.7 --allow-downgrade --force
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to install LLVM 15.0.7"
+            exit 1
+          }
       - name: Set LLVM env (Windows)
         if: runner.os == 'Windows'
         run: |
