@@ -109,7 +109,9 @@ jobs:
         run: |
           echo "LLVM_SYS_150_PREFIX=C:\\Program Files\\LLVM" >> $env:GITHUB_ENV
           echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> $env:GITHUB_ENV
-          echo "LLVM_CONFIG_PATH=C:\\Program Files\\LLVM\\bin\\llvm-config.exe" >> $env:GITHUB_ENV
+          if (Test-Path "C:\\Program Files\\LLVM\\bin\\llvm-config.exe") {
+            echo "LLVM_CONFIG_PATH=C:\\Program Files\\LLVM\\bin\\llvm-config.exe" >> $env:GITHUB_ENV
+          }
           echo "PATH=C:\\Program Files\\LLVM\\bin;$env:PATH" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -119,8 +121,16 @@ jobs:
         run: |
           Write-Host "LLVM_SYS_150_PREFIX=$env:LLVM_SYS_150_PREFIX"
           Write-Host "LIBCLANG_PATH=$env:LIBCLANG_PATH"
-          Write-Host "LLVM_CONFIG_PATH=$env:LLVM_CONFIG_PATH"
-          & "$env:LLVM_CONFIG_PATH" --version
+          if ($env:LLVM_CONFIG_PATH) {
+            Write-Host "LLVM_CONFIG_PATH=$env:LLVM_CONFIG_PATH"
+          } else {
+            Write-Host "LLVM_CONFIG_PATH not set (llvm-config.exe typically not shipped on Windows)."
+          }
+          Write-Host "Listing LLVM bin directory contents:"
+          Get-ChildItem "C:\\Program Files\\LLVM\\bin" | Select-Object Name
+          Write-Host "Checking for expected directories:"
+          Test-Path "C:\\Program Files\\LLVM\\include" | ForEach-Object { Write-Host "include exists: $_" }
+          Test-Path "C:\\Program Files\\LLVM\\lib" | ForEach-Object { Write-Host "lib exists: $_" }
 
       - name: Run tests
         run: cargo test --workspace
