@@ -117,7 +117,17 @@ jobs:
           Test-Path "$env:LLVM_SYS_150_PREFIX\\include" | ForEach-Object { Write-Host "include exists: $_" }
           Test-Path "$env:LLVM_SYS_150_PREFIX\\lib" | ForEach-Object { Write-Host "lib exists: $_" }
 
-      - name: Run tests
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        env:
+          LLVM_SYS_150_PREFIX: ${{ env.LLVM_SYS_150_PREFIX }}
+          LIBCLANG_PATH: ${{ env.LIBCLANG_PATH }}
+          PATH: ${{ env.PATH }}
+          INKWELL_LLVM_VERSION: "15"
+        run: cargo test --workspace
+
+      - name: Run tests (non-Windows)
+        if: runner.os != 'Windows'
         run: cargo test --workspace
 
   bench-smoke:
