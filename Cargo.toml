@@ -9,5 +9,6 @@ members = [
     "compiler/medic_type",
     "compiler/medic_typeck",
     "compiler/medic_codegen_llvm",
+    "compiler/benches",
     "tests",
 ]

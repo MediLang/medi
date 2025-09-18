@@ -73,17 +73,23 @@ fn main() -> std::io::Result<()> {
     let sizes = ["256k", "512k", "2m", "4m", "8m"];
     let kinds = ["func", "expr"];
 
-    println!("Parser scaling benchmark (release)\nBase dir: {}\n", base.display());
+    println!(
+        "Parser scaling benchmark (release)\nBase dir: {}\n",
+        base.display()
+    );
 
     let mut rows: Vec<Row> = Vec::new();
 
     println!("kind,size,bytes,ok,stmts,time_ms");
     for kind in kinds.iter() {
         for size in sizes.iter() {
-            let fname = format!("large_{}_{size}.medi", kind);
+            let fname = format!("large_{kind}_{size}.medi");
             let path = base.join(&fname);
             if !path.exists() {
-                eprintln!("Missing file: {} (generate with generate_sized_files)", path.display());
+                eprintln!(
+                    "Missing file: {} (generate with generate_sized_files)",
+                    path.display()
+                );
                 continue;
             }
             let bytes = fs::metadata(&path)?.len();
@@ -93,11 +99,20 @@ fn main() -> std::io::Result<()> {
             let mut last_stmts = 0usize;
             for _ in 0..3 {
                 let (ok, stmts, t) = bench_file(&path)?;
-                last_ok = ok; last_stmts = stmts; times.push(t);
+                last_ok = ok;
+                last_stmts = stmts;
+                times.push(t);
             }
             let avg_ms = times.iter().copied().sum::<u128>() as f64 / times.len() as f64 / 1000.0;
-            println!("{},{},{},{} ,{}, {:.2}", kind, size, bytes, last_ok, last_stmts, avg_ms);
-            rows.push(Row { kind, size, bytes, ok: last_ok, stmts: last_stmts, time_ms: avg_ms });
+            println!("{kind},{size},{bytes},{last_ok},{last_stmts},{avg_ms:.2}");
+            rows.push(Row {
+                kind,
+                size,
+                bytes,
+                ok: last_ok,
+                stmts: last_stmts,
+                time_ms: avg_ms,
+            });
         }
     }
 
@@ -107,14 +122,17 @@ fn main() -> std::io::Result<()> {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let csv_path = base.join(format!("scaling_{}.csv", ts));
-    let json_path = base.join(format!("scaling_{}.json", ts));
+    let csv_path = base.join(format!("scaling_{ts}.csv"));
+    let json_path = base.join(format!("scaling_{ts}.json"));
 
     // CSV
     {
         let mut s = String::from("kind,size,bytes,ok,stmts,time_ms\n");
         for r in &rows {
-            s.push_str(&format!("{},{},{},{},{},{}\n", r.kind, r.size, r.bytes, r.ok, r.stmts, r.time_ms));
+            s.push_str(&format!(
+                "{},{},{},{},{},{}\n",
+                r.kind, r.size, r.bytes, r.ok, r.stmts, r.time_ms
+            ));
         }
         fs::write(&csv_path, s)?;
     }

@@ -8,7 +8,7 @@ fn main() {
 
     // Estimate tokens per line (average 20 tokens per line)
     let lines = target_tokens / 20;
-    let tokens_per_line = target_tokens / lines;
+    let _tokens_per_line = target_tokens / lines;
 
     let mut file = File::create(output_path).expect("Failed to create test file");
 
@@ -42,8 +42,5 @@ fn check_blood_pressure(systolic: int, diastolic: int) -> string {
         bytes_written += template_size;
     }
 
-    println!(
-        "Generated test file: {} ({} bytes)",
-        output_path, bytes_written
-    );
+    println!("Generated test file: {output_path} ({bytes_written} bytes)");
 }

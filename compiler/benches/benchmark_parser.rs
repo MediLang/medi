@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::Write;
-use std::time::Instant;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
@@ -18,7 +18,7 @@ fn main() {
         // Another fallback if run from repo root directly
         "compiler/benches/large_test_file.medi",
     ];
-    println!("CARGO_MANIFEST_DIR={}", manifest_dir);
+    println!("CARGO_MANIFEST_DIR={manifest_dir}");
     let mut path: Option<PathBuf> = None;
     for cand in candidates.iter() {
         let p = Path::new(manifest_dir).join(cand);
@@ -61,7 +61,13 @@ fn main() {
             Err(_) => 0,
         };
         let status = if result.is_ok() { "OK" } else { "ERR" };
-        println!("\rIteration {}: status={}, {} statements, {} ms", i + 1, status, stmt_count, elapsed.as_millis());
+        println!(
+            "\rIteration {}: status={}, {} statements, {} ms",
+            i + 1,
+            status,
+            stmt_count,
+            elapsed.as_millis()
+        );
         times.push(elapsed.as_micros());
     }
 

@@ -56,6 +56,33 @@ pub enum CodeGenError {
     Llvm(String),
 }
 
+// Helper to select an appropriate target triple for object emission.
+// Uses MEDI_TARGET_TRIPLE when provided, otherwise selects based on host OS.
+#[cfg(feature = "llvm")]
+fn selected_triple() -> String {
+    if let Ok(s) = std::env::var("MEDI_TARGET_TRIPLE") {
+        if !s.is_empty() {
+            return s;
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        "x86_64-unknown-linux-gnu".to_string()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        "x86_64-apple-darwin".to_string()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        "x86_64-pc-windows-msvc".to_string()
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    {
+        "x86_64-unknown-linux-gnu".to_string()
+    }
+}
+
 /// Like generate_x86_64_object_with_opts_types, but also registers concrete specializations.
 #[cfg(feature = "llvm")]
 pub fn generate_x86_64_object_with_opts_types_and_specs(
@@ -114,7 +141,7 @@ pub fn generate_x86_64_object_with_opts_types_and_specs(
     // Target machine and emission
     use inkwell::targets::{InitializationConfig, Target};
     Target::initialize_all(&InitializationConfig::default());
-    let triple = TargetTriple::create("x86_64-unknown-linux-gnu");
+    let triple = TargetTriple::create(&selected_triple());
     let target = Target::from_triple(&triple)
         .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
     let tm = target
@@ -607,7 +634,7 @@ impl<'ctx> CodeGen<'ctx> {
         };
         // Best-effort: apply a default target triple and data layout for ABI correctness.
         // If this fails (e.g., missing target), continue with LLVM defaults.
-        let _ = this.set_target_triple_and_datalayout("x86_64-unknown-linux-gnu");
+        let _ = this.set_target_triple_and_datalayout(&selected_triple());
         this
     }
 
@@ -4374,7 +4401,7 @@ pub fn generate_x86_64_object_cpu_features(
     }
 
     // 2) Configure x86-64 target and data layout
-    let triple = TargetTriple::create("x86_64-pc-linux-gnu");
+    let triple = TargetTriple::create(&selected_triple());
     let target = Target::from_triple(&triple)
         .map_err(|e| CodeGenError::Llvm(format!("target error: {e}")))?;
     let reloc = RelocMode::PIC;

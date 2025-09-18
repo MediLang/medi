@@ -1,15 +1,10 @@
-use medic_lexer::{
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
-    lexer::Lexer as OriginalLexer,
-    streaming_lexer::StreamingLexer,
-    token::Token,
-    LexerConfig,
-};
+use medic_lexer::{lexer::Lexer as OriginalLexer, token::Token};
 use std::error::Error;
 use std::fmt;
 use std::time::Instant;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct BenchmarkError {
     message: String,
     iteration: usize,
@@ -150,8 +145,7 @@ fn run_benchmark() -> Result<BenchmarkStats, Box<dyn Error>> {
         // Log any errors if they occurred
         if error_count > 0 {
             eprintln!(
-                "  Warning: Found {} tokenization errors in iteration {}",
-                error_count,
+                "  Warning: Found {error_count} tokenization errors in iteration {}",
                 i + 1
             );
 
@@ -214,7 +208,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
         Err(e) => {
-            eprintln!("Benchmark failed: {}", e);
+            eprintln!("Benchmark failed: {e}");
             return Err(e);
         }
     }

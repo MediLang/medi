@@ -61,7 +61,9 @@ fn measure_streaming_lexer(content: &str) -> (usize, u128) {
 /// Measures the chunked lexer's performance.
 fn measure_chunked_lexer(content: &str) -> (usize, u128) {
     let config = ChunkedLexerConfig::default();
-    let cursor = Cursor::new(content.as_bytes());
+    // Own the buffer to avoid borrowing `content` with a non-'static lifetime
+    let buf: Vec<u8> = content.as_bytes().to_vec();
+    let cursor = Cursor::new(buf);
     let lexer = ChunkedLexer::from_reader(cursor, config);
     measure_lexer_performance(lexer)
 }
@@ -69,7 +71,7 @@ fn measure_chunked_lexer(content: &str) -> (usize, u128) {
 /// Formats bytes into a human-readable string (KB or MB)
 fn format_memory(kb: u64) -> String {
     if kb < 1024 {
-        format!("{} KB", kb)
+        format!("{kb} KB")
     } else {
         format!("{:.2} MB", kb as f64 / 1024.0)
     }
@@ -101,17 +103,17 @@ fn main() {
         std::io::stdout().flush().unwrap();
 
         // Benchmark original lexer
-        let (tokens, time) = measure_original_lexer(&content);
+        let (_tokens, time) = measure_original_lexer(&content);
         original_times.push(time);
 
         // Benchmark streaming lexer
-        let (tokens, time) = measure_streaming_lexer(&content);
+        let (_tokens, time) = measure_streaming_lexer(&content);
         streaming_times.push(time);
 
         // Benchmark chunked lexer
         let (tokens, time) = measure_chunked_lexer(&content);
         chunked_times.push(time);
-        println!("\rChunkedLexer: {} tokens in {} μs", tokens, time);
+        println!("\rChunkedLexer: {tokens} tokens in {time} μs");
     }
 
     // Calculate statistics
@@ -122,7 +124,7 @@ fn main() {
         let max = *times.iter().max().unwrap_or(&0);
 
         // Calculate variance
-        let variance = times
+        let _variance = times
             .iter()
             .map(|&x| {
                 let diff = x as f64 - avg;
@@ -135,9 +137,9 @@ fn main() {
     }
 
     // Calculate statistics for each lexer
-    let (o_sum, o_avg, o_min, o_max) = calculate_stats(&original_times);
-    let (s_sum, s_avg, s_min, s_max) = calculate_stats(&streaming_times);
-    let (c_sum, c_avg, c_min, c_max) = calculate_stats(&chunked_times);
+    let (_o_sum, o_avg, o_min, o_max) = calculate_stats(&original_times);
+    let (_s_sum, s_avg, s_min, s_max) = calculate_stats(&streaming_times);
+    let (_c_sum, c_avg, c_min, c_max) = calculate_stats(&chunked_times);
 
     // Calculate standard deviations
     let o_std = (calculate_stats(&original_times).1 - o_avg).abs().sqrt();
@@ -151,16 +153,16 @@ fn main() {
     );
 
     println!("OriginalLexer (tokens: {}):", original_times.len());
-    println!("  Time: {:.2} μs (avg)", o_avg);
-    println!("  Range: {:.2} - {:.2} μs\n", o_min, o_max);
+    println!("  Time: {o_avg:.2} μs (avg)");
+    println!("  Range: {o_min:.2} - {o_max:.2} μs\n");
 
     println!("StreamingLexer (tokens: {}):", streaming_times.len());
-    println!("  Time: {:.2} μs (avg)", s_avg);
-    println!("  Range: {:.2} - {:.2} μs\n", s_min, s_max);
+    println!("  Time: {s_avg:.2} μs (avg)");
+    println!("  Range: {s_min:.2} - {s_max:.2} μs\n");
 
     println!("ChunkedLexer (tokens: {}):", chunked_times.len());
-    println!("  Time: {:.2} μs (avg)", c_avg);
-    println!("  Range: {:.2} - {:.2} μs\n", c_min, c_max);
+    println!("  Time: {c_avg:.2} μs (avg)");
+    println!("  Range: {c_min:.2} - {c_max:.2} μs\n");
 
     // Note about memory measurements
     println!("Note: Memory measurements were removed as they reflected total process memory.");
@@ -175,10 +177,10 @@ fn main() {
     let rust_version = std::env::var("RUSTC").unwrap_or_else(|_| "rustc (unknown)".to_string());
 
     println!("\nTest Environment:");
-    println!("- CPU: {}", cpu_info);
-    println!("- Cores: {}", cores);
-    println!("- RAM: {}", mem_info);
-    println!("- Rust Version: {}", rust_version);
+    println!("- CPU: {cpu_info}");
+    println!("- Cores: {cores}");
+    println!("- RAM: {mem_info}");
+    println!("- Rust Version: {rust_version}");
     println!("- Optimization: --release");
     println!("- Measurement Tool: Custom benchmark with memory_stats");
 

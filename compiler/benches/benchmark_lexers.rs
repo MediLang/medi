@@ -1,9 +1,3 @@
-use medic_lexer::{
-    chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
-    lexer::Lexer as OriginalLexer,
-    streaming_lexer::StreamingLexer,
-    LexerConfig,
-};
 use memory_stats::memory_stats;
 use std::fs;
 use std::process::Command;
@@ -27,9 +21,9 @@ fn main() {
     let rust_version = get_rust_version();
 
     println!("=== Test Environment ===");
-    println!("CPU: {}", cpu_info);
-    println!("Memory: {}", mem_info);
-    println!("Rust Version: {}", rust_version);
+    println!("CPU: {cpu_info}");
+    println!("Memory: {mem_info}");
+    println!("Rust Version: {rust_version}");
     println!("Optimization: --release");
     println!("Measurement: Custom benchmark using std::time::Instant\n");
 
@@ -96,9 +90,8 @@ fn check_blood_pressure(systolic: i32, diastolic: i32) -> &str {
     result
 }
 
-use medic_lexer::chunked_lexer::ChunkedLexerConfig;
 use std::fs::File;
-use std::io::{self, BufReader};
+use std::io::BufReader;
 
 fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> {
     let mut times = Vec::with_capacity(runs);
@@ -135,12 +128,12 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
                 let reader = BufReader::new(file);
                 let lexer = medic_lexer::chunked_lexer::ChunkedLexer::from_reader(
                     reader,
-                    ChunkedLexerConfig::default(),
+                    medic_lexer::chunked_lexer::ChunkedLexerConfig::default(),
                 );
                 let tokens: Vec<_> = lexer.collect();
                 tokens.len()
             }
-            _ => panic!("Unknown lexer type: {}", lexer_type),
+            _ => panic!("Unknown lexer type: {lexer_type}"),
         };
 
         let elapsed = start.elapsed();

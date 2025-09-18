@@ -37,6 +37,65 @@ jobs:
         run: RUST_BACKTRACE=1 cargo clippy --all -- -A warnings
 
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+
+      # Linux: install LLVM 15 and clang-15
+      - name: Install LLVM 15 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libllvm15 llvm-15-runtime clang-15 libpolly-15-dev
+          sudo ln -sf /usr/bin/llvm-config-15 /usr/bin/llvm-config
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - name: Set LLVM env (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+          echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+
+      # macOS: install LLVM 15 via Homebrew
+      - name: Install LLVM 15 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install llvm@15
+          echo "LLVM_SYS_150_PREFIX=$(brew --prefix llvm@15)" >> $GITHUB_ENV
+          echo "PATH=$(brew --prefix llvm@15)/bin:$PATH" >> $GITHUB_ENV
+      - name: Set LLVM env (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "LIBCLANG_PATH=$(xcrun --show-sdk-path)/usr/lib" >> $GITHUB_ENV
+
+      # Windows: install LLVM via Chocolatey
+      - name: Install LLVM (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install -y llvm --version=15.0.7
+        shell: powershell
+      - name: Set LLVM env (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "LLVM_SYS_150_PREFIX=C:\\Program Files\\LLVM" >> $env:GITHUB_ENV
+          echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> $env:GITHUB_ENV
+        shell: powershell
+
+      - name: Run tests
+        run: cargo test --workspace
+
+  bench-smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,5 +116,8 @@ jobs:
         run: |
           echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
           echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-      - name: Run tests
-        run: cargo test --workspace
+      - name: Run codegen benchmark (smoke)
+        env:
+          MEDI_BENCH_SMOKE: "1"
+        run: |
+          cargo bench -p medic_benchmarks --bench codegen_bench -- --quick

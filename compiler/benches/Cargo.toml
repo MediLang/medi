@@ -42,6 +42,8 @@ path = "lexer_simple_benchmark.rs"
 [dependencies]
 medic_lexer = { path = "../medic_lexer" }
 medic_parser = { path = "../medic_parser" }
+medic_codegen_llvm = { path = "../medic_codegen_llvm", features = ["llvm"] }
+medic_ast = { path = "../medic_ast" }
 criterion = { version = "0.5", features = ["html_reports"] }
 memory-stats = "1.2.0"
 rand = "0.8"
@@ -50,6 +52,8 @@ serde_json = "1"
 libc = "0.2"
 plotters = { version = "0.3", default-features = false, features = ["bitmap_backend", "bitmap_encoder"] }
 plotters-svg = "0.3"
+num_cpus = "1.16"
+sys-info = "0.9.1"
 
 [[bench]]
 name = "parse_profile"
@@ -57,3 +61,8 @@ path = "parse_profile.rs"
 harness = false
 num_cpus = "1.16"
 sys-info = "0.9.1"
+
+[[bench]]
+name = "codegen_bench"
+path = "codegen_bench.rs"
+harness = false
