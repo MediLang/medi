@@ -87,32 +87,22 @@ jobs:
             echo "MEDI_TARGET_TRIPLE=x86_64-apple-darwin" >> $GITHUB_ENV
           fi
 
-      # Windows: install LLVM via Chocolatey
+      # Windows: install LLVM 15 using install-llvm-action (reliable headers/libs)
       - name: Install LLVM 15 (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          choco list --local-only | Select-String -Pattern '^llvm ' | ForEach-Object { $_.ToString() }
-          $installed = choco list --local-only | Select-String -Pattern '^llvm ' | ForEach-Object { $_.ToString() }
-          if ($installed -and ($installed -notmatch '15\.')) {
-            Write-Host "Found non-15 LLVM installed. Uninstalling..."
-            choco uninstall -y llvm
-          }
-          Write-Host "Installing LLVM 15.0.7 via Chocolatey..."
-          choco install -y llvm --version=15.0.7 --allow-downgrade --force
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to install LLVM 15.0.7"
-            exit 1
-          }
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "15.0"
       - name: Set LLVM env (Windows)
         if: runner.os == 'Windows'
         run: |
-          echo "LLVM_SYS_150_PREFIX=C:\\Program Files\\LLVM" >> $env:GITHUB_ENV
-          echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> $env:GITHUB_ENV
-          if (Test-Path "C:\\Program Files\\LLVM\\bin\\llvm-config.exe") {
-            echo "LLVM_CONFIG_PATH=C:\\Program Files\\LLVM\\bin\\llvm-config.exe" >> $env:GITHUB_ENV
+          Write-Host "LLVM_PATH (from action) = $env:LLVM_PATH"
+          echo "LLVM_SYS_150_PREFIX=$env:LLVM_PATH" >> $env:GITHUB_ENV
+          echo "LIBCLANG_PATH=$env:LLVM_PATH\\bin" >> $env:GITHUB_ENV
+          if (Test-Path "$env:LLVM_PATH\\bin\\llvm-config.exe") {
+            echo "LLVM_CONFIG_PATH=$env:LLVM_PATH\\bin\\llvm-config.exe" >> $env:GITHUB_ENV
           }
-          echo "PATH=C:\\Program Files\\LLVM\\bin;$env:PATH" >> $env:GITHUB_ENV
+          echo "PATH=$env:LLVM_PATH\\bin;$env:PATH" >> $env:GITHUB_ENV
         shell: powershell
 
       - name: Verify LLVM on Windows
@@ -121,16 +111,11 @@ jobs:
         run: |
           Write-Host "LLVM_SYS_150_PREFIX=$env:LLVM_SYS_150_PREFIX"
           Write-Host "LIBCLANG_PATH=$env:LIBCLANG_PATH"
-          if ($env:LLVM_CONFIG_PATH) {
-            Write-Host "LLVM_CONFIG_PATH=$env:LLVM_CONFIG_PATH"
-          } else {
-            Write-Host "LLVM_CONFIG_PATH not set (llvm-config.exe typically not shipped on Windows)."
-          }
           Write-Host "Listing LLVM bin directory contents:"
-          Get-ChildItem "C:\\Program Files\\LLVM\\bin" | Select-Object Name
+          Get-ChildItem "$env:LLVM_SYS_150_PREFIX\\bin" | Select-Object Name
           Write-Host "Checking for expected directories:"
-          Test-Path "C:\\Program Files\\LLVM\\include" | ForEach-Object { Write-Host "include exists: $_" }
-          Test-Path "C:\\Program Files\\LLVM\\lib" | ForEach-Object { Write-Host "lib exists: $_" }
+          Test-Path "$env:LLVM_SYS_150_PREFIX\\include" | ForEach-Object { Write-Host "include exists: $_" }
+          Test-Path "$env:LLVM_SYS_150_PREFIX\\lib" | ForEach-Object { Write-Host "lib exists: $_" }
 
       - name: Run tests
         run: cargo test --workspace
