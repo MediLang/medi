@@ -109,7 +109,18 @@ jobs:
         run: |
           echo "LLVM_SYS_150_PREFIX=C:\\Program Files\\LLVM" >> $env:GITHUB_ENV
           echo "LIBCLANG_PATH=C:\\Program Files\\LLVM\\bin" >> $env:GITHUB_ENV
+          echo "LLVM_CONFIG_PATH=C:\\Program Files\\LLVM\\bin\\llvm-config.exe" >> $env:GITHUB_ENV
+          echo "PATH=C:\\Program Files\\LLVM\\bin;$env:PATH" >> $env:GITHUB_ENV
         shell: powershell
+
+      - name: Verify LLVM on Windows
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "LLVM_SYS_150_PREFIX=$env:LLVM_SYS_150_PREFIX"
+          Write-Host "LIBCLANG_PATH=$env:LIBCLANG_PATH"
+          Write-Host "LLVM_CONFIG_PATH=$env:LLVM_CONFIG_PATH"
+          & "$env:LLVM_CONFIG_PATH" --version
 
       - name: Run tests
         run: cargo test --workspace
