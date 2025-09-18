@@ -30,17 +30,19 @@ fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
 
 #[cfg(target_os = "macos")]
 fn link_with_clang(obj_path: &std::path::Path) -> PathBuf {
-    let exe_path = obj_path.with_extension("exe");
-    let status = Command::new("clang")
+    let exe_path = obj_path.with_extension("");
+    let out = Command::new("clang")
         .arg("-o")
         .arg(&exe_path)
         .arg(obj_path)
-        .status()
+        .output()
         .expect("failed to spawn clang");
-    assert!(
-        status.success(),
-        "clang failed to link object into executable"
-    );
+    if !out.status.success() {
+        panic!(
+            "clang failed to link object into executable. stderr: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
     exe_path
 }
 
@@ -96,18 +98,22 @@ fn link_with_clang(obj_path: &std::path::Path) -> PathBuf {
     let exe_path = obj_path.with_extension("exe");
     // Use -no-pie to avoid PIE linking issues on CI; rely on system libc/rt defaults
     // Try `clang` then fall back to `clang-15` (name on Ubuntu images)
-    let try_link = |cmd: &str| -> std::io::Result<std::process::ExitStatus> {
+    let try_link = |cmd: &str| -> std::io::Result<std::process::Output> {
         Command::new(cmd)
             .arg("-no-pie")
             .arg("-o")
             .arg(&exe_path)
             .arg(obj_path)
-            .status()
+            .output()
     };
-    let status = try_link("clang").or_else(|_| try_link("clang-15"));
-    match status {
-        Ok(s) if s.success() => {}
-        Ok(s) => panic!("linker succeeded to run but failed with status: {s:?}"),
+    let out = try_link("clang").or_else(|_| try_link("clang-15"));
+    match out {
+        Ok(o) if o.status.success() => {}
+        Ok(o) => panic!(
+            "linker ran but failed. status: {:?}, stderr: {}",
+            o.status,
+            String::from_utf8_lossy(&o.stderr)
+        ),
         Err(e) => panic!("failed to spawn clang/clang-15: {e}"),
     }
     exe_path

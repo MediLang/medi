@@ -69,7 +69,11 @@ fn selected_triple() -> String {
     {
         "x86_64-unknown-linux-gnu".to_string()
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    {
+        "aarch64-apple-darwin".to_string()
+    }
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
     {
         "x86_64-apple-darwin".to_string()
     }

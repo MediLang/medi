@@ -78,12 +78,25 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           echo "LIBCLANG_PATH=$(xcrun --show-sdk-path)/usr/lib" >> $GITHUB_ENV
+      - name: Set target triple (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          if [ "$(uname -m)" = "arm64" ]; then
+            echo "MEDI_TARGET_TRIPLE=aarch64-apple-darwin" >> $GITHUB_ENV
+          else
+            echo "MEDI_TARGET_TRIPLE=x86_64-apple-darwin" >> $GITHUB_ENV
+          fi
 
       # Windows: install LLVM via Chocolatey
       - name: Install LLVM (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install -y llvm --version=15.0.7
+          # Allow downgrade if a newer LLVM is already present; if install still fails, continue
+          choco install -y llvm --version=15.0.7 --allow-downgrade
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "LLVM install downgrade failed or newer present; proceeding with preinstalled LLVM"
+            $global:LASTEXITCODE = 0
+          }
         shell: powershell
       - name: Set LLVM env (Windows)
         if: runner.os == 'Windows'
