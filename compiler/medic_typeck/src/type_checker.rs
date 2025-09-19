@@ -1180,7 +1180,7 @@ impl<'a> TypeChecker<'a> {
     /// env.insert("x".to_string(), MediType::Int);
     /// let mut checker = TypeChecker::new(&mut env);
     /// let id = Spanned::new(
-    ///     IdentifierNode { name: "x".to_string() },
+    ///     IdentifierNode::from_str_name("x"),
     ///     Span { start: 0, end: 1, line: 1, column: 1 },
     /// );
     /// let expr = ExpressionNode::Identifier(id);
