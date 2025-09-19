@@ -2051,40 +2051,46 @@ mod tests {
         let mut tc = TypeChecker::new(&mut env);
         let fun = StatementNode::Function(Box::new(FunctionNode {
             name: IdentifierNode::from_str_name("add"),
-            params: [
-                ParameterNode {
-                    name: IdentifierNode::from_str_name("a"),
-                    type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
-                        IdentifierNode::from_str_name("Int"),
-                        Span::default(),
-                    ))),
-                    span: Span::default(),
-                },
-                ParameterNode {
-                    name: IdentifierNode::from_str_name("b"),
-                    type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
-                        IdentifierNode::from_str_name("Int"),
-                        Span::default(),
-                    ))),
-                    span: Span::default(),
-                },
-            ]
-            .into(),
+            params: {
+                let mut p: NodeList<ParameterNode> = NodeList::new();
+                p.extend([
+                    ParameterNode {
+                        name: IdentifierNode::from_str_name("a"),
+                        type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
+                            IdentifierNode::from_str_name("Int"),
+                            Span::default(),
+                        ))),
+                        span: Span::default(),
+                    },
+                    ParameterNode {
+                        name: IdentifierNode::from_str_name("b"),
+                        type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
+                            IdentifierNode::from_str_name("Int"),
+                            Span::default(),
+                        ))),
+                        span: Span::default(),
+                    },
+                ]);
+                p
+            },
             return_type: Some(ExpressionNode::Identifier(Spanned::new(
                 IdentifierNode::from_str_name("Int"),
                 Span::default(),
             ))),
             body: BlockNode {
-                statements: [StatementNode::Let(Box::new(LetStatementNode {
-                    name: IdentifierNode::from_str_name("x"),
-                    type_annotation: None,
-                    value: Some(ExpressionNode::Literal(Spanned::new(
-                        LiteralNode::Int(1),
-                        Span::default(),
-                    ))),
-                    span: Span::default(),
-                }))]
-                .into(),
+                statements: {
+                    let mut s: NodeList<StatementNode> = NodeList::new();
+                    s.extend([StatementNode::Let(Box::new(LetStatementNode {
+                        name: IdentifierNode::from_str_name("x"),
+                        type_annotation: None,
+                        value: Some(ExpressionNode::Literal(Spanned::new(
+                            LiteralNode::Int(1),
+                            Span::default(),
+                        ))),
+                        span: Span::default(),
+                    }))]);
+                    s
+                },
                 span: Span::default(),
             },
             span: Span::default(),
