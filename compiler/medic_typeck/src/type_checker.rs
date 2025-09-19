@@ -28,6 +28,7 @@ pub struct TypeChecker<'a> {
 }
 
 #[cfg(test)]
+#[allow(clippy::vec_init_then_push)]
 mod unit_tests {
     use super::*;
 
@@ -97,7 +98,7 @@ mod unit_tests {
         // Build AST: fn f(x: T) -> T { x }
         let f_fn = StatementNode::Function(Box::new(FunctionNode {
             name: IdentifierNode::from_str_name("f"),
-            params: vec![ParameterNode {
+            params: [ParameterNode {
                 name: IdentifierNode::from_str_name("x"),
                 type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
                     IdentifierNode::from_str_name("T"),
@@ -114,7 +115,8 @@ mod unit_tests {
                     line: 1,
                     column: 1,
                 },
-            }],
+            }]
+            .into(),
             return_type: Some(ExpressionNode::Identifier(Spanned::new(
                 IdentifierNode::from_str_name("T"),
                 Span {
@@ -125,7 +127,7 @@ mod unit_tests {
                 },
             ))),
             body: BlockNode {
-                statements: vec![StatementNode::Return(Box::new(ReturnNode {
+                statements: [StatementNode::Return(Box::new(ReturnNode {
                     value: Some(ExpressionNode::Identifier(Spanned::new(
                         IdentifierNode::from_str_name("x"),
                         Span {
@@ -141,7 +143,8 @@ mod unit_tests {
                         line: 1,
                         column: 1,
                     },
-                }))],
+                }))]
+                .into(),
                 span: Span {
                     start: 0,
                     end: 0,
@@ -160,10 +163,10 @@ mod unit_tests {
         // fn test() { let a = f(1); let b = f(1.0); }
         let test_fn = StatementNode::Function(Box::new(FunctionNode {
             name: IdentifierNode::from_str_name("test"),
-            params: vec![],
+            params: NodeList::new(),
             return_type: None,
             body: BlockNode {
-                statements: vec![
+                statements: [
                     StatementNode::Let(Box::new(LetStatementNode {
                         name: IdentifierNode::from_str_name("a"),
                         type_annotation: None,
@@ -240,7 +243,8 @@ mod unit_tests {
                             column: 1,
                         },
                     })),
-                ],
+                ]
+                .into(),
                 span: Span {
                     start: 0,
                     end: 0,
@@ -257,7 +261,7 @@ mod unit_tests {
         }));
 
         let program = ProgramNode {
-            statements: vec![f_fn, test_fn],
+            statements: [f_fn, test_fn].into(),
         };
 
         let tc = TypeChecker::new(&mut env);
@@ -2000,7 +2004,7 @@ mod tests {
         let stmt = StatementNode::If(Box::new(IfNode {
             condition: ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), Span::default())),
             then_branch: BlockNode {
-                statements: vec![],
+                statements: NodeList::new(),
                 span: Span::default(),
             },
             else_branch: None,
@@ -2016,7 +2020,7 @@ mod tests {
         let mut tc = TypeChecker::new(&mut env);
         let fun = StatementNode::Function(Box::new(FunctionNode {
             name: IdentifierNode::from_str_name("add"),
-            params: vec![
+            params: [
                 ParameterNode {
                     name: IdentifierNode::from_str_name("a"),
                     type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
@@ -2033,13 +2037,14 @@ mod tests {
                     ))),
                     span: Span::default(),
                 },
-            ],
+            ]
+            .into(),
             return_type: Some(ExpressionNode::Identifier(Spanned::new(
                 IdentifierNode::from_str_name("Int"),
                 Span::default(),
             ))),
             body: BlockNode {
-                statements: vec![StatementNode::Let(Box::new(LetStatementNode {
+                statements: [StatementNode::Let(Box::new(LetStatementNode {
                     name: IdentifierNode::from_str_name("x"),
                     type_annotation: None,
                     value: Some(ExpressionNode::Literal(Spanned::new(
@@ -2047,7 +2052,8 @@ mod tests {
                         Span::default(),
                     ))),
                     span: Span::default(),
-                }))],
+                }))]
+                .into(),
                 span: Span::default(),
             },
             span: Span::default(),
