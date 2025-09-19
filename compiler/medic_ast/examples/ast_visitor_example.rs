@@ -340,7 +340,9 @@ fn create_sample_ast() -> ProgramNode {
         span,
     )));
 
-    ProgramNode {
-        statements: vec![stmt1, stmt2, stmt3],
-    }
+    // Build statements using NodeList in a way that works for both Vec and SmallVec aliases
+    let mut statements: NodeList<StatementNode> = NodeList::new();
+    statements.extend([stmt1, stmt2, stmt3]);
+
+    ProgramNode { statements }
 }
