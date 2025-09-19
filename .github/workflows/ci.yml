@@ -99,6 +99,8 @@ jobs:
           Write-Host "LLVM_PATH (from action) = $env:LLVM_PATH"
           echo "LLVM_SYS_150_PREFIX=$env:LLVM_PATH" >> $env:GITHUB_ENV
           echo "LIBCLANG_PATH=$env:LLVM_PATH\\bin" >> $env:GITHUB_ENV
+          echo "LLVM_HOME=$env:LLVM_PATH" >> $env:GITHUB_ENV
+          echo "LIB=$env:LLVM_PATH\\lib;$env:LIB" >> $env:GITHUB_ENV
           if (Test-Path "$env:LLVM_PATH\\bin\\llvm-config.exe") {
             echo "LLVM_CONFIG_PATH=$env:LLVM_PATH\\bin\\llvm-config.exe" >> $env:GITHUB_ENV
           }
@@ -125,6 +127,8 @@ jobs:
           PATH: ${{ env.PATH }}
           INKWELL_LLVM_VERSION: "15"
           LLVM_SYS_150_IGNORE_MARKER: "YES"
+          LLVM_HOME: ${{ env.LLVM_HOME }}
+          LIB: ${{ env.LIB }}
         run: cargo test --workspace
 
       - name: Run tests (non-Windows)
