@@ -98,38 +98,12 @@ mod unit_tests {
         // Build AST: fn f(x: T) -> T { x }
         let f_fn = StatementNode::Function(Box::new(FunctionNode {
             name: IdentifierNode::from_str_name("f"),
-            params: [ParameterNode {
-                name: IdentifierNode::from_str_name("x"),
-                type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
-                    IdentifierNode::from_str_name("T"),
-                    Span {
-                        start: 0,
-                        end: 1,
-                        line: 1,
-                        column: 1,
-                    },
-                ))),
-                span: Span {
-                    start: 0,
-                    end: 0,
-                    line: 1,
-                    column: 1,
-                },
-            }]
-            .into(),
-            return_type: Some(ExpressionNode::Identifier(Spanned::new(
-                IdentifierNode::from_str_name("T"),
-                Span {
-                    start: 0,
-                    end: 1,
-                    line: 1,
-                    column: 1,
-                },
-            ))),
-            body: BlockNode {
-                statements: [StatementNode::Return(Box::new(ReturnNode {
-                    value: Some(ExpressionNode::Identifier(Spanned::new(
-                        IdentifierNode::from_str_name("x"),
+            params: {
+                let mut p: NodeList<ParameterNode> = NodeList::new();
+                p.extend([ParameterNode {
+                    name: IdentifierNode::from_str_name("x"),
+                    type_annotation: Some(ExpressionNode::Identifier(Spanned::new(
+                        IdentifierNode::from_str_name("T"),
                         Span {
                             start: 0,
                             end: 1,
@@ -143,8 +117,40 @@ mod unit_tests {
                         line: 1,
                         column: 1,
                     },
-                }))]
-                .into(),
+                }]);
+                p
+            },
+            return_type: Some(ExpressionNode::Identifier(Spanned::new(
+                IdentifierNode::from_str_name("T"),
+                Span {
+                    start: 0,
+                    end: 1,
+                    line: 1,
+                    column: 1,
+                },
+            ))),
+            body: BlockNode {
+                statements: {
+                    let mut s: NodeList<StatementNode> = NodeList::new();
+                    s.extend([StatementNode::Return(Box::new(ReturnNode {
+                        value: Some(ExpressionNode::Identifier(Spanned::new(
+                            IdentifierNode::from_str_name("x"),
+                            Span {
+                                start: 0,
+                                end: 1,
+                                line: 1,
+                                column: 1,
+                            },
+                        ))),
+                        span: Span {
+                            start: 0,
+                            end: 0,
+                            line: 1,
+                            column: 1,
+                        },
+                    }))]);
+                    s
+                },
                 span: Span {
                     start: 0,
                     end: 0,
@@ -181,15 +187,19 @@ mod unit_tests {
                                         column: 1,
                                     },
                                 )),
-                                arguments: vec![ExpressionNode::Literal(Spanned::new(
-                                    LiteralNode::Int(1),
-                                    Span {
-                                        start: 2,
-                                        end: 3,
-                                        line: 1,
-                                        column: 3,
-                                    },
-                                ))],
+                                arguments: {
+                                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                                    args.extend([ExpressionNode::Literal(Spanned::new(
+                                        LiteralNode::Int(1),
+                                        Span {
+                                            start: 2,
+                                            end: 3,
+                                            line: 1,
+                                            column: 3,
+                                        },
+                                    ))]);
+                                    args
+                                },
                             }),
                             Span {
                                 start: 0,
@@ -219,15 +229,19 @@ mod unit_tests {
                                         column: 1,
                                     },
                                 )),
-                                arguments: vec![ExpressionNode::Literal(Spanned::new(
-                                    LiteralNode::Float(1.0),
-                                    Span {
-                                        start: 2,
-                                        end: 5,
-                                        line: 1,
-                                        column: 3,
-                                    },
-                                ))],
+                                arguments: {
+                                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                                    args.extend([ExpressionNode::Literal(Spanned::new(
+                                        LiteralNode::Float(1.0),
+                                        Span {
+                                            start: 2,
+                                            end: 5,
+                                            line: 1,
+                                            column: 3,
+                                        },
+                                    ))]);
+                                    args
+                                },
                             }),
                             Span {
                                 start: 0,
@@ -244,7 +258,8 @@ mod unit_tests {
                         },
                     })),
                 ]
-                .into(),
+                .into_iter()
+                .collect(),
                 span: Span {
                     start: 0,
                     end: 0,
@@ -261,7 +276,11 @@ mod unit_tests {
         }));
 
         let program = ProgramNode {
-            statements: [f_fn, test_fn].into(),
+            statements: {
+                let mut nl: NodeList<StatementNode> = NodeList::new();
+                nl.extend([f_fn, test_fn]);
+                nl
+            },
         };
 
         let tc = TypeChecker::new(&mut env);
@@ -419,7 +438,11 @@ mod unit_tests {
         let call = ExpressionNode::Call(Spanned::new(
             Box::new(CallExpressionNode {
                 callee,
-                arguments: vec![arg],
+                arguments: {
+                    let mut a: NodeList<ExpressionNode> = NodeList::new();
+                    a.extend([arg]);
+                    a
+                },
             }),
             call_span,
         ));
@@ -2364,10 +2387,14 @@ mod tests {
         let call_expr = ExpressionNode::Call(Spanned::new(
             Box::new(CallExpressionNode {
                 callee: ExpressionNode::Identifier(Spanned::new(callee_ident.clone(), callee_span)),
-                arguments: vec![
-                    ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), arg1_span)),
-                    ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), arg2_span)),
-                ],
+                arguments: {
+                    let mut a: NodeList<ExpressionNode> = NodeList::new();
+                    a.extend([
+                        ExpressionNode::Literal(Spanned::new(LiteralNode::Int(1), arg1_span)),
+                        ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), arg2_span)),
+                    ]);
+                    a
+                },
             }),
             call_span,
         ));
