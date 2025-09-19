@@ -498,7 +498,11 @@ mod unit_tests {
         let call = ExpressionNode::Call(Spanned::new(
             Box::new(CallExpressionNode {
                 callee,
-                arguments: vec![arg],
+                arguments: {
+                    let mut a: NodeList<ExpressionNode> = NodeList::new();
+                    a.extend([arg]);
+                    a
+                },
             }),
             call_span,
         ));
@@ -549,7 +553,11 @@ mod unit_tests {
         let call = ExpressionNode::Call(Spanned::new(
             Box::new(CallExpressionNode {
                 callee,
-                arguments: vec![arg],
+                arguments: {
+                    let mut a: NodeList<ExpressionNode> = NodeList::new();
+                    a.extend([arg]);
+                    a
+                },
             }),
             call_span,
         ));
