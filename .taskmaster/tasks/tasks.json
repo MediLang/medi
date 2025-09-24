@@ -231,7 +231,7 @@
               2
             ],
             "details": "Configure wasm32-wasi target triple, ensure correct memory model and calling conventions, implement any required intrinsics/shims, and integrate with toolchain for emitting .wasm modules. Provide example that runs in a minimal WASI runtime or browser (if applicable).",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 8,

@@ -34,7 +34,7 @@ Enable it via the `llvm-backend` feature on the `medic` crate (which plumbs to t
 
 ```bash
 # Build only the backend crate
-cargo build -p medic_codegen_llvm --features llvm
+cargo build -p medic -p medic_codegen_llvm --features llvm-backend
 
 # Or build the compiler frontend with the backend enabled
 cargo build -p medic --features llvm-backend
@@ -78,3 +78,45 @@ Notes:
 
 These are scaffolds to establish the build and linking pipeline. Future changes will translate
 Medi AST into IR, wire optimization passes, and emit code for the supported targets.
+
+## WebAssembly (wasm32-wasi) target
+
+The LLVM backend can emit WebAssembly modules targeting WASI. When there are top-level Medi
+statements, the compiler lowers them into a WASI-compliant `_start(): void` entrypoint.
+
+Build the compiler with the backend and emit a wasm module:
+
+```bash
+cargo build -p medic --features llvm-backend
+
+# From repo root
+./target/debug/medic --emit=wasm32 --out=hello.wasm examples/wasm32-wasi/hello.medi
+```
+
+You can run the result with a WASI runtime such as `wasmtime` or `wasmer`:
+
+```bash
+wasmtime hello.wasm
+# or
+wasmer run hello.wasm
+```
+
+Notes:
+
+- The current example performs arithmetic only; I/O intrinsics (e.g., printing) are not yet wired.
+- Omit `--out` to print the LLVM IR for inspection instead of writing a `.wasm` binary.
+
+### WASI memory model and calling conventions
+
+- Data layout and ABI: The module’s data layout is taken from LLVM’s target machine for `wasm32-wasi`, ensuring sizes/alignments conform to the WASI ABI.
+- Entry point: When there are top-level statements, they are lowered into a `_start(): void` function, as required by WASI.
+- Integer/float sizes: `Int` lowers to `i64`, `Float` to `f64`, `Bool` to `i1`. Pointers are in address space 0 (linear memory).
+- Strings: Currently represented as `i8*` (pointer into linear memory) with explicit byte lengths where needed by imports.
+- Calling convention: LLVM’s default CC for wasm is used; no custom CC attributes are applied at this time.
+- Imports: Minimal I/O is implemented via the WASI `fd_write` import from module `wasi_snapshot_preview1`.
+
+### Minimal print intrinsic
+
+- Medi-level `print("string literal")` is lowered to a single `fd_write(1, &iovec, 1, &nwritten)` call.
+- The backend constructs a single `iovec { i8* buf; i32 len; }` on the stack and issues the call. Only string literals are supported at present.
+- Example usage in `examples/wasm32-wasi/hello.medi` prints a line to stdout under a WASI runtime.

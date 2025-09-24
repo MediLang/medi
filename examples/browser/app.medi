@@ -1,0 +1,12 @@
+// Minimal Medi program for browser target (wasm32-unknown-unknown)
+// Top-level statements are lowered into an exported `main(): void`.
+let a = 21;
+let b = a * 2; // 42
+
+// Print greeting and the computed value to the page via env.host_log
+print("Hello from Medi (browser) b=\n");
+print_i64(b);
+print("\n");
+print("pi=\n");
+print_f64(3.14159265);
+print("\n");

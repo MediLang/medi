@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "test": "ts-node src/compiler/tests/lexer.test.ts && ts-node src/compiler/tests/parser.test.ts",
-    "start": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts",
+    "serve:browser": "npx -y http-server examples/browser -p 8080"
   },
   "repository": {
     "type": "git",

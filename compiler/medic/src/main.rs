@@ -13,7 +13,9 @@ use serde_json::Value as JsonValue;
 
 #[cfg(feature = "llvm-backend")]
 use medic_codegen_llvm::{
-    generate_ir_string_with_types_and_specs, generate_x86_64_object_default,
+    generate_ir_string_with_types_and_specs,
+    generate_wasm32_unknown_object_with_opts_types_and_specs,
+    generate_wasm32_wasi_object_with_opts_types_and_specs, generate_x86_64_object_default,
     generate_x86_64_object_with_opts, generate_x86_64_object_with_opts_types_and_specs, TargetKind,
 };
 
@@ -120,6 +122,8 @@ fn main() {
                 emit_target = match val {
                     "x86_64" => Some(TargetKind::X86_64),
                     "wasm32" => Some(TargetKind::Wasm32),
+                    // Accept alias for browser target; we’ll route separately below
+                    "wasm32-unknown" => Some(TargetKind::Wasm32),
                     "riscv32" => Some(TargetKind::RiscV32),
                     other => {
                         eprintln!("warning: unknown emit target '{other}', expected x86_64|wasm32|riscv32");
@@ -330,6 +334,103 @@ fn main() {
                                     }
                                     Err(e) => {
                                         eprintln!("error: x86_64 code emission failed: {e}");
+                                        std::process::exit(2);
+                                    }
+                                }
+                            }
+                            TargetKind::Wasm32 => {
+                                // If the user explicitly requested wasm32-unknown, route to unknown target emission
+                                let is_unknown = args.iter().any(|a| a == "--emit=wasm32-unknown");
+                                // Set defaults similar to x86 path
+                                let mut opt = std::env::var("MEDI_LLVM_OPT")
+                                    .ok()
+                                    .and_then(|s| s.parse::<u8>().ok());
+                                if opt.is_none() {
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        opt = Some(1);
+                                    }
+                                    #[cfg(not(debug_assertions))]
+                                    {
+                                        opt = Some(3);
+                                    }
+                                }
+                                if std::env::var("MEDI_LLVM_PIPE").is_err() {
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        std::env::set_var("MEDI_LLVM_PIPE", "debug");
+                                    }
+                                    #[cfg(not(debug_assertions))]
+                                    {
+                                        std::env::set_var("MEDI_LLVM_PIPE", "default");
+                                    }
+                                }
+                                let cpu = std::env::var("MEDI_LLVM_CPU")
+                                    .unwrap_or_else(|_| "generic".to_string());
+                                let feats = std::env::var("MEDI_LLVM_FEATURES")
+                                    .unwrap_or_else(|_| "".to_string());
+
+                                let result = if is_unknown {
+                                    generate_wasm32_unknown_object_with_opts_types_and_specs(
+                                        &program,
+                                        opt.unwrap_or(2),
+                                        &cpu,
+                                        &feats,
+                                        &fun_tys,
+                                        &specs,
+                                    )
+                                } else {
+                                    generate_wasm32_wasi_object_with_opts_types_and_specs(
+                                        &program,
+                                        opt.unwrap_or(2),
+                                        &cpu,
+                                        &feats,
+                                        &fun_tys,
+                                        &specs,
+                                    )
+                                };
+
+                                match result {
+                                    Ok(wasm) => {
+                                        if let Some(path) = out_path {
+                                            if let Err(e) = fs::write(&path, &wasm) {
+                                                eprintln!("error: failed to write wasm file '{path}': {e}");
+                                                std::process::exit(2);
+                                            } else {
+                                                let opt_used = std::env::var("MEDI_LLVM_OPT")
+                                                    .unwrap_or_else(|_| "2".into());
+                                                let cpu_used = std::env::var("MEDI_LLVM_CPU")
+                                                    .unwrap_or_else(|_| "generic".into());
+                                                let feats_used =
+                                                    std::env::var("MEDI_LLVM_FEATURES")
+                                                        .unwrap_or_else(|_| "".into());
+                                                if is_unknown {
+                                                    eprintln!(
+                                                        "wrote wasm32-unknown-unknown to {path} ({} bytes) [opt={}, cpu='{}', features='{}']",
+                                                        wasm.len(), opt_used, cpu_used, feats_used
+                                                    );
+                                                } else {
+                                                    eprintln!(
+                                                        "wrote wasm32-wasi to {path} ({} bytes) [opt={}, cpu='{}', features='{}']",
+                                                        wasm.len(), opt_used, cpu_used, feats_used
+                                                    );
+                                                }
+                                            }
+                                        } else {
+                                            eprintln!("note: no --out=path provided; printing LLVM IR instead");
+                                            match generate_ir_string_with_types_and_specs(
+                                                &program, &fun_tys, &specs,
+                                            ) {
+                                                Ok(ir) => println!("{ir}"),
+                                                Err(e) => {
+                                                    eprintln!("error: IR generation failed: {e}");
+                                                    std::process::exit(2);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("error: wasm32 emission failed: {e}");
                                         std::process::exit(2);
                                     }
                                 }

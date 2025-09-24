@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Medi Browser WASM Demo</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+      pre { background: #f6f8fa; padding: 1rem; border-radius: 8px; overflow: auto; }
+      .ok { color: #0a7a0a; }
+      .err { color: #b00020; }
+    </style>
+  </head>
+  <body>
+    <h1>Medi Browser WASM Demo</h1>
+    <p>This page loads a Medi-compiled <code>wasm32-unknown-unknown</code> module and calls its <code>main()</code> export.</p>
+    <button id="runBtn">Load & Run</button>
+    <div id="out"></div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

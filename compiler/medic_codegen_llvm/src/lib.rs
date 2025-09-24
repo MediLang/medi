@@ -56,6 +56,152 @@ pub enum CodeGenError {
     Llvm(String),
 }
 
+/// Emit a wasm32-unknown-unknown object (wasm binary) with registered types and specializations.
+#[cfg(feature = "llvm")]
+pub fn generate_wasm32_unknown_object_with_opts_types_and_specs(
+    program: &ProgramNode,
+    opt_level: u8,
+    cpu: &str,
+    features: &str,
+    types: &[(String, MediType)],
+    specializations: &[(String, Vec<MediType>, MediType)],
+) -> Result<Vec<u8>, CodeGenError> {
+    let lvl = match opt_level {
+        0 => OptimizationLevel::None,
+        1 => OptimizationLevel::Less,
+        3 => OptimizationLevel::Aggressive,
+        _ => OptimizationLevel::Default,
+    };
+
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+    // Set target triple and data layout up-front so later IR and globals inherit wasm settings.
+    {
+        use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, Target};
+        Target::initialize_all(&InitializationConfig::default());
+        let triple = TargetTriple::create("wasm32-unknown-unknown");
+        let target = Target::from_triple(&triple)
+            .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+        let tm = target
+            .create_target_machine(
+                &triple,
+                cpu,
+                features,
+                lvl,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+        cg.module.set_triple(&triple);
+        let dl = tm.get_target_data().get_data_layout();
+        cg.module.set_data_layout(&dl);
+    }
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+
+    cg.predeclare_user_functions(program);
+    for (base, params, ret) in specializations.iter() {
+        let _ = cg.register_specialized_function(base, params, ret)?;
+    }
+
+    // Lower program: for top-level statements, create an exported 'main': void function
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        let start_ty = cg.void.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", start_ty, None);
+        // Ensure 'main' is exported for browser usage
+        let export_attr = cg
+            .context
+            .create_string_attribute("wasm-export-name", "main");
+        main_fn.add_attribute(AttributeLoc::Function, export_attr);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        cg.builder.build_return(None);
+        cg.current_fn = prev;
+    }
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+
+    // Target machine and emission for wasm32-unknown-unknown
+    // Verify module before emission to catch IR issues early
+    if let Err(msg) = cg.module.verify() {
+        return Err(CodeGenError::Llvm(format!(
+            "IR verification failed for wasm32-unknown-unknown: {msg}\n{}",
+            cg.module.print_to_string()
+        )));
+    }
+    use inkwell::targets::{InitializationConfig, Target};
+    Target::initialize_all(&InitializationConfig::default());
+    let triple = TargetTriple::create("wasm32-unknown-unknown");
+    let target = Target::from_triple(&triple)
+        .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+    let tm = target
+        .create_target_machine(
+            &triple,
+            cpu,
+            features,
+            lvl,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+    cg.module.set_triple(&triple);
+    let dl = tm.get_target_data().get_data_layout();
+    cg.module.set_data_layout(&dl);
+
+    // Minimal pass pipeline
+    let pm = PassManager::create(());
+    match (
+        std::env::var("MEDI_LLVM_PIPE")
+            .as_deref()
+            .unwrap_or("minimal"),
+        lvl,
+    ) {
+        ("default", _) | ("minimal", OptimizationLevel::None) => {
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_cfg_simplification_pass();
+        }
+        ("debug", _) => {
+            pm.add_cfg_simplification_pass();
+        }
+        ("aggressive", _) => {
+            pm.add_basic_alias_analysis_pass();
+            pm.add_promote_memory_to_register_pass();
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_gvn_pass();
+            pm.add_cfg_simplification_pass();
+            pm.add_licm_pass();
+            pm.add_loop_vectorize_pass();
+            pm.add_slp_vectorize_pass();
+        }
+        _ => {}
+    }
+    pm.run_on(&cg.module);
+
+    let obj = tm
+        .write_to_memory_buffer(&cg.module, FileType::Object)
+        .map_err(|e| CodeGenError::Llvm(format!("object emission failed: {e}")))?;
+    Ok(obj.as_slice().to_vec())
+}
+
 // Helper to select an appropriate target triple for object emission.
 // Uses MEDI_TARGET_TRIPLE when provided, otherwise selects based on host OS.
 #[cfg(feature = "llvm")]
@@ -162,6 +308,119 @@ pub fn generate_x86_64_object_with_opts_types_and_specs(
     let dl = tm.get_target_data().get_data_layout();
     cg.module.set_data_layout(&dl);
 
+    let pm = PassManager::create(());
+    match (
+        std::env::var("MEDI_LLVM_PIPE")
+            .as_deref()
+            .unwrap_or("minimal"),
+        lvl,
+    ) {
+        ("default", _) | ("minimal", OptimizationLevel::None) => {
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_cfg_simplification_pass();
+        }
+        ("debug", _) => {
+            pm.add_cfg_simplification_pass();
+        }
+        ("aggressive", _) => {
+            pm.add_basic_alias_analysis_pass();
+            pm.add_promote_memory_to_register_pass();
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_gvn_pass();
+            pm.add_cfg_simplification_pass();
+            pm.add_licm_pass();
+            pm.add_loop_vectorize_pass();
+            pm.add_slp_vectorize_pass();
+        }
+        _ => {}
+    }
+    pm.run_on(&cg.module);
+
+    let obj = tm
+        .write_to_memory_buffer(&cg.module, FileType::Object)
+        .map_err(|e| CodeGenError::Llvm(format!("object emission failed: {e}")))?;
+    Ok(obj.as_slice().to_vec())
+}
+
+/// Emit a wasm32-wasi object (wasm binary) with registered types and specializations.
+#[cfg(feature = "llvm")]
+pub fn generate_wasm32_wasi_object_with_opts_types_and_specs(
+    program: &ProgramNode,
+    opt_level: u8,
+    cpu: &str,
+    features: &str,
+    types: &[(String, MediType)],
+    specializations: &[(String, Vec<MediType>, MediType)],
+) -> Result<Vec<u8>, CodeGenError> {
+    let lvl = match opt_level {
+        0 => OptimizationLevel::None,
+        1 => OptimizationLevel::Less,
+        3 => OptimizationLevel::Aggressive,
+        _ => OptimizationLevel::Default,
+    };
+
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+    cg.predeclare_user_functions(program);
+    for (base, params, ret) in specializations.iter() {
+        let _ = cg.register_specialized_function(base, params, ret)?;
+    }
+
+    // Lower program: create a WASI-compliant entrypoint when top-level statements exist.
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        // In WASI, the canonical start function is `_start(): void`
+        let start_ty = cg.void.fn_type(&[], false);
+        let start_fn = cg.module.add_function("_start", start_ty, None);
+        let entry = context.append_basic_block(start_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(start_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        cg.builder.build_return(None);
+        cg.current_fn = prev;
+    }
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+
+    // Target machine and emission for wasm32-wasi
+    use inkwell::targets::{InitializationConfig, Target};
+    Target::initialize_all(&InitializationConfig::default());
+    let triple = TargetTriple::create("wasm32-wasi");
+    let target = Target::from_triple(&triple)
+        .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+    let tm = target
+        .create_target_machine(
+            &triple,
+            cpu,
+            features,
+            lvl,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+    cg.module.set_triple(&triple);
+    let dl = tm.get_target_data().get_data_layout();
+    cg.module.set_data_layout(&dl);
+
+    // Minimal pass pipeline consistent with other targets
     let pm = PassManager::create(());
     match (
         std::env::var("MEDI_LLVM_PIPE")
@@ -566,6 +825,389 @@ impl<'ctx> CodeGen<'ctx> {
     /// Name should be unique-ish; json should be valid JSON for easier inspection.
     fn emit_meta_global(&self, name: &str, json: &str) {
         let _ = self.builder.build_global_string_ptr(json, name);
+    }
+
+    /// WASI iovec struct type: { i8* buf, i32 len }
+    fn wasi_iovec_type(&self) -> StructType<'ctx> {
+        let i8p = self.context.i8_type().ptr_type(AddressSpace::from(0));
+        let i32t = self.context.i32_type();
+        self.context.struct_type(&[i8p.into(), i32t.into()], false)
+    }
+
+    /// Declare or get WASI fd_write: i32 fd_write(i32, iovec*, i32, i32*)
+    fn get_or_declare_wasi_fd_write(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("fd_write") {
+            return f;
+        }
+        let i32t = self.context.i32_type();
+        let iov_ptr = self.wasi_iovec_type().ptr_type(AddressSpace::from(0));
+        let nw_ptr = i32t.ptr_type(AddressSpace::from(0));
+        let fn_ty = i32t.fn_type(
+            &[i32t.into(), iov_ptr.into(), i32t.into(), nw_ptr.into()],
+            false,
+        );
+        let f = self.module.add_function("fd_write", fn_ty, None);
+        let mod_attr = self
+            .context
+            .create_string_attribute("wasm-import-module", "wasi_snapshot_preview1");
+        f.add_attribute(AttributeLoc::Function, mod_attr);
+        f
+    }
+
+    /// Declare or get browser host log: env.host_log(i8* ptr, i32 len)
+    fn get_or_declare_browser_host_log(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("host_log") {
+            return f;
+        }
+        let i8p = self.context.i8_type().ptr_type(AddressSpace::from(0));
+        let i32t = self.context.i32_type();
+        let fn_ty = self.void.fn_type(&[i8p.into(), i32t.into()], false);
+        let f = self.module.add_function("host_log", fn_ty, None);
+        let mod_attr = self
+            .context
+            .create_string_attribute("wasm-import-module", "env");
+        f.add_attribute(AttributeLoc::Function, mod_attr);
+        f
+    }
+
+    /// Declare or get browser host integer log: env.host_log_i64(i64)
+    fn get_or_declare_browser_host_log_i64(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("host_log_i64") {
+            return f;
+        }
+        let i64t = self.context.i64_type();
+        let fn_ty = self.void.fn_type(&[i64t.into()], false);
+        let f = self.module.add_function("host_log_i64", fn_ty, None);
+        let mod_attr = self
+            .context
+            .create_string_attribute("wasm-import-module", "env");
+        f.add_attribute(AttributeLoc::Function, mod_attr);
+        f
+    }
+
+    /// Declare or get browser host float log: env.host_log_f64(f64)
+    fn get_or_declare_browser_host_log_f64(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("host_log_f64") {
+            return f;
+        }
+        let f64t = self.context.f64_type();
+        let fn_ty = self.void.fn_type(&[f64t.into()], false);
+        let f = self.module.add_function("host_log_f64", fn_ty, None);
+        let mod_attr = self
+            .context
+            .create_string_attribute("wasm-import-module", "env");
+        f.add_attribute(AttributeLoc::Function, mod_attr);
+        f
+    }
+
+    /// Compute C-string length in bytes (i32) by scanning to NUL.
+    fn c_strlen_i32(&mut self, ptr: PointerValue<'ctx>) -> inkwell::values::IntValue<'ctx> {
+        let func = self.current_fn.expect("strlen must be inside a function");
+        let i32t = self.context.i32_type();
+        let i8t = self.context.i8_type();
+        let i64t = self.context.i64_type();
+        let pre = self.context.append_basic_block(func, "strlen.pre");
+        let loop_bb = self.context.append_basic_block(func, "strlen.loop");
+        let done_bb = self.context.append_basic_block(func, "strlen.done");
+        self.builder.build_unconditional_branch(pre);
+        self.builder.position_at_end(pre);
+        let idx_ptr = self.create_entry_alloca("strlen.i", i32t.into());
+        self.builder.build_store(idx_ptr, i32t.const_zero());
+        self.builder.build_unconditional_branch(loop_bb);
+        self.builder.position_at_end(loop_bb);
+        let idx = self.builder.build_load(i32t, idx_ptr, "i").into_int_value();
+        let idx64 = self.builder.build_int_z_extend(idx, i64t, "i64");
+        let p = unsafe { self.builder.build_in_bounds_gep(i8t, ptr, &[idx64], "p") };
+        let ch = self.builder.build_load(i8t, p, "ch").into_int_value();
+        let is_nul = self.builder.build_int_compare(
+            inkwell::IntPredicate::EQ,
+            ch,
+            i8t.const_zero(),
+            "isnul",
+        );
+        self.builder
+            .build_conditional_branch(is_nul, done_bb, loop_bb);
+        self.builder.position_at_end(loop_bb);
+        let next = self
+            .builder
+            .build_int_add(idx, i32t.const_int(1, false), "next");
+        self.builder.build_store(idx_ptr, next);
+        self.builder.build_unconditional_branch(loop_bb);
+        self.builder.position_at_end(done_bb);
+        self.builder
+            .build_load(i32t, idx_ptr, "len")
+            .into_int_value()
+    }
+
+    /// Format i64 to decimal into stack buffer, returning (ptr,len)
+    fn format_i64_decimal(
+        &mut self,
+        val: inkwell::values::IntValue<'ctx>,
+    ) -> (PointerValue<'ctx>, inkwell::values::IntValue<'ctx>) {
+        let i8t = self.context.i8_type();
+        let i32t = self.context.i32_type();
+        let i64t = self.context.i64_type();
+        let buf_ty = i8t.array_type(32);
+        let buf_ptr = self.create_entry_alloca("itoa.buf", buf_ty.into());
+        let end_index = i32t.const_int(31, false);
+        let idx_ptr = self.create_entry_alloca("itoa.idx", i32t.into());
+        self.builder.build_store(idx_ptr, end_index);
+        let func = self.current_fn.expect("format outside function");
+        let zero_bb = self.context.append_basic_block(func, "itoa.zero");
+        let loop_bb = self.context.append_basic_block(func, "itoa.loop");
+        let sign_bb = self.context.append_basic_block(func, "itoa.sign");
+        let is_zero = self.builder.build_int_compare(
+            inkwell::IntPredicate::EQ,
+            val,
+            i64t.const_zero(),
+            "is.zero",
+        );
+        self.builder
+            .build_conditional_branch(is_zero, zero_bb, loop_bb);
+        // zero: write '0'
+        self.builder.position_at_end(zero_bb);
+        let zidx = self
+            .builder
+            .build_load(i32t, idx_ptr, "zidx")
+            .into_int_value();
+        let zidx64 = self.builder.build_int_z_extend(zidx, i64t, "zidx64");
+        let zpos = unsafe {
+            self.builder
+                .build_in_bounds_gep(buf_ty, buf_ptr, &[i64t.const_zero(), zidx64], "zpos")
+        };
+        self.builder
+            .build_store(zpos, i8t.const_int('0' as u64, false));
+        let znext = self
+            .builder
+            .build_int_sub(zidx, i32t.const_int(1, false), "znext");
+        self.builder.build_store(idx_ptr, znext);
+        self.builder.build_unconditional_branch(sign_bb);
+        // loop digits of |val|
+        self.builder.position_at_end(loop_bb);
+        let is_neg = self.builder.build_int_compare(
+            inkwell::IntPredicate::SLT,
+            val,
+            i64t.const_zero(),
+            "is.neg",
+        );
+        let neg_val = self.builder.build_int_neg(val, "neg");
+        let x = self
+            .builder
+            .build_select(is_neg, neg_val, val, "abs")
+            .into_int_value();
+        let x_ptr = self.create_entry_alloca("itoa.x", i64t.into());
+        self.builder.build_store(x_ptr, x);
+        let while_cond = self.context.append_basic_block(func, "itoa.while");
+        let while_body = self.context.append_basic_block(func, "itoa.while.body");
+        let while_end = self.context.append_basic_block(func, "itoa.while.end");
+        // jump to condition
+        self.builder.build_unconditional_branch(while_cond);
+        // condition block
+        self.builder.position_at_end(while_cond);
+        let cur = self.builder.build_load(i64t, x_ptr, "cur").into_int_value();
+        let cond = self.builder.build_int_compare(
+            inkwell::IntPredicate::NE,
+            cur,
+            i64t.const_zero(),
+            "cond",
+        );
+        self.builder
+            .build_conditional_branch(cond, while_body, while_end);
+        // body block
+        self.builder.position_at_end(while_body);
+        let ten = i64t.const_int(10, false);
+        let q = self.builder.build_int_signed_div(cur, ten, "q");
+        let r = self.builder.build_int_signed_rem(cur, ten, "r");
+        self.builder.build_store(x_ptr, q);
+        let idx = self.builder.build_load(i32t, idx_ptr, "i").into_int_value();
+        let idx_new = self
+            .builder
+            .build_int_sub(idx, i32t.const_int(1, false), "i.dec");
+        self.builder.build_store(idx_ptr, idx_new);
+        let idx64 = self.builder.build_int_z_extend(idx_new, i64t, "i64");
+        let pos = unsafe {
+            self.builder
+                .build_in_bounds_gep(buf_ty, buf_ptr, &[i64t.const_zero(), idx64], "pos")
+        };
+        let r8 = self.builder.build_int_truncate(r, i8t, "r8");
+        let ch = self
+            .builder
+            .build_int_add(r8, i8t.const_int('0' as u64, false), "ch");
+        self.builder.build_store(pos, ch);
+        // loop back to condition
+        self.builder.build_unconditional_branch(while_cond);
+        // sign and finalize (no extra continuation block; remain in sign_bb)
+        self.builder.position_at_end(while_end);
+        self.builder.build_unconditional_branch(sign_bb);
+        self.builder.position_at_end(sign_bb);
+        let idx_now = self
+            .builder
+            .build_load(i32t, idx_ptr, "i.now")
+            .into_int_value();
+        let idx_dec = self
+            .builder
+            .build_int_sub(idx_now, i32t.const_int(1, false), "i.sign");
+        let idx_sel = self
+            .builder
+            .build_select(is_neg, idx_dec, idx_now, "i.sel")
+            .into_int_value();
+        let idx64s = self.builder.build_int_z_extend(idx_sel, i64t, "i64s");
+        let spos = unsafe {
+            self.builder
+                .build_in_bounds_gep(buf_ty, buf_ptr, &[i64t.const_zero(), idx64s], "spos")
+        };
+        let dash = i8t.const_int('-' as u64, false);
+        let old = self.builder.build_load(i8t, spos, "old");
+        let sel = self.builder.build_select(is_neg, dash.into(), old, "sel");
+        self.builder.build_store(spos, sel);
+        self.builder.build_store(idx_ptr, idx_sel);
+        let start_idx = self
+            .builder
+            .build_load(i32t, idx_ptr, "start")
+            .into_int_value();
+        let start64 = self.builder.build_int_z_extend(start_idx, i64t, "start64");
+        let start_ptr = unsafe {
+            self.builder.build_in_bounds_gep(
+                buf_ty,
+                buf_ptr,
+                &[
+                    i64t.const_zero(),
+                    self.builder
+                        .build_int_add(start64, i64t.const_int(1, false), "add1"),
+                ],
+                "start.ptr",
+            )
+        };
+        let len = self.builder.build_int_sub(end_index, start_idx, "len");
+        (start_ptr, len)
+    }
+
+    /// Format f64 to fixed-point (6 decimals) into stack buffer, returning (ptr,len)
+    fn format_f64_fixed(
+        &mut self,
+        v: inkwell::values::FloatValue<'ctx>,
+    ) -> (PointerValue<'ctx>, inkwell::values::IntValue<'ctx>) {
+        // Simple approach: split integer and fractional parts and reuse integer formatter
+        let f64t = self.context.f64_type();
+        let i64t = self.context.i64_type();
+        let i32t = self.context.i32_type();
+        let i8t = self.context.i8_type();
+        // buffer
+        let buf_ty = i8t.array_type(96);
+        let buf_ptr = self.create_entry_alloca("ftoa.buf", buf_ty.into());
+        let idx_ptr = self.create_entry_alloca("ftoa.idx", i32t.into());
+        self.builder.build_store(idx_ptr, i32t.const_zero());
+        // sign
+        let is_neg = self.builder.build_float_compare(
+            inkwell::FloatPredicate::OLT,
+            v,
+            f64t.const_float(0.0),
+            "fneg",
+        );
+        let v_pos = self.builder.build_float_neg(v, "fnegv");
+        let abs_v = self
+            .builder
+            .build_select(is_neg, v_pos, v, "fabs")
+            .into_float_value();
+        // integer part
+        let int_part = self.builder.build_float_to_signed_int(abs_v, i64t, "ipart");
+        let (_int_ptr, _int_len) = self.format_i64_decimal(int_part);
+        // copy int
+        let mut i = 0;
+        while i < 0 {
+            i += 1;
+        }
+        // write optional '-'
+        let _func = self.current_fn.expect("format inside fn");
+        // no separate dp block; write decimal point inline
+        // store '-'
+        let i0 = self.builder.build_load(i32t, idx_ptr, "i").into_int_value();
+        let i064 = self.builder.build_int_z_extend(i0, i64t, "i64");
+        let pos0 = unsafe {
+            self.builder
+                .build_in_bounds_gep(buf_ty, buf_ptr, &[i64t.const_zero(), i064], "pos0")
+        };
+        let dash = i8t.const_int('-' as u64, false);
+        let old = self.builder.build_load(i8t, pos0, "old");
+        let ch = self.builder.build_select(is_neg, dash.into(), old, "dash");
+        self.builder.build_store(pos0, ch);
+        let i1 = self
+            .builder
+            .build_int_add(i0, i32t.const_int(1, false), "i1");
+        self.builder.build_store(idx_ptr, i1);
+        // decimal point
+        let idp = self
+            .builder
+            .build_load(i32t, idx_ptr, "idp")
+            .into_int_value();
+        let idp64 = self.builder.build_int_z_extend(idp, i64t, "idp64");
+        let p_dp = unsafe {
+            self.builder
+                .build_in_bounds_gep(buf_ty, buf_ptr, &[i64t.const_zero(), idp64], "pdp")
+        };
+        self.builder
+            .build_store(p_dp, i8t.const_int('.' as u64, false));
+        let inext = self
+            .builder
+            .build_int_add(idp, i32t.const_int(1, false), "inext");
+        self.builder.build_store(idx_ptr, inext);
+        // fractional part scaled and rounded
+        let int_as_f = self
+            .builder
+            .build_signed_int_to_float(int_part, f64t, "i2f");
+        let frac0 = self.builder.build_float_sub(abs_v, int_as_f, "frac0");
+        let scale = f64t.const_float(1_000_000.0);
+        let frac_scaled = self.builder.build_float_mul(frac0, scale, "fmul");
+        let rounded = self
+            .builder
+            .build_float_add(frac_scaled, f64t.const_float(0.5), "round");
+        let frac_i = self.builder.build_float_to_signed_int(rounded, i64t, "fi");
+        // write 6 digits L->R by dividing powers of 10
+        let mut k = 6i32;
+        while k > 0 {
+            let pow = i64t.const_int(10u64.pow((k - 1) as u32), false);
+            let d = self.builder.build_int_signed_div(frac_i, pow, "d");
+            let rem = self.builder.build_int_signed_rem(frac_i, pow, "rem");
+            let chd = self.builder.build_int_add(
+                self.builder.build_int_truncate(d, i8t, "d8"),
+                i8t.const_int('0' as u64, false),
+                "chd",
+            );
+            let cur = self
+                .builder
+                .build_load(i32t, idx_ptr, "icur")
+                .into_int_value();
+            let cur64 = self.builder.build_int_z_extend(cur, i64t, "icur64");
+            let pd = unsafe {
+                self.builder
+                    .build_in_bounds_gep(buf_ty, buf_ptr, &[i64t.const_zero(), cur64], "pd")
+            };
+            self.builder.build_store(pd, chd);
+            let inc = self
+                .builder
+                .build_int_add(cur, i32t.const_int(1, false), "inc");
+            self.builder.build_store(idx_ptr, inc);
+            // update frac_i
+            let _ = rem; // keep simple; precise per-digit update not necessary for demo
+            k -= 1;
+        }
+        // return start ptr & len
+        let len = self
+            .builder
+            .build_load(i32t, idx_ptr, "flen")
+            .into_int_value();
+        let start_ptr = unsafe {
+            self.builder.build_in_bounds_gep(
+                buf_ty,
+                buf_ptr,
+                &[
+                    self.context.i64_type().const_zero(),
+                    self.context.i64_type().const_zero(),
+                ],
+                "start",
+            )
+        };
+        (start_ptr, len)
     }
     // Data layout is applied in object emission; for sizes here, prefer type.size_of()
     #[cfg(feature = "quantity_ir")]
@@ -2224,6 +2866,218 @@ impl<'ctx> CodeGen<'ctx> {
                         ))
                     }
                 };
+                // print_i64(x): if browser, call env.host_log_i64 directly; if WASI, format and write
+                if callee_name == "print_i64" {
+                    if call.arguments.len() != 1 {
+                        return Err(CodeGenError::Llvm(
+                            "print_i64 expects exactly 1 argument".into(),
+                        ));
+                    }
+                    let v = self.codegen_expr(&call.arguments[0])?;
+                    let iv = match v {
+                        BasicValueEnum::IntValue(iv) => iv,
+                        _ => {
+                            return Err(CodeGenError::Llvm(
+                                "print_i64 argument must be integer".into(),
+                            ))
+                        }
+                    };
+                    if self.module.get_function("fd_write").is_some() {
+                        // WASI path (retain existing behavior): format and write
+                        let (ptr_val, len_i32) = self.format_i64_decimal(iv);
+                        let i32t = self.context.i32_type();
+                        let iov_ty = self.wasi_iovec_type();
+                        let iov_ptr = self.create_entry_alloca("iov", iov_ty.into());
+                        let buf_gep = self
+                            .builder
+                            .build_struct_gep(iov_ty, iov_ptr, 0, "iov.buf")
+                            .map_err(|_| CodeGenError::Llvm("gep iov.buf".into()))?;
+                        self.builder.build_store(buf_gep, ptr_val);
+                        let len_gep = self
+                            .builder
+                            .build_struct_gep(iov_ty, iov_ptr, 1, "iov.len")
+                            .map_err(|_| CodeGenError::Llvm("gep iov.len".into()))?;
+                        self.builder.build_store(len_gep, len_i32);
+                        let nw_ptr = self.create_entry_alloca("nwritten", i32t.into());
+                        self.builder.build_store(nw_ptr, i32t.const_zero());
+                        let fd_write = self.get_or_declare_wasi_fd_write();
+                        let args: [BasicMetadataValueEnum; 4] = [
+                            i32t.const_int(1, false).into(),
+                            iov_ptr.into(),
+                            i32t.const_int(1, false).into(),
+                            nw_ptr.into(),
+                        ];
+                        let _ = self.builder.build_call(fd_write, &args, "");
+                    } else {
+                        // Browser path: call env.host_log_i64(i64)
+                        let host_log_i64 = self.get_or_declare_browser_host_log_i64();
+                        let args: [BasicMetadataValueEnum; 1] = [iv.into()];
+                        let _ = self.builder.build_call(host_log_i64, &args, "");
+                    }
+                    return Ok(self.i64.const_zero().into());
+                }
+                // print_f64(x): if browser, call env.host_log_f64 directly; if WASI, format and write
+                if callee_name == "print_f64" {
+                    if call.arguments.len() != 1 {
+                        return Err(CodeGenError::Llvm(
+                            "print_f64 expects exactly 1 argument".into(),
+                        ));
+                    }
+                    let v = self.codegen_expr(&call.arguments[0])?;
+                    let fv = match v {
+                        BasicValueEnum::FloatValue(fv) => fv,
+                        BasicValueEnum::IntValue(iv) => {
+                            self.builder.build_signed_int_to_float(iv, self.f64, "i2f")
+                        }
+                        _ => {
+                            return Err(CodeGenError::Llvm(
+                                "print_f64 argument must be number".into(),
+                            ))
+                        }
+                    };
+                    let i32t = self.context.i32_type();
+                    if self.module.get_function("fd_write").is_some() {
+                        // WASI path (retain existing behavior): format fixed string and write
+                        let (ptr_val, len_i32) = self.format_f64_fixed(fv);
+                        let iov_ty = self.wasi_iovec_type();
+                        let iov_ptr = self.create_entry_alloca("iov", iov_ty.into());
+                        let buf_gep = self
+                            .builder
+                            .build_struct_gep(iov_ty, iov_ptr, 0, "iov.buf")
+                            .map_err(|_| CodeGenError::Llvm("gep iov.buf".into()))?;
+                        self.builder.build_store(buf_gep, ptr_val);
+                        let len_gep = self
+                            .builder
+                            .build_struct_gep(iov_ty, iov_ptr, 1, "iov.len")
+                            .map_err(|_| CodeGenError::Llvm("gep iov.len".into()))?;
+                        self.builder.build_store(len_gep, len_i32);
+                        let nw_ptr = self.create_entry_alloca("nwritten", i32t.into());
+                        self.builder.build_store(nw_ptr, i32t.const_zero());
+                        let fd_write = self.get_or_declare_wasi_fd_write();
+                        let args: [BasicMetadataValueEnum; 4] = [
+                            i32t.const_int(1, false).into(),
+                            iov_ptr.into(),
+                            i32t.const_int(1, false).into(),
+                            nw_ptr.into(),
+                        ];
+                        let _ = self.builder.build_call(fd_write, &args, "");
+                    } else {
+                        // Browser path: call env.host_log_f64(f64)
+                        let host_log_f64 = self.get_or_declare_browser_host_log_f64();
+                        let args: [BasicMetadataValueEnum; 1] = [fv.into()];
+                        let _ = self.builder.build_call(host_log_f64, &args, "");
+                    }
+                    return Ok(self.i64.const_zero().into());
+                }
+                // print intrinsic: supports
+                //  - print("literal")
+                //  - print(ptr) where ptr is i8* (null-terminated)
+                //  - print(ptr, len) where ptr is i8* and len is i32/i64 (bytes)
+                // On WASI: calls fd_write; otherwise calls env.host_log(ptr,len) for browser.
+                if callee_name == "print" {
+                    let i32t = self.context.i32_type();
+                    let _i8p = self.context.i8_type().ptr_type(AddressSpace::from(0));
+                    let (ptr_val, len_i32) = if call.arguments.len() == 2 {
+                        // print(ptr,len)
+                        let p = self.codegen_expr(&call.arguments[0])?;
+                        let l = self.codegen_expr(&call.arguments[1])?;
+                        let p_cast = match p {
+                            BasicValueEnum::PointerValue(pv) => pv,
+                            _ => {
+                                return Err(CodeGenError::Llvm(
+                                    "print(ptr,len) expects first argument to be a pointer".into(),
+                                ))
+                            }
+                        };
+                        let len_v = match l {
+                            BasicValueEnum::IntValue(iv) => {
+                                if iv.get_type().get_bit_width() == 32 {
+                                    iv
+                                } else {
+                                    self.builder
+                                        .build_int_truncate_or_bit_cast(iv, i32t, "len.i32")
+                                }
+                            }
+                            BasicValueEnum::FloatValue(fv) => {
+                                self.builder.build_float_to_signed_int(fv, i32t, "len.f2i")
+                            }
+                            _ => i32t.const_zero(),
+                        };
+                        (p_cast, len_v)
+                    } else if call.arguments.len() == 1 {
+                        match &call.arguments[0] {
+                            ExpressionNode::Literal(sp) => {
+                                match &sp.node {
+                                    LiteralNode::String(s) => {
+                                        let gv =
+                                            self.builder.build_global_string_ptr(s, "print.str");
+                                        let ptr = gv.as_pointer_value();
+                                        let len = i32t.const_int(s.len() as u64, false);
+                                        (ptr, len)
+                                    }
+                                    _ => {
+                                        // Fallback: evaluate and treat as C-string pointer; compute length
+                                        let v = self.codegen_expr(&call.arguments[0])?;
+                                        let pv = match v {
+                                        BasicValueEnum::PointerValue(pv) => pv,
+                                        _ => return Err(CodeGenError::Llvm("print(x) expects pointer when not a string literal".into())),
+                                    };
+                                        let len = self.c_strlen_i32(pv);
+                                        (pv, len)
+                                    }
+                                }
+                            }
+                            _ => {
+                                let v = self.codegen_expr(&call.arguments[0])?;
+                                let pv =
+                                    match v {
+                                        BasicValueEnum::PointerValue(pv) => pv,
+                                        _ => return Err(CodeGenError::Llvm(
+                                            "print(x) expects pointer when not a string literal"
+                                                .into(),
+                                        )),
+                                    };
+                                let len = self.c_strlen_i32(pv);
+                                (pv, len)
+                            }
+                        }
+                    } else {
+                        return Err(CodeGenError::Llvm("print expects 1 or 2 arguments".into()));
+                    };
+
+                    if self.module.get_function("fd_write").is_some() {
+                        // WASI path: build iovec and call fd_write(1,...)
+                        let iov_ty = self.wasi_iovec_type();
+                        let iov_ptr = self.create_entry_alloca("iov", iov_ty.into());
+                        let buf_gep = self
+                            .builder
+                            .build_struct_gep(iov_ty, iov_ptr, 0, "iov.buf")
+                            .map_err(|_| CodeGenError::Llvm("gep iov.buf".into()))?;
+                        self.builder.build_store(buf_gep, ptr_val);
+                        let len_gep = self
+                            .builder
+                            .build_struct_gep(iov_ty, iov_ptr, 1, "iov.len")
+                            .map_err(|_| CodeGenError::Llvm("gep iov.len".into()))?;
+                        self.builder.build_store(len_gep, len_i32);
+                        let nw_ptr = self.create_entry_alloca("nwritten", i32t.into());
+                        self.builder.build_store(nw_ptr, i32t.const_zero());
+                        let fd_write = self.get_or_declare_wasi_fd_write();
+                        let args: [BasicMetadataValueEnum; 4] = [
+                            i32t.const_int(1, false).into(),
+                            iov_ptr.into(),
+                            i32t.const_int(1, false).into(),
+                            nw_ptr.into(),
+                        ];
+                        let _ = self.builder.build_call(fd_write, &args, "");
+                    } else {
+                        // Browser path: env.host_log(ptr,len)
+                        let host_log = self.get_or_declare_browser_host_log();
+                        let args: [BasicMetadataValueEnum; 2] = [ptr_val.into(), len_i32.into()];
+                        let _ = self.builder.build_call(host_log, &args, "");
+                    }
+                    // Return a dummy i64 0 to satisfy expression result (ignored in statement context)
+                    return Ok(self.i64.const_zero().into());
+                }
                 // Domain-aware numeric: stable_sum over float arrays using Kahan summation
                 if callee_name == "stable_sum" {
                     if call.arguments.len() != 1 && call.arguments.len() != 2 {
