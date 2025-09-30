@@ -253,7 +253,7 @@
               8
             ],
             "details": "Create CI matrix (Linux) to validate IR, codegen, and smoke tests for x86-64, wasm32-wasi, and riscv32. Upload artifacts for inspection and gate merges on target build success.",
-            "status": "in-progress"
+            "status": "done"
           }
         ]
       },
