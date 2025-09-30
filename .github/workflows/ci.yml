@@ -200,3 +200,46 @@ jobs:
           MEDI_BENCH_SMOKE: "1"
         run: |
           cargo bench -p medic_benchmarks --bench codegen_bench -- --quick
+
+  codegen-matrix:
+    name: Codegen Artifacts (LLVM)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64, wasm32, riscv32]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+      - name: Install LLVM 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libllvm15 llvm-15-runtime clang-15 libpolly-15-dev
+          sudo ln -sf /usr/bin/llvm-config-15 /usr/bin/llvm-config
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - name: Set LLVM environment variables
+        run: |
+          echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+          echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+          echo "INKWELL_LLVM_VERSION=15" >> $GITHUB_ENV
+          echo "LLVM_SYS_150_IGNORE_MARKER=YES" >> $GITHUB_ENV
+      - name: Build workspace
+        run: cargo build --workspace --features llvm-backend
+      - name: Emit object for ${{ matrix.target }}
+        run: |
+          mkdir -p artifacts
+          cargo run -p medic --features llvm-backend -- --emit=${{ matrix.target }} --opt=2 --out=artifacts/${{ matrix.target }}.o << 'EOF'
+          // minimal program to drive codegen
+          fn main() { }
+          EOF
+      - name: Upload codegen artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obj-${{ matrix.target }}
+          path: artifacts/${{ matrix.target }}.o
