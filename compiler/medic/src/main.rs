@@ -13,7 +13,7 @@ use serde_json::Value as JsonValue;
 
 #[cfg(feature = "llvm-backend")]
 use medic_codegen_llvm::{
-    generate_ir_string_with_types_and_specs,
+    generate_ir_string_with_types_and_specs, generate_riscv32_object_with_opts_types_and_specs,
     generate_wasm32_unknown_object_with_opts_types_and_specs,
     generate_wasm32_wasi_object_with_opts_types_and_specs, generate_x86_64_object_default,
     generate_x86_64_object_with_opts, generate_x86_64_object_with_opts_types_and_specs, TargetKind,
@@ -436,6 +436,90 @@ fn main() {
                                 }
                             }
                             _ => {
+                                // RISC-V 32-bit (RV32) emission path
+                                if let TargetKind::RiscV32 = target {
+                                    // Similar defaults to x86/wasm
+                                    let mut opt = std::env::var("MEDI_LLVM_OPT")
+                                        .ok()
+                                        .and_then(|s| s.parse::<u8>().ok());
+                                    if opt.is_none() {
+                                        #[cfg(debug_assertions)]
+                                        {
+                                            opt = Some(1);
+                                        }
+                                        #[cfg(not(debug_assertions))]
+                                        {
+                                            opt = Some(3);
+                                        }
+                                    }
+                                    if std::env::var("MEDI_LLVM_PIPE").is_err() {
+                                        #[cfg(debug_assertions)]
+                                        {
+                                            std::env::set_var("MEDI_LLVM_PIPE", "debug");
+                                        }
+                                        #[cfg(not(debug_assertions))]
+                                        {
+                                            std::env::set_var("MEDI_LLVM_PIPE", "default");
+                                        }
+                                    }
+                                    let cpu = std::env::var("MEDI_LLVM_CPU")
+                                        .unwrap_or_else(|_| "generic".to_string());
+                                    let feats = std::env::var("MEDI_LLVM_FEATURES")
+                                        .unwrap_or_else(|_| "".to_string());
+
+                                    let result = generate_riscv32_object_with_opts_types_and_specs(
+                                        &program,
+                                        opt.unwrap_or(2),
+                                        &cpu,
+                                        &feats,
+                                        &fun_tys,
+                                        &specs,
+                                    );
+
+                                    match result {
+                                        Ok(obj) => {
+                                            if let Some(path) = out_path {
+                                                if let Err(e) = fs::write(&path, &obj) {
+                                                    eprintln!(
+                                                        "error: failed to write object file '{path}': {e}"
+                                                    );
+                                                    std::process::exit(2);
+                                                } else {
+                                                    let opt_used = std::env::var("MEDI_LLVM_OPT")
+                                                        .unwrap_or_else(|_| "2".into());
+                                                    let cpu_used = std::env::var("MEDI_LLVM_CPU")
+                                                        .unwrap_or_else(|_| "generic".into());
+                                                    let feats_used =
+                                                        std::env::var("MEDI_LLVM_FEATURES")
+                                                            .unwrap_or_else(|_| "".into());
+                                                    eprintln!(
+                                                        "wrote riscv32 object to {path} ({} bytes) [opt={}, cpu='{}', features='{}']",
+                                                        obj.len(), opt_used, cpu_used, feats_used
+                                                    );
+                                                }
+                                            } else {
+                                                eprintln!("note: no --out=path provided; printing LLVM IR instead");
+                                                match generate_ir_string_with_types_and_specs(
+                                                    &program, &fun_tys, &specs,
+                                                ) {
+                                                    Ok(ir) => println!("{ir}"),
+                                                    Err(e) => {
+                                                        eprintln!(
+                                                            "error: IR generation failed: {e}"
+                                                        );
+                                                        std::process::exit(2);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("error: riscv32 code emission failed: {e}");
+                                            std::process::exit(2);
+                                        }
+                                    }
+                                    // done handling RISC-V
+                                    return;
+                                }
                                 // Fallback: just emit IR for other targets until implemented
                                 match generate_ir_string_with_types_and_specs(
                                     &program, &fun_tys, &specs,

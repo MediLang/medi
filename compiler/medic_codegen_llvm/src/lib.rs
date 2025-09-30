@@ -202,6 +202,129 @@ pub fn generate_wasm32_unknown_object_with_opts_types_and_specs(
     Ok(obj.as_slice().to_vec())
 }
 
+/// Emit a riscv32-unknown-elf object with registered types and specializations.
+#[cfg(feature = "llvm")]
+pub fn generate_riscv32_object_with_opts_types_and_specs(
+    program: &ProgramNode,
+    opt_level: u8,
+    cpu: &str,
+    features: &str,
+    types: &[(String, MediType)],
+    specializations: &[(String, Vec<MediType>, MediType)],
+) -> Result<Vec<u8>, CodeGenError> {
+    let lvl = match opt_level {
+        0 => OptimizationLevel::None,
+        1 => OptimizationLevel::Less,
+        3 => OptimizationLevel::Aggressive,
+        _ => OptimizationLevel::Default,
+    };
+
+    initialize_targets()?;
+    let context = Context::create();
+    let mut cg = CodeGen::new(&context, "medi_module");
+
+    // Register MediType function signatures and specializations first
+    for (name, ty) in types.iter() {
+        cg.register_function_type(name, ty.clone());
+    }
+    for (base, params, ret) in specializations.iter() {
+        let _ = cg.register_specialized_function(base, params, ret);
+    }
+
+    // Predeclare non-generic functions so top-level calls can resolve
+    cg.predeclare_user_functions(program);
+
+    // Lower program to IR (implicit main if needed), mirroring generate_ir_string_with_types_and_specs
+    let has_top_stmts = program
+        .statements
+        .iter()
+        .any(|s| !matches!(s, StatementNode::Function(_)));
+    if has_top_stmts {
+        let fn_ty = cg.i64.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", fn_ty, None);
+        let entry = cg.context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        for s in &program.statements {
+            if !matches!(s, StatementNode::Function(_)) {
+                cg.codegen_stmt(s)?;
+            }
+        }
+        cg.scope.pop();
+        cg.builder.build_return(Some(&cg.i64.const_zero()));
+        cg.current_fn = prev;
+    }
+    for s in &program.statements {
+        if let StatementNode::Function(_) = s {
+            cg.codegen_stmt(s)?;
+        }
+    }
+
+    // Target machine for RISC-V RV32
+    let triple = TargetTriple::create("riscv32-unknown-elf");
+    let target = Target::from_triple(&triple)
+        .map_err(|e| CodeGenError::Llvm(format!("Target::from_triple failed: {e}")))?;
+    let tm = target
+        .create_target_machine(
+            &triple,
+            if cpu.is_empty() { "generic-rv32" } else { cpu },
+            features,
+            lvl,
+            RelocMode::Default,
+            CodeModel::Default,
+        )
+        .ok_or_else(|| CodeGenError::Llvm("create_target_machine failed".into()))?;
+
+    // Apply triple + data layout for ABI correctness
+    cg.module.set_triple(&triple);
+    let dl = tm.get_target_data().get_data_layout();
+    cg.module.set_data_layout(&dl);
+
+    // Run optimization pipeline based on MEDI_LLVM_PIPE
+    let pipe = std::env::var("MEDI_LLVM_PIPE").unwrap_or_else(|_| "minimal".to_string());
+    let pm = PassManager::create(());
+    match (pipe.as_str(), lvl) {
+        ("default", OptimizationLevel::Default) | ("minimal", OptimizationLevel::None) => {
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_cfg_simplification_pass();
+        }
+        ("debug", _) => {
+            pm.add_cfg_simplification_pass();
+        }
+        ("aggressive", _) => {
+            pm.add_basic_alias_analysis_pass();
+            pm.add_promote_memory_to_register_pass();
+            pm.add_instruction_combining_pass();
+            pm.add_reassociate_pass();
+            pm.add_gvn_pass();
+            pm.add_cfg_simplification_pass();
+            pm.add_licm_pass();
+            // RISC-V may still benefit from vectorization in LLVM where available
+            pm.add_loop_vectorize_pass();
+            pm.add_slp_vectorize_pass();
+        }
+        _ => {}
+    }
+    pm.run_on(&cg.module);
+
+    // Be explicit: set C calling convention for all non-intrinsic functions
+    for f in cg.module.get_functions() {
+        let name = f.get_name().to_string_lossy();
+        if !name.starts_with("llvm.") {
+            // 0 is C calling convention in LLVM
+            f.set_call_conventions(0);
+        }
+    }
+
+    // Emit object
+    let obj = tm
+        .write_to_memory_buffer(&cg.module, FileType::Object)
+        .map_err(|e| CodeGenError::Llvm(format!("object emission failed: {e}")))?;
+    Ok(obj.as_slice().to_vec())
+}
+
 // Helper to select an appropriate target triple for object emission.
 // Uses MEDI_TARGET_TRIPLE when provided, otherwise selects based on host OS.
 #[cfg(feature = "llvm")]

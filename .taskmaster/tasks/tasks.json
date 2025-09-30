@@ -241,7 +241,7 @@
               2
             ],
             "details": "Configure riscv32 target triple, implement ABI/calling convention support, validate data layout and alignment, and ensure emitted code runs on a reference RV32 emulator or dev board. Provide minimal examples and measure footprint to meet edge constraints.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 9,
