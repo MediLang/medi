@@ -630,7 +630,7 @@ dependencies = [
 
 [[package]]
 name = "medic"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "medic_ast",
  "medic_codegen_llvm",
@@ -645,7 +645,7 @@ dependencies = [
 
 [[package]]
 name = "medic_ast"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "medic_lexer",
  "pretty_assertions",
@@ -677,7 +677,7 @@ dependencies = [
 
 [[package]]
 name = "medic_codegen_llvm"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "inkwell",
  "medic_ast",
@@ -688,14 +688,14 @@ dependencies = [
 
 [[package]]
 name = "medic_env"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "medic_type",
 ]
 
 [[package]]
 name = "medic_lexer"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "criterion",
  "env_logger",
@@ -713,7 +713,7 @@ dependencies = [
 
 [[package]]
 name = "medic_parser"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "env_logger",
  "log",
@@ -726,11 +726,11 @@ dependencies = [
 
 [[package]]
 name = "medic_type"
-version = "0.1.0"
+version = "0.0.3"
 
 [[package]]
 name = "medic_typeck"
-version = "0.1.0"
+version = "0.0.3"
 dependencies = [
  "log",
  "medic_ast",

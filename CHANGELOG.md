@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No changes yet.
+Planned improvements and documentation updates.
+
+## [v0.0.3] - 2025-09-30
+
+### Added
+- LLVM backend integration behind `llvm-backend` feature in `compiler/medic/` backed by `medic_codegen_llvm` using Inkwell/LLVM 15.
+- Target codegen support and CI artifacts for:
+  - x86-64
+  - wasm32-wasi
+  - riscv32 (initial RV32)
+- CI matrix in `.github/workflows/ci.yml` covering fmt/lint, tests (Linux/macOS/Windows), quick bench smoke, and per-target codegen artifacts.
+
+### Improved
+- Clinician-friendly diagnostics in parser for common mistakes (e.g., `=` vs `==`, unmatched brackets, `per` operator suggestions).
+- Unified lexer error tokens across streaming and chunked lexers: `TokenType::Error("Invalid token '<lexeme>'")` with optional debug logging.
+- Parser recovery around early lexer error tokens with cleaner EOF handling.
+- Clippy and formatting fixes across the workspace; pre-commit hooks green.
+
+### Examples
+- Minimal codegen smoke programs emitted per target in CI for inspection.
+
+### Notes
+- Requires system LLVM 15.x when enabling the `llvm-backend` feature.
 
 ## [v0.0.2] - 2025-09-02
 
