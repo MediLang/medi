@@ -29,8 +29,10 @@ jobs:
         run: |
           echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
           echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-      - name: Install nightly for rustfmt (if needed)
+      - name: Install rustfmt
         run: rustup component add rustfmt
+      - name: Install clippy
+        run: rustup component add clippy
       - name: Rustfmt check
         run: cargo fmt --all -- --check
       - name: Clippy check
