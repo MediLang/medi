@@ -15,8 +15,8 @@ use serde_json::Value as JsonValue;
 use medic_codegen_llvm::{
     generate_ir_string_with_types_and_specs, generate_riscv32_object_with_opts_types_and_specs,
     generate_wasm32_unknown_object_with_opts_types_and_specs,
-    generate_wasm32_wasi_object_with_opts_types_and_specs, generate_x86_64_object_default,
-    generate_x86_64_object_with_opts, generate_x86_64_object_with_opts_types_and_specs, TargetKind,
+    generate_wasm32_wasi_object_with_opts_types_and_specs,
+    generate_x86_64_object_with_opts_types_and_specs, TargetKind,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -118,7 +118,7 @@ fn main() {
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--emit=") => {
-                let val = s.splitn(2, '=').nth(1).unwrap_or("");
+                let val = s.split_once('=').map(|x| x.1).unwrap_or("");
                 emit_target = match val {
                     "x86_64" => Some(TargetKind::X86_64),
                     "wasm32" => Some(TargetKind::Wasm32),
@@ -133,12 +133,12 @@ fn main() {
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--out=") => {
-                out_path = s.splitn(2, '=').nth(1).map(|s| s.to_string());
+                out_path = s.split_once('=').map(|x| x.1.to_string());
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--opt=") => {
                 // Parse integer 0..=3
-                if let Some(val) = s.splitn(2, '=').nth(1) {
+                if let Some(val) = s.split_once('=').map(|x| x.1) {
                     if let Ok(n) = val.parse::<u8>() {
                         // stash in env vars for simplicity; we will read below
                         std::env::set_var("MEDI_LLVM_OPT", n.to_string());
@@ -147,13 +147,13 @@ fn main() {
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--cpu=") => {
-                if let Some(val) = s.splitn(2, '=').nth(1) {
+                if let Some(val) = s.split_once('=').map(|x| x.1) {
                     std::env::set_var("MEDI_LLVM_CPU", val);
                 }
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--features=") => {
-                if let Some(val) = s.splitn(2, '=').nth(1) {
+                if let Some(val) = s.split_once('=').map(|x| x.1) {
                     std::env::set_var("MEDI_LLVM_FEATURES", val);
                 }
             }
@@ -162,7 +162,7 @@ fn main() {
             }
             #[cfg(feature = "llvm-backend")]
             s if s.starts_with("--opt-pipeline=") => {
-                if let Some(val) = s.splitn(2, '=').nth(1) {
+                if let Some(val) = s.split_once('=').map(|x| x.1) {
                     // Allowed values: minimal (default), default, aggressive, debug
                     let v = match val {
                         "default" | "minimal" | "aggressive" | "debug" => val,
@@ -293,7 +293,7 @@ fn main() {
                                 let result = {
                                     let opt = opt.unwrap_or(2);
                                     let cpu = cpu.unwrap_or_else(|| "x86-64".to_string());
-                                    let feats = feats.unwrap_or_else(|| "".to_string());
+                                    let feats = feats.unwrap_or_default();
                                     // Use the new API that registers MediType function signatures and specializations first.
                                     generate_x86_64_object_with_opts_types_and_specs(
                                         &program, opt, &cpu, &feats, &fun_tys, &specs,
