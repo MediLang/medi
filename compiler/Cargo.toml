@@ -9,7 +9,9 @@ members = [
     "medic_type",
     "medic_typeck",
     "medic_codegen_llvm",
-    "benches"
+    "benches",
+    "medic_borrowck",
+    "medic_runtime"
 ]
 
 [workspace.dependencies]

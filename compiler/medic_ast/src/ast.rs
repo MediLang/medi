@@ -25,6 +25,17 @@ impl Visitable for String {
     }
 }
 
+impl Visitable for IndexExpressionNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_index_expr(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.object.accept(visitor)?;
+        self.index.accept(visitor)
+    }
+}
+
 /// Represents an expression in the AST
 use crate::visit::Span;
 
@@ -86,6 +97,8 @@ pub enum ExpressionNode {
     Call(Spanned<Box<CallExpressionNode>>),
     /// A member access (e.g., object.property)
     Member(Spanned<Box<MemberExpressionNode>>),
+    /// An index access (e.g., array[index])
+    Index(Spanned<Box<IndexExpressionNode>>),
     /// A healthcare-specific query
     HealthcareQuery(Spanned<Box<HealthcareQueryNode>>),
     /// A statement expression (e.g., a block expression)
@@ -242,6 +255,12 @@ pub struct CallExpressionNode {
 pub struct MemberExpressionNode {
     pub object: ExpressionNode,
     pub property: IdentifierNode,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IndexExpressionNode {
+    pub object: ExpressionNode,
+    pub index: ExpressionNode,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -558,6 +577,7 @@ impl Visitable for ExpressionNode {
             ExpressionNode::Binary(Spanned { node: expr, .. }) => expr.accept(visitor),
             ExpressionNode::Call(Spanned { node: expr, .. }) => expr.accept(visitor),
             ExpressionNode::Member(Spanned { node: expr, .. }) => expr.accept(visitor),
+            ExpressionNode::Index(Spanned { node: expr, .. }) => expr.accept(visitor),
             ExpressionNode::Literal(Spanned { node: lit, .. }) => lit.accept(visitor),
             ExpressionNode::Identifier(Spanned { node: ident, .. }) => ident.accept(visitor),
             ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => query.accept(visitor),
@@ -576,6 +596,7 @@ impl Visitable for ExpressionNode {
             ExpressionNode::Binary(Spanned { node: expr, .. }) => expr.visit_children(visitor),
             ExpressionNode::Call(Spanned { node: expr, .. }) => expr.visit_children(visitor),
             ExpressionNode::Member(Spanned { node: expr, .. }) => expr.visit_children(visitor),
+            ExpressionNode::Index(Spanned { node: expr, .. }) => expr.visit_children(visitor),
             ExpressionNode::Literal(Spanned { node: lit, .. }) => lit.visit_children(visitor),
             ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
                 ident.visit_children(visitor)
@@ -930,17 +951,17 @@ impl ExpressionNode {
             ExpressionNode::Binary(span) => &span.span,
             ExpressionNode::Call(span) => &span.span,
             ExpressionNode::Member(span) => &span.span,
+            ExpressionNode::Index(span) => &span.span,
             ExpressionNode::HealthcareQuery(span) => &span.span,
-            ExpressionNode::Statement(span) => &span.span,
             ExpressionNode::Struct(span) => &span.span,
             ExpressionNode::Array(span) => &span.span,
             ExpressionNode::Quantity(span) => &span.span,
+            ExpressionNode::Statement(span) => &span.span,
         }
     }
 
     /// Creates an expression from a statement
     ///
-    /// If the statement is an expression statement, returns the inner expression.
     /// Otherwise, wraps the statement in a `Statement` variant.
     pub fn from_statement(stmt: StatementNode) -> Self {
         match stmt {
@@ -1099,6 +1120,9 @@ impl std::fmt::Display for ExpressionNode {
                     write!(f, "{el}")?;
                 }
                 write!(f, "]")
+            }
+            ExpressionNode::Index(Spanned { node: e, .. }) => {
+                write!(f, "{}[{}]", e.object, e.index)
             }
             ExpressionNode::Quantity(Spanned { node: q, .. }) => {
                 write!(f, "{} {}", q.value, q.unit.name())

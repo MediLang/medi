@@ -267,7 +267,7 @@
         "dependencies": [
           3
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -275,7 +275,7 @@
             "description": "Design and implement a Rust-like borrow checker for static memory safety verification at compile time",
             "dependencies": [],
             "details": "Implement ownership rules, lifetime tracking, and reference validation. Create an abstract syntax tree (AST) analyzer to verify borrowing rules. Develop compile-time checks for mutable/immutable borrows. Test with comprehensive test suite covering edge cases like nested borrows and partial borrows. Performance requirement: Static analysis should complete within 100ms for files under 10,000 lines of code.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 2,

@@ -2105,6 +2105,13 @@ impl<'ctx> CodeGen<'ctx> {
     ) -> Result<BasicValueEnum<'ctx>, CodeGenError> {
         match expr {
             ExpressionNode::Literal(sp) => Ok(self.const_for_literal(&sp.node)),
+            ExpressionNode::Index(sp) => {
+                // Minimal placeholder: evaluate object and index, return object value.
+                // TODO: Implement proper aggregate/array element access (GEP + load) when arrays/slices are first-class.
+                let obj = self.codegen_expr(&sp.node.object)?;
+                let _idx = self.codegen_expr(&sp.node.index)?;
+                Ok(obj)
+            }
             #[cfg(feature = "quantity_ir")]
             ExpressionNode::Quantity(sp) => {
                 // Build { value: f64, unit_id: i32 }

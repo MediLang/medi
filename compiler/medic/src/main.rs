@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::io::{self, Read};
 
+use medic_borrowck::BorrowChecker;
 use medic_env::env::TypeEnv;
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
@@ -241,6 +242,15 @@ fn main() {
                     if !type_errors.is_empty() {
                         for err in &type_errors {
                             eprintln!("type error: {err}");
+                        }
+                        std::process::exit(1);
+                    }
+
+                    // Run borrow checker after successful type checking
+                    let mut bchk = BorrowChecker::new();
+                    if let Err(errors) = bchk.check_program(&program) {
+                        for err in errors {
+                            eprintln!("borrow error: {err}");
                         }
                         std::process::exit(1);
                     }

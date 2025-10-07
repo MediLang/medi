@@ -203,6 +203,39 @@ jobs:
         run: |
           cargo bench -p medic_benchmarks --bench codegen_bench -- --quick
 
+  borrowck-perf-gate:
+    name: Borrow Checker Perf Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+      - name: Run borrow checker benchmark (quick)
+        run: |
+          set -euo pipefail
+          cargo bench -p medic_benchmarks --bench borrow_checker_bench -- --quick | tee bench.out
+          # Extract first occurrence like: "time:   [13.570 ms 13.576 ms 13.582 ms]"
+          line=$(grep -E "time:\s+\[[0-9.]+ ms [0-9.]+ ms [0-9.]+ ms\]" -m1 bench.out || true)
+          echo "Criterion line: $line"
+          if [ -z "$line" ]; then
+            echo "Could not parse benchmark output" >&2
+            exit 1
+          fi
+          # Take the middle number as median
+          median_ms=$(echo "$line" | sed -E 's/.*\[([0-9.]+) ms ([0-9.]+) ms ([0-9.]+) ms\].*/\2/')
+          echo "Median: ${median_ms} ms"
+          # Threshold (80ms for 5k statements provides headroom towards 100ms @ <10k LOC)
+          threshold_ms=80
+          awk -v m="$median_ms" -v t="$threshold_ms" 'BEGIN { if (m+0 > t+0) { exit 1 } }' || {
+            echo "Borrow checker perf regression: ${median_ms} ms > ${threshold_ms} ms" >&2
+            exit 1
+          }
+          echo "Perf gate passed: ${median_ms} ms ≤ ${threshold_ms} ms"
+
   codegen-matrix:
     name: Codegen Artifacts (LLVM)
     runs-on: ubuntu-latest

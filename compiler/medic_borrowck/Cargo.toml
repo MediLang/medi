@@ -1,0 +1,13 @@
+[package]
+name = "medic_borrowck"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+medic_ast = { path = "../medic_ast" }
+thiserror = "1"
+
+[features]
+# When enabled, function calls are treated conservatively: borrows inside calls persist to the outer region
+# (i.e., call sites do not create an inner region). This can reveal alias flows from functions returning references.
+conservative_fn_ref = []

@@ -1,0 +1,13 @@
+[package]
+name = "medic_runtime"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+thiserror = "1"
+
+[features]
+# Enable a simple GC-backed safe zone (stubs for now)
+gc = []
+# Enable simplified real-time zones (no-alloc stubs for now)
+rt_zones = []

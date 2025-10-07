@@ -44,7 +44,7 @@
 //! ```
 
 use crate::parser::Span;
-use medic_ast::ast::QuantityLiteralNode;
+use medic_ast::ast::{IndexExpressionNode, QuantityLiteralNode};
 use medic_ast::Spanned;
 use nom::error::ErrorKind;
 use nom::Err;
@@ -740,8 +740,8 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
             // parse_identifier already handles chained member access (e.g., obj.prop1.prop2).
             let (mut input, mut expr) = parse_identifier(input)?;
 
-            // Parse potential function call(s) after the identifier/member expression.
-            // Supports chained calls like `foo()(1)`.
+            // Parse potential function call(s) and indexing after the identifier/member expression.
+            // Supports chained calls and indexes like `foo()(1)[i][j]`.
             loop {
                 let lookahead = input.skip_whitespace();
                 if let Some(t) = lookahead.peek() {
@@ -827,6 +827,42 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
                         expr = ExpressionNode::Call(Spanned::new(Box::new(call), span));
                         input = after_rparen;
                         // Continue loop to handle chained calls
+                        continue;
+                    }
+                    // Handle postfix indexing: [...]
+                    if matches!(t.token_type, TokenType::LeftBracket) {
+                        // consume '['
+                        let (after_lbrack, _) = take_token_if(
+                            |tt| matches!(tt, TokenType::LeftBracket),
+                            ErrorKind::Tag,
+                        )(lookahead)?;
+                        let after_lbrack = after_lbrack.skip_whitespace();
+
+                        // parse index expression
+                        let (rest, index_expr) = parse_expression(after_lbrack)?;
+                        let rest = rest.skip_whitespace();
+
+                        // expect closing ']'
+                        let (after_rbrack, rbrack_tok) = take_token_if(
+                            |tt| matches!(tt, TokenType::RightBracket),
+                            ErrorKind::Tag,
+                        )(rest)?;
+
+                        // build index node spanning from base expr start to ']'
+                        let base_span = *expr.span();
+                        let span = Span {
+                            start: base_span.start,
+                            end: rbrack_tok.location.offset + rbrack_tok.lexeme.len(),
+                            line: base_span.line,
+                            column: base_span.column,
+                        };
+                        let idx = IndexExpressionNode {
+                            object: expr,
+                            index: index_expr,
+                        };
+                        expr = ExpressionNode::Index(Spanned::new(Box::new(idx), span));
+                        input = after_rbrack;
+                        // Continue to allow chained indexes/calls
                         continue;
                     }
                 }

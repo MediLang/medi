@@ -83,6 +83,10 @@ pub trait Visitor {
         self.visit_children(node)
     }
 
+    fn visit_index_expr(&mut self, node: &IndexExpressionNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
     fn visit_healthcare_query(&mut self, node: &HealthcareQueryNode) -> VisitResult<Self::Output> {
         self.visit_children(node)
     }

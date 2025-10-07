@@ -417,6 +417,29 @@ The grammar is inspired by multiple languages but maintains consistency through 
    - Privacy boundary enforcement
    - Real-time guarantees for medical devices
 
+### Runtime Features & Feature Flags
+
+Medi provides a host-side runtime crate at `compiler/medic_runtime/` offering task-based parallelism and channel-based message passing. Optional zones for memory management are feature-gated for incremental adoption:
+
+- **Tasks**: `spawn_task`, `spawn_task_with_priority(Priority)` create lightweight threads and return `Task` handles (`Task::join()`).
+- **Channels**: `create_channel<T>() -> (SenderHandle<T>, ReceiverHandle<T>)` for typed message passing.
+- **Feature flags** (in `medic_runtime`):
+  - `gc`: Enables `gc_zone::SafeGc` stubs and `collect_garbage()` hooks for a safe, GC-oriented zone.
+  - `rt_zones`: Enables `rt_zone::RtZone` stubs with `enter()/exit()` for simplified real-time regions.
+
+Enable features in your Cargo manifest or via CLI:
+
+```toml
+[dependencies]
+medic_runtime = { path = "compiler/medic_runtime", features = ["gc", "rt_zones"] }
+```
+
+```bash
+cargo test -p medic_runtime --features gc,rt_zones
+```
+
+These stubs establish the ergonomic surface for future zone semantics (safe GC zone, constrained RT zone) and can evolve without breaking user code.
+
 ### Error Handling
 
 1. **Result Type**

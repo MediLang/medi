@@ -800,6 +800,10 @@ impl<'a> TypeChecker<'a> {
                     ExpressionNode::Member(Spanned { node: m, .. }) => {
                         self.visit_expr(&m.object);
                     }
+                    ExpressionNode::Index(Spanned { node: ix, .. }) => {
+                        self.visit_expr(&ix.object);
+                        self.visit_expr(&ix.index);
+                    }
                     ExpressionNode::Array(Spanned { node: arr, .. }) => {
                         for el in &arr.elements {
                             self.visit_expr(el);
@@ -992,6 +996,10 @@ impl<'a> TypeChecker<'a> {
             | ExpressionNode::SnomedCode(_) => PHI,
             ExpressionNode::Member(Spanned { node: mem, .. }) => {
                 self.check_expr_privacy(&mem.object)
+            }
+            ExpressionNode::Index(Spanned { node: idx, .. }) => {
+                // Propagate privacy from the object being indexed
+                self.check_expr_privacy(&idx.object)
             }
             ExpressionNode::Binary(Spanned { node: bin, .. }) => {
                 let l = self.check_expr_privacy(&bin.left);
@@ -1530,6 +1538,27 @@ impl<'a> TypeChecker<'a> {
                     MediType::Unknown // Member access is only valid on structs
                 }
             }
+            ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                if arr.elements.is_empty() {
+                    MediType::List(Box::new(MediType::Unknown))
+                } else {
+                    // Infer a unified element type; promote mixed numerics to Float, else Unknown
+                    let mut iter = arr.elements.iter().map(|e| self.check_expr(e));
+                    let mut elem_ty = iter.next().unwrap_or(MediType::Unknown);
+                    for t in iter {
+                        if t == elem_ty {
+                            continue;
+                        }
+                        if t.is_numeric() && elem_ty.is_numeric() {
+                            elem_ty = MediType::Float;
+                        } else {
+                            elem_ty = MediType::Unknown;
+                            break;
+                        }
+                    }
+                    MediType::List(Box::new(elem_ty))
+                }
+            }
             ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => {
                 match query.query_type.as_str() {
                     "PatientData" => MediType::Record(vec![
@@ -1549,29 +1578,16 @@ impl<'a> TypeChecker<'a> {
                     _ => MediType::Unknown, // Fallback for unsupported query types
                 }
             }
-            ExpressionNode::Array(Spanned { node: arr, .. }) => {
-                if arr.elements.is_empty() {
-                    MediType::List(Box::new(MediType::Unknown))
-                } else {
-                    // Infer a unified element type
-                    let mut iter = arr.elements.iter().map(|e| self.check_expr(e));
-                    let mut elem_ty = iter.next().unwrap_or(MediType::Unknown);
-                    for t in iter {
-                        if t == elem_ty {
-                            continue;
-                        }
-                        // If numeric mix, promote to Float
-                        if t.is_numeric() && elem_ty.is_numeric() {
-                            elem_ty = MediType::Float;
-                        } else {
-                            // Heterogeneous types: fall back to Unknown
-                            elem_ty = MediType::Unknown;
-                            break;
-                        }
-                    }
-                    MediType::List(Box::new(elem_ty))
+            ExpressionNode::Index(Spanned { node: idx, .. }) => {
+                // If object is a list, type is its element type; otherwise Unknown
+                let obj_ty = self.check_expr(&idx.object);
+                let _ = self.check_expr(&idx.index);
+                match obj_ty {
+                    MediType::List(inner) => *inner,
+                    _ => MediType::Unknown,
                 }
             }
+            // (call arm handled earlier in this match)
             ExpressionNode::Statement(Spanned { node: stmt, .. }) => {
                 // For statement expressions, check the inner statement
                 match &**stmt {

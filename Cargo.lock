@@ -633,6 +633,7 @@ name = "medic"
 version = "0.0.3"
 dependencies = [
  "medic_ast",
+ "medic_borrowck",
  "medic_codegen_llvm",
  "medic_env",
  "medic_lexer",
@@ -662,6 +663,7 @@ dependencies = [
  "criterion",
  "libc",
  "medic_ast",
+ "medic_borrowck",
  "medic_codegen_llvm",
  "medic_lexer",
  "medic_parser",
@@ -673,6 +675,14 @@ dependencies = [
  "serde",
  "serde_json",
  "sys-info",
+]
+
+[[package]]
+name = "medic_borrowck"
+version = "0.0.1"
+dependencies = [
+ "medic_ast",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

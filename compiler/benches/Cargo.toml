@@ -44,6 +44,7 @@ medic_lexer = { path = "../medic_lexer" }
 medic_parser = { path = "../medic_parser" }
 medic_codegen_llvm = { path = "../medic_codegen_llvm", features = ["llvm"] }
 medic_ast = { path = "../medic_ast" }
+medic_borrowck = { path = "../medic_borrowck" }
 criterion = { version = "0.5", features = ["html_reports"] }
 memory-stats = "1.2.0"
 rand = "0.8"
@@ -65,4 +66,9 @@ sys-info = "0.9.1"
 [[bench]]
 name = "codegen_bench"
 path = "codegen_bench.rs"
+harness = false
+
+[[bench]]
+name = "borrow_checker_bench"
+path = "borrow_checker_bench.rs"
 harness = false
