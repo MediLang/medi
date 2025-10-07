@@ -42,7 +42,6 @@ path = "lexer_simple_benchmark.rs"
 [dependencies]
 medic_lexer = { path = "../medic_lexer" }
 medic_parser = { path = "../medic_parser" }
-medic_codegen_llvm = { path = "../medic_codegen_llvm", features = ["llvm"] }
 medic_ast = { path = "../medic_ast" }
 medic_borrowck = { path = "../medic_borrowck" }
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -56,16 +55,23 @@ plotters-svg = "0.3"
 num_cpus = "1.16"
 sys-info = "0.9.1"
 
+# Optional LLVM-dependent codegen crate; only enabled for codegen_bench
+medic_codegen_llvm = { path = "../medic_codegen_llvm", features = ["llvm"], optional = true }
+
+[features]
+default = []
+codegen-bench = ["medic_codegen_llvm"]
+
 [[bench]]
 name = "parse_profile"
 path = "parse_profile.rs"
 harness = false
-num_cpus = "1.16"
 sys-info = "0.9.1"
 
 [[bench]]
 name = "codegen_bench"
 path = "codegen_bench.rs"
+required-features = ["codegen-bench"]
 harness = false
 
 [[bench]]
