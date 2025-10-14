@@ -201,7 +201,7 @@ jobs:
         env:
           MEDI_BENCH_SMOKE: "1"
         run: |
-          cargo bench -p medic_benchmarks --bench codegen_bench -- --quick
+          cargo bench -p medic_benchmarks --features codegen-bench --bench codegen_bench -- --quick
 
   borrowck-perf-gate:
     name: Borrow Checker Perf Gate
