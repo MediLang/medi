@@ -440,6 +440,109 @@ cargo test -p medic_runtime --features gc,rt_zones
 
 These stubs establish the ergonomic surface for future zone semantics (safe GC zone, constrained RT zone) and can evolve without breaking user code.
 
+#### Real-Time Memory (rt_zones)
+
+When the `rt_zones` feature is enabled in `medic_runtime`, two deterministic allocation primitives are available:
+
+- `RtRegion<const BYTES: usize>`: a region/bump allocator with compile-time capacity for transient allocations.
+  - `alloc<T>(value: T) -> Option<&mut T>`
+  - `alloc_uninit<T>() -> Option<&mut MaybeUninit<T>>`
+  - `alloc_array_uninit<T>(len: usize) -> Option<&mut [MaybeUninit<T>]>`
+  - `unsafe fn reset(&self)`: frees the entire region; all prior references become invalid.
+
+- `FixedPool<T, const N: usize>`: a fixed-size object pool with O(1) allocate/free.
+  - `alloc(value: T) -> Option<&mut T>`
+  - `unsafe fn free_ptr(&self, ptr: *mut T)`
+
+RT code should use these APIs to achieve deterministic allocation latency. A typical pattern is to use a `FixedPool` for messages/objects and an `RtRegion` for transient buffers, periodically calling `reset()` at well-defined points (e.g., once per frame/tick) to reclaim memory.
+
+RT sections can be annotated in code (at the AST level) using markers `rt_begin()` and `rt_end()`. The compiler provides an optional static check (enabled via environment variable `MEDI_RT_CHECK=1` in the CLI) that flags disallowed calls within RT sections, including but not limited to:
+
+- `medi_gc_alloc_string`, `medi_gc_collect` (GC interactions)
+- `spawn_task`, `create_channel` (host runtime concurrency APIs)
+
+This check is conservative and name-based; it is intended as an aid to keep RT sections free from GC and blocking/dynamic behaviors.
+
+Run-time example (requires `rt_zones`):
+
+```bash
+cargo run -p medic_runtime --example rt_iot --features rt_zones
+```
+
+This example demonstrates a sensor loop using `FixedPool` and `RtRegion`, with a periodic `reset()` pattern and prints worst-case per-iteration latency.
+
+##### Safer Handles and Scoped Regions
+
+- `PoolBox<T, N>`: RAII handle from `FixedPool::alloc_box(value)` that auto-returns to the pool when dropped.
+
+```rust
+let pool: FixedPool<MyMsg, 256> = FixedPool::new();
+if let Some(mut msg) = pool.alloc_box(MyMsg { ..Default::default() }) {
+    msg.field = 42;
+} // msg dropped -> returned to pool
+```
+
+- `RtScope<BYTES>`: obtain with `let scope = region.scope();` to automatically reclaim all allocations on scope drop.
+
+```rust
+let region = RtRegion::<{ 16 * 1024 }>::new();
+{
+    let scope = region.scope();
+    let buf = scope.alloc_array_uninit::<u8>(64).unwrap();
+    // use buf...
+} // scope dropped -> region.reset() invoked
+```
+
+- `RtZone<BYTES, T, N>`: unified wrapper bundling a region and pool with a single scoped entry/exit.
+
+```rust
+// Pool element type T, region capacity BYTES, pool capacity N
+let zone: RtZone<MyMsg, { 16 * 1024 }, 256> = RtZone::new();
+let scope = zone.scope();
+// Pool allocation (auto-return on drop)
+if let Some(mut msg) = scope.alloc_pool_box(MyMsg { ..Default::default() }) {
+    // Region allocation (auto-reset on scope drop)
+    let tmp = scope.alloc_region_array_uninit::<u8>(64).unwrap();
+    // ...
+}
+```
+
+#### RtZone: Unified Real-Time Zone
+
+`RtZone<BYTES, T, N>` provides a convenience wrapper that combines a region (`RtRegion<BYTES>`) and a fixed-size pool (`FixedPool<T, N>`) under a single scoped guard for deterministic RT code.
+
+- **Design goals**
+- Deterministic O(1) allocations and frees.
+- Minimize `unsafe` in user code by using RAII (`PoolBox`) and scoped resets (`RtZoneScope`).
+- Provide ergonomic, structured lifetime management for IoT loops/ticks.
+
+- **Invariants**
+- `RtZoneScope` resets the region on drop; all region-backed references become invalid after scope exit.
+- `PoolBox` auto-returns elements to the pool on drop; do not store `PoolBox` across scopes unless intended.
+- The pool capacity `N` bounds concurrent live elements; allocation returns `None` when exhausted.
+
+- **Usage patterns**
+```rust
+let zone: RtZone<MyMsg, { 16 * 1024 }, 256> = RtZone::new();
+loop {
+    let scope = zone.scope();
+    if let Some(mut msg) = scope.alloc_pool_box(MyMsg::default()) {
+        let tmp = scope.alloc_region_array_uninit::<u8>(64).unwrap();
+        // process ...
+    } // msg returned to pool here; region reclaimed when scope drops
+    // next iteration gets a fresh region
+}
+```
+
+- **Anti-patterns**
+- Holding references into the region past scope end (UB). Prefer copying out minimal results if needed.
+- Leaking `PoolBox` with `into_raw()` without arranging a paired `free_ptr` (advanced/unsafe only).
+- Performing blocking I/O or GC-triggering calls inside RT sections.
+
+- **Performance notes**
+- Pool ops are LIFO O(1); region bump/align ops are O(1). Typical per-op latency validated to ≤ 50µs under tests.
+- Choose `BYTES`/`N` to avoid runtime growth/reallocation. Use a periodic scope cadence (e.g., every tick) for predictable reclaim.
+
 ### Error Handling
 
 1. **Result Type**

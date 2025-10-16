@@ -238,6 +238,12 @@ pub mod rt_zone {
     }
 }
 
+#[cfg(feature = "rt_zones")]
+pub mod rt;
+
+#[cfg(feature = "rt_zones")]
+pub use rt::{verify_latency, FixedPool, RtRegion};
+
 // --- Tests ---
 #[cfg(test)]
 mod tests {

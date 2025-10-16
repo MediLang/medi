@@ -3,6 +3,7 @@ use std::fs;
 use std::io::{self, Read};
 
 use medic_borrowck::BorrowChecker;
+use medic_borrowck::RtConstraintChecker;
 use medic_env::env::TypeEnv;
 use medic_lexer::lexer::Lexer;
 use medic_lexer::token::Token;
@@ -239,7 +240,7 @@ fn main() {
                         eprintln!("{}", render_snippet(&d, &source));
                     }
 
-                    // Run type checking and inference over the parsed program
+                    // Initialize type environment first (so RT checker can consult it)
                     let mut env = TypeEnv::with_prelude();
                     // Optional: load function types from a JSON file to seed generics like fn(T)->T
                     if let Some(ref p) = types_json_path {
@@ -256,6 +257,57 @@ fn main() {
                             }
                         }
                     }
+
+                    // Optional: real-time constraint checking (env-gated)
+                    if std::env::var("MEDI_RT_CHECK").ok().as_deref() == Some("1") {
+                        use std::collections::HashSet;
+                        // Seed from defaults
+                        let mut disallowed: HashSet<String> = [
+                            "medi_gc_alloc_string",
+                            "medi_gc_collect",
+                            "spawn_task",
+                            "create_channel",
+                        ]
+                        .into_iter()
+                        .map(|s| s.to_string())
+                        .collect();
+                        // Project-specific RT-unsafe tags via TypeEnv
+                        if let Ok(tags) = std::env::var("MEDI_RT_UNSAFE") {
+                            for name in tags.split(',') {
+                                let s = name.trim();
+                                if !s.is_empty() {
+                                    env.set_rt_unsafe_fn(s);
+                                }
+                            }
+                        }
+                        // Extend from MEDI_RT_DISALLOW env var
+                        if let Ok(extra) = std::env::var("MEDI_RT_DISALLOW") {
+                            for name in extra.split(',') {
+                                let s = name.trim();
+                                if !s.is_empty() {
+                                    disallowed.insert(s.to_string());
+                                }
+                            }
+                        }
+                        // Extend from TypeEnv rt_unsafe flags for all visible functions
+                        for (fname, _ty) in env.collect_function_types() {
+                            if env.is_rt_unsafe_fn(&fname) {
+                                disallowed.insert(fname);
+                            }
+                        }
+                        let checker = RtConstraintChecker::new(
+                            "rt_begin",
+                            "rt_end",
+                            disallowed.into_iter().collect::<Vec<_>>(),
+                        );
+                        if let Err(errors) = checker.check_program(&program) {
+                            for err in errors {
+                                eprintln!("rt check error: {err}");
+                            }
+                            std::process::exit(1);
+                        }
+                    }
+
                     let mut checker = TypeChecker::new(&mut env);
                     let mut type_errors = checker.check_program(&program);
                     maybe_incremental_step();

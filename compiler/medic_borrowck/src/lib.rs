@@ -8,6 +8,171 @@ pub enum BorrowError {
     Message(String),
 }
 
+// --- Real-time constraint checker (opt-in markers) ---
+
+/// Checks that within regions delimited by calls to `rt_begin` and `rt_end`,
+/// no calls to disallowed functions occur (e.g., GC, dynamic allocation, spawning, channels).
+/// The checker is conservative and string-based over callee names.
+pub struct RtConstraintChecker {
+    begin_fn: String,
+    end_fn: String,
+    disallowed: std::collections::HashSet<String>,
+    errors: Vec<String>,
+    inside_rt: bool,
+}
+
+impl RtConstraintChecker {
+    pub fn new(begin_fn: &str, end_fn: &str, disallowed: impl IntoIterator<Item = String>) -> Self {
+        Self {
+            begin_fn: begin_fn.to_string(),
+            end_fn: end_fn.to_string(),
+            disallowed: disallowed.into_iter().collect(),
+            errors: Vec::new(),
+            inside_rt: false,
+        }
+    }
+
+    pub fn check_program(mut self, program: &ProgramNode) -> Result<(), Vec<String>> {
+        let _ = program.accept(&mut self);
+        if self.errors.is_empty() {
+            Ok(())
+        } else {
+            Err(self.errors)
+        }
+    }
+}
+
+impl Visitor for RtConstraintChecker {
+    type Output = ();
+
+    fn visit_program(&mut self, node: &ProgramNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
+    fn visit_block(&mut self, node: &BlockNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
+    fn visit_call_expr(&mut self, node: &CallExpressionNode) -> VisitResult<Self::Output> {
+        // Gather potential callee names: full member path and last segment
+        fn callee_names(expr: &ExpressionNode) -> (Option<String>, Option<String>, Span) {
+            match expr {
+                ExpressionNode::Identifier(Spanned {
+                    node: IdentifierNode { name },
+                    span,
+                }) => (Some(name.clone()), Some(name.clone()), *span),
+                ExpressionNode::Member(Spanned { node: boxed, span }) => {
+                    // Unwind chain to build a.b.c and last segment c
+                    let mut parts: Vec<String> = vec![boxed.property.name().to_string()];
+                    let mut cur: &ExpressionNode = &boxed.object;
+                    let base_span = *span;
+                    loop {
+                        match cur {
+                            ExpressionNode::Member(Spanned { node: inner, .. }) => {
+                                parts.push(inner.property.name().to_string());
+                                cur = &inner.object;
+                            }
+                            ExpressionNode::Identifier(Spanned {
+                                node: IdentifierNode { name },
+                                span: s,
+                            }) => {
+                                parts.push(name.clone());
+                                parts.reverse();
+                                let full = parts.join(".");
+                                let last = parts.last().cloned();
+                                return (Some(full), last, *s);
+                            }
+                            _ => return (None, None, base_span),
+                        }
+                    }
+                }
+                other => {
+                    let sp = other.span();
+                    (None, None, *sp)
+                }
+            }
+        }
+
+        let (full, last, span) = callee_names(&node.callee);
+        if let Some(name) = full.as_ref().or(last.as_ref()) {
+            if name == &self.begin_fn {
+                self.inside_rt = true;
+            } else if name == &self.end_fn {
+                self.inside_rt = false;
+            } else if self.inside_rt {
+                let banned = match (full.as_ref(), last.as_ref()) {
+                    (Some(fq), Some(ls)) => {
+                        self.disallowed.contains(fq) || self.disallowed.contains(ls)
+                    }
+                    (Some(fq), None) => self.disallowed.contains(fq),
+                    (None, Some(ls)) => self.disallowed.contains(ls),
+                    _ => false,
+                };
+                if banned {
+                    self.errors.push(format!(
+                        "disallowed call '{}' inside RT section at line {} col {}",
+                        name, span.line, span.column
+                    ));
+                }
+            }
+        }
+        // Recurse into callee and args (although callee is simple in current language)
+        node.callee.accept(self)?;
+        for arg in &node.arguments {
+            arg.accept(self)?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod rt_tests {
+    use super::*;
+
+    fn call(name: &str) -> ExpressionNode {
+        ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name(name),
+                    Span::default(),
+                )),
+                arguments: vec![],
+            }),
+            Span::default(),
+        ))
+    }
+
+    #[test]
+    fn rt_checker_flags_disallowed_calls_between_markers() {
+        let program = ProgramNode {
+            statements: vec![
+                StatementNode::Expr(call("rt_begin")),
+                StatementNode::Expr(call("medi_gc_alloc_string")),
+                StatementNode::Expr(call("rt_end")),
+            ],
+        };
+        let disallowed = [
+            "medi_gc_alloc_string".to_string(),
+            "spawn_task".to_string(),
+            "create_channel".to_string(),
+        ];
+        let checker = RtConstraintChecker::new("rt_begin", "rt_end", disallowed);
+        let res = checker.check_program(&program);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn rt_checker_allows_calls_outside_markers() {
+        let program = ProgramNode {
+            statements: vec![StatementNode::Expr(call("medi_gc_alloc_string"))],
+        };
+        let disallowed = ["medi_gc_alloc_string".to_string()];
+        let checker = RtConstraintChecker::new("rt_begin", "rt_end", disallowed);
+        let res = checker.check_program(&program);
+        assert!(res.is_ok());
+    }
+}
+
 /// Opaque variable identifier allocated on declaration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VarId(u32);

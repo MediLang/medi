@@ -295,7 +295,7 @@
               1
             ],
             "details": "Implement region-based memory allocation with compile-time size determination. Create a pool allocator for fixed-size objects. Develop static analysis tools to verify real-time constraints. Test with simulated IoT workloads and timing verification. Performance requirement: Allocation/deallocation operations must complete in constant time (O(1)) with maximum latency of 50μs.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 4,

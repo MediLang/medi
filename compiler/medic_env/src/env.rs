@@ -21,6 +21,8 @@ pub struct TypeEnv {
     // Function metadata for HIPAA/privacy checks
     sinks: HashMap<String, SinkKind>,
     deid_fns: HashSet<String>,
+    // Functions considered unsafe for real-time sections
+    rt_unsafe_fns: HashSet<String>,
     // Optional per-sink minimum privacy policy (by sink name)
     sink_min_privacy: HashMap<String, PrivacyAnnotation>,
     // Optional per-sink-kind minimum privacy policy (defaults by kind)
@@ -41,6 +43,7 @@ impl TypeEnv {
             privacy: HashMap::new(),
             sinks: HashMap::new(),
             deid_fns: HashSet::new(),
+            rt_unsafe_fns: HashSet::new(),
             sink_min_privacy: HashMap::new(),
             sink_kind_min_privacy: HashMap::new(),
         }
@@ -87,6 +90,11 @@ impl TypeEnv {
         // Opinionated defaults: Network/File require Anonymized at minimum
         env.set_sink_kind_min_privacy(SinkKind::Network, PrivacyAnnotation::Anonymized);
         env.set_sink_kind_min_privacy(SinkKind::File, PrivacyAnnotation::Anonymized);
+        // Seed RT-unsafe runtime functions (can be extended by projects)
+        env.set_rt_unsafe_fn("medi_gc_alloc_string");
+        env.set_rt_unsafe_fn("medi_gc_collect");
+        env.set_rt_unsafe_fn("spawn_task");
+        env.set_rt_unsafe_fn("create_channel");
         // Other kinds left unset by default; projects may configure as needed
         env
     }
@@ -98,6 +106,7 @@ impl TypeEnv {
             privacy: HashMap::new(),
             sinks: HashMap::new(),
             deid_fns: HashSet::new(),
+            rt_unsafe_fns: HashSet::new(),
             sink_min_privacy: HashMap::new(),
             sink_kind_min_privacy: HashMap::new(),
         }
@@ -213,5 +222,22 @@ impl TypeEnv {
             return p.get_sink_kind_min_privacy(kind);
         }
         None
+    }
+
+    /// Register a function as unsafe for real-time sections.
+    pub fn set_rt_unsafe_fn(&mut self, name: impl Into<String>) {
+        self.rt_unsafe_fns.insert(name.into());
+    }
+
+    /// Check whether a function is marked RT-unsafe (searching parents).
+    pub fn is_rt_unsafe_fn(&self, name: &str) -> bool {
+        if self.rt_unsafe_fns.contains(name) {
+            true
+        } else {
+            self.parent
+                .as_ref()
+                .map(|p| p.is_rt_unsafe_fn(name))
+                .unwrap_or(false)
+        }
     }
 }
