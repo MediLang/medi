@@ -11,6 +11,7 @@ medic_parser = { path = "../medic_parser" }
 medic_type = { path = "../medic_type" }
 medic_typeck = { path = "../medic_typeck" }
 medic_borrowck = { path = "../medic_borrowck" }
+medic_runtime = { path = "../medic_runtime" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 medic_codegen_llvm = { path = "../medic_codegen_llvm", optional = true }

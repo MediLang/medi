@@ -9,6 +9,7 @@ use medic_lexer::token::Token;
 use medic_parser::parser::{
     parse_program_recovering, parse_program_with_diagnostics, render_snippet, TokenSlice,
 };
+use medic_runtime::{init_gc_with_params, maybe_incremental_step, GcParams};
 use medic_typeck::type_checker::TypeChecker;
 use serde_json::Value as JsonValue;
 
@@ -100,6 +101,26 @@ fn load_types_json(env: &mut TypeEnv, json_text: &str) -> Result<(), String> {
 }
 
 fn main() {
+    // Initialize runtime GC with tunable parameters via environment
+    // MEDI_GC_NURSERY_BYTES, MEDI_GC_PROMOTION_THRESHOLD, MEDI_GC_MAX_PAUSE_MS
+    let mut gc_params = GcParams::default();
+    if let Ok(s) = std::env::var("MEDI_GC_NURSERY_BYTES") {
+        if let Ok(n) = s.parse::<usize>() {
+            gc_params.nursery_threshold_bytes = n;
+        }
+    }
+    if let Ok(s) = std::env::var("MEDI_GC_PROMOTION_THRESHOLD") {
+        if let Ok(n) = s.parse::<usize>() {
+            gc_params.gen_promotion_threshold = n;
+        }
+    }
+    if let Ok(s) = std::env::var("MEDI_GC_MAX_PAUSE_MS") {
+        if let Ok(n) = s.parse::<u64>() {
+            gc_params.max_pause_ms = n;
+        }
+    }
+    let _gc = init_gc_with_params(gc_params);
+    maybe_incremental_step();
     // Read source either from file arg or stdin; recognize --json flag
     let args: Vec<String> = env::args().collect();
     let mut mode = OutputMode::Text;
@@ -204,6 +225,7 @@ fn main() {
     // Tokenize
     let tokens: Vec<Token> = Lexer::new(&source).collect();
     let input = TokenSlice::new(&tokens);
+    maybe_incremental_step();
 
     // First, try strict parse that returns a single diagnostic on error
     match parse_program_with_diagnostics(input) {
@@ -236,6 +258,7 @@ fn main() {
                     }
                     let mut checker = TypeChecker::new(&mut env);
                     let mut type_errors = checker.check_program(&program);
+                    maybe_incremental_step();
                     // Include any collected validation/type errors from expression checks
                     type_errors.extend(checker.take_errors());
 
@@ -258,6 +281,7 @@ fn main() {
                     // Optional: code emission when llvm-backend is enabled
                     #[cfg(feature = "llvm-backend")]
                     if let Some(target) = emit_target {
+                        maybe_incremental_step();
                         // Compute concrete specializations now (checker holds mutable borrow of env)
                         let specs = checker.collect_function_specializations(&program);
                         // Release checker (and its &mut env) before immutably borrowing env for function types

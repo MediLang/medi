@@ -11,3 +11,14 @@ thiserror = "1"
 gc = []
 # Enable simplified real-time zones (no-alloc stubs for now)
 rt_zones = []
+# Enable incremental/chunked GC prototype
+gc-incremental = []
+# Enable card table prototype for generational write barriers
+gc-card-table = []
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "gc_benches"
+harness = false

@@ -8,6 +8,8 @@ edition = "2021"
 llvm = ["dep:inkwell", "inkwell/llvm15-0"]
 # Experimental: represent quantities as { double, i32 unit_id } in IR
 quantity_ir = []
+# Experimental: call into medic_runtime GC for string literal allocation (64-bit targets only)
+gc-runtime-integration = []
 
 [dependencies]
 thiserror = "1.0"

@@ -108,14 +108,110 @@ Medi supports a wide range of healthcare domains, with modular modules:
 *   Expression-oriented programming with powerful pattern matching.
 *   Uses `.medi` file extension for source files, following industry-standard practices.
 
-## Performance and RISC-V
+## Getting Started
 
+Medi is in pre-alpha, with a prototype under development. To contribute or follow progress:
+
+*   Clone the Repository: `git clone https://github.com/MediLang/medi.git`
+*   Join the Community: [X: @MediLangHQ](https://twitter.com/MediLangHQ) | [Discord]([Discord](https://discord.gg/JxE6dD285R))
+*   Read the Docs: [medi-lang.org/docs](http://medi-lang.org/docs) (Coming Soon)
+*   Contribute: See `CONTRIBUTING.md` for guidelines. Focus areas: medic, standard library, IDE, RISC-V, AI models.
+
+## Build & Test
+
+### Building the Project
+
+Run all builds from the `medi/` directory root:
+
+```sh
+cargo build --workspace
+```
+
+### Running Tests
+
+Run all tests for all crates:
+
+```sh
+cargo test --workspace
+```
+
+### Codegen CLI flags (x86-64)
+
+When building with the LLVM backend feature, the `medic` CLI can emit x86-64 ELF object files and provides tuning flags for optimization, CPU, and features.
+
+Basic usage:
+
+```sh
+medic --emit=x86_64 --out=program.o path/to/source.medi
+```
+
+Available flags:
+
+- `--emit=x86_64`
+- `--out=<file>`
+- `--opt=0|1|2|3`  (0=None, 1=Less, 2=Default, 3=Aggressive)
+- `--cpu=<name>`   (e.g., `haswell`)
+- `--features=<csv>` (e.g., `+avx2,+sse4.2`)
+- `--opt-pipeline=minimal|default` (selects a pass pipeline profile; default is `minimal`)
+
+Examples:
+
+```sh
+# Default optimization/profile, generic x86-64
+medic --emit=x86_64 --out=a.o input.medi
+
+# Haswell with AVX2 at -O3 using the default (richer) pipeline
+medic --emit=x86_64 --out=a.o \
+  --opt=3 --cpu=haswell --features=+avx2,+sse4.2 \
+  --opt-pipeline=default input.medi
+
+# No optimization (useful for debugging generated code)
+medic --emit=x86_64 --out=a.o --opt=0 input.medi
+```
+
+## Performance and RISC-V
 Medi is engineered for high performance, critical for healthcare’s big data and real-time needs:
 
 *   **LLVM Compilation:** Optimizes code to machine code, rivaling Julia/Rust for tasks like genomic alignment or AI inference.
 *   **WebAssembly:** Enables low-latency analytics on edge devices, addressing Python’s latency issues for IoT.
 *   **Parallel/GPU Processing:** Accelerates data science (e.g., epidemiology simulations) and AI (e.g., imaging analysis) with multi-threading and CUDA/OpenCL.
 *   **Hybrid Memory Management:** Combines a low-pause garbage collector for simplicity with manual control (`scope`) for predictable IoT performance.
+
+## Memory Management
+
+Medi uses a hybrid approach to balance ease-of-use with predictable latency:
+
+- **Generational GC (default):** Fast minor collections over a nursery with a remembered set to keep young pauses low (target p99 < 10ms in typical configurations).
+- **Incremental Major GC (feature-gated):** Under the `gc-incremental` feature, Medi prototypes a tri-color incremental major collector with chunked marking/sweeping. Step budgets respect `GcParams.max_pause_ms` to keep pauses bounded, while end-to-end completion runs across many small steps.
+- **Manual control for IoT:** For ultra-low-latency paths, use `scope` and other manual techniques (roadmap) alongside the GC.
+
+### Tuning & Telemetry
+
+- Tunables via `GcParams` (and environment variables set by the compiler/runtime):
+  - `nursery_threshold_bytes` (nursery size)
+  - `gen_promotion_threshold` (promotion cadence)
+  - `max_pause_ms` (incremental step budget)
+- Optional telemetry: set `MEDI_GC_LOG=1` to print `gc_minor_pause_ms` and `gc_major_pause_ms` during runs.
+ - Runtime/env knobs:
+   - `MEDI_GC_STEP_SCALE` (default: `3`). Higher values tighten per-step work caps in incremental major GC to reduce p99 step latency without code changes.
+   - `MEDI_GC_NURSERY_BYTES` is read by benches to override nursery size at runtime for A/B experiments (see `compiler/medic_runtime/benches/gc_benches.rs`).
+
+### Benchmarks
+
+Criterion benches are available in `compiler/medic_runtime/benches/gc_benches.rs`:
+
+```bash
+cargo bench -p medic_runtime
+# With incremental prototype enabled
+cargo bench -p medic_runtime --features gc-incremental
+```
+
+Open HTML reports for p50/p99:
+
+- `target/criterion/minor_gc_pause/alloc_small_strings_minor_collect/report/index.html`
+- `target/criterion/major_gc_pause/alloc_many_then_major_collect/report/index.html`
+- `target/criterion/throughput/alloc_mutate_with_and_without_minor/report/index.html`
+- When `gc-incremental` is enabled: `target/criterion/incremental_major/step_latency_and_total_completion/report/index.html`
 
 ## RISC-V Integration
 
@@ -219,8 +315,8 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 | [Lexer/Parser/AST](.taskmaster/tasks/tasks.json) (Task 1) | Supported (prototype) |
 | [Clinician-friendly diagnostics](.taskmaster/tasks/tasks.json) (Task 1, subtask 5) | In progress |
 | [Type system core/inference](.taskmaster/tasks/tasks.json) (Task 2) | In progress |
-| [LLVM backend (x86-64/WASM/RISC-V)](.taskmaster/tasks/tasks.json) (Task 3) | Planned |
-| [Runtime/memory zones](.taskmaster/tasks/tasks.json) (Task 4) | Planned |
+| [LLVM backend (x86-64/WASM/RISC-V)](.taskmaster/tasks/tasks.json) (Task 3) | In progress |
+| [Runtime/memory zones](.taskmaster/tasks/tasks.json) (Task 4) | In progress |
 | [Standard library (data/stats/compliance/ai)](.taskmaster/tasks/tasks.json) (Task 5) | Planned |
 | [FHIR interop (REST, Search, Bulk)](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
 | [DICOM/DICOMweb](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |

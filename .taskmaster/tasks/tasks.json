@@ -285,7 +285,7 @@
               1
             ],
             "details": "Create a mark-and-sweep collector with generational optimization. Implement weak references and finalization callbacks. Develop tunable GC parameters for different workloads. Test with memory-intensive benchmarks and leak detection tools. Performance requirement: GC pauses under 10ms for heaps up to 100MB, with throughput impact less than 10%.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 3,

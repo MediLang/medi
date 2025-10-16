@@ -1334,9 +1334,12 @@ impl ChunkedLexer {
             }
         }
 
-        // If we didn't already set a partial string from boundary logic, use any remainder
-        if partial_string.is_none() && last_span_end < chunk.len() {
-            partial_string = Some(chunk[last_span_end..].to_string());
+        // Ensure forward progress: if we did not set a partial deferral, advance across
+        // the entire chunk (including whitespace/comments) so the outer iterator does not
+        // think no progress was made and stop early. Do NOT create a generic deferral for
+        // arbitrary remainder, as whitespace/comments are skipped and should be consumed.
+        if partial_string.is_none() {
+            used_end = chunk.len();
         }
 
         let mut end_pos = start_pos;

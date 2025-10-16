@@ -18,6 +18,14 @@ Rather than claiming to directly "move atoms," Medi-CMM provides a computational
 
 Medi-CMM offers features tailored for computational molecular medicine:
 
+## Latency & Throughput
+
+Medi-CMM targets predictable performance for interactive scientific workflows:
+
+- **Minor GC pauses:** Generational nursery collections aim for sub-10ms p99 under typical workloads via a remembered set that limits traversal.
+- **Incremental Major GC (prototype):** A feature-gated incremental major collector respects `GcParams.max_pause_ms` by chunking mark/sweep into small steps, keeping pause times bounded while completing full-heap work across steps.
+- **Benchmarks:** Criterion benchmarks (see Medi repository README) provide p50/p99 for minor/major (incremental) and throughput measurements to guide tuning for large models and datasets.
+
 - **Biomolecular Syntax**: Domain-specific constructs for representing proteins, nucleic acids, small molecules, and their interactions
 - **Simulation Frameworks**: Built-in methods for molecular dynamics, Monte Carlo simulations, and quantum mechanical calculations
 - **ML/AI Integration**: Native support for molecular representation learning, binding affinity prediction, and generative models

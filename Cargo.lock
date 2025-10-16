@@ -638,6 +638,7 @@ dependencies = [
  "medic_env",
  "medic_lexer",
  "medic_parser",
+ "medic_runtime",
  "medic_type",
  "medic_typeck",
  "serde",
@@ -732,6 +733,14 @@ dependencies = [
  "nom",
  "pretty_assertions",
  "thiserror 2.0.12",
+]
+
+[[package]]
+name = "medic_runtime"
+version = "0.0.1"
+dependencies = [
+ "criterion",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

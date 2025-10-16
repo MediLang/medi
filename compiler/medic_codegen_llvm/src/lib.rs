@@ -56,6 +56,122 @@ pub enum CodeGenError {
     Llvm(String),
 }
 
+#[cfg(all(
+    test,
+    feature = "llvm",
+    feature = "gc-runtime-integration",
+    target_pointer_width = "64"
+))]
+mod gc_ir_smoke_tests {
+    use super::*;
+    use inkwell::context::Context;
+    use medic_ast::ast::*;
+    use medic_ast::visit;
+
+    fn mk_span() -> visit::Span {
+        visit::Span {
+            start: 0,
+            end: 0,
+            line: 0,
+            column: 0,
+        }
+    }
+
+    #[test]
+    fn emits_gc_calls_for_string_let() {
+        let context = Context::create();
+        let mut cg = CodeGen::new(&context, "test_mod");
+
+        // Build: let s = "hi";
+        let let_stmt = StatementNode::Let(Box::new(LetStatementNode {
+            name: IdentifierNode::from_str_name("s"),
+            type_annotation: None,
+            value: Some(ExpressionNode::Literal(Spanned::new(
+                LiteralNode::String("hi".to_string()),
+                mk_span(),
+            ))),
+            span: mk_span(),
+        }));
+
+        // Create a dummy main and emit the let into it to allow building calls
+        use inkwell::AddressSpace;
+        let main_ty = cg.void.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", main_ty, None);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        cg.codegen_stmt(&let_stmt).expect("codegen let");
+        cg.scope_pop_emit_gc_roots();
+        cg.builder.build_return(None);
+        cg.current_fn = prev;
+
+        assert!(
+            cg.module.get_function("medi_gc_alloc_string").is_some(),
+            "expected medi_gc_alloc_string call emitted"
+        );
+        assert!(
+            cg.module.get_function("medi_gc_add_root").is_some(),
+            "expected medi_gc_add_root call emitted"
+        );
+        assert!(
+            cg.module.get_function("medi_gc_remove_root").is_some(),
+            "expected medi_gc_remove_root declared for scope pop"
+        );
+        assert!(
+            cg.module.get_function("medi_gc_write_barrier").is_some(),
+            "expected write barrier declared/emitted for string binding"
+        );
+    }
+
+    #[test]
+    fn emits_add_edge_for_struct_with_string_field() {
+        let context = Context::create();
+        let mut cg = CodeGen::new(&context, "test_mod");
+
+        // Build: let p = Person { name: "hi" };
+        let struct_lit = ExpressionNode::Struct(Spanned::new(
+            Box::new(StructLiteralNode {
+                type_name: "Person".to_string(),
+                fields: vec![StructField {
+                    name: "name".to_string(),
+                    value: ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::String("hi".into()),
+                        mk_span(),
+                    )),
+                }],
+            }),
+            mk_span(),
+        ));
+        let let_stmt = StatementNode::Let(Box::new(LetStatementNode {
+            name: IdentifierNode::from_str_name("p"),
+            type_annotation: None,
+            value: Some(struct_lit),
+            span: mk_span(),
+        }));
+
+        let main_ty = cg.void.fn_type(&[], false);
+        let main_fn = cg.module.add_function("main", main_ty, None);
+        let entry = context.append_basic_block(main_fn, "entry");
+        cg.builder.position_at_end(entry);
+        let prev = cg.current_fn.replace(main_fn);
+        cg.scope.push();
+        cg.codegen_stmt(&let_stmt).expect("codegen let struct");
+        cg.scope_pop_emit_gc_roots();
+        cg.builder.build_return(None);
+        cg.current_fn = prev;
+
+        assert!(
+            cg.module.get_function("medi_gc_add_edge").is_some(),
+            "expected medi_gc_add_edge call emitted for struct child"
+        );
+        assert!(
+            cg.module.get_function("medi_gc_write_barrier").is_some(),
+            "expected medi_gc_write_barrier call emitted for struct child"
+        );
+    }
+}
+
 /// Emit a wasm32-unknown-unknown object (wasm binary) with registered types and specializations.
 #[cfg(feature = "llvm")]
 pub fn generate_wasm32_unknown_object_with_opts_types_and_specs(
@@ -128,7 +244,7 @@ pub fn generate_wasm32_unknown_object_with_opts_types_and_specs(
                 cg.codegen_stmt(s)?;
             }
         }
-        cg.scope.pop();
+        cg.scope_pop_emit_gc_roots();
         cg.builder.build_return(None);
         cg.current_fn = prev;
     }
@@ -869,6 +985,9 @@ struct Scope<'ctx> {
             (PointerValue<'ctx>, BasicTypeEnum<'ctx>, Option<StructInfo>),
         >,
     >,
+    #[cfg(feature = "gc-runtime-integration")]
+    /// Stack of GC root handles (i64) per lexical scope frame
+    root_handles: Vec<Vec<inkwell::values::IntValue<'ctx>>>,
 }
 
 #[cfg(feature = "llvm")]
@@ -876,10 +995,14 @@ impl<'ctx> Scope<'ctx> {
     fn new() -> Self {
         Self {
             vars: vec![Default::default()],
+            #[cfg(feature = "gc-runtime-integration")]
+            root_handles: vec![Vec::new()],
         }
     }
     fn push(&mut self) {
         self.vars.push(Default::default());
+        #[cfg(feature = "gc-runtime-integration")]
+        self.root_handles.push(Vec::new());
     }
     fn pop(&mut self) {
         self.vars.pop();
@@ -909,6 +1032,22 @@ impl<'ctx> Scope<'ctx> {
     ) {
         if let Some(top) = self.vars.last_mut() {
             top.insert(name.to_string(), (ptr, elem_ty, Some(info)));
+        }
+    }
+    #[cfg(feature = "gc-runtime-integration")]
+    fn add_root_handle(&mut self, h: inkwell::values::IntValue<'ctx>) {
+        if let Some(top) = self.root_handles.last_mut() {
+            top.push(h);
+        }
+    }
+    #[cfg(feature = "gc-runtime-integration")]
+    fn drain_roots_frame(&mut self) -> Vec<inkwell::values::IntValue<'ctx>> {
+        if let Some(mut top) = self.root_handles.pop() {
+            // ensure a new empty frame exists when called from CodeGen pop wrapper
+            self.root_handles.push(Vec::new());
+            std::mem::take(&mut top)
+        } else {
+            Vec::new()
         }
     }
 }
@@ -948,6 +1087,145 @@ impl<'ctx> CodeGen<'ctx> {
     /// Name should be unique-ish; json should be valid JSON for easier inspection.
     fn emit_meta_global(&self, name: &str, json: &str) {
         let _ = self.builder.build_global_string_ptr(json, name);
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn get_or_declare_medi_gc_add_root(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_gc_add_root") {
+            return f;
+        }
+        let i64 = self.context.i64_type();
+        let fn_ty = self.void.fn_type(&[i64.into()], false);
+        self.module.add_function("medi_gc_add_root", fn_ty, None)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn get_or_declare_medi_gc_remove_root(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_gc_remove_root") {
+            return f;
+        }
+        let i64 = self.context.i64_type();
+        let fn_ty = self.void.fn_type(&[i64.into()], false);
+        self.module.add_function("medi_gc_remove_root", fn_ty, None)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn get_or_declare_medi_gc_alloc_string(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_gc_alloc_string") {
+            return f;
+        }
+        let i8ptr = self.context.i8_type().ptr_type(AddressSpace::from(0));
+        let i64 = self.context.i64_type();
+        let fn_ty = i64.fn_type(&[i8ptr.into(), i64.into()], false);
+        self.module
+            .add_function("medi_gc_alloc_string", fn_ty, None)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn get_or_declare_medi_gc_add_edge(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_gc_add_edge") {
+            return f;
+        }
+        let i64 = self.context.i64_type();
+        let fn_ty = self.void.fn_type(&[i64.into(), i64.into()], false);
+        self.module.add_function("medi_gc_add_edge", fn_ty, None)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn get_or_declare_medi_gc_alloc_unit(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_gc_alloc_unit") {
+            return f;
+        }
+        let i64 = self.context.i64_type();
+        let fn_ty = i64.fn_type(&[], false);
+        self.module.add_function("medi_gc_alloc_unit", fn_ty, None)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn get_or_declare_medi_gc_write_barrier(&self) -> FunctionValue<'ctx> {
+        if let Some(f) = self.module.get_function("medi_gc_write_barrier") {
+            return f;
+        }
+        let i64 = self.context.i64_type();
+        let fn_ty = self.void.fn_type(&[i64.into(), i64.into()], false);
+        self.module
+            .add_function("medi_gc_write_barrier", fn_ty, None)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn gc_string_handle_and_ptr(
+        &self,
+        s: &str,
+    ) -> (
+        inkwell::values::IntValue<'ctx>,
+        inkwell::values::PointerValue<'ctx>,
+    ) {
+        use inkwell::AddressSpace;
+        let gv = self.builder.build_global_string_ptr(s, "str");
+        let ptr_bytes = gv.as_pointer_value();
+        let len = self
+            .context
+            .i64_type()
+            .const_int(s.as_bytes().len() as u64, false);
+        let alloc_fn = self.get_or_declare_medi_gc_alloc_string();
+        let call = self
+            .builder
+            .build_call(alloc_fn, &[ptr_bytes.into(), len.into()], "gc_str_id");
+        let id = call
+            .try_as_basic_value()
+            .left()
+            .expect("id")
+            .into_int_value();
+        let i8ptr = self.context.i8_type().ptr_type(AddressSpace::from(0));
+        let shim_ptr = self.builder.build_int_to_ptr(id, i8ptr, "gc_str_ptr");
+        (id, shim_ptr)
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn gc_emit_edge_and_barrier(
+        &self,
+        parent: inkwell::values::IntValue<'ctx>,
+        child: inkwell::values::IntValue<'ctx>,
+    ) {
+        let add_edge = self.get_or_declare_medi_gc_add_edge();
+        let wb = self.get_or_declare_medi_gc_write_barrier();
+        let _ = self
+            .builder
+            .build_call(add_edge, &[parent.into(), child.into()], "add_edge");
+        let _ = self
+            .builder
+            .build_call(wb, &[parent.into(), child.into()], "wb");
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn gc_store_child_and_barrier(
+        &self,
+        parent: inkwell::values::IntValue<'ctx>,
+        dest: inkwell::values::PointerValue<'ctx>,
+        child_handle: inkwell::values::IntValue<'ctx>,
+    ) {
+        use inkwell::AddressSpace;
+        // Convert handle to i8* shim and store into destination slot, then emit edge+barrier
+        let i8ptr = self.context.i8_type().ptr_type(AddressSpace::from(0));
+        let shim_ptr = self
+            .builder
+            .build_int_to_ptr(child_handle, i8ptr, "gc_child_ptr");
+        self.builder.build_store(dest, shim_ptr);
+        self.gc_emit_edge_and_barrier(parent, child_handle);
+    }
+
+    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+    fn scope_pop_emit_gc_roots(&mut self) {
+        let remove_fn = self.get_or_declare_medi_gc_remove_root();
+        let handles = self.scope.drain_roots_frame();
+        for h in handles {
+            let _ = self.builder.build_call(remove_fn, &[h.into()], "drop_root");
+        }
+        self.scope.pop();
+    }
+    #[cfg(not(all(feature = "gc-runtime-integration", target_pointer_width = "64")))]
+    fn scope_pop_emit_gc_roots(&mut self) {
+        self.scope.pop();
     }
 
     /// WASI iovec struct type: { i8* buf, i32 len }
@@ -1996,8 +2274,40 @@ impl<'ctx> CodeGen<'ctx> {
             LiteralNode::Float(fl) => self.f64.const_float(*fl).into(),
             LiteralNode::Bool(b) => self.i1.const_int(if *b { 1 } else { 0 }, false).into(),
             LiteralNode::String(s) => {
-                let gv = self.builder.build_global_string_ptr(s, "str");
-                gv.as_pointer_value().into()
+                #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+                {
+                    use inkwell::AddressSpace;
+                    // Declare extern: i64 medi_gc_alloc_string(i8* ptr, i64 len)
+                    let i8ptr = self.context.i8_type().ptr_type(AddressSpace::from(0));
+                    let i64 = self.context.i64_type();
+                    let fn_ty = i64.fn_type(&[i8ptr.into(), i64.into()], false);
+                    let func = if let Some(f) = self.module.get_function("medi_gc_alloc_string") {
+                        f
+                    } else {
+                        self.module
+                            .add_function("medi_gc_alloc_string", fn_ty, None)
+                    };
+
+                    let gv = self.builder.build_global_string_ptr(s, "str");
+                    let ptr = gv.as_pointer_value();
+                    let len = i64.const_int(s.as_bytes().len() as u64, false);
+                    let call =
+                        self.builder
+                            .build_call(func, &[ptr.into(), len.into()], "gc_str_id");
+                    let id_val = call
+                        .try_as_basic_value()
+                        .left()
+                        .expect("medi_gc_alloc_string should return a value")
+                        .into_int_value();
+                    // Shim: represent GC handle as i8* to preserve existing string representation
+                    let cast_ptr = self.builder.build_int_to_ptr(id_val, i8ptr, "gc_str_ptr");
+                    cast_ptr.into()
+                }
+                #[cfg(not(all(feature = "gc-runtime-integration", target_pointer_width = "64")))]
+                {
+                    let gv = self.builder.build_global_string_ptr(s, "str");
+                    gv.as_pointer_value().into()
+                }
             }
         }
     }
@@ -4182,10 +4492,39 @@ impl<'ctx> CodeGen<'ctx> {
                     let fields = &sp.node.fields;
                     // Evaluate field values in declared order
                     let mut vals: Vec<BasicValueEnum> = Vec::with_capacity(fields.len());
+                    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+                    let mut child_gc_handles: Vec<
+                        inkwell::values::IntValue<'ctx>,
+                    > = Vec::new();
                     let mut ftypes: Vec<BasicTypeEnum> = Vec::with_capacity(fields.len());
                     let mut fnames: Vec<String> = Vec::with_capacity(fields.len());
                     for f in fields {
-                        let v = self.codegen_expr(&f.value)?;
+                        let v = {
+                            #[cfg(all(
+                                feature = "gc-runtime-integration",
+                                target_pointer_width = "64"
+                            ))]
+                            {
+                                if let ExpressionNode::Literal(sp) = &f.value {
+                                    if let LiteralNode::String(s) = &sp.node {
+                                        let (id, shim_ptr) = self.gc_string_handle_and_ptr(s);
+                                        child_gc_handles.push(id);
+                                        shim_ptr.into()
+                                    } else {
+                                        self.codegen_expr(&f.value)?
+                                    }
+                                } else {
+                                    self.codegen_expr(&f.value)?
+                                }
+                            }
+                            #[cfg(not(all(
+                                feature = "gc-runtime-integration",
+                                target_pointer_width = "64"
+                            )))]
+                            {
+                                self.codegen_expr(&f.value)?
+                            }
+                        };
                         ftypes.push(Self::basic_type_of_value(&v));
                         vals.push(v);
                         fnames.push(f.name.to_string());
@@ -4206,22 +4545,172 @@ impl<'ctx> CodeGen<'ctx> {
                             field_names: fnames,
                         },
                     );
+                    // Feature-gated: create a parent GC handle and register edges to child handles
+                    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+                    if !child_gc_handles.is_empty() {
+                        let alloc_unit = self.get_or_declare_medi_gc_alloc_unit();
+                        let parent = self
+                            .builder
+                            .build_call(alloc_unit, &[], "gc_parent")
+                            .try_as_basic_value()
+                            .left()
+                            .expect("parent id")
+                            .into_int_value();
+                        // root parent for this binding
+                        let add_fn = self.get_or_declare_medi_gc_add_root();
+                        let _ =
+                            self.builder
+                                .build_call(add_fn, &[parent.into()], "add_root_parent");
+                        self.scope.add_root_handle(parent);
+                        // register edges from parent -> each child handle
+                        let add_edge = self.get_or_declare_medi_gc_add_edge();
+                        let wb = self.get_or_declare_medi_gc_write_barrier();
+                        for ch in child_gc_handles {
+                            let _ = self.builder.build_call(
+                                add_edge,
+                                &[parent.into(), ch.into()],
+                                "add_edge",
+                            );
+                            let _ = self
+                                .builder
+                                .build_call(wb, &[parent.into(), ch.into()], "wb");
+                        }
+                    }
                 } else if let Some(ExpressionNode::Array(ap)) = &letn.value {
                     // Array literal initializer: infer element type, allocate array, store elements
                     let mut vals: Vec<BasicValueEnum> = Vec::with_capacity(ap.node.elements.len());
+                    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+                    let mut child_gc_handles: Vec<
+                        inkwell::values::IntValue<'ctx>,
+                    > = Vec::new();
                     for el in &ap.node.elements {
-                        vals.push(self.codegen_expr(el)?);
+                        #[cfg(all(
+                            feature = "gc-runtime-integration",
+                            target_pointer_width = "64"
+                        ))]
+                        let v = if let ExpressionNode::Literal(sp) = el {
+                            if let LiteralNode::String(s) = &sp.node {
+                                use inkwell::AddressSpace;
+                                let gv = self.builder.build_global_string_ptr(s, "str");
+                                let ptr_bytes = gv.as_pointer_value();
+                                let len = self
+                                    .context
+                                    .i64_type()
+                                    .const_int(s.as_bytes().len() as u64, false);
+                                let alloc_fn = self.get_or_declare_medi_gc_alloc_string();
+                                let call = self.builder.build_call(
+                                    alloc_fn,
+                                    &[ptr_bytes.into(), len.into()],
+                                    "gc_str_id",
+                                );
+                                let id = call
+                                    .try_as_basic_value()
+                                    .left()
+                                    .expect("id")
+                                    .into_int_value();
+                                child_gc_handles.push(id);
+                                let i8ptr = self.context.i8_type().ptr_type(AddressSpace::from(0));
+                                self.builder
+                                    .build_int_to_ptr(id, i8ptr, "gc_str_ptr")
+                                    .into()
+                            } else {
+                                self.codegen_expr(el)?
+                            }
+                        } else {
+                            self.codegen_expr(el)?
+                        };
+                        #[cfg(not(all(
+                            feature = "gc-runtime-integration",
+                            target_pointer_width = "64"
+                        )))]
+                        let v = self.codegen_expr(el)?;
+                        vals.push(v);
                     }
                     let arr_ty = self.infer_array_type(&vals)?;
                     let var_ptr = self.create_entry_alloca(letn.name.name(), arr_ty.into());
                     self.store_array_elements(arr_ty, var_ptr, &vals)?;
                     self.scope.insert(letn.name.name(), var_ptr, arr_ty.into());
+                    #[cfg(all(feature = "gc-runtime-integration", target_pointer_width = "64"))]
+                    if !child_gc_handles.is_empty() {
+                        // Create a parent handle for the array binding and wire edges+barriers
+                        let alloc_unit = self.get_or_declare_medi_gc_alloc_unit();
+                        let parent = self
+                            .builder
+                            .build_call(alloc_unit, &[], "gc_parent")
+                            .try_as_basic_value()
+                            .left()
+                            .expect("parent id")
+                            .into_int_value();
+                        let add_root = self.get_or_declare_medi_gc_add_root();
+                        let _ =
+                            self.builder
+                                .build_call(add_root, &[parent.into()], "add_root_parent");
+                        self.scope.add_root_handle(parent);
+                        let add_edge = self.get_or_declare_medi_gc_add_edge();
+                        let wb = self.get_or_declare_medi_gc_write_barrier();
+                        for ch in child_gc_handles {
+                            let _ = self.builder.build_call(
+                                add_edge,
+                                &[parent.into(), ch.into()],
+                                "add_edge",
+                            );
+                            let _ = self
+                                .builder
+                                .build_call(wb, &[parent.into(), ch.into()], "wb");
+                        }
+                    }
                 } else {
                     let ptr = self.create_entry_alloca(letn.name.name(), ty);
                     self.scope.insert(letn.name.name(), ptr, ty);
                     if let Some(init) = &letn.value {
-                        let v = self.codegen_expr(init)?;
-                        self.builder.build_store(ptr, v);
+                        // Feature-gated GC root add for string literals
+                        #[cfg(all(
+                            feature = "gc-runtime-integration",
+                            target_pointer_width = "64"
+                        ))]
+                        if let ExpressionNode::Literal(sp) = init {
+                            if let LiteralNode::String(s) = &sp.node {
+                                let (id, shim_ptr) = self.gc_string_handle_and_ptr(s);
+                                self.builder.build_store(ptr, shim_ptr);
+                                let alloc_unit = self.get_or_declare_medi_gc_alloc_unit();
+                                let parent = self
+                                    .builder
+                                    .build_call(alloc_unit, &[], "gc_parent")
+                                    .try_as_basic_value()
+                                    .left()
+                                    .expect("parent id")
+                                    .into_int_value();
+                                let add_root = self.get_or_declare_medi_gc_add_root();
+                                let _ = self.builder.build_call(
+                                    add_root,
+                                    &[parent.into()],
+                                    "add_root_parent",
+                                );
+                                self.scope.add_root_handle(parent);
+                                // register graph edge and issue write barrier (conservative)
+                                let add_edge = self.get_or_declare_medi_gc_add_edge();
+                                let _ = self.builder.build_call(
+                                    add_edge,
+                                    &[parent.into(), id.into()],
+                                    "add_edge",
+                                );
+                                let wb = self.get_or_declare_medi_gc_write_barrier();
+                                let _ =
+                                    self.builder
+                                        .build_call(wb, &[parent.into(), id.into()], "wb");
+                            } else {
+                                let v = self.codegen_expr(init)?;
+                                self.builder.build_store(ptr, v);
+                            }
+                        }
+                        #[cfg(not(all(
+                            feature = "gc-runtime-integration",
+                            target_pointer_width = "64"
+                        )))]
+                        {
+                            let v = self.codegen_expr(init)?;
+                            self.builder.build_store(ptr, v);
+                        }
                     }
                     // Attach simple array-shape metadata when this is a fixed-size array
                     if let BasicTypeEnum::ArrayType(at) = ty {
