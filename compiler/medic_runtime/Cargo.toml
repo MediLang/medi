@@ -5,6 +5,10 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1"
+crossbeam-deque = "0.8"
+num_cpus = "1"
+core_affinity = "0.7"
+crossbeam-channel = "0.5"
 
 [features]
 # Enable a simple GC-backed safe zone (stubs for now)
@@ -21,4 +25,8 @@ criterion = "0.5"
 
 [[bench]]
 name = "gc_benches"
+harness = false
+
+[[bench]]
+name = "scheduler_benches"
 harness = false

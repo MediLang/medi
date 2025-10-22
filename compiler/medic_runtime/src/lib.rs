@@ -12,9 +12,13 @@ pub fn maybe_incremental_step() {
 // Minimal runtime scaffolding for Medi: tasks and channels.
 // This is a host-side runtime for executing Medi programs in native targets.
 
+use crossbeam_channel as xchan;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, JoinHandle};
+
+mod scheduler;
+pub use scheduler::{Priority, Scheduler, TaskCtx};
 
 #[derive(Debug)]
 pub struct Task {
@@ -64,6 +68,60 @@ pub fn create_channel<T>() -> (SenderHandle<T>, ReceiverHandle<T>) {
     (SenderHandle { sender: tx }, ReceiverHandle { receiver: rx })
 }
 
+// --- Crossbeam-channel (MPMC) APIs ---
+
+#[derive(Debug, Clone)]
+pub struct XSender<T> {
+    sender: xchan::Sender<T>,
+}
+
+#[derive(Debug, Clone)]
+pub struct XReceiver<T> {
+    receiver: xchan::Receiver<T>,
+}
+
+impl<T> XSender<T> {
+    #[inline]
+    pub fn send(&self, value: T) -> Result<(), xchan::SendError<T>> {
+        self.sender.send(value)
+    }
+    #[inline]
+    pub fn try_send(&self, value: T) -> Result<(), xchan::TrySendError<T>> {
+        self.sender.try_send(value)
+    }
+}
+
+impl<T> XReceiver<T> {
+    #[inline]
+    pub fn recv(&self) -> Result<T, xchan::RecvError> {
+        self.receiver.recv()
+    }
+    #[inline]
+    pub fn try_recv(&self) -> Result<T, xchan::TryRecvError> {
+        self.receiver.try_recv()
+    }
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.receiver.len()
+    }
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.receiver.is_empty()
+    }
+}
+
+#[inline]
+pub fn create_unbounded_channel<T>() -> (XSender<T>, XReceiver<T>) {
+    let (tx, rx) = xchan::unbounded();
+    (XSender { sender: tx }, XReceiver { receiver: rx })
+}
+
+#[inline]
+pub fn create_bounded_channel<T>(cap: usize) -> (XSender<T>, XReceiver<T>) {
+    let (tx, rx) = xchan::bounded(cap);
+    (XSender { sender: tx }, XReceiver { receiver: rx })
+}
+
 pub fn spawn_task<F>(f: F) -> Task
 where
     F: FnOnce() + Send + 'static,
@@ -72,12 +130,7 @@ where
     Task { handle }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Priority {
-    Low,
-    Normal,
-    High,
-}
+// Priority now re-exported from scheduler
 
 // For now Priority is a no-op hint. Future: map to OS-specific scheduling where allowed.
 pub fn spawn_task_with_priority<F>(_priority: Priority, f: F) -> Task
@@ -101,6 +154,37 @@ pub fn init_gc_with_params(params: GcParams) -> Arc<Mutex<GarbageCollector>> {
 
 pub fn get_gc() -> Arc<Mutex<GarbageCollector>> {
     RUNTIME_GC.get().unwrap().clone()
+}
+
+// --- Work-stealing Scheduler (global handle) ---
+
+static RUNTIME_SCHEDULER: OnceLock<Arc<Scheduler>> = OnceLock::new();
+
+pub fn init_scheduler(num_threads: Option<usize>) -> Arc<Scheduler> {
+    let sched = Scheduler::new(num_threads);
+    let _ = RUNTIME_SCHEDULER.set(sched.clone());
+    sched
+}
+
+pub fn get_scheduler() -> Arc<Scheduler> {
+    RUNTIME_SCHEDULER
+        .get()
+        .expect("scheduler not initialized; call init_scheduler() first")
+        .clone()
+}
+
+pub fn sched_spawn<F>(f: F)
+where
+    F: FnOnce(&mut TaskCtx) + Send + 'static,
+{
+    get_scheduler().spawn(f)
+}
+
+pub fn sched_spawn_with_priority<F>(p: Priority, f: F)
+where
+    F: FnOnce(&mut TaskCtx) + Send + 'static,
+{
+    get_scheduler().spawn_with_priority(p, f)
 }
 
 // --- GC integration helpers (for codegen wiring) ---
@@ -266,5 +350,29 @@ mod tests {
         let v = rx.recv().expect("should receive value");
         assert_eq!(v, 42);
         t.join().unwrap();
+    }
+
+    #[test]
+    fn scheduler_smoke() {
+        // init scheduler with small thread count
+        let _ = init_scheduler(Some(2));
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static CNT: AtomicUsize = AtomicUsize::new(0);
+
+        for _ in 0..64 {
+            sched_spawn(|_ctx| {
+                CNT.fetch_add(1, Ordering::SeqCst);
+            });
+        }
+
+        // give workers some time
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        // shutdown and join
+        let s = get_scheduler();
+        s.shutdown();
+        s.join();
+
+        assert_eq!(CNT.load(Ordering::SeqCst), 64);
     }
 }

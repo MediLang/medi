@@ -307,7 +307,7 @@
               3
             ],
             "details": "Create a work-stealing scheduler with priority support. Implement memory isolation between tasks. Develop channel-based message passing for inter-task communication. Test with parallel algorithms and concurrency stress tests. Performance requirement: Scaling efficiency of at least 80% up to 16 cores with task creation overhead under 5μs.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 5,
