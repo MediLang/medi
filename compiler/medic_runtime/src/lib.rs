@@ -17,6 +17,12 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, JoinHandle};
 
+mod error;
+pub use error::{
+    add_error_context_listener, report_error, set_error_reporter, set_error_reporter_with_context,
+    MemoryErrorKind, RecoveryPolicy, RuntimeDiagnostic, RuntimeError, SchedulerErrorKind,
+};
+
 mod scheduler;
 pub use scheduler::{Priority, Scheduler, TaskCtx};
 
@@ -50,16 +56,40 @@ pub struct ReceiverHandle<T> {
 
 impl<T> SenderHandle<T> {
     pub fn send(&self, value: T) -> Result<(), mpsc::SendError<T>> {
-        self.sender.send(value)
+        match self.sender.send(value) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                let err = RuntimeError::Message("channel.send failed".into());
+                medi_runtime_report!(err, "channel.send");
+                Err(e)
+            }
+        }
     }
 }
 
 impl<T> ReceiverHandle<T> {
     pub fn recv(&self) -> Result<T, mpsc::RecvError> {
-        self.receiver.recv()
+        match self.receiver.recv() {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                let err = RuntimeError::Message("channel.recv failed".into());
+                medi_runtime_report!(err, "channel.recv");
+                Err(e)
+            }
+        }
     }
     pub fn try_recv(&self) -> Result<T, mpsc::TryRecvError> {
-        self.receiver.try_recv()
+        match self.receiver.try_recv() {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                // Non-blocking try_recv errors are often normal; only report if not Empty
+                if !matches!(e, mpsc::TryRecvError::Empty) {
+                    let err = RuntimeError::Message("channel.try_recv failed".into());
+                    medi_runtime_report!(err, "channel.try_recv");
+                }
+                Err(e)
+            }
+        }
     }
 }
 
@@ -83,22 +113,54 @@ pub struct XReceiver<T> {
 impl<T> XSender<T> {
     #[inline]
     pub fn send(&self, value: T) -> Result<(), xchan::SendError<T>> {
-        self.sender.send(value)
+        match self.sender.send(value) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                let err = RuntimeError::Message("xchan.send failed".into());
+                medi_runtime_report!(err, "xchan.send");
+                Err(e)
+            }
+        }
     }
     #[inline]
     pub fn try_send(&self, value: T) -> Result<(), xchan::TrySendError<T>> {
-        self.sender.try_send(value)
+        match self.sender.try_send(value) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                if !matches!(e, xchan::TrySendError::Full(_)) {
+                    let err = RuntimeError::Message("xchan.try_send failed".into());
+                    medi_runtime_report!(err, "xchan.try_send");
+                }
+                Err(e)
+            }
+        }
     }
 }
 
 impl<T> XReceiver<T> {
     #[inline]
     pub fn recv(&self) -> Result<T, xchan::RecvError> {
-        self.receiver.recv()
+        match self.receiver.recv() {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                let err = RuntimeError::Message("xchan.recv failed".into());
+                medi_runtime_report!(err, "xchan.recv");
+                Err(e)
+            }
+        }
     }
     #[inline]
     pub fn try_recv(&self) -> Result<T, xchan::TryRecvError> {
-        self.receiver.try_recv()
+        match self.receiver.try_recv() {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                if !matches!(e, xchan::TryRecvError::Empty) {
+                    let err = RuntimeError::Message("xchan.try_recv failed".into());
+                    medi_runtime_report!(err, "xchan.try_recv");
+                }
+                Err(e)
+            }
+        }
     }
     #[inline]
     pub fn len(&self) -> usize {
@@ -161,9 +223,29 @@ pub fn get_gc() -> Arc<Mutex<GarbageCollector>> {
 static RUNTIME_SCHEDULER: OnceLock<Arc<Scheduler>> = OnceLock::new();
 
 pub fn init_scheduler(num_threads: Option<usize>) -> Arc<Scheduler> {
-    let sched = Scheduler::new(num_threads);
-    let _ = RUNTIME_SCHEDULER.set(sched.clone());
-    sched
+    if let Some(existing) = RUNTIME_SCHEDULER.get() {
+        existing.ensure_running(num_threads);
+        existing.clone()
+    } else {
+        let sched = Scheduler::new(num_threads);
+        let _ = RUNTIME_SCHEDULER.set(sched.clone());
+        sched
+    }
+}
+
+pub fn init_scheduler_with_policy(
+    num_threads: Option<usize>,
+    policy: RecoveryPolicy,
+) -> Arc<Scheduler> {
+    if let Some(existing) = RUNTIME_SCHEDULER.get() {
+        existing.set_policy(policy);
+        existing.ensure_running(num_threads);
+        existing.clone()
+    } else {
+        let sched = Scheduler::new_with_policy(num_threads, policy);
+        let _ = RUNTIME_SCHEDULER.set(sched.clone());
+        sched
+    }
 }
 
 pub fn get_scheduler() -> Arc<Scheduler> {
@@ -191,19 +273,40 @@ where
 
 pub fn gc_alloc_string(s: &str) -> GcRef<String> {
     let gc = get_gc();
-    let mut guard = gc.lock().expect("gc mutex poisoned");
+    let mut guard = match gc.lock() {
+        Ok(g) => g,
+        Err(_) => {
+            let err = RuntimeError::Message("gc lock poisoned".into());
+            medi_runtime_report!(err, "gc.lock");
+            panic!("gc mutex poisoned");
+        }
+    };
     guard.allocate::<String>(s.to_string())
 }
 
 pub fn gc_add_root<T: 'static + Send + std::any::Any>(r: &GcRef<T>) {
     let gc = get_gc();
-    let mut guard = gc.lock().expect("gc mutex poisoned");
+    let mut guard = match gc.lock() {
+        Ok(g) => g,
+        Err(_) => {
+            let err = RuntimeError::Message("gc lock poisoned".into());
+            medi_runtime_report!(err, "gc.lock");
+            panic!("gc mutex poisoned");
+        }
+    };
     guard.add_root(r)
 }
 
 pub fn gc_remove_root<T: 'static + Send + std::any::Any>(r: &GcRef<T>) {
     let gc = get_gc();
-    let mut guard = gc.lock().expect("gc mutex poisoned");
+    let mut guard = match gc.lock() {
+        Ok(g) => g,
+        Err(_) => {
+            let err = RuntimeError::Message("gc lock poisoned".into());
+            medi_runtime_report!(err, "gc.lock");
+            panic!("gc mutex poisoned");
+        }
+    };
     guard.remove_root(r)
 }
 
@@ -332,6 +435,19 @@ pub use rt::{verify_latency, FixedPool, RtRegion};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{Duration, Instant};
+
+    // Serialize scheduler-related tests to avoid global scheduler cross-talk under parallel test runner
+    static SCHED_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    fn sched_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        SCHED_TEST_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .unwrap()
+    }
+    use crate::medi_runtime_report;
 
     #[test]
     fn spawn_and_join_task() {
@@ -354,25 +470,212 @@ mod tests {
 
     #[test]
     fn scheduler_smoke() {
+        let _g = sched_test_guard();
         // init scheduler with small thread count
         let _ = init_scheduler(Some(2));
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        static CNT: AtomicUsize = AtomicUsize::new(0);
-
+        get_scheduler().ensure_running(Some(2));
+        // Use deterministic acks instead of timing
+        let (tx, rx) = xchan::bounded::<()>(64);
         for _ in 0..64 {
-            sched_spawn(|_ctx| {
-                CNT.fetch_add(1, Ordering::SeqCst);
+            let txc = tx.clone();
+            sched_spawn(move |_ctx| {
+                let _ = txc.send(());
             });
         }
-
-        // give workers some time
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        drop(tx);
+        for _ in 0..64 {
+            // up to 1s total budget; each recv has a timeout to avoid hangs
+            rx.recv_timeout(Duration::from_secs(1))
+                .expect("ack not received in time");
+        }
 
         // shutdown and join
         let s = get_scheduler();
         s.shutdown();
         s.join();
+        // If we received 64 acks without timeout, work executed successfully
+    }
 
-        assert_eq!(CNT.load(Ordering::SeqCst), 64);
+    #[test]
+    fn reporter_invocation_under_1ms() {
+        static COUNT: AtomicUsize = AtomicUsize::new(0);
+        fn cb_ctx(_e: &RuntimeError, _ctx: &crate::error::RuntimeContext) {
+            // Simulate minimal formatting work
+            let _d: RuntimeDiagnostic = _e.into();
+            COUNT.fetch_add(1, Ordering::Relaxed);
+        }
+        add_error_context_listener(cb_ctx);
+
+        let start = Instant::now();
+        for _ in 0..10_000 {
+            let err = RuntimeError::Message("x".into());
+            medi_runtime_report!(err, "bench.report");
+        }
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed < Duration::from_secs(2),
+            "reporting too slow: {elapsed:?}"
+        );
+        assert!(COUNT.load(Ordering::Relaxed) >= 1);
+    }
+
+    #[test]
+    fn scheduler_panic_recovery_skiptask() {
+        let _g = sched_test_guard();
+        let _ = init_scheduler_with_policy(Some(2), RecoveryPolicy::SkipTask);
+        // Install context reporter (do nothing)
+        fn cb_ctx(_e: &RuntimeError, _ctx: &crate::error::RuntimeContext) {}
+        add_error_context_listener(cb_ctx);
+        // Ensure scheduler is running in case a previous test shut it down
+        get_scheduler().ensure_running(Some(2));
+
+        sched_spawn(|_ctx| {
+            panic!("boom");
+        });
+        // Also schedule a normal task after panic to ensure scheduler continues
+        let (tx, rx) = xchan::bounded::<()>(1);
+        let tx2 = tx.clone();
+        sched_spawn(move |_ctx| {
+            let _ = tx2.send(());
+        });
+        drop(tx);
+        rx.recv_timeout(Duration::from_secs(1))
+            .expect("post-panic ack not received in time");
+        let s = get_scheduler();
+        s.shutdown();
+        s.join();
+        // Ack received => scheduler continued after panic
+    }
+
+    #[test]
+    fn scheduler_panic_recovery_shutdown() {
+        let _g = sched_test_guard();
+        let _ = init_scheduler_with_policy(Some(2), RecoveryPolicy::ShutdownScheduler);
+        // Install context reporter
+        fn cb_ctx(_e: &RuntimeError, _ctx: &crate::error::RuntimeContext) {}
+        set_error_reporter_with_context(cb_ctx);
+        get_scheduler().ensure_running(Some(2));
+
+        sched_spawn(|_ctx| {
+            panic!("boom");
+        });
+        // Give time for workers to process and trip shutdown
+        std::thread::sleep(Duration::from_millis(100));
+        let s = get_scheduler();
+        // State should allow shutdown+join quickly
+        s.shutdown();
+        s.join();
+    }
+
+    #[cfg(feature = "rt_zones")]
+    #[test]
+    fn rt_region_overflow_reports_error() {
+        use crate::rt::RtRegion;
+        static ERR: AtomicUsize = AtomicUsize::new(0);
+        fn cb_ctx(_e: &RuntimeError, _ctx: &crate::error::RuntimeContext) {
+            ERR.fetch_add(1, Ordering::Relaxed);
+        }
+        add_error_context_listener(cb_ctx);
+        const CAP: usize = 64;
+        let region = RtRegion::<CAP>::new();
+        // Request more than capacity to force overflow
+        let r = region.alloc_array_uninit_result::<u8>(CAP + 16);
+        assert!(r.is_err());
+        assert!(ERR.load(Ordering::Relaxed) >= 1);
+    }
+
+    #[cfg(feature = "rt_zones")]
+    #[test]
+    fn fixed_pool_exhaustion_reports_error_and_context() {
+        use crate::rt::FixedPool;
+        static COUNT: AtomicUsize = AtomicUsize::new(0);
+        use std::sync::Mutex;
+        static OPS: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
+        fn cb_ctx(_e: &RuntimeError, ctx: &crate::error::RuntimeContext) {
+            COUNT.fetch_add(1, Ordering::Relaxed);
+            OPS.lock().unwrap().push(ctx.op);
+        }
+        add_error_context_listener(cb_ctx);
+
+        let pool: FixedPool<u32, 1> = FixedPool::new();
+        let _ = pool.alloc(1u32).unwrap();
+        // Next allocation should exhaust and be reported
+        let _ = pool.alloc(2u32);
+        assert!(COUNT.load(Ordering::Relaxed) >= 1);
+        let ops = OPS.lock().unwrap();
+        assert!(ops.iter().any(|&op| op == "fixed_pool.alloc_exhausted"));
+    }
+
+    #[cfg(feature = "rt_zones")]
+    #[test]
+    fn rt_region_repeated_overflow_is_fast_enough() {
+        use crate::rt::RtRegion;
+        static COUNT: AtomicUsize = AtomicUsize::new(0);
+        fn cb_ctx(_e: &RuntimeError, _ctx: &crate::error::RuntimeContext) {
+            COUNT.fetch_add(1, Ordering::Relaxed);
+        }
+        add_error_context_listener(cb_ctx);
+        const CAP: usize = 32;
+        let region = RtRegion::<CAP>::new();
+        let start = Instant::now();
+        for _ in 0..20_000 {
+            let _ = region.alloc_array_uninit_result::<u8>(CAP + 64);
+        }
+        let elapsed = start.elapsed();
+        // Generous upper bound to avoid flaky CI; ensures average path is tiny
+        assert!(
+            elapsed < Duration::from_secs(3),
+            "overflow handling too slow: {elapsed:?}"
+        );
+        assert!(COUNT.load(Ordering::Relaxed) >= 10_000);
+    }
+
+    #[cfg(feature = "rt_zones")]
+    #[test]
+    fn context_is_propagated_for_rt_errors() {
+        use crate::rt::{FixedPool, RtRegion};
+        use std::sync::Mutex;
+        static RECORDS: Mutex<Vec<(&'static str, &'static str)>> = Mutex::new(Vec::new());
+        fn cb_ctx(_e: &RuntimeError, ctx: &crate::error::RuntimeContext) {
+            RECORDS.lock().unwrap().push((ctx.module, ctx.op));
+        }
+        add_error_context_listener(cb_ctx);
+
+        // Trigger region overflow
+        const CAP: usize = 16;
+        let region = RtRegion::<CAP>::new();
+        let _ = region.alloc_array_uninit_result::<u8>(CAP + 8);
+        // Trigger double-free
+        let pool: FixedPool<u32, 2> = FixedPool::new();
+        let p = pool.alloc(7u32).unwrap() as *mut u32;
+        unsafe { pool.free_ptr(p) };
+        unsafe { pool.free_ptr(p) };
+
+        let records = RECORDS.lock().unwrap();
+        assert!(records
+            .iter()
+            .any(|(_, op)| *op == "rt_region.alloc_array_overflow"));
+        assert!(records
+            .iter()
+            .any(|(_, op)| *op == "fixed_pool.double_free"));
+        // module path present
+        assert!(records.iter().all(|(m, _)| !m.is_empty()));
+    }
+
+    #[cfg(feature = "rt_zones")]
+    #[test]
+    fn fixed_pool_double_free_reports_error() {
+        use crate::rt::FixedPool;
+        static ERR: AtomicUsize = AtomicUsize::new(0);
+        fn cb_ctx(_e: &RuntimeError, _ctx: &crate::error::RuntimeContext) {
+            ERR.fetch_add(1, Ordering::Relaxed);
+        }
+        set_error_reporter_with_context(cb_ctx);
+        let pool: FixedPool<u32, 4> = FixedPool::new();
+        let p = pool.alloc(1u32).unwrap() as *mut u32;
+        unsafe { pool.free_ptr(p) };
+        // Second free should be reported
+        unsafe { pool.free_ptr(p) };
+        assert!(ERR.load(Ordering::Relaxed) >= 1);
     }
 }

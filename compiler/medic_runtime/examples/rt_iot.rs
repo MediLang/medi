@@ -29,7 +29,7 @@ fn main() {
             sensor_id: (i % 1024) as u16,
             value: (i % 4096) as u16,
         });
-        if let Some(mut mref) = m {
+        if let Some(mref) = m {
             // Transient working buffer via zone scope; auto reset on drop
             let buf = scope.alloc_region_array_uninit::<u8>(64).unwrap();
             let acc = (mref.sensor_id as u32) * 31 + (mref.value as u32) * 7;

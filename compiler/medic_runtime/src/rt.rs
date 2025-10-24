@@ -9,6 +9,9 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::time::{Duration, Instant};
 
+use crate::error::{MemoryErrorKind, RuntimeError};
+use crate::medi_runtime_report;
+
 /// A region allocator with a fixed compile-time capacity.
 ///
 /// - Constant-time bump allocation.
@@ -92,6 +95,24 @@ impl<'a, const BYTES: usize> RtScope<'a, BYTES> {
     #[inline]
     pub fn alloc_array_uninit<T>(&self, len: usize) -> Option<&'a mut [MaybeUninit<T>]> {
         self.region.alloc_array_uninit::<T>(len)
+    }
+
+    #[inline]
+    pub fn alloc_result<T>(&self, value: T) -> Result<&'a mut T, RuntimeError> {
+        self.region.alloc_result(value)
+    }
+
+    #[inline]
+    pub fn alloc_uninit_result<T>(&self) -> Result<&'a mut MaybeUninit<T>, RuntimeError> {
+        self.region.alloc_uninit_result::<T>()
+    }
+
+    #[inline]
+    pub fn alloc_array_uninit_result<T>(
+        &self,
+        len: usize,
+    ) -> Result<&'a mut [MaybeUninit<T>], RuntimeError> {
+        self.region.alloc_array_uninit_result::<T>(len)
     }
 }
 
@@ -215,6 +236,21 @@ impl<const BYTES: usize> RtRegion<BYTES> {
         }
     }
 
+    /// Result-returning variant that reports overflow via the runtime reporter.
+    #[inline]
+    pub fn alloc_uninit_result<T>(&self) -> Result<&mut MaybeUninit<T>, RuntimeError> {
+        if let Some(p) = self.alloc_uninit::<T>() {
+            Ok(p)
+        } else {
+            let err = RuntimeError::Memory(MemoryErrorKind::RegionOverflow {
+                requested: size_of::<T>().max(1),
+                capacity: BYTES,
+            });
+            medi_runtime_report!(err, "rt_region.alloc_uninit_overflow");
+            Err(err)
+        }
+    }
+
     /// Allocate and write `value` into the region.
     #[inline]
     pub fn alloc<T>(&self, value: T) -> Option<&mut T> {
@@ -223,6 +259,18 @@ impl<const BYTES: usize> RtRegion<BYTES> {
         unsafe {
             ptr::write(slot.as_mut_ptr(), value);
             Some(&mut *slot.as_mut_ptr())
+        }
+    }
+
+    /// Result-returning variant that reports overflow via the runtime reporter.
+    #[inline]
+    pub fn alloc_result<T>(&self, value: T) -> Result<&mut T, RuntimeError> {
+        match self.alloc_uninit_result::<T>() {
+            Ok(slot) => unsafe {
+                ptr::write(slot.as_mut_ptr(), value);
+                Ok(&mut *slot.as_mut_ptr())
+            },
+            Err(e) => Err(e),
         }
     }
 
@@ -247,6 +295,25 @@ impl<const BYTES: usize> RtRegion<BYTES> {
         }
     }
 
+    /// Result-returning variant that reports overflow via the runtime reporter.
+    #[inline]
+    pub fn alloc_array_uninit_result<T>(
+        &self,
+        len: usize,
+    ) -> Result<&mut [MaybeUninit<T>], RuntimeError> {
+        if let Some(p) = self.alloc_array_uninit::<T>(len) {
+            Ok(p)
+        } else {
+            let bytes = size_of::<T>().max(1) * len;
+            let err = RuntimeError::Memory(MemoryErrorKind::RegionOverflow {
+                requested: bytes,
+                capacity: BYTES,
+            });
+            medi_runtime_report!(err, "rt_region.alloc_array_overflow");
+            Err(err)
+        }
+    }
+
     /// Reset the region, invalidating all outstanding references.
     /// Safety: the caller must ensure no references from this region are used after reset.
     #[inline]
@@ -264,6 +331,7 @@ pub struct FixedPool<T, const N: usize> {
     storage: UnsafeCell<[MaybeUninit<T>; N]>,
     freelist: UnsafeCell<[usize; N]>,
     top: UnsafeCell<usize>,
+    occupied: UnsafeCell<[bool; N]>,
 }
 
 impl<T, const N: usize> FixedPool<T, N> {
@@ -274,6 +342,7 @@ impl<T, const N: usize> FixedPool<T, N> {
             storage: UnsafeCell::new(uninit_array()),
             freelist: UnsafeCell::new(init_indices()),
             top: UnsafeCell::new(N),
+            occupied: UnsafeCell::new([false; N]),
         }
     }
 
@@ -295,6 +364,8 @@ impl<T, const N: usize> FixedPool<T, N> {
     pub fn alloc(&self, value: T) -> Option<&mut T> {
         let top = unsafe { &mut *self.top.get() };
         if *top == 0 {
+            let err = RuntimeError::Memory(MemoryErrorKind::PoolExhausted { capacity: N });
+            medi_runtime_report!(err, "fixed_pool.alloc_exhausted");
             return None;
         }
         // Pop index from freelist.
@@ -304,6 +375,8 @@ impl<T, const N: usize> FixedPool<T, N> {
         // Safety: slot is currently uninitialized/free.
         unsafe {
             ptr::write(slot.as_mut_ptr(), value);
+            // Mark occupied for double-free detection
+            (*self.occupied.get())[idx] = true;
             Some(&mut *slot.as_mut_ptr())
         }
     }
@@ -314,9 +387,20 @@ impl<T, const N: usize> FixedPool<T, N> {
     pub unsafe fn free_ptr(&self, ptr_obj: *mut T) {
         let base = (*self.storage.get()).as_ptr() as *const T;
         let idx = ptr_obj.offset_from(base);
-        debug_assert!(idx >= 0 && (idx as usize) < N);
+        if !(idx >= 0 && (idx as usize) < N) {
+            let err = RuntimeError::Memory(MemoryErrorKind::InvalidFree);
+            medi_runtime_report!(err, "fixed_pool.invalid_free");
+            return;
+        }
         let idx = idx as usize;
         let top = &mut *self.top.get();
+        // Detect double free via occupancy bitmap
+        if !(*self.occupied.get())[idx] {
+            let err = RuntimeError::Memory(MemoryErrorKind::DoubleFree { index: idx });
+            medi_runtime_report!(err, "fixed_pool.double_free");
+            return;
+        }
+        (*self.occupied.get())[idx] = false;
         debug_assert!(*top < N); // Not overflowing
         (*self.freelist.get())[*top] = idx;
         *top += 1;

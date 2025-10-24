@@ -4,6 +4,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 
+use crate::error::{report_error, RecoveryPolicy, RuntimeError, SchedulerErrorKind};
+
 #[cfg(feature = "rt_zones")]
 use crate::rt::RtRegion;
 
@@ -101,8 +103,9 @@ pub struct Scheduler {
     inject_high: Injector<Job>,
     inject_norm: Injector<Job>,
     inject_low: Injector<Job>,
-    stealers: Vec<Stealer<Job>>,
+    stealers: Mutex<Vec<Stealer<Job>>>,
     threads: Mutex<Vec<JoinHandle<()>>>,
+    policy: Mutex<RecoveryPolicy>,
 }
 
 type JobFn = Box<dyn FnOnce(&mut TaskCtx) + Send + 'static>;
@@ -113,6 +116,10 @@ struct Job {
 
 impl Scheduler {
     pub fn new(num_threads: Option<usize>) -> Arc<Self> {
+        Self::new_with_policy(num_threads, RecoveryPolicy::SkipTask)
+    }
+
+    pub fn new_with_policy(num_threads: Option<usize>, policy: RecoveryPolicy) -> Arc<Self> {
         // Prefer physical cores when available; fall back to logical CPUs
         let default_threads = core_affinity::get_core_ids()
             .map(|ids| ids.len())
@@ -137,8 +144,9 @@ impl Scheduler {
             inject_high,
             inject_norm,
             inject_low,
-            stealers,
+            stealers: Mutex::new(stealers),
             threads: Mutex::new(Vec::new()),
+            policy: Mutex::new(policy),
         });
 
         // Spawn worker threads, moving each worker into its thread
@@ -195,6 +203,12 @@ impl Scheduler {
             Priority::Normal => self.inject_norm.push(job),
             Priority::Low => self.inject_low.push(job),
         }
+        // Nudge all workers to pick up newly enqueued work
+        if let Ok(ths) = self.threads.lock() {
+            for h in ths.iter() {
+                h.thread().unpark();
+            }
+        }
     }
 
     pub fn shutdown(self: &Arc<Self>) {
@@ -216,6 +230,70 @@ impl Scheduler {
         let mut threads = self.threads.lock().unwrap();
         for h in threads.drain(..) {
             let _ = h.join();
+        }
+    }
+
+    #[inline]
+    pub fn set_policy(&self, p: RecoveryPolicy) {
+        if let Ok(mut g) = self.policy.lock() {
+            *g = p;
+        }
+    }
+
+    /// Ensure the scheduler has active worker threads; restart if previously shut down.
+    pub fn ensure_running(self: &Arc<Self>, num_threads: Option<usize>) {
+        let mut threads = self.threads.lock().unwrap();
+        if self.running.load(Ordering::SeqCst) && !threads.is_empty() {
+            return;
+        }
+        // Mark running and (re)spawn workers
+        self.running.store(true, Ordering::SeqCst);
+
+        // Determine thread count
+        let default_threads = core_affinity::get_core_ids()
+            .map(|ids| ids.len())
+            .unwrap_or_else(num_cpus::get);
+        let n = num_threads.unwrap_or(default_threads).max(1);
+
+        // Build local workers and stealers
+        let mut local_workers: Vec<Worker<Job>> = Vec::with_capacity(n);
+        let mut stealers = Vec::with_capacity(n);
+        for _ in 0..n {
+            let w = Worker::new_lifo();
+            stealers.push(w.stealer());
+            local_workers.push(w);
+        }
+        *self.stealers.lock().unwrap() = stealers;
+
+        // Determine core pinning order
+        let core_ids = build_numa_aware_core_order()
+            .or_else(|| {
+                core_affinity::get_core_ids().map(|ids| {
+                    let mut order = Vec::with_capacity(ids.len());
+                    for i in (0..ids.len()).step_by(2) {
+                        order.push(ids[i]);
+                    }
+                    for i in (1..ids.len()).step_by(2) {
+                        order.push(ids[i]);
+                    }
+                    order
+                })
+            })
+            .map(Arc::new);
+
+        // Spawn and store thread handles
+        for (idx, worker) in local_workers.into_iter().enumerate() {
+            let s = Arc::clone(self);
+            let core_ids_cloned = core_ids.clone();
+            let handle = thread::spawn(move || {
+                if let Some(ids) = core_ids_cloned.as_ref() {
+                    if let Some(core) = ids.get(idx % ids.len()) {
+                        let _ = core_affinity::set_for_current(*core);
+                    }
+                }
+                worker_loop(s, idx, worker)
+            });
+            threads.push(handle);
         }
     }
 }
@@ -253,12 +331,15 @@ fn pop_or_steal<'a>(
 }
 
 fn worker_loop(s: Arc<Scheduler>, idx: usize, local: Worker<Job>) {
-    let stealers: Vec<_> = s
-        .stealers
-        .iter()
-        .enumerate()
-        .filter_map(|(i, st)| if i == idx { None } else { Some(st.clone()) })
-        .collect();
+    // Clone stealers once; release the lock immediately to avoid blocking restarts.
+    let stealers: Vec<Stealer<Job>> = {
+        let stealers_locked = s.stealers.lock().unwrap();
+        stealers_locked
+            .iter()
+            .enumerate()
+            .filter_map(|(i, st)| if i == idx { None } else { Some(st.clone()) })
+            .collect()
+    };
 
     #[cfg(feature = "rt_zones")]
     let region: RtRegion<{ 64 * 1024 }> = RtRegion::new();
@@ -277,10 +358,40 @@ fn worker_loop(s: Arc<Scheduler>, idx: usize, local: Worker<Job>) {
             &s.inject_low,
         ) {
             if let Some(f) = job.f.take() {
-                f(&mut ctx);
-                #[cfg(feature = "rt_zones")]
-                unsafe {
-                    ctx.region.reset();
+                let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(&mut ctx)));
+                match res {
+                    Ok(()) => {
+                        #[cfg(feature = "rt_zones")]
+                        unsafe {
+                            ctx.region.reset();
+                        }
+                    }
+                    Err(p) => {
+                        // Try to extract a message using combinators
+                        let msg = p
+                            .downcast_ref::<&str>()
+                            .map(|s| (*s).to_string())
+                            .or_else(|| p.downcast_ref::<String>().cloned());
+                        let err =
+                            RuntimeError::Scheduler(SchedulerErrorKind::TaskPanic { message: msg });
+                        report_error(&err);
+                        let shutdown = {
+                            if let Ok(g) = s.policy.lock() {
+                                matches!(*g, RecoveryPolicy::ShutdownScheduler)
+                            } else {
+                                false
+                            }
+                        };
+                        if shutdown {
+                            s.running.store(false, Ordering::SeqCst);
+                        }
+                        // Nudge all workers to check queues after a panic
+                        if let Ok(ths) = s.threads.lock() {
+                            for h in ths.iter() {
+                                h.thread().unpark();
+                            }
+                        }
+                    }
                 }
             }
             continue;

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.4] - 2025-10-24
+
+### Added
+- Comprehensive runtime error/diagnostics system in `compiler/medic_runtime`:
+  - `RuntimeError`, `MemoryErrorKind`, `SchedulerErrorKind`, and `RuntimeDiagnostic`.
+  - Context-aware reporting via `set_error_reporter_with_context` and `medi_runtime_report!` capturing file/line/module/op tags.
+  - Multi-listener support with `add_error_context_listener` for observability and tests.
+- Context tags for channels and GC paths:
+  - Channels: `channel.send`, `channel.recv`, `channel.try_recv` (on non-empty failures).
+  - Crossbeam: `xchan.send`, `xchan.try_send` (on non-full failures), `xchan.recv`, `xchan.try_recv` (on non-empty failures).
+  - GC: `gc.lock` emitted when GC mutex is poisoned.
+- Real-time memory (rt_zones) diagnostics:
+  - `rt_region.alloc_*_overflow` tags for region overflow cases.
+  - `fixed_pool.alloc_exhausted`, `fixed_pool.invalid_free`, `fixed_pool.double_free`.
+- Documentation: new `compiler/medic_runtime/README.md` covering errors, recovery policies, RT memory, and examples.
+
+### Changed
+- Hardened scheduler tests to be deterministic (barrier/ack-based), serialized with a test mutex to avoid global scheduler cross-talk.
+- Improved scheduler responsiveness by unparking workers after enqueue and after task panics; reduced lock hold time on `stealers`.
+
+### Fixed
+- Eliminated flakiness in scheduler tests (`scheduler_smoke`, `scheduler_panic_recovery_skiptask`).
+- Cleaned warnings in runtime and examples (removed unused imports/mut, replaced bare `expect` on GC locks with context-tagged reports).
+
+### Performance
+- Diagnostics path validated with `reporter_invocation_under_1ms` test (10k events bounded well under 2s total); RT-zone latency tests remain green.
+
 ## [v0.0.3] - 2025-09-30
 
 ### Added
