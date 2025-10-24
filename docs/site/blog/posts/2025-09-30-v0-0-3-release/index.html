@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Medi v0.0.3 – LLVM backend integration, multi-target codegen artifacts, and improved diagnostics.">
+    <meta name="author" content="The Medi Team">
+    <link rel="icon" href="../../../assets/images/favicon-placeholder.png">
+    <title>Medi v0.0.3 Released – LLVM backend & multi-target CI</title>
+    <link rel="stylesheet" href="../../../assets/stylesheets/main.7e37652d.min.css">
+    <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+  </head>
+  <body data-md-color-scheme="default" data-md-color-primary="#3ebbb3" data-md-color-accent="indigo">
+    <main class="md-main" data-md-component="main">
+      <div class="md-main__inner md-grid">
+        <div class="md-content" data-md-component="content">
+          <article class="md-content__inner md-typeset">
+            <h1>Medi v0.0.3 Released</h1>
+            <p>Date: 2025-09-30</p>
+            <h2>Added</h2>
+            <ul>
+              <li>LLVM backend integration (feature <code>llvm-backend</code>) via <code>medic_codegen_llvm</code> (Inkwell/LLVM 15).</li>
+              <li>CI artifacts for targets: x86-64, wasm32-wasi, and initial riscv32.</li>
+              <li>CI matrix: fmt/lint, tests (Linux/macOS/Windows), quick bench smoke, per-target codegen artifacts.</li>
+            </ul>
+            <h2>Improved</h2>
+            <ul>
+              <li>Clinician-friendly diagnostics in parser (e.g., <code>=</code> vs <code>==</code>, unmatched brackets, <code>per</code> suggestions).</li>
+              <li>Unified lexer error tokens across streaming and chunked paths; better parser recovery and EOF handling.</li>
+              <li>Clippy/formatting fixes; pre-commit hooks green.</li>
+            </ul>
+            <h2>Examples</h2>
+            <ul>
+              <li>Minimal codegen smoke programs emitted per target in CI for inspection.</li>
+            </ul>
+            <h2>Notes</h2>
+            <ul>
+              <li>Requires system LLVM 15.x when enabling <code>llvm-backend</code>.</li>
+            </ul>
+            <h2>Links</h2>
+            <ul>
+              <li><a href="../../../../CHANGELOG.md#v003---2025-09-30">Changelog v0.0.3</a></li>
+              <li><a href="https://github.com/MediLang/medi/releases/tag/v0.0.3">GitHub Release Tag</a></li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
