@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Medi v0.0.4 – Deterministic scheduler tests, unified runtime diagnostics, and RT memory observability.">
+    <meta name="author" content="The Medi Team">
+    <link rel="icon" href="../../../assets/images/favicon-placeholder.png">
+    <title>Medi v0.0.4 Released – Deterministic tests & diagnostics</title>
+    <link rel="stylesheet" href="../../../assets/stylesheets/main.7e37652d.min.css">
+    <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+  </head>
+  <body data-md-color-scheme="default" data-md-color-primary="#3ebbb3" data-md-color-accent="indigo">
+    <main class="md-main" data-md-component="main">
+      <div class="md-main__inner md-grid">
+        <div class="md-content" data-md-component="content">
+          <article class="md-content__inner md-typeset">
+            <h1>Medi v0.0.4 Released</h1>
+            <p>Date: 2025-10-24</p>
+            <h2>Highlights</h2>
+            <ul>
+              <li><strong>Deterministic scheduler tests</strong>: Ack/barrier-based tests; serialized to avoid cross-talk.</li>
+              <li><strong>Unified runtime diagnostics</strong>: <code>RuntimeError</code>, <code>MemoryErrorKind</code>, <code>SchedulerErrorKind</code>, <code>RuntimeDiagnostic</code> with context via <code>medi_runtime_report!</code>.</li>
+              <li><strong>RT memory observability</strong>: region overflow and pool edge-case tags.</li>
+              <li><strong>Channels & GC tags</strong>: std and crossbeam channel ops; <code>gc.lock</code> on poison.</li>
+              <li><strong>Docs</strong>: new medic_runtime README covering errors, recovery, RT memory, and examples.</li>
+            </ul>
+            <h2>Performance</h2>
+            <ul>
+              <li>Diagnostics validated under ~1ms/event; RT latency tests remain green.</li>
+            </ul>
+            <h2>Links</h2>
+            <ul>
+              <li><a href="../../../../CHANGELOG.md#v004---2025-10-24">Changelog v0.0.4</a></li>
+              <li><a href="https://github.com/MediLang/medi/releases/tag/v0.0.4">GitHub Release Tag</a></li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>
