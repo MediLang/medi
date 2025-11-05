@@ -11,4 +11,8 @@ members = [
     "compiler/medic_codegen_llvm",
     "compiler/benches",
     "tests",
+    "stdlib/medi_data",
+    "stdlib/medi_stats",
+    "stdlib/medi_compliance",
+    "stdlib/medi_ai",
 ]

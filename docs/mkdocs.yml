@@ -1,6 +1,5 @@
 site_name: The Medi Book
-# For local development, comment out site_url
-# site_url: https://medi-lang.org/docs/
+site_url: https://medilang.github.io/medi/
 site_description: Documentation for the Medi healthcare programming language
 site_author: The Medi Team
 repo_url: https://github.com/MediLang/medi
@@ -100,6 +99,8 @@ nav:
   - Blog:
     - Overview: blog/index.md
     - Posts:
+      - Medi v0.0.4 Released: blog/posts/2025-10-24-v0-0-4-release.md
+      - Medi v0.0.3 Released: blog/posts/2025-09-30-v0-0-3-release.md
       - MediLang v0.0.2 Released: blog/posts/2025-09-02-v0-0-2-release.md
       - Journey to Nested Expressions: blog/posts/2025-05-24-nested-expressions.md
   - Getting Started:

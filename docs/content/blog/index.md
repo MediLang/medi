@@ -4,6 +4,16 @@ Welcome to the MediLang blog! Here you'll find the latest updates, technical dee
 
 ## Latest Posts
 
+### [Medi v0.0.4 Released – Deterministic tests & diagnostics](posts/2025-10-24-v0-0-4-release.md)
+
+*October 24, 2025*  
+Deterministic scheduler tests, unified runtime diagnostics with context tags, and RT memory observability.
+
+### [Medi v0.0.3 Released – LLVM backend & multi-target CI](posts/2025-09-30-v0-0-3-release.md)
+
+*September 30, 2025*  
+LLVM backend integration, codegen artifacts for multiple targets, improved parser diagnostics, and CI enhancements.
+
 ### [MediLang v0.0.2 Released: Healthcare Types, Type Annotation Tests, and Privacy Flows](posts/2025-09-02-v0-0-2-release.md)
 
 *September 2, 2025*  

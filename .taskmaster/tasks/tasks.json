@@ -335,7 +335,7 @@
           2,
           4
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -343,7 +343,7 @@
             "description": "Create the medi.data module for standardized healthcare data structures and operations",
             "dependencies": [],
             "details": "Implement core data structures for patient records, medical events, and clinical observations. Include functions for data validation, sanitization, and transformation. Create parsers for common healthcare formats (FHIR, HL7, DICOM). Develop serialization/deserialization utilities. Implement secure storage abstractions with encryption. Add comprehensive documentation with examples. Test with real and synthetic healthcare datasets, focusing on data integrity, performance with large datasets, and compliance with standards.",
-            "status": "pending"
+            "status": "done"
           },
           {
             "id": 2,
