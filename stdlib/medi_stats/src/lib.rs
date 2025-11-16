@@ -14,6 +14,28 @@
 /// let p_two_sided = 2.0 * (1.0 - cdf);
 /// println!("p-value ~= {}", p_two_sided);
 /// ```
+mod clinical;
+mod epidemiology;
+#[cfg(feature = "fhir")]
+mod fhir_adapters;
+mod population;
+mod predictive;
+mod quality;
+mod risk;
+mod timeseries;
+mod viz;
+
+pub use clinical::*;
+pub use epidemiology::*;
+#[cfg(feature = "fhir")]
+pub use fhir_adapters::*;
+pub use population::*;
+pub use predictive::*;
+pub use quality::*;
+pub use risk::*;
+pub use timeseries::*;
+pub use viz::*;
+
 pub fn mean(xs: &[f64]) -> f64 {
     if xs.is_empty() {
         return f64::NAN;

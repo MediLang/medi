@@ -838,6 +838,7 @@ name = "medi_stats"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "medi_data",
  "statrs",
 ]
 

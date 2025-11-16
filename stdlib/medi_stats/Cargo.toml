@@ -11,10 +11,15 @@ path = "src/lib.rs"
 
 [features]
 pvalue = ["statrs"]
+fhir = ["medi_data"]
 
 [dev-dependencies]
 approx = "0.5"
 
 [dependencies.statrs]
 version = "0.16"
+optional = true
+
+[dependencies.medi_data]
+path = "../medi_data"
 optional = true
