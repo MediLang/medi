@@ -72,6 +72,10 @@ impl TypeEnv {
         env.set_deid_fn("anonymize");
         env.set_deid_fn("deidentify_patient");
         env.set_deid_fn("deid");
+        // medi.compliance helpers (std library): treat these as de-id as well
+        env.set_deid_fn("mask_phi");
+        env.set_deid_fn("hash_phi");
+        env.set_deid_fn("redact_phi");
         // Pre-register common sinks
         env.set_sink_fn("print", SinkKind::Print);
         env.set_sink_fn("println", SinkKind::Print);

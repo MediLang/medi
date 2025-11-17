@@ -234,7 +234,7 @@ rule HighRiskSepsis {
 - `medi::science::imaging` - Medical imaging
 
 ### Privacy and Security (`medi::privacy`)
-- `medi::privacy::hipaa` - HIPAA compliance
+- `medi::privacy::hipaa` - HIPAA compliance (integrates with helpers in `medi.compliance` for de-identification and keyword/bundle checks)
 - `medi::privacy::gdpr` - GDPR requirements
 - `medi::privacy::federated` - Federated learning
 - `medi::privacy::crypto` - Medical-grade encryption
@@ -578,7 +578,7 @@ The Medi compiler (`medic`) consists of several stages:
 3. **Privacy & Compliance Checker**:
    - Enforces HIPAA/GDPR rules at compile time
    - Validates data access patterns
-   - Ensures proper anonymization
+   - Ensures proper anonymization (using both type-level rules and standard library helpers such as `medi.compliance` de-identification and HIPAA bundle checks)
 
 4. **Code Generation**:
    - LLVM-based backend

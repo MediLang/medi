@@ -79,7 +79,69 @@ Medi redefines healthcare analytics with powerful, accessible data science and A
 
 *   **Privacy-Preserving Analytics:** `federated` and `dp` constructs for federated learning and differential privacy, compliant with HIPAA/GDPR.
 *   **Regulatory Automation:** `regulate` for compliance checks and `report` for FDA/EMA submissions, streamlining trial and AI validation.
-*   **Security:** Hardware-accelerated encryption (e.g., RISC-V crypto extensions) and anonymization (`pseudonymize`) for sensitive data.
+*   **Security & De-identification:** Hardware-accelerated encryption (e.g., RISC-V crypto extensions) and anonymization helpers in `medi.compliance` such as `mask_phi`, `hash_phi`, `redact_phi`, and tag-based `deidentify_field(value, tag)` for PHI-like strings.
+
+### 4.1 Example: Rust host using medi.compliance
+
+```rust
+use medi_compliance::{
+    deidentify_field,
+    run_hipaa_bundle,
+    HipaaKeywordRule,
+    RetentionAction,
+    RetentionPolicy,
+    ConsentRecord,
+    ConsentScope,
+    ConsentStatus,
+    RuleSeverity,
+};
+
+fn main() {
+    // PHI-like string
+    let raw_ssn = "123-45-6789";
+    let anonymized = deidentify_field(raw_ssn, "phi.hash");
+
+    // Simple HIPAA keyword rule and bundle invocation
+    let rules = vec![HipaaKeywordRule {
+        id: "k1".into(),
+        description: "Detect SSN".into(),
+        keywords: vec!["ssn".into(), "social security".into()],
+        severity: RuleSeverity::Error,
+    }];
+
+    let consent = ConsentRecord {
+        id: "c1".into(),
+        subject: "patient-123".into(),
+        scopes: vec![ConsentScope {
+            resource: "ehr".into(),
+            action: "read".into(),
+        }],
+        status: ConsentStatus::Active,
+        expires_at: None,
+    };
+
+    let retention_policies = vec![RetentionPolicy {
+        min_age_days: 0,
+        max_age_days: Some(365),
+        action: RetentionAction::Retain,
+    }];
+
+    let report = run_hipaa_bundle(
+        "Patient SSN: 123-45-6789",
+        &rules,
+        Some(&consent),
+        Some("ehr"),
+        Some("read"),
+        Some(100),
+        &retention_policies,
+    );
+
+    println!("HIPAA overall: passed={}", report.overall.failed == 0);
+    println!("Anonymized SSN: {}", anonymized);
+}
+```
+
+This example shows how a Rust host can combine standard library helpers (`deidentify_field`, `run_hipaa_bundle`) with the compiler's privacy checks on sinks and types.
 
 ### 5. Versatile Applications
 
@@ -317,12 +379,12 @@ Medi is in pre-alpha, with a prototype under development. To contribute or follo
 | [Type system core/inference](.taskmaster/tasks/tasks.json) (Task 2) | In progress |
 | [LLVM backend (x86-64/WASM/RISC-V)](.taskmaster/tasks/tasks.json) (Task 3) | In progress |
 | [Runtime/memory zones](.taskmaster/tasks/tasks.json) (Task 4) | In progress |
-| [Standard library (data/stats/compliance/ai)](.taskmaster/tasks/tasks.json) (Task 5) | Planned |
+| [Standard library (data/stats/compliance/ai)](.taskmaster/tasks/tasks.json) (Task 5) | Planned/Prototype |
 | [FHIR interop (REST, Search, Bulk)](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
 | [DICOM/DICOMweb](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
 | [Terminologies (SNOMED, LOINC, ICD, RxNorm, UCUM, CPT/HCPCS, NDC)](.taskmaster/tasks/tasks.json) (Task 5: medi.data) | Planned |
 | [CLI/REPL](.taskmaster/tasks/tasks.json) (Task 7) | Planned |
-| [Compliance checker (HIPAA/GDPR/Part 11)](.taskmaster/tasks/tasks.json) (Task 6) | Planned |
+| [Compliance checker (HIPAA/GDPR/Part 11)](.taskmaster/tasks/tasks.json) (Task 6) | Planned/Prototype (HIPAA bundle helpers) |
 
 Legend: Supported = usable prototype; In progress = partial implementation; Planned = on roadmap.
 
