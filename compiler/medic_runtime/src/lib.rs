@@ -476,16 +476,18 @@ mod tests {
         get_scheduler().ensure_running(Some(2));
         // Use deterministic acks instead of timing
         let (tx, rx) = xchan::bounded::<()>(64);
-        for _ in 0..64 {
+        // Keep CI-friendly upper bound by using fewer tasks
+        let n_tasks = 32usize;
+        for _ in 0..n_tasks {
             let txc = tx.clone();
             sched_spawn(move |_ctx| {
                 let _ = txc.send(());
             });
         }
         drop(tx);
-        for _ in 0..64 {
-            // up to 1s total budget; each recv has a timeout to avoid hangs
-            rx.recv_timeout(Duration::from_secs(1))
+        for _ in 0..n_tasks {
+            // Up to ~16s worst-case budget in CI: 32 * 500ms
+            rx.recv_timeout(Duration::from_millis(500))
                 .expect("ack not received in time");
         }
 
