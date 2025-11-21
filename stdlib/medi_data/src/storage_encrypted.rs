@@ -1,4 +1,3 @@
-#![cfg(feature = "encryption-aes-gcm")]
 use std::fs::{create_dir_all, read, write};
 use std::path::{Path, PathBuf};
 
@@ -18,21 +17,22 @@ pub struct EncryptedFileStore {
     key: Key<Aes256Gcm>,
 }
 
+#[allow(deprecated)]
 impl EncryptedFileStore {
     pub fn new(dir: impl AsRef<Path>, key_bytes: [u8; 32]) -> Result<Self, StoreError> {
         let dir = dir.as_ref().to_path_buf();
         if !dir.exists() {
             create_dir_all(&dir).map_err(|e| StoreError::new(e.to_string()))?;
         }
-        let key = Key::<Aes256Gcm>::from_slice(&key_bytes).clone();
+        let key = *Key::<Aes256Gcm>::from_slice(&key_bytes);
         Ok(Self { dir, key })
     }
 
     pub fn from_env(dir: impl AsRef<Path>, env_key_var: &str) -> Result<Self, StoreError> {
         let key_hex = std::env::var(env_key_var)
-            .map_err(|e| StoreError::new(format!("env {}: {}", env_key_var, e)))?;
+            .map_err(|e| StoreError::new(format!("env {env_key_var}: {e}")))?;
         let key_bytes_vec =
-            hex::decode(key_hex).map_err(|e| StoreError::new(format!("hex decode: {}", e)))?;
+            hex::decode(key_hex).map_err(|e| StoreError::new(format!("hex decode: {e}")))?;
         if key_bytes_vec.len() != 32 {
             return Err(StoreError::new("AES-256-GCM key must be 32 bytes"));
         }
@@ -42,13 +42,14 @@ impl EncryptedFileStore {
     }
 
     fn path_for(&self, key: &str) -> PathBuf {
-        self.dir.join(format!("{}.enc", key))
+        self.dir.join(format!("{key}.enc"))
     }
     fn cipher(&self) -> Aes256Gcm {
         Aes256Gcm::new(&self.key)
     }
 }
 
+#[allow(deprecated)]
 impl SecureStore for EncryptedFileStore {
     fn save<T: Serialize>(&self, key: &str, value: &T) -> Result<(), StoreError> {
         let path = self.path_for(key);
@@ -60,11 +61,11 @@ impl SecureStore for EncryptedFileStore {
         let ct = self
             .cipher()
             .encrypt(nonce, plaintext.as_ref())
-            .map_err(|e| StoreError::new(format!("encrypt: {}", e)))?;
+            .map_err(|e| StoreError::new(format!("encrypt: {e}")))?;
         let mut out = Vec::with_capacity(12 + ct.len());
         out.extend_from_slice(&nonce_bytes);
         out.extend_from_slice(&ct);
-        write(&path, out).map_err(|e| StoreError::new(format!("write {}: {}", path.display(), e)))
+        write(&path, out).map_err(|e| StoreError::new(format!("write {}: {e}", path.display())))
     }
 
     fn load<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>, StoreError> {
@@ -73,7 +74,7 @@ impl SecureStore for EncryptedFileStore {
             return Ok(None);
         }
         let data =
-            read(&path).map_err(|e| StoreError::new(format!("read {}: {}", path.display(), e)))?;
+            read(&path).map_err(|e| StoreError::new(format!("read {}: {e}", path.display())))?;
         if data.len() < 13 {
             return Err(StoreError::new("ciphertext too short"));
         }
@@ -82,7 +83,7 @@ impl SecureStore for EncryptedFileStore {
         let pt = self
             .cipher()
             .decrypt(nonce, ct)
-            .map_err(|e| StoreError::new(format!("decrypt: {}", e)))?;
+            .map_err(|e| StoreError::new(format!("decrypt: {e}")))?;
         let v = serde_json::from_slice::<T>(&pt).map_err(|e| StoreError::new(e.to_string()))?;
         Ok(Some(v))
     }
@@ -109,7 +110,7 @@ impl SecureStore for EncryptedFileStore {
         let path = self.path_for(key);
         if path.exists() {
             std::fs::remove_file(&path)
-                .map_err(|e| StoreError::new(format!("remove {}: {}", path.display(), e)))?;
+                .map_err(|e| StoreError::new(format!("remove {}: {e}", path.display())))?;
         }
         Ok(())
     }

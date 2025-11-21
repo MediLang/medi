@@ -1,133 +1,93 @@
 {
 	"meta": {
-		"generatedAt": "2025-08-25T05:47:12.466Z",
-		"tasksAnalyzed": 15,
-		"totalTasks": 16,
-		"analysisCount": 15,
+		"generatedAt": "2025-11-21T11:11:07.598Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 27,
+		"analysisCount": 10,
 		"thresholdScore": 5,
 		"projectName": "Taskmaster",
 		"usedResearch": true
 	},
 	"complexityAnalysis": [
 		{
-			"taskId": 13,
-			"taskTitle": "Implement REPL",
+			"taskId": 18,
+			"taskTitle": "Expand FHIR Resource Types in medi_data",
 			"complexityScore": 7,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Break down the REPL implementation into: (1) Input loop and command parsing (including history and multi-line support), (2) Incremental parsing and type checking with state preservation, (3) Runtime evaluation and pretty-printing of results/errors, (4) Session management commands (load, vars, help, quit), (5) Integration and testing for error recovery and usability.",
-			"reasoning": "Implementing a robust REPL for a statically-typed language with incremental compilation, clinician-friendly error reporting, and session state is moderately complex. It requires careful design for input handling, incremental compilation, runtime integration, and user experience, but leverages established patterns from language server and REPL implementations."
-		},
-		{
-			"taskId": 12,
-			"taskTitle": "Implement CLI Compiler (medic)",
-			"complexityScore": 8,
 			"recommendedSubtasks": 6,
-			"expansionPrompt": "Expand the CLI compiler task into: (1) Argument parsing and UX design, (2) Compile pipeline wiring (parse, typecheck, codegen, emit/run), (3) Target selection and artifact management, (4) Diagnostics formatting and error reporting, (5) Integration with standard library and runtime, (6) End-to-end and regression testing.",
-			"reasoning": "A modern CLI compiler must handle argument parsing, multi-target code generation, diagnostics, and integration with other components. Ensuring robust UX, error reporting, and compatibility with the full toolchain increases complexity, especially with clinician-friendly diagnostics and multi-platform support."
+			"expansionPrompt": "Break down the implementation of each new FHIR resource type (Medication, Procedure, Condition, Encounter, DiagnosticReport) into separate subtasks: (1) struct definition, (2) validation logic, (3) serialization/deserialization, (4) documentation with usage examples, (5) unit tests for each resource, (6) cross-resource conversion logic where applicable.",
+			"reasoning": "Implementing multiple FHIR resource types with full validation, serialization, and documentation is moderately complex due to the need to adhere to FHIR specifications, ensure interoperability, and provide robust test coverage. Each resource type has unique fields and validation rules, and best practices recommend modular, well-documented, and thoroughly tested implementations[2][3][5]."
 		},
 		{
-			"taskId": 16,
-			"taskTitle": "Implement Feature-Gated Pipeline Operator",
-			"complexityScore": 5,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Decompose the pipeline operator implementation into: (1) Token type and enum additions, (2) Lexer and streaming/chunked lexer updates with feature gating, (3) Test suite for all lexer modes and feature flag states, (4) Documentation and backward compatibility validation.",
-			"reasoning": "Adding a feature-gated token is a contained change but requires careful updates across multiple lexer paths, robust testing (including chunked/streaming edge cases), and documentation to ensure backward compatibility and maintainability."
-		},
-		{
-			"taskId": 9,
-			"taskTitle": "Implement Example Use Cases",
-			"complexityScore": 6,
-			"recommendedSubtasks": 5,
-			"expansionPrompt": "Expand use case implementation into: (1) Clinical data exploration example, (2) Regulatory compliance example, (3) Statistical analysis example, (4) Synthetic data testing example, (5) Integration and end-to-end validation with compiler and standard library.",
-			"reasoning": "Developing comprehensive, realistic examples that exercise the full stack (language, standard library, compliance, and runtime) is moderately complex, requiring coordination across modules and thorough testing to ensure correctness and usability."
-		},
-		{
-			"taskId": 11,
-			"taskTitle": "Implement Python FFI Prototype",
-			"complexityScore": 5,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Break down the FFI prototype into: (1) PyO3/maturin build pipeline setup, (2) Exposing minimal Medi APIs to Python, (3) Python-side tests and usage examples, (4) CI integration and documentation for build and usage.",
-			"reasoning": "A minimal FFI prototype using PyO3/maturin is well-supported by tooling, but requires careful handling of type conversions, build integration, and demonstration of cross-language calls, with moderate complexity for a prototype."
-		},
-		{
-			"taskId": 6,
-			"taskTitle": "Implement Privacy and Compliance Checking",
+			"taskId": 19,
+			"taskTitle": "Implement FHIR Profile Validation Framework",
 			"complexityScore": 8,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "Expand compliance checking into: (1) PHI data flow analysis, (2) Detection of unprotected PHI usage, (3) Verification of anonymization, (4) Integration with regulate construct, (5) Integration with type system and PrivacyProtected trait, (6) Comprehensive compliance test suite and documentation.",
-			"reasoning": "Static analysis for privacy/compliance in a healthcare context is complex, requiring precise data flow analysis, integration with language constructs, regulatory mapping, and robust testing to avoid false positives/negatives."
-		},
-		{
-			"taskId": 4,
-			"taskTitle": "Implement Memory Management and Runtime System",
-			"complexityScore": 9,
 			"recommendedSubtasks": 7,
-			"expansionPrompt": "Decompose memory management and runtime into: (1) Borrow checker system, (2) Garbage collection for safe zone, (3) Real-time memory zone for IoT, (4) Task-based parallelism framework, (5) Error handling system, (6) Healthcare I/O primitives, (7) Performance and concurrency testing.",
-			"reasoning": "Designing a safe, concurrent runtime with borrow checking, garbage collection, real-time constraints, and healthcare-specific I/O is highly complex, requiring deep systems expertise and rigorous testing for safety and performance."
+			"expansionPrompt": "Decompose the framework into: (1) profile definition and parsing, (2) required field validation, (3) cardinality checks, (4) error reporting, (5) profile configuration loading, (6) predefined profile templates (e.g., US Core), (7) comprehensive unit and integration tests.",
+			"reasoning": "A configurable validation framework must support extensible profiles, enforce complex rules (cardinality, required fields), and provide clear error reporting. It requires careful design for flexibility and maintainability, as well as robust testing for various FHIR profiles and edge cases[3][4][8]."
 		},
 		{
-			"taskId": 1,
-			"taskTitle": "Implement Lexer and Parser for Medi Language",
+			"taskId": 20,
+			"taskTitle": "Add FHIR Bundle Support",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Divide the task into: (1) bundle struct and enum definitions, (2) bundle creation logic, (3) JSON/XML parsing, (4) bundle validation, (5) transaction and batch processing logic, (6) extraction and error handling utilities.",
+			"reasoning": "Supporting FHIR bundles involves handling multiple resource types, parsing/validation for different formats, and implementing transactional logic. Industry standards emphasize robust error handling and efficient processing for scalability and interoperability[1][4][5]."
+		},
+		{
+			"taskId": 21,
+			"taskTitle": "Implement Enhanced Compliance Rule Engine",
 			"complexityScore": 9,
 			"recommendedSubtasks": 8,
-			"expansionPrompt": "Expand the lexer/parser task into: (1) Token type and structure definition, (2) Lexical analyzer implementation, (3) Recursive descent parser implementation, (4) AST generation, (5) Clinician-friendly error reporting, (6) Grammar and spec documentation, (7) Comprehensive test suite, (8) Performance profiling and optimization.",
-			"reasoning": "Implementing a robust, Unicode-aware lexer and recursive descent parser with healthcare-specific constructs, AST generation, and advanced error reporting is a high-complexity task, requiring deep language design, testing, and performance tuning."
+			"expansionPrompt": "Expand into: (1) rule condition parser and evaluator, (2) rule composition logic (AND/OR/NOT), (3) pattern matching and regex support, (4) field presence/value checks, (5) severity-based reporting, (6) remediation and evidence collection, (7) predefined HIPAA/GDPR rule sets, (8) performance optimization and benchmarking.",
+			"reasoning": "A compliance rule engine must support complex, composable logic, high performance, and extensibility for multiple standards. It requires advanced pattern matching, robust error handling, and thorough testing to ensure regulatory compliance and scalability, making it a high-complexity task."
 		},
 		{
-			"taskId": 2,
-			"taskTitle": "Develop Healthcare-Specific Type System",
+			"taskId": 22,
+			"taskTitle": "Develop Model Registry and Pluggable Backend System",
 			"complexityScore": 8,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "Break down the type system into: (1) Core type system infrastructure, (2) Healthcare-specific type definitions, (3) Type checking and inference, (4) Patient data safety guarantees, (5) Integration with parser and runtime, (6) Comprehensive type system test suite.",
-			"reasoning": "A type system with healthcare-specific types, inference, and safety guarantees is complex, requiring careful design for extensibility, correctness, and integration with language semantics and compliance requirements."
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Break down into: (1) model registry core data structures, (2) backend trait and interface, (3) ONNX backend implementation, (4) TensorFlow Lite backend, (5) custom backend support, (6) metadata and versioning logic, (7) serialization/deserialization and thread safety.",
+			"reasoning": "Building a model registry with pluggable backends requires careful abstraction, support for multiple ML frameworks, robust metadata/versioning, and thread safety. Industry best practices call for modularity, extensibility, and comprehensive testing for reliability and maintainability."
 		},
 		{
-			"taskId": 3,
-			"taskTitle": "Build LLVM Backend Integration for Compiler",
+			"taskId": 23,
+			"taskTitle": "Implement Model Calibration and Validation Utilities",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Divide into: (1) Platt scaling implementation, (2) isotonic regression, (3) validation metrics (ROC-AUC, precision, recall, F1), (4) fairness metrics, (5) feature importance calculation, (6) model quantization utilities.",
+			"reasoning": "Calibration and validation utilities require implementing statistical algorithms, metrics, and explainability tools. While each component is well-understood, integrating them into a cohesive, extensible framework with robust testing and documentation adds moderate complexity."
+		},
+		{
+			"taskId": 24,
+			"taskTitle": "Implement Advanced Statistical Capabilities",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Expand into: (1) numerically stable algorithms (Welford, Kahan), (2) streaming statistics, (3) survival analysis (Kaplan-Meier, log-rank), (4) time-series analysis (moving averages, exponential smoothing), (5) statistical power analysis, (6) bootstrap/permutation tests, (7) benchmarking and comparison with established packages.",
+			"reasoning": "Advanced statistical features require implementing and validating complex algorithms, ensuring numerical stability, and supporting streaming and survival analysis. Best practices demand rigorous testing, benchmarking, and alignment with established statistical methods."
+		},
+		{
+			"taskId": 25,
+			"taskTitle": "Create Comprehensive Integration Test Suite",
 			"complexityScore": 9,
-			"recommendedSubtasks": 9,
-			"expansionPrompt": "Expand LLVM backend integration into: (1) LLVM setup and environment configuration, (2) AST to LLVM IR translation, (3) x86-64 code generation, (4) Optimization pipeline, (5) Type system integration, (6) Backend testing framework, (7) WebAssembly target, (8) RISC-V codegen, (9) CI matrix for targets.",
-			"reasoning": "Integrating LLVM for multi-target code generation (x86-64, WebAssembly, RISC-V), with optimization and type system mapping, is highly complex and requires deep compiler, systems, and cross-platform expertise."
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Break down into: (1) HL7→FHIR→validate→store→query flow tests, (2) FHIR→compliance→anonymize→report flow tests, (3) risk prediction workflow tests, (4) multi-resource bundle validation/storage tests, (5) performance benchmarks, (6) test data generators, (7) CI integration and coverage reporting, (8) documentation of test cases.",
+			"reasoning": "A comprehensive integration suite must cover complex, multi-module workflows, realistic data scenarios, and performance benchmarks. It requires coordination across modules, robust test data generation, and CI integration, making it highly complex and critical for system reliability."
 		},
 		{
-			"taskId": 5,
-			"taskTitle": "Develop Core Standard Library Modules",
-			"complexityScore": 8,
-			"recommendedSubtasks": 6,
-			"expansionPrompt": "Decompose standard library development into: (1) medi.data module, (2) medi.stats module, (3) medi.compliance module, (4) medi.ai module, (5) Integration and cross-module testing, (6) Documentation and usage examples.",
-			"reasoning": "Building a comprehensive, healthcare-focused standard library with data, statistics, compliance, and AI modules is complex, requiring domain expertise, robust API design, and extensive testing for correctness and interoperability."
-		},
-		{
-			"taskId": 10,
-			"taskTitle": "Create Documentation and Performance Benchmarks",
+			"taskId": 26,
+			"taskTitle": "Create Comprehensive Documentation and Examples",
 			"complexityScore": 6,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Divide into: (1) README updates for each crate, (2) getting-started guides, (3) API documentation with examples, (4) cookbook with common patterns, (5) migration and troubleshooting guides, (6) runnable examples directory.",
+			"reasoning": "Comprehensive documentation is essential for usability and maintainability. While not algorithmically complex, it requires thoroughness, clarity, and coordination across modules to ensure all features are well-documented and examples are runnable and accurate."
+		},
+		{
+			"taskId": 27,
+			"taskTitle": "Prepare Version Bump and Release",
+			"complexityScore": 5,
 			"recommendedSubtasks": 5,
-			"expansionPrompt": "Expand documentation and benchmarking into: (1) Language and API documentation, (2) Performance benchmarking suite, (3) Comparative analysis with Python/R, (4) Example code repository, (5) Documentation testing and user feedback.",
-			"reasoning": "Comprehensive documentation and benchmarking are moderately complex, requiring coordination across teams, reproducible performance measurement, and clear, accessible documentation for diverse audiences."
-		},
-		{
-			"taskId": 14,
-			"taskTitle": "Package Manager Foundation (medipack)",
-			"complexityScore": 5,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Break down package manager foundation into: (1) Manifest schema and parser, (2) Project initialization scaffolding, (3) Build integration with compiler, (4) Testing and documentation for init/build workflows.",
-			"reasoning": "A minimal package manager foundation is a contained task, but requires careful manifest design, integration with the build system, and robust testing to ensure reliability and future extensibility."
-		},
-		{
-			"taskId": 15,
-			"taskTitle": "Documentation Generator",
-			"complexityScore": 5,
-			"recommendedSubtasks": 4,
-			"expansionPrompt": "Decompose documentation generator into: (1) Source extractor for doc comments and metadata, (2) Markdown/HTML renderer with navigation, (3) CLI integration for doc generation, (4) Testing and golden-file validation.",
-			"reasoning": "A documentation generator is a well-scoped tooling task, leveraging established patterns for source extraction and rendering, but requires attention to integration and output quality."
-		},
-		{
-			"taskId": 8,
-			"taskTitle": "Develop Basic IDE with Visual Analytics",
-			"complexityScore": 5,
-			"recommendedSubtasks": 3,
-			"expansionPrompt": "Break down this task with a focus on develop basic ide with visual analytics.",
-			"reasoning": "Automatically added due to missing analysis in AI response."
+			"expansionPrompt": "Break down into: (1) version bump in all Cargo.toml files, (2) changelog and release notes update, (3) full test suite and linting, (4) release artifact creation and tagging, (5) dependency and compatibility matrix update.",
+			"reasoning": "Release preparation is a standard but multi-step process involving coordination, validation, and documentation. While not highly complex, it is critical for quality assurance and requires attention to detail to ensure a smooth release."
 		}
 	]
 }

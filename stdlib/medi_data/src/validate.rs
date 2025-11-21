@@ -1,10 +1,123 @@
 use crate::fhir::FHIRResource;
-use crate::fhir::{FHIRMedicalEvent, FHIRObservation, FHIRPatient};
+use crate::fhir::{
+    FHIRCondition, FHIRDiagnosticReport, FHIREncounter, FHIRMedicalEvent, FHIRMedication,
+    FHIRObservation, FHIRPatient, FHIRProcedure,
+};
 use crate::fhir_any::FHIRAny;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValidationError {
     pub message: String,
+}
+
+// --- Additional FHIR validators (minimal) ---
+
+pub fn validate_medication(m: &FHIRMedication) -> Result<(), ValidationError> {
+    if m.id.trim().is_empty() {
+        return Err(ValidationError::new("Medication.id must not be empty"));
+    }
+    if m.code.trim().is_empty() {
+        return Err(ValidationError::new("Medication.code must not be empty"));
+    }
+    // Ingredients may be empty vector; if present, ensure no empty entries
+    if m.ingredients.iter().any(|s| s.trim().is_empty()) {
+        return Err(ValidationError::new(
+            "Medication.ingredients must not contain empty entries",
+        ));
+    }
+    Ok(())
+}
+
+pub fn validate_procedure(p: &FHIRProcedure) -> Result<(), ValidationError> {
+    if p.id.trim().is_empty() {
+        return Err(ValidationError::new("Procedure.id must not be empty"));
+    }
+    if p.code.trim().is_empty() {
+        return Err(ValidationError::new("Procedure.code must not be empty"));
+    }
+    if p.subject.trim().is_empty() {
+        return Err(ValidationError::new("Procedure.subject must not be empty"));
+    }
+    if let Some(d) = &p.performed_date {
+        let ok = (d.len() == 10 && &d[4..5] == "-" && &d[7..8] == "-")
+            || (d.len() == 8 && d.chars().all(|c| c.is_ascii_digit()));
+        if !ok {
+            return Err(ValidationError::new(
+                "Procedure.performed_date must be YYYY-MM-DD or YYYYMMDD",
+            ));
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_condition(c: &FHIRCondition) -> Result<(), ValidationError> {
+    if c.id.trim().is_empty() {
+        return Err(ValidationError::new("Condition.id must not be empty"));
+    }
+    if c.code.trim().is_empty() {
+        return Err(ValidationError::new("Condition.code must not be empty"));
+    }
+    if c.clinical_status.trim().is_empty() {
+        return Err(ValidationError::new(
+            "Condition.clinical_status must not be empty",
+        ));
+    }
+    if c.verification_status.trim().is_empty() {
+        return Err(ValidationError::new(
+            "Condition.verification_status must not be empty",
+        ));
+    }
+    if c.subject.trim().is_empty() {
+        return Err(ValidationError::new("Condition.subject must not be empty"));
+    }
+    Ok(())
+}
+
+pub fn validate_encounter(e: &FHIREncounter) -> Result<(), ValidationError> {
+    if e.id.trim().is_empty() {
+        return Err(ValidationError::new("Encounter.id must not be empty"));
+    }
+    if let Some(sd) = &e.start_date {
+        let ok = (sd.len() == 10 && &sd[4..5] == "-" && &sd[7..8] == "-")
+            || (sd.len() == 8 && sd.chars().all(|c| c.is_ascii_digit()));
+        if !ok {
+            return Err(ValidationError::new(
+                "Encounter.start_date must be YYYY-MM-DD or YYYYMMDD",
+            ));
+        }
+    }
+    if let Some(ed) = &e.end_date {
+        let ok = (ed.len() == 10 && &ed[4..5] == "-" && &ed[7..8] == "-")
+            || (ed.len() == 8 && ed.chars().all(|c| c.is_ascii_digit()));
+        if !ok {
+            return Err(ValidationError::new(
+                "Encounter.end_date must be YYYY-MM-DD or YYYYMMDD",
+            ));
+        }
+    }
+    if e.subject.trim().is_empty() {
+        return Err(ValidationError::new("Encounter.subject must not be empty"));
+    }
+    Ok(())
+}
+
+pub fn validate_diagnostic_report(r: &FHIRDiagnosticReport) -> Result<(), ValidationError> {
+    if r.id.trim().is_empty() {
+        return Err(ValidationError::new(
+            "DiagnosticReport.id must not be empty",
+        ));
+    }
+    if r.code.trim().is_empty() {
+        return Err(ValidationError::new(
+            "DiagnosticReport.code must not be empty",
+        ));
+    }
+    if r.subject.trim().is_empty() {
+        return Err(ValidationError::new(
+            "DiagnosticReport.subject must not be empty",
+        ));
+    }
+    Ok(())
 }
 
 /// Basic per-profile required fields validation over FHIRAny.
@@ -14,6 +127,11 @@ pub fn validate_any_basic(item: &FHIRAny) -> Result<(), ValidationError> {
         FHIRAny::Patient(p) => validate_patient(p),
         FHIRAny::Observation(o) => validate_observation(o),
         FHIRAny::MedicalEvent(e) => validate_medical_event(e),
+        FHIRAny::Medication(m) => validate_medication(m),
+        FHIRAny::Procedure(p) => validate_procedure(p),
+        FHIRAny::Condition(c) => validate_condition(c),
+        FHIRAny::Encounter(e) => validate_encounter(e),
+        FHIRAny::DiagnosticReport(r) => validate_diagnostic_report(r),
     }
 }
 

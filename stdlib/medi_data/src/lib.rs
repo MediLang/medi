@@ -78,6 +78,7 @@
 //! - Trim names and normalize dates using `sanitize` utilities
 //! - Parse HL7 messages and map to FHIR using `hl7` + `hl7_fhir`
 //! - Import/export NDJSON lines with `ndjson` helpers
+pub mod convert;
 pub mod dicom;
 pub mod fhir;
 pub mod fhir_any;
@@ -92,11 +93,19 @@ pub mod storage;
 pub mod storage_composite;
 pub mod storage_file;
 pub mod validate;
+pub mod validation_profile;
 
-pub use fhir::{FHIRObservation, FHIRPatient, FHIRResource};
+pub use fhir::{
+    FHIRCondition, FHIRDiagnosticReport, FHIREncounter, FHIRMedication, FHIRObservation,
+    FHIRPatient, FHIRProcedure, FHIRResource,
+};
 pub use fhir_any::FHIRAny;
 pub use query::{fhir_query, Query, QueryBuilder};
 pub use validate::{validate_fhir, ValidationError};
+pub use validation_profile::{
+    load_profiles_from_str, validate_with_profile_any, validate_with_profile_json,
+    ValidationProfile,
+};
 
 #[cfg(feature = "encryption-aes-gcm")]
 pub mod storage_aes_gcm;

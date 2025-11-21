@@ -41,6 +41,36 @@ for o in &obs { validate_observation(o)?; }
 validate_medical_event(&e)?;
 ```
 
+### New FHIR resource types (Medication, Procedure, Condition, Encounter, DiagnosticReport)
+
+```rust
+use medi_data::fhir::*;
+use medi_data::validate::{
+  validate_medication, validate_procedure, validate_condition,
+  validate_encounter, validate_diagnostic_report,
+};
+
+let med = FHIRMedication { id: "m1".into(), code: "RX123".into(), form: Some("tablet".into()), ingredients: vec!["ingA".into()] };
+validate_medication(&med)?;
+
+let proc_ = FHIRProcedure { id: "p1".into(), code: "PROC".into(), performed_date: Some("20250101".into()), subject: "pat1".into() };
+validate_procedure(&proc_)?;
+
+let cond = FHIRCondition { id: "c1".into(), code: "COND".into(), clinical_status: "active".into(), verification_status: "confirmed".into(), subject: "pat1".into() };
+validate_condition(&cond)?;
+
+let enc = FHIREncounter { id: "e1".into(), class_: Some("outpatient".into()), start_date: Some("2025-01-02".into()), end_date: None, subject: "pat1".into() };
+validate_encounter(&enc)?;
+
+let rep = FHIRDiagnosticReport { id: "r1".into(), code: "DRPT".into(), result_codes: vec!["OBS1".into(), "OBS2".into()], subject: "pat1".into() };
+validate_diagnostic_report(&rep)?;
+
+// JSON helpers
+let s = medication_to_json(&med)?;
+let back = medication_from_json(&s)?;
+assert_eq!(back.id, med.id);
+```
+
 ### 4) Store (File / Encrypted)
 ```rust
 use medi_data::storage::{SecureStore};
@@ -69,6 +99,21 @@ let q = fhir_query("MedicalEvent")
 let matched = q.execute_medical_events(&events);
 ```
 
+#### Query over mixed resources (FHIRAny)
+```rust
+use medi_data::{fhir_any::FHIRAny, fhir_query};
+use medi_data::fhir::*;
+
+let any: Vec<FHIRAny> = vec![
+  FHIRAny::Medication(FHIRMedication { id: "m1".into(), code: "RX123".into(), form: None, ingredients: vec![] }),
+  FHIRAny::Condition(FHIRCondition { id: "c1".into(), code: "COND".into(), clinical_status: "active".into(), verification_status: "confirmed".into(), subject: "pat1".into() }),
+  FHIRAny::Encounter(FHIREncounter { id: "e1".into(), class_: None, start_date: None, end_date: None, subject: "pat1".into() }),
+];
+let q = fhir_query("Any").filter_eq("subject", "pat1").build();
+let out = q.execute_any(&any);
+assert!(out.len() >= 2);
+```
+
 ### Cookbook: HL7 Helpers
 ```rust
 use medi_data::hl7_fhir_more::{
@@ -84,6 +129,19 @@ let obs = hl7_to_observations_from_obr(hl7_msg).unwrap();
 let dates = hl7_obr_dates_minimal(hl7_msg);
 let obs_with_time = hl7_observations_from_obr_with_time(hl7_msg).unwrap();
 let contacts = hl7_extract_nk1_contacts(hl7_msg);
+```
+
+### Cookbook: Cross-resource helpers
+```rust
+use medi_data::convert::{link_conditions_to_encounters, diagnostic_report_from_observation_codes};
+use medi_data::fhir::*;
+
+let linked: Vec<(FHIRCondition, Option<FHIREncounter>)> =
+  link_conditions_to_encounters(&conditions, &encounters);
+
+let rep = diagnostic_report_from_observation_codes(
+  "r1", "pat1", "DRPT", &["OBS1", "OBS2"],
+);
 ```
 
 ### Cookbook: Bulk sanitize observations before validate/query

@@ -1,0 +1,489 @@
+# Medi v0.0.5 Release: Standard Library Enhancements
+
+## Overview
+Complete the standard library modules (medi_data, medi_stats, medi_compliance, medi_ai) with production-ready features, comprehensive testing, and integration flows to prepare for v0.0.5 release.
+
+## Goals
+1. Expand FHIR coverage with additional resource types and robust validation
+2. Implement real compliance rule evaluation engine
+3. Enhance AI model infrastructure with pluggable backends
+4. Add advanced statistical capabilities
+5. Create comprehensive integration test suite
+
+## Task 1: Expand FHIR Coverage in medi_data
+
+### Description
+Extend FHIR resource types, add profile-based validation, and improve parsing robustness.
+
+### Acceptance Criteria
+- Add 5+ new FHIR resource types: Medication, Procedure, Condition, Encounter, DiagnosticReport
+- Implement FHIR profile validation framework with configurable profiles
+- Add FHIR bundle support (collection/transaction/batch)
+- Enhance validation with cardinality checks and required field enforcement
+- Add FHIR search parameter support in query builder
+- Create comprehensive documentation with examples for each resource type
+- Unit tests for each new resource type with valid/invalid cases
+- Integration tests for multi-resource workflows
+
+### Implementation Notes
+```rust
+// New resource types
+pub struct FHIRMedication {
+    pub id: String,
+    pub code: String,
+    pub form: Option<String>,
+    pub ingredient: Vec<MedicationIngredient>,
+}
+
+pub struct FHIRProcedure {
+    pub id: String,
+    pub code: String,
+    pub performed_date: Option<String>,
+    pub subject: String, // patient reference
+}
+
+pub struct FHIRCondition {
+    pub id: String,
+    pub code: String,
+    pub clinical_status: String,
+    pub verification_status: String,
+    pub subject: String,
+}
+
+// Profile validation
+pub struct ValidationProfile {
+    pub name: String,
+    pub resource_type: String,
+    pub required_fields: Vec<String>,
+    pub cardinality: HashMap<String, (u32, Option<u32>)>,
+}
+
+pub fn validate_with_profile(
+    resource: &dyn FHIRResource,
+    profile: &ValidationProfile
+) -> Result<(), ValidationError>;
+
+// Bundle support
+pub struct FHIRBundle {
+    pub bundle_type: BundleType,
+    pub entries: Vec<FHIRAny>,
+}
+
+pub enum BundleType {
+    Collection,
+    Transaction,
+    Batch,
+}
+```
+
+### Test Strategy
+- Unit tests for each resource type with edge cases
+- Profile validation tests with various constraint combinations
+- Bundle processing tests (create, parse, validate)
+- Performance tests for large bundles (1000+ entries)
+
+## Task 2: Implement Real Compliance Rule Engine
+
+### Description
+Replace placeholder compliance checks with a real rule evaluation engine supporting multiple standards and actionable diagnostics.
+
+### Acceptance Criteria
+- Implement rule evaluation engine with pattern matching and data inspection
+- Add 10+ real HIPAA rules (PHI detection, encryption requirements, access logging)
+- Support GDPR rules (consent validation, data minimization, right to erasure)
+- Implement severity-based reporting (info/warning/error)
+- Add remediation suggestions for failed rules
+- Create compliance report generator (JSON/HTML/PDF)
+- Comprehensive test suite with real-world scenarios
+- Performance: evaluate 100 rules against 1MB data in <100ms
+
+### Implementation Notes
+```rust
+// Enhanced rule engine
+pub enum RuleCondition {
+    ContainsKeyword(Vec<String>),
+    MatchesPattern(Regex),
+    FieldPresent(String),
+    FieldAbsent(String),
+    FieldValueEquals { field: String, value: String },
+    And(Vec<RuleCondition>),
+    Or(Vec<RuleCondition>),
+    Not(Box<RuleCondition>),
+}
+
+pub struct EnhancedComplianceRule {
+    pub id: String,
+    pub description: String,
+    pub standard: ComplianceStandard,
+    pub severity: RuleSeverity,
+    pub condition: RuleCondition,
+    pub remediation: Option<String>,
+}
+
+pub struct ComplianceEngine {
+    rules: Vec<EnhancedComplianceRule>,
+}
+
+impl ComplianceEngine {
+    pub fn evaluate(&self, data: &str) -> Vec<DetailedComplianceResult>;
+    pub fn evaluate_json(&self, data: &serde_json::Value) -> Vec<DetailedComplianceResult>;
+}
+
+pub struct DetailedComplianceResult {
+    pub rule_id: String,
+    pub passed: bool,
+    pub severity: RuleSeverity,
+    pub message: String,
+    pub remediation: Option<String>,
+    pub evidence: Option<String>, // matched text/location
+}
+
+// Real HIPAA rules
+pub fn default_hipaa_rules() -> Vec<EnhancedComplianceRule>;
+pub fn default_gdpr_rules() -> Vec<EnhancedComplianceRule>;
+```
+
+### Test Strategy
+- Unit tests for each rule condition type
+- Integration tests with real PHI examples
+- False positive/negative analysis
+- Performance benchmarks with large datasets
+- Compliance report generation tests
+
+## Task 3: Enhance AI Model Infrastructure
+
+### Description
+Build pluggable model backend system with registry, calibration, and validation utilities.
+
+### Acceptance Criteria
+- Implement model registry with versioning and metadata
+- Add pluggable backend interface (ONNX, TensorFlow Lite, custom)
+- Create model calibration utilities (Platt scaling, isotonic regression)
+- Implement validation framework (ROC-AUC, calibration curves, fairness metrics)
+- Add model explainability helpers (SHAP-like feature importance)
+- Support model quantization for edge deployment
+- Comprehensive documentation with examples
+- Unit tests for each backend type
+- Integration tests for full model lifecycle
+
+### Implementation Notes
+```rust
+// Model registry
+pub struct ModelRegistry {
+    models: HashMap<String, RegisteredModel>,
+}
+
+pub struct RegisteredModel {
+    pub id: String,
+    pub version: String,
+    pub backend: Box<dyn ModelBackend>,
+    pub metadata: ModelMetadata,
+}
+
+pub struct ModelMetadata {
+    pub name: String,
+    pub description: String,
+    pub input_features: Vec<String>,
+    pub output_type: OutputType,
+    pub created_at: String,
+    pub performance_metrics: HashMap<String, f64>,
+}
+
+// Pluggable backends
+pub trait ModelBackend: Send + Sync {
+    fn predict(&self, features: &[f64]) -> Result<Vec<f64>, ModelError>;
+    fn predict_batch(&self, features: &[Vec<f64>]) -> Result<Vec<Vec<f64>>, ModelError>;
+    fn backend_type(&self) -> &str;
+}
+
+pub struct OnnxBackend {
+    session: onnxruntime::Session,
+}
+
+pub struct TfLiteBackend {
+    interpreter: tflite::Interpreter,
+}
+
+// Calibration
+pub struct PlattScaling {
+    a: f64,
+    b: f64,
+}
+
+impl PlattScaling {
+    pub fn fit(predictions: &[f64], labels: &[bool]) -> Self;
+    pub fn transform(&self, prediction: f64) -> f64;
+}
+
+// Validation
+pub struct ModelValidator {
+    pub metrics: Vec<Box<dyn ValidationMetric>>,
+}
+
+pub trait ValidationMetric {
+    fn name(&self) -> &str;
+    fn compute(&self, predictions: &[f64], labels: &[bool]) -> f64;
+}
+
+pub struct RocAuc;
+pub struct CalibrationError;
+pub struct DemographicParity;
+
+// Explainability
+pub fn compute_feature_importance(
+    model: &dyn ModelBackend,
+    baseline: &[f64],
+    features: &[f64],
+) -> Vec<f64>;
+```
+
+### Test Strategy
+- Unit tests for each backend implementation
+- Calibration tests with known distributions
+- Validation metric tests with synthetic data
+- Explainability tests with simple models
+- Performance benchmarks for inference
+
+## Task 4: Advanced Statistical Capabilities
+
+### Description
+Add numerical stability tests, streaming statistics, and survival analysis foundations.
+
+### Acceptance Criteria
+- Implement numerically stable algorithms (Welford's for variance, Kahan summation)
+- Add streaming/online statistics (mean, variance, quantiles)
+- Implement survival analysis basics (Kaplan-Meier, log-rank test)
+- Add time-series analysis (moving averages, exponential smoothing)
+- Create statistical power analysis utilities
+- Add bootstrap and permutation test helpers
+- Comprehensive numerical stability tests
+- Performance tests for streaming operations
+
+### Implementation Notes
+```rust
+// Streaming statistics
+pub struct StreamingStats {
+    count: u64,
+    mean: f64,
+    m2: f64, // for variance
+}
+
+impl StreamingStats {
+    pub fn new() -> Self;
+    pub fn update(&mut self, value: f64);
+    pub fn mean(&self) -> f64;
+    pub fn variance(&self) -> f64;
+    pub fn stddev(&self) -> f64;
+}
+
+// Survival analysis
+pub struct KaplanMeier {
+    pub times: Vec<f64>,
+    pub survival_prob: Vec<f64>,
+    pub at_risk: Vec<usize>,
+    pub events: Vec<usize>,
+}
+
+pub fn kaplan_meier(
+    times: &[f64],
+    events: &[bool], // true = event, false = censored
+) -> KaplanMeier;
+
+pub fn log_rank_test(
+    group1_times: &[f64],
+    group1_events: &[bool],
+    group2_times: &[f64],
+    group2_events: &[bool],
+) -> f64; // p-value
+
+// Time series
+pub struct ExponentialSmoothing {
+    alpha: f64,
+    current: f64,
+}
+
+impl ExponentialSmoothing {
+    pub fn new(alpha: f64, initial: f64) -> Self;
+    pub fn update(&mut self, value: f64) -> f64;
+}
+
+// Bootstrap
+pub fn bootstrap_ci(
+    data: &[f64],
+    statistic: fn(&[f64]) -> f64,
+    n_bootstrap: usize,
+    confidence: f64,
+) -> (f64, f64); // (lower, upper)
+```
+
+### Test Strategy
+- Numerical stability tests with pathological inputs
+- Streaming stats tests with known distributions
+- Survival analysis tests with benchmark datasets
+- Time series tests with synthetic data
+- Bootstrap CI coverage tests
+
+## Task 5: Integration Test Suite
+
+### Description
+Create comprehensive end-to-end integration tests covering multi-crate workflows.
+
+### Acceptance Criteria
+- Implement 10+ integration test scenarios covering key use cases
+- Test HL7 → FHIR → validate → store → query flow
+- Test FHIR → compliance check → anonymize → report flow
+- Test patient data → risk prediction → stratification flow
+- Test multi-resource bundle → validation → storage flow
+- Add performance benchmarks for integration flows
+- Create test data generators for realistic scenarios
+- Document each integration test scenario
+- CI integration with test coverage reporting
+
+### Implementation Notes
+```rust
+// Integration test structure
+#[test]
+fn test_hl7_to_fhir_to_storage_to_query() {
+    // 1. Parse HL7 message
+    let hl7_msg = "MSH|^~\\&|...";
+    let patient = hl7_to_fhir_patient_minimal(hl7_msg).unwrap();
+    
+    // 2. Validate FHIR
+    validate_patient(&patient).unwrap();
+    
+    // 3. Store
+    let store = FileStore::new(temp_dir()).unwrap();
+    store.save("patient_001", &patient).unwrap();
+    
+    // 4. Query
+    let query = fhir_query("Patient")
+        .filter_family_name_ci_contains("doe")
+        .build();
+    let results = query.execute_patients(&[patient]);
+    assert_eq!(results.len(), 1);
+}
+
+#[test]
+fn test_compliance_anonymize_report() {
+    // 1. Load patient data with PHI
+    let patient = create_test_patient_with_phi();
+    
+    // 2. Check compliance
+    let engine = ComplianceEngine::new(default_hipaa_rules());
+    let results = engine.evaluate_json(&serde_json::to_value(&patient).unwrap());
+    
+    // 3. Anonymize based on failures
+    let anonymized = anonymize_patient(&patient, &results);
+    
+    // 4. Generate report
+    let report = generate_compliance_report(&results);
+    assert!(report.contains("PHI detected"));
+}
+
+#[test]
+fn test_risk_prediction_workflow() {
+    // 1. Load patient data
+    let patient = create_test_patient();
+    
+    // 2. Extract features
+    let features = extract_risk_features(&patient);
+    
+    // 3. Load model
+    let model = load_model("models/diabetes_risk.json").unwrap();
+    
+    // 4. Predict
+    let risk = model.predict(&features);
+    
+    // 5. Stratify
+    let stratum = stratify_risk(&RiskPrediction {
+        score: risk,
+        condition: "diabetes".into(),
+        timeframe: "5y".into(),
+    });
+    
+    assert!(matches!(stratum, RiskStratum::Low | RiskStratum::Medium | RiskStratum::High));
+}
+```
+
+### Test Strategy
+- Each integration test should be self-contained
+- Use realistic test data (synthetic but representative)
+- Measure performance and set regression thresholds
+- Test error paths and recovery
+- Document expected behavior and edge cases
+
+## Task 6: Documentation and Examples
+
+### Description
+Create comprehensive documentation and examples for all new features.
+
+### Acceptance Criteria
+- Update README for each stdlib crate with new features
+- Create getting-started guides for each major feature
+- Add API documentation with examples for all public functions
+- Create cookbook with common patterns
+- Add performance tuning guide
+- Create migration guide from v0.0.4 to v0.0.5
+- Add troubleshooting section
+- All examples must compile and pass tests
+
+### Implementation Notes
+- Use doc comments with examples for all public APIs
+- Create examples/ directory in each crate
+- Add cookbook.md with common patterns
+- Update main README with v0.0.5 highlights
+
+## Task 7: Version Bump and Release Preparation
+
+### Description
+Update versions, changelog, and prepare release artifacts.
+
+### Acceptance Criteria
+- Bump all stdlib crate versions to 0.2.0
+- Update CHANGELOG.md with v0.0.5 section
+- Run full test suite and ensure 100% pass rate
+- Run clippy with -D warnings and fix all issues
+- Run cargo fmt on all crates
+- Update version compatibility matrix
+- Create release notes
+- Tag release in git
+
+### Implementation Notes
+```toml
+# Update Cargo.toml for each stdlib crate
+[package]
+version = "0.2.0"
+```
+
+### Test Strategy
+- Run `cargo test --all-features` on all crates
+- Run `cargo clippy --all-features -- -D warnings`
+- Run `cargo fmt --all -- --check`
+- Verify examples compile and run
+- Run integration tests
+- Check documentation builds
+
+## Success Metrics
+- All stdlib crates at version 0.2.0
+- Test coverage >80% for new code
+- All clippy warnings resolved
+- Documentation complete for all public APIs
+- 10+ integration tests passing
+- Performance benchmarks within targets
+- CHANGELOG.md updated with all changes
+- Release tagged and ready for deployment
+
+## Timeline
+- Task 1 (FHIR): 3-4 days
+- Task 2 (Compliance): 3-4 days
+- Task 3 (AI): 3-4 days
+- Task 4 (Stats): 2-3 days
+- Task 5 (Integration): 2-3 days
+- Task 6 (Docs): 2 days
+- Task 7 (Release): 1 day
+- Total: ~16-21 days
+
+## Dependencies
+- All tasks depend on current stdlib implementation
+- Task 5 (Integration) depends on Tasks 1-4
+- Task 7 (Release) depends on all previous tasks

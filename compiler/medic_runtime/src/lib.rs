@@ -567,7 +567,7 @@ mod tests {
         let _ = pool.alloc(2u32);
         assert!(COUNT.load(Ordering::Relaxed) >= 1);
         let ops = OPS.lock().unwrap();
-        assert!(ops.iter().any(|&op| op == "fixed_pool.alloc_exhausted"));
+        assert!(ops.contains(&"fixed_pool.alloc_exhausted"));
     }
 
     #[cfg(feature = "rt_zones")]

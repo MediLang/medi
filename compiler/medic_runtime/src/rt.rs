@@ -22,6 +22,25 @@ pub struct RtRegion<const BYTES: usize> {
     offset: UnsafeCell<usize>,
 }
 
+// Provide Default for types that define new()
+impl<T, const BYTES: usize, const N: usize> Default for RtZone<T, BYTES, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const BYTES: usize> Default for RtRegion<BYTES> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T, const N: usize> Default for FixedPool<T, N> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// RAII handle for objects allocated from `FixedPool`, automatically returning
 /// the object to the pool on drop.
 pub struct PoolBox<'a, T, const N: usize> {
@@ -217,6 +236,7 @@ impl<const BYTES: usize> RtRegion<BYTES> {
     /// Allocate a value of type `T` with proper alignment from the region.
     /// Returns a mutable reference to uninitialized memory for `T` on success.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc_uninit<T>(&self) -> Option<&mut MaybeUninit<T>> {
         let align = align_of::<T>();
         let size = size_of::<T>().max(1);
@@ -238,6 +258,7 @@ impl<const BYTES: usize> RtRegion<BYTES> {
 
     /// Result-returning variant that reports overflow via the runtime reporter.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc_uninit_result<T>(&self) -> Result<&mut MaybeUninit<T>, RuntimeError> {
         if let Some(p) = self.alloc_uninit::<T>() {
             Ok(p)
@@ -253,6 +274,7 @@ impl<const BYTES: usize> RtRegion<BYTES> {
 
     /// Allocate and write `value` into the region.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc<T>(&self, value: T) -> Option<&mut T> {
         let slot = self.alloc_uninit::<T>()?;
         // Safety: just allocated, properly aligned, within region.
@@ -264,6 +286,7 @@ impl<const BYTES: usize> RtRegion<BYTES> {
 
     /// Result-returning variant that reports overflow via the runtime reporter.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc_result<T>(&self, value: T) -> Result<&mut T, RuntimeError> {
         match self.alloc_uninit_result::<T>() {
             Ok(slot) => unsafe {
@@ -276,6 +299,7 @@ impl<const BYTES: usize> RtRegion<BYTES> {
 
     /// Allocate a contiguous array of `len` elements of type `T`.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc_array_uninit<T>(&self, len: usize) -> Option<&mut [MaybeUninit<T>]> {
         let align = align_of::<T>();
         let size = size_of::<T>().max(1) * len;
@@ -297,6 +321,7 @@ impl<const BYTES: usize> RtRegion<BYTES> {
 
     /// Result-returning variant that reports overflow via the runtime reporter.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc_array_uninit_result<T>(
         &self,
         len: usize,
@@ -315,7 +340,10 @@ impl<const BYTES: usize> RtRegion<BYTES> {
     }
 
     /// Reset the region, invalidating all outstanding references.
-    /// Safety: the caller must ensure no references from this region are used after reset.
+    ///
+    /// # Safety
+    /// The caller must ensure no references from this region are used after reset.
+    /// Violating this requirement may cause undefined behavior due to dangling references.
     #[inline]
     pub unsafe fn reset(&self) {
         *self.offset.get() = 0;
@@ -361,6 +389,7 @@ impl<T, const N: usize> FixedPool<T, N> {
     /// Allocate a slot and write `value`, returning a mutable reference.
     /// Returns None if the pool is exhausted.
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc(&self, value: T) -> Option<&mut T> {
         let top = unsafe { &mut *self.top.get() };
         if *top == 0 {
@@ -382,7 +411,9 @@ impl<T, const N: usize> FixedPool<T, N> {
     }
 
     /// Free the object by pointer previously returned by `alloc`.
-    /// Safety: `ptr` must point to an allocation from this pool and not be double-freed.
+    ///
+    /// # Safety
+    /// `ptr` must point to an allocation from this pool and not be double-freed.
     #[inline]
     pub unsafe fn free_ptr(&self, ptr_obj: *mut T) {
         let base = (*self.storage.get()).as_ptr() as *const T;
@@ -467,9 +498,9 @@ mod tests {
         const N: usize = 64;
         let pool: FixedPool<u32, N> = FixedPool::new();
         let mut ptrs: [*mut u32; N] = [core::ptr::null_mut(); N];
-        for i in 0..N {
+        for (i, slot) in ptrs.iter_mut().enumerate() {
             let r = pool.alloc(i as u32).unwrap();
-            ptrs[i] = r as *mut u32;
+            *slot = r as *mut u32;
         }
         assert!(pool.alloc(999).is_none()); // exhausted
         unsafe {
@@ -506,10 +537,9 @@ mod tests {
         let budget = Duration::from_micros(50);
         assert!(
             worst_region <= budget,
-            "region max latency: {:?}",
-            worst_region
+            "region max latency: {worst_region:?}"
         );
-        assert!(worst_pool <= budget, "pool max latency: {:?}", worst_pool);
+        assert!(worst_pool <= budget, "pool max latency: {worst_pool:?}");
     }
 
     #[test]
@@ -566,6 +596,6 @@ mod tests {
                 }
             }
         }
-        assert!(worst <= budget, "iot loop worst-case: {:?}", worst);
+        assert!(worst <= budget, "iot loop worst-case: {worst:?}");
     }
 }

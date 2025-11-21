@@ -12,6 +12,7 @@ mod imp {
         key: Key<Aes256Gcm>,
     }
 
+    #[allow(deprecated)]
     impl AesGcmStore {
         pub fn new_random() -> Self {
             let key = Aes256Gcm::generate_key(&mut OsRng);
@@ -19,7 +20,7 @@ mod imp {
         }
 
         pub fn from_bytes(key_bytes: [u8; 32]) -> Self {
-            let key = Key::<Aes256Gcm>::from_slice(&key_bytes).clone();
+            let key = *Key::<Aes256Gcm>::from_slice(&key_bytes);
             Self { key }
         }
 
@@ -28,6 +29,7 @@ mod imp {
         }
     }
 
+    #[allow(deprecated)]
     impl SecureStore for AesGcmStore {
         fn save<T: Serialize>(&self, _key: &str, _value: &T) -> Result<(), StoreError> {
             // Placeholder: A real implementation would persist ciphertext to a backend.
@@ -38,13 +40,23 @@ mod imp {
             let _ciphertext = self
                 .cipher()
                 .encrypt(nonce, plaintext.as_ref())
-                .map_err(|e| StoreError::new(format!("encrypt error: {}", e)))?;
+                .map_err(|e| StoreError::new(format!("encrypt error: {e}")))?;
             Ok(())
         }
 
         fn load<T: DeserializeOwned>(&self, _key: &str) -> Result<Option<T>, StoreError> {
             // Placeholder returns None; not persisted in-memory here
             Ok(None)
+        }
+
+        fn list_keys(&self) -> Result<Vec<String>, StoreError> {
+            // Placeholder: no persistence in this stub
+            Ok(vec![])
+        }
+
+        fn remove(&self, _key: &str) -> Result<(), StoreError> {
+            // Placeholder: nothing to remove in this stub
+            Ok(())
         }
     }
 

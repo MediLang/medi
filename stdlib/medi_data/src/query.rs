@@ -398,6 +398,49 @@ impl Query {
                         && Self::matches_date(group, "start_date", e.start_date.as_deref());
                     base
                 }),
+                FHIRAny::Medication(m) => self.groups.iter().any(|group| {
+                    let base = Self::matches_str(group, "id", Some(m.id.as_str()))
+                        && Self::matches_str(group, "code", Some(m.code.as_str()))
+                        && Self::matches_str(group, "form", m.form.as_deref());
+                    base
+                }),
+                FHIRAny::Procedure(p) => self.groups.iter().any(|group| {
+                    let base = Self::matches_str(group, "id", Some(p.id.as_str()))
+                        && Self::matches_str(group, "code", Some(p.code.as_str()))
+                        && Self::matches_str(group, "subject", Some(p.subject.as_str()))
+                        && Self::matches_date(group, "performed_date", p.performed_date.as_deref());
+                    base
+                }),
+                FHIRAny::Condition(c) => self.groups.iter().any(|group| {
+                    let base = Self::matches_str(group, "id", Some(c.id.as_str()))
+                        && Self::matches_str(group, "code", Some(c.code.as_str()))
+                        && Self::matches_str(
+                            group,
+                            "clinical_status",
+                            Some(c.clinical_status.as_str()),
+                        )
+                        && Self::matches_str(
+                            group,
+                            "verification_status",
+                            Some(c.verification_status.as_str()),
+                        )
+                        && Self::matches_str(group, "subject", Some(c.subject.as_str()));
+                    base
+                }),
+                FHIRAny::Encounter(e) => self.groups.iter().any(|group| {
+                    let base = Self::matches_str(group, "id", Some(e.id.as_str()))
+                        && Self::matches_str(group, "class", e.class_.as_deref())
+                        && Self::matches_date(group, "start_date", e.start_date.as_deref())
+                        && Self::matches_date(group, "end_date", e.end_date.as_deref())
+                        && Self::matches_str(group, "subject", Some(e.subject.as_str()));
+                    base
+                }),
+                FHIRAny::DiagnosticReport(r) => self.groups.iter().any(|group| {
+                    let base = Self::matches_str(group, "id", Some(r.id.as_str()))
+                        && Self::matches_str(group, "code", Some(r.code.as_str()))
+                        && Self::matches_str(group, "subject", Some(r.subject.as_str()));
+                    base
+                }),
             })
             .collect()
     }

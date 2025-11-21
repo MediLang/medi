@@ -60,7 +60,7 @@ impl Visitor for RtConstraintChecker {
                 ExpressionNode::Identifier(Spanned {
                     node: IdentifierNode { name },
                     span,
-                }) => (Some(name.clone()), Some(name.clone()), *span),
+                }) => (Some(name.to_string()), Some(name.to_string()), *span),
                 ExpressionNode::Member(Spanned { node: boxed, span }) => {
                     // Unwind chain to build a.b.c and last segment c
                     let mut parts: Vec<String> = vec![boxed.property.name().to_string()];
@@ -76,7 +76,7 @@ impl Visitor for RtConstraintChecker {
                                 node: IdentifierNode { name },
                                 span: s,
                             }) => {
-                                parts.push(name.clone());
+                                parts.push(name.to_string());
                                 parts.reverse();
                                 let full = parts.join(".");
                                 let last = parts.last().cloned();
@@ -555,7 +555,7 @@ impl BorrowChecker {
                 node: IdentifierNode { name },
                 span,
             }) => {
-                let id = self.resolve_or_declare(name);
+                let id = self.resolve_or_declare(name.as_str());
                 Some((id, None, *span))
             }
             ExpressionNode::Member(Spanned { node: boxed, .. }) => {
@@ -578,7 +578,7 @@ impl BorrowChecker {
                             node: IdentifierNode { name },
                             span,
                         }) => {
-                            let id = self.resolve_or_declare(name);
+                            let id = self.resolve_or_declare(name.as_str());
                             props.reverse();
                             return Some((id, Some(FieldPath(props)), *span));
                         }
@@ -604,7 +604,7 @@ impl BorrowChecker {
                             node: IdentifierNode { name },
                             span,
                         }) => {
-                            let id = self.resolve_or_declare(name);
+                            let id = self.resolve_or_declare(name.as_str());
                             props.reverse();
                             return Some((id, Some(FieldPath(props)), *span));
                         }
@@ -773,10 +773,11 @@ impl Visitor for BorrowChecker {
                 span,
             }) = &node.callee
             {
-                let id = self.resolve_or_declare(name);
-                self.borrow_immutable_id(id, name, *span);
+                let s = name.as_str();
+                let id = self.resolve_or_declare(s);
+                self.borrow_immutable_id(id, s, *span);
                 // Apply alias summary: borrow aliased argument immutably within the call
-                if let Some(summary) = self.alias_summaries.get(name) {
+                if let Some(summary) = self.alias_summaries.get(s) {
                     if let Some(arg_idx) = summary.returns_ref_to_arg {
                         if let Some(arg) = node.arguments.get(arg_idx) {
                             if let Some((aid, _, aspan)) = self.resolve_lvalue(arg) {
@@ -801,10 +802,11 @@ impl Visitor for BorrowChecker {
                 span,
             }) = &node.callee
             {
-                let id = self.resolve_or_declare(name);
-                self.borrow_immutable_id(id, name, *span);
+                let s = name.as_str();
+                let id = self.resolve_or_declare(s);
+                self.borrow_immutable_id(id, s, *span);
                 // Apply alias summary: borrow aliased argument immutably and allow it to persist
-                if let Some(summary) = self.alias_summaries.get(name) {
+                if let Some(summary) = self.alias_summaries.get(s) {
                     if let Some(arg_idx) = summary.returns_ref_to_arg {
                         if let Some(arg) = node.arguments.get(arg_idx) {
                             if let Some((aid, _, aspan)) = self.resolve_lvalue(arg) {

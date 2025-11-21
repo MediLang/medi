@@ -15,6 +15,7 @@ pub struct GcParams {
 // Incremental/chunked major GC (feature-gated)
 #[cfg(feature = "gc-incremental")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 enum IncPhase {
     Idle,
     Mark,
@@ -48,6 +49,7 @@ impl GarbageCollector {
     }
 
     /// Perform incremental work for up to approx `ms_budget` milliseconds. Returns true when the major GC is complete.
+    #[allow(clippy::needless_return)]
     pub fn incremental_step(&mut self, ms_budget: u64) -> bool {
         let start = std::time::Instant::now();
         // Derive conservative per-step work caps from budget to bound long tails
