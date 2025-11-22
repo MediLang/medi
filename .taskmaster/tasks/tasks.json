@@ -1038,7 +1038,7 @@
         "dependencies": [
           18
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1046,7 +1046,7 @@
             "description": "Define the data structures for FHIR validation profiles, including required fields and cardinality constraints.",
             "dependencies": [],
             "details": "Implement the `ValidationProfile` struct in Rust, ensuring it supports extensible resource types, required fields, and cardinality rules as specified in the PRD.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1057,7 +1057,7 @@
               "19.1"
             ],
             "details": "Support reading profile definitions from external configuration files (e.g., JSON, YAML), and instantiate `ValidationProfile` objects accordingly.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1069,7 +1069,7 @@
               "19.2"
             ],
             "details": "Implement checks in `validate_with_profile` to ensure every required field in the profile exists in the resource, returning errors for missing fields.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1081,7 +1081,7 @@
               "19.2"
             ],
             "details": "Implement cardinality checks in `validate_with_profile`, ensuring fields meet the specified minimum and maximum occurrence requirements.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1093,7 +1093,7 @@
               "19.4"
             ],
             "details": "Ensure that validation errors are returned as structured messages, indicating the type and details of each failure (e.g., missing field, cardinality violation).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1105,7 +1105,7 @@
               "19.2"
             ],
             "details": "Implement and document built-in profiles for widely used FHIR standards, making them available for immediate use and testing.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -1119,7 +1119,7 @@
               "19.6"
             ],
             "details": "Write unit tests for required field and cardinality validation, error reporting, and configuration loading. Develop integration tests using real and synthetic FHIR resources against multiple profiles.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -1860,7 +1860,7 @@
     ],
     "metadata": {
       "created": "2025-08-23T01:27:51.072Z",
-      "updated": "2025-11-21T15:29:58.416Z",
+      "updated": "2025-11-21T23:48:42.263Z",
       "description": "Tasks for master context"
     }
   }

@@ -6,7 +6,33 @@ use crate::fhir::{
 use crate::fhir_any::FHIRAny;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ValidationErrorKind {
+    MissingField {
+        field: String,
+    },
+    EmptyField {
+        field: String,
+    },
+    WrongType {
+        field: String,
+        expected: &'static str,
+    },
+    Cardinality {
+        field: String,
+        len: u32,
+        min: u32,
+        max: Option<u32>,
+    },
+    TypeMismatch {
+        expected: String,
+        found: String,
+    },
+    Message(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ValidationError {
+    pub kind: ValidationErrorKind,
     pub message: String,
 }
 
@@ -217,9 +243,76 @@ pub fn validate_observation(o: &FHIRObservation) -> Result<(), ValidationError> 
 
 impl ValidationError {
     pub fn new(message: impl Into<String>) -> Self {
+        let m = message.into();
         Self {
-            message: message.into(),
+            kind: ValidationErrorKind::Message(m.clone()),
+            message: m,
         }
+    }
+}
+
+impl From<ValidationErrorKind> for ValidationError {
+    fn from(kind: ValidationErrorKind) -> Self {
+        use ValidationErrorKind::*;
+        let message = match &kind {
+            MissingField { field } => format!("Missing required field: {field}"),
+            EmptyField { field } => format!("Field '{field}' must not be empty"),
+            WrongType { field, expected } => {
+                format!("Field '{field}' has wrong type; expected {expected}")
+            }
+            Cardinality {
+                field,
+                len,
+                min,
+                max,
+            } => match max {
+                Some(mx) => {
+                    format!("Field '{field}' has length {len} but allowed range is [{min}..={mx}]")
+                }
+                None => format!("Field '{field}' has length {len} but minimum is {min}"),
+            },
+            TypeMismatch { expected, found } => {
+                format!("Profile expects resource_type '{expected}' but got '{found}'")
+            }
+            Message(m) => m.clone(),
+        };
+        Self { kind, message }
+    }
+}
+
+impl core::fmt::Display for ValidationErrorKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        use ValidationErrorKind::*;
+        match self {
+            MissingField { field } => write!(f, "Missing required field: {field}"),
+            EmptyField { field } => write!(f, "Field '{field}' must not be empty"),
+            WrongType { field, expected } => {
+                write!(f, "Field '{field}' has wrong type; expected {expected}")
+            }
+            Cardinality {
+                field,
+                len,
+                min,
+                max,
+            } => match max {
+                Some(mx) => write!(
+                    f,
+                    "Field '{field}' has length {len} but allowed range is [{min}..={mx}]"
+                ),
+                None => write!(f, "Field '{field}' has length {len} but minimum is {min}"),
+            },
+            TypeMismatch { expected, found } => write!(
+                f,
+                "Profile expects resource_type '{expected}' but got '{found}'"
+            ),
+            Message(m) => write!(f, "{m}"),
+        }
+    }
+}
+
+impl core::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.message)
     }
 }
 

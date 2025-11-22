@@ -1,0 +1,20 @@
+[
+  {
+    "name": "BasicPatient",
+    "resource_type": "Patient",
+    "required_fields": ["id", "given_name"],
+    "cardinality": {}
+  },
+  {
+    "name": "BasicObservation",
+    "resource_type": "Observation",
+    "required_fields": ["id", "code"],
+    "cardinality": {}
+  },
+  {
+    "name": "BasicDiagnosticReport",
+    "resource_type": "DiagnosticReport",
+    "required_fields": ["id", "code"],
+    "cardinality": {"result_codes": [1, 3]}
+  }
+]

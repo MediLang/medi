@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 use crate::fhir_any::FHIRAny;
-use crate::validate::ValidationError;
+use crate::validate::{ValidationError, ValidationErrorKind};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ValidationProfile {
@@ -35,10 +37,11 @@ pub fn validate_with_profile_json(
     // Type check (if provided inside the JSON as a synthetic field)
     if let Some(rt) = obj.get("resourceType").and_then(|v| v.as_str()) {
         if !profile.resource_type.eq_ignore_ascii_case(rt) {
-            return Err(ValidationError::new(format!(
-                "Profile '{}' expects resource_type '{}' but got '{}'",
-                profile.name, profile.resource_type, rt
-            )));
+            return Err(ValidationErrorKind::TypeMismatch {
+                expected: profile.resource_type.clone(),
+                found: rt.to_string(),
+            }
+            .into());
         }
     }
 
@@ -47,14 +50,16 @@ pub fn validate_with_profile_json(
         let v = obj.get(field);
         match v {
             None | Some(JsonValue::Null) => {
-                return Err(ValidationError::new(format!(
-                    "Missing required field: {field}"
-                )));
+                return Err(ValidationErrorKind::MissingField {
+                    field: field.clone(),
+                }
+                .into());
             }
             Some(JsonValue::String(s)) if s.trim().is_empty() => {
-                return Err(ValidationError::new(format!(
-                    "Field '{field}' must not be empty"
-                )));
+                return Err(ValidationErrorKind::EmptyField {
+                    field: field.clone(),
+                }
+                .into());
             }
             _ => {}
         }
@@ -66,21 +71,31 @@ pub fn validate_with_profile_json(
             Some(JsonValue::Array(a)) => a.len() as u32,
             None | Some(JsonValue::Null) => 0,
             _ => {
-                return Err(ValidationError::new(format!(
-                    "Field '{field}' must be an array for cardinality check"
-                )));
+                return Err(ValidationErrorKind::WrongType {
+                    field: field.clone(),
+                    expected: "array",
+                }
+                .into());
             }
         };
         if arr_len < *min {
-            return Err(ValidationError::new(format!(
-                "Field '{field}' has length {arr_len} but minimum is {min}"
-            )));
+            return Err(ValidationErrorKind::Cardinality {
+                field: field.clone(),
+                len: arr_len,
+                min: *min,
+                max: *max,
+            }
+            .into());
         }
         if let Some(m) = max {
             if arr_len > *m {
-                return Err(ValidationError::new(format!(
-                    "Field '{field}' has length {arr_len} but maximum is {m}"
-                )));
+                return Err(ValidationErrorKind::Cardinality {
+                    field: field.clone(),
+                    len: arr_len,
+                    min: *min,
+                    max: Some(*m),
+                }
+                .into());
             }
         }
     }
@@ -106,14 +121,25 @@ pub fn validate_with_profile_any(
         FHIRAny::DiagnosticReport(_) => "DiagnosticReport",
     };
     if !profile.resource_type.eq_ignore_ascii_case(item_rt) {
-        return Err(ValidationError::new(format!(
-            "Profile '{}' expects resource_type '{}' but got '{}'",
-            profile.name, profile.resource_type, item_rt
-        )));
+        return Err(ValidationErrorKind::TypeMismatch {
+            expected: profile.resource_type.clone(),
+            found: item_rt.to_string(),
+        }
+        .into());
     }
 
-    // Convert with serde to JSON object
-    let mut obj = serde_json::to_value(item).map_err(|e| ValidationError::new(e.to_string()))?;
+    // Convert only the inner resource to JSON so fields are at top-level
+    let mut obj = match item {
+        FHIRAny::Patient(v) => serde_json::to_value(v),
+        FHIRAny::Observation(v) => serde_json::to_value(v),
+        FHIRAny::MedicalEvent(v) => serde_json::to_value(v),
+        FHIRAny::Medication(v) => serde_json::to_value(v),
+        FHIRAny::Procedure(v) => serde_json::to_value(v),
+        FHIRAny::Condition(v) => serde_json::to_value(v),
+        FHIRAny::Encounter(v) => serde_json::to_value(v),
+        FHIRAny::DiagnosticReport(v) => serde_json::to_value(v),
+    }
+    .map_err(|e| ValidationError::new(e.to_string()))?;
     if let JsonValue::Object(ref mut map) = obj {
         // Inject a synthetic resourceType for easier invariants
         map.entry("resourceType".to_string())
@@ -126,4 +152,20 @@ pub fn validate_with_profile_any(
 /// Load profiles from a JSON string of an array of ValidationProfile objects.
 pub fn load_profiles_from_str(json: &str) -> Result<Vec<ValidationProfile>, serde_json::Error> {
     serde_json::from_str::<Vec<ValidationProfile>>(json)
+}
+
+/// Load profiles from a JSON file path.
+pub fn load_profiles_from_file<P: AsRef<Path>>(
+    path: P,
+) -> Result<Vec<ValidationProfile>, Box<dyn std::error::Error>> {
+    let data = fs::read_to_string(path)?;
+    let v = load_profiles_from_str(&data)?;
+    Ok(v)
+}
+
+/// Built-in profiles packaged with the crate (JSON array), parsed at runtime.
+pub fn load_builtin_profiles() -> Result<Vec<ValidationProfile>, serde_json::Error> {
+    // SAFETY: file is packaged at compile time via include_str!
+    const BUILTIN: &str = include_str!("../resources/builtin_profiles.json");
+    load_profiles_from_str(BUILTIN)
 }
