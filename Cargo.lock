@@ -814,6 +814,7 @@ dependencies = [
 name = "medi_compliance"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "regex",
  "serde",
  "serde_json",

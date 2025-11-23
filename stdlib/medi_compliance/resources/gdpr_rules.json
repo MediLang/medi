@@ -1,0 +1,11 @@
+[
+  {
+    "id": "gdpr.data.minimization.age_lt_18_flag",
+    "description": "If subject is under 18, flag for parental consent",
+    "standard": "Gdpr",
+    "severity": "Warning",
+    "tags": ["gdpr", "consent"],
+    "expr": {"LessThan": {"path": "age", "value": 18.0}},
+    "remediation": {"title": "Check parental consent", "steps": ["Verify consent for processing minor data."]}
+  }
+]

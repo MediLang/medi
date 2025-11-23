@@ -13,6 +13,8 @@ fn profile_check_and_report_summary() {
         standard: ComplianceStandard::Hipaa,
         severity: medi_compliance::RuleSeverity::Error,
         tags: vec!["hipaa".into()],
+        expr: None,
+        remediation: None,
     }];
 
     let results = check_compliance_profile("data", &ComplianceProfile::Hipaa, &rules);

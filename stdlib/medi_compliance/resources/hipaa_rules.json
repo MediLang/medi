@@ -1,0 +1,92 @@
+[
+  {
+    "id": "hipaa.note.no_ssn",
+    "description": "Notes must not include SSN pattern",
+    "standard": "Hipaa",
+    "severity": "Error",
+    "tags": ["hipaa", "phi"],
+    "expr": {"Regex": {"path": "note", "pattern": "\\b\\d{3}-\\d{2}-\\d{4}\\b"}},
+    "remediation": {"title": "Remove SSN from note", "steps": ["Redact or mask SSN values in free text notes."]}
+  },
+  {
+    "id": "hipaa.note.no_phone",
+    "description": "Notes must not include US phone patterns",
+    "standard": "Hipaa",
+    "severity": "Warning",
+    "tags": ["hipaa", "phi"],
+    "expr": {"Regex": {"path": "note", "pattern": "\\b\\(?\\d{3}\\)?[-. ]?\\d{3}[-. ]?\\d{4}\\b"}},
+    "remediation": {"title": "Remove phone numbers", "steps": ["Redact or mask phone numbers in notes."]}
+  },
+  {
+    "id": "hipaa.note.no_email",
+    "description": "Notes must not include email addresses",
+    "standard": "Hipaa",
+    "severity": "Warning",
+    "tags": ["hipaa", "phi"],
+    "expr": {"Regex": {"path": "note", "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"}},
+    "remediation": {"title": "Remove email addresses", "steps": ["Redact email addresses in notes."]}
+  },
+  {
+    "id": "hipaa.tags.include_phi",
+    "description": "Bundles tagged as PHI must include phi tag",
+    "standard": "Hipaa",
+    "severity": "Warning",
+    "tags": ["hipaa", "metadata"],
+    "expr": {"Contains": {"path": "tags", "item": "phi"}},
+    "remediation": {"title": "Add missing tag", "steps": ["Add 'phi' to tags if data contains PHI."]}
+  },
+  {
+    "id": "hipaa.patient.id_exists",
+    "description": "Patient id must exist",
+    "standard": "Hipaa",
+    "severity": "Error",
+    "tags": ["hipaa"],
+    "expr": {"Exists": {"path": "patient.id", "should_exist": true}},
+    "remediation": {"title": "Provide patient id", "steps": ["Ensure patient.id is populated."]}
+  },
+  {
+    "id": "hipaa.patient.id_not_forbidden",
+    "description": "Patient id must not equal 'forbidden'",
+    "standard": "Hipaa",
+    "severity": "Warning",
+    "tags": ["hipaa"],
+    "expr": {"NotEquals": {"path": "patient.id", "value": "forbidden"}},
+    "remediation": {"title": "Fix identifier", "steps": ["Use a valid patient id value."]}
+  },
+  {
+    "id": "hipaa.age.valid_range_low",
+    "description": "Age should be >= 0",
+    "standard": "Hipaa",
+    "severity": "Warning",
+    "tags": ["hipaa", "quality"],
+    "expr": {"GreaterThan": {"path": "age", "value": -0.5}},
+    "remediation": {"title": "Correct age", "steps": ["Ensure non-negative age."]}
+  },
+  {
+    "id": "hipaa.age.valid_range_high",
+    "description": "Age should be < 120",
+    "standard": "Hipaa",
+    "severity": "Warning",
+    "tags": ["hipaa", "quality"],
+    "expr": {"LessThan": {"path": "age", "value": 120.0}},
+    "remediation": {"title": "Correct age", "steps": ["Ensure plausible age < 120."]}
+  },
+  {
+    "id": "hipaa.tags.non_empty",
+    "description": "Tags array should be non-empty when present",
+    "standard": "Hipaa",
+    "severity": "Info",
+    "tags": ["hipaa", "metadata"],
+    "expr": {"NonEmpty": {"path": "tags"}},
+    "remediation": {"title": "Add tags if applicable", "steps": ["Include relevant metadata tags."]}
+  },
+  {
+    "id": "hipaa.note.non_empty",
+    "description": "Notes should be non-empty",
+    "standard": "Hipaa",
+    "severity": "Info",
+    "tags": ["hipaa", "quality"],
+    "expr": {"NonEmpty": {"path": "note"}},
+    "remediation": {"title": "Provide note", "steps": ["Include a brief clinical note if applicable."]}
+  }
+]

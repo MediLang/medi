@@ -3,12 +3,44 @@ use serde_json::Value as JsonValue;
 
 #[allow(unused_imports)]
 use regex::Regex;
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use std::path::Path;
 
 /// Basic HIPAA compliance rule primitive
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceRule {
     pub id: String,
     pub description: String,
+}
+
+/// Load `DetailedComplianceRule`s from a JSON string.
+pub fn load_rules_from_str(s: &str) -> Result<Vec<DetailedComplianceRule>, serde_json::Error> {
+    serde_json::from_str::<Vec<DetailedComplianceRule>>(s)
+}
+
+/// Load `DetailedComplianceRule`s from a JSON file path.
+pub fn load_rules_from_file<P: AsRef<Path>>(
+    p: P,
+) -> Result<Vec<DetailedComplianceRule>, Box<dyn std::error::Error>> {
+    let data = fs::read_to_string(p)?;
+    let v = load_rules_from_str(&data)?;
+    Ok(v)
+}
+
+/// Load built-in rules for a standard (small seed bundles).
+pub fn load_builtin_rules(standard: ComplianceStandard) -> Vec<DetailedComplianceRule> {
+    match standard {
+        ComplianceStandard::Hipaa => {
+            let s = include_str!("../resources/hipaa_rules.json");
+            load_rules_from_str(s).unwrap_or_default()
+        }
+        ComplianceStandard::Gdpr => {
+            let s = include_str!("../resources/gdpr_rules.json");
+            load_rules_from_str(s).unwrap_or_default()
+        }
+        _ => Vec::new(),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -141,6 +173,8 @@ pub fn check_hipaa_compliance(data: &str, rules: &[ComplianceRule]) -> Vec<Compl
             standard: ComplianceStandard::Hipaa,
             severity: RuleSeverity::Info,
             tags: vec!["hipaa".to_string()],
+            expr: None,
+            remediation: None,
         })
         .collect();
 
@@ -326,7 +360,7 @@ pub enum ComplianceStandard {
 }
 
 /// Severity for a compliance rule.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum RuleSeverity {
     Info,
     Warning,
@@ -356,6 +390,12 @@ pub struct DetailedComplianceRule {
     pub severity: RuleSeverity,
     /// Optional tags, such as "audit", "consent", "retention".
     pub tags: Vec<String>,
+    /// Optional boolean expression for this rule.
+    #[serde(default)]
+    pub expr: Option<RuleExpr>,
+    /// Optional remediation guidance.
+    #[serde(default)]
+    pub remediation: Option<Remediation>,
 }
 
 /// Basic profile-aware compliance check.
@@ -598,6 +638,55 @@ pub enum RuleExpr {
 pub struct EvidenceItem {
     pub path: String,
     pub value_snippet: Option<String>,
+}
+
+/// Remediation guidance for a failed rule.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Remediation {
+    pub title: String,
+    pub steps: Vec<String>,
+}
+
+/// Aggregated compliance report with severity tallies and evidence.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ComplianceReport {
+    pub results: Vec<ComplianceResult>,
+    /// Counts keyed by severity (Error/Warning/Info) for failed rules.
+    pub counts_by_severity: BTreeMap<RuleSeverity, usize>,
+    /// Evidence per rule id (only populated for failures).
+    pub evidence: HashMap<String, Vec<EvidenceItem>>,
+    /// Optional summaries: short human-readable lines.
+    pub summaries: Vec<String>,
+}
+
+impl ComplianceReport {
+    pub fn summarize(
+        results: &[ComplianceResult],
+        evidence: &HashMap<String, Vec<EvidenceItem>>,
+        severities: &HashMap<String, RuleSeverity>,
+    ) -> Self {
+        // Build counts by severity using rule_id -> severity map
+        let mut counts: BTreeMap<RuleSeverity, usize> = BTreeMap::new();
+        let mut lines: Vec<String> = Vec::new();
+        for r in results {
+            if !r.passed {
+                if let Some(sev) = severities.get(&r.rule_id) {
+                    *counts.entry(sev.clone()).or_insert(0) += 1;
+                }
+                if let Some(msg) = &r.message {
+                    lines.push(format!("{}: {}", r.rule_id, msg));
+                } else {
+                    lines.push(format!("{}: failed", r.rule_id));
+                }
+            }
+        }
+        Self {
+            results: results.to_vec(),
+            counts_by_severity: counts,
+            evidence: evidence.clone(),
+            summaries: lines,
+        }
+    }
 }
 
 /// Evaluate a rule expression against JSON data and return (passed, evidence).
