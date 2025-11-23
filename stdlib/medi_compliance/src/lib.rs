@@ -572,6 +572,16 @@ pub enum ConditionOp {
     Equals { path: String, value: JsonValue },
     /// Check that a field matches a regex pattern (string fields only).
     Regex { path: String, pattern: String },
+    /// Check inequality of a field value to a constant.
+    NotEquals { path: String, value: JsonValue },
+    /// Check that a field is non-empty (strings: len>0 after trim; arrays: len>0; objects: len>0).
+    NonEmpty { path: String },
+    /// For strings: substring containment (case-sensitive). For arrays: membership by exact JsonValue equality.
+    Contains { path: String, item: JsonValue },
+    /// Numeric comparison: field > value (numbers only).
+    GreaterThan { path: String, value: f64 },
+    /// Numeric comparison: field < value (numbers only).
+    LessThan { path: String, value: f64 },
 }
 
 /// A boolean expression over conditions.
@@ -638,6 +648,67 @@ fn evaluate_condition(data: &JsonValue, cond: &ConditionOp) -> (bool, Vec<Eviden
         ConditionOp::Equals { path, value } => {
             let v = get_path(data, path);
             let pass = v == Some(value);
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: v.map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::NotEquals { path, value } => {
+            let v = get_path(data, path);
+            let pass = v != Some(value);
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: v.map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::NonEmpty { path } => {
+            let v = get_path(data, path);
+            let pass = match v {
+                Some(JsonValue::String(s)) => !s.trim().is_empty(),
+                Some(JsonValue::Array(a)) => !a.is_empty(),
+                Some(JsonValue::Object(o)) => !o.is_empty(),
+                Some(_) => true, // numbers/bools considered non-empty
+                None => false,
+            };
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: v.map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::Contains { path, item } => {
+            let v = get_path(data, path);
+            let pass = match (v, item) {
+                (Some(JsonValue::String(s)), JsonValue::String(needle)) => s.contains(needle),
+                (Some(JsonValue::Array(a)), it) => a.iter().any(|x| x == it),
+                _ => false,
+            };
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: get_path(data, path).map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::GreaterThan { path, value } => {
+            let v = get_path(data, path);
+            let pass = match v {
+                Some(JsonValue::Number(n)) => n.as_f64().is_some_and(|x| x > *value),
+                _ => false,
+            };
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: v.map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::LessThan { path, value } => {
+            let v = get_path(data, path);
+            let pass = match v {
+                Some(JsonValue::Number(n)) => n.as_f64().is_some_and(|x| x < *value),
+                _ => false,
+            };
             let ev = EvidenceItem {
                 path: path.clone(),
                 value_snippet: v.map(snippet),
@@ -747,6 +818,8 @@ mod tests {
     fn rule_engine_basic_conditions_and_composition() {
         let data = serde_json::json!({
             "patient": { "id": "p1", "name": { "family": "Doe", "given": ["Jane"] } },
+            "age": 42,
+            "tags": ["hipaa","phi"],
             "note": "Allergic to penicillin"
         });
 
@@ -770,6 +843,47 @@ mod tests {
             pattern: "penicil+in".to_string(),
         });
         assert!(evaluate_rule_expr(&data, &c3).0);
+
+        // NotEquals
+        let neq = RuleExpr::Condition(ConditionOp::NotEquals {
+            path: "patient.id".to_string(),
+            value: JsonValue::String("p2".to_string()),
+        });
+        assert!(evaluate_rule_expr(&data, &neq).0);
+
+        // NonEmpty: tags array and note string
+        let ne_tags = RuleExpr::Condition(ConditionOp::NonEmpty {
+            path: "tags".to_string(),
+        });
+        assert!(evaluate_rule_expr(&data, &ne_tags).0);
+        let ne_note = RuleExpr::Condition(ConditionOp::NonEmpty {
+            path: "note".to_string(),
+        });
+        assert!(evaluate_rule_expr(&data, &ne_note).0);
+
+        // Contains
+        let c_str = RuleExpr::Condition(ConditionOp::Contains {
+            path: "note".to_string(),
+            item: JsonValue::String("penicillin".to_string()),
+        });
+        assert!(evaluate_rule_expr(&data, &c_str).0);
+        let c_arr = RuleExpr::Condition(ConditionOp::Contains {
+            path: "tags".to_string(),
+            item: JsonValue::String("phi".to_string()),
+        });
+        assert!(evaluate_rule_expr(&data, &c_arr).0);
+
+        // GreaterThan / LessThan
+        let gt = RuleExpr::Condition(ConditionOp::GreaterThan {
+            path: "age".to_string(),
+            value: 18.0,
+        });
+        assert!(evaluate_rule_expr(&data, &gt).0);
+        let lt = RuleExpr::Condition(ConditionOp::LessThan {
+            path: "age".to_string(),
+            value: 100.0,
+        });
+        assert!(evaluate_rule_expr(&data, &lt).0);
 
         // Not
         let not_id = RuleExpr::Not(Box::new(RuleExpr::Condition(ConditionOp::Equals {
