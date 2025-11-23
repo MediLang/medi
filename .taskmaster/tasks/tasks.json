@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Implement Lexer and Parser for Medi Language",
         "description": "Develop a recursive descent parser for Medi's core syntax with support for healthcare-specific constructs and AST generation.",
         "details": "Create a lexer that handles UTF-8 source encoding and tokenizes Medi code with support for medical literals. Implement a recursive descent parser that can parse the core syntax including healthcare-specific constructs like `fhir_query`, `predict_risk`, and `regulate`. Generate an Abstract Syntax Tree (AST) with healthcare-aware semantic analysis. Implement clinician-friendly error reporting.\n\nPseudo-code for parser implementation:\n```rust\nstruct Token { type: TokenType, value: String, position: Position }\nstruct AST { type: NodeType, children: Vec<AST>, value: Option<Value> }\n\nfn tokenize(source: String) -> Vec<Token> {\n  // Implement lexical analysis for Medi tokens\n  // Handle medical literals and healthcare-specific keywords\n}\n\nfn parse(tokens: Vec<Token>) -> Result<AST, ParseError> {\n  // Implement recursive descent parser\n  // Handle healthcare constructs like fhir_query, regulate, etc.\n  // Build and return AST\n}\n\nfn report_error(error: ParseError) -> String {\n  // Generate clinician-friendly error messages\n}\n```",
@@ -17,7 +17,8 @@
             "description": "Define all v0.1 token types per LANG_SPEC.md, including exact keyword and operator/delimiter sets, literals, and identifiers. Ensure a UTF-8-aware token structure with precise position tracking.",
             "dependencies": [],
             "details": "Acceptance Criteria:\n- Enumerate v0.1 Keywords exactly as in LANG_SPEC.md:\n  module import fn let const type struct enum trait impl pub priv return while for in match if else loop break continue true false nil fhir_query regulate federated scope real_time\n- Enumerate v0.1 Operators & Delimiters exactly as in LANG_SPEC.md:\n  + - * / % = == != < > <= >= += -= *= /= %= && || ! -> => { } ( ) [ ] . :: , : ; @ # ? .. ..= ...\n- Identifier rules: start with letter/underscore; followed by letters/digits/underscores; case-sensitive; cannot use reserved keywords\n- Literals supported: integers, floats, strings (including multiline), booleans, datetime, and medical literals (e.g., pid(\"PT123\"), icd10(\"A00.0\"))\n- Healthcare keywords present as tokens: fhir_query, regulate, federated, scope, real_time\n- Pipeline operator (|>) is NOT part of v0.1 and must not be emitted as a single token\n- Token structure fields and semantics:\n  - token_type (enum covering all above)\n  - lexeme (interned or owned string)\n  - location with line (1-based), column (1-based), offset (0-based byte index)\n  - Column advancement and end-column helpers use Unicode scalar count (chars), not bytes; grapheme-cluster precision may be added later\n- Unit tests:\n  - Verify exact line/column/offset for single-line ASCII tokens\n  - Verify multi-line and UTF-8 inputs (e.g., emojis, accented chars) maintain correct positions\n  - Cover all listed keywords and a representative sample of operators/delimiters including :: and ..=\n- Documentation: brief purpose for each token category and any healthcare-specific semantics\nEstimated Complexity: Medium - requires careful alignment with the spec and Unicode-aware position tracking.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -27,7 +28,8 @@
               1
             ],
             "details": "Acceptance Criteria:\n- Correctly tokenize all v0.1 language constructs per `LANG_SPEC.md`, including healthcare keywords and medical literals (e.g., pid(\"PT123\"), icd10(\"A00.0\")).\n- UTF-8 input handling and platform-independent line endings (CRLF/CR/LF) with consistent normalization.\n- Handle whitespace and comments per `LANG_SPEC.md` (single-line and block forms as specified).\n- Unicode-aware position tracking (line 1-based, column 1-based using Unicode scalar count, not bytes); verified on multi-line and non-ASCII input.\n- Support string literals with escape sequences and multiline strings as specified.\n- Standardized lexer error token: emit TokenType::Error(\"Invalid token '<lexeme>'\") for invalid input; keep debug logging behind a `logging` feature (no behavior change when disabled).\n- Large-input performance: provide streaming/chunked lexing path with bounded memory and stable throughput; avoid loading entire files into memory.\n- Do not emit pipeline `|>` as a single token (ensure it lexes according to v0.1 rules).\n- Comprehensive tests:\n  - All healthcare keywords and representative medical literals.\n  - Unicode and cross-platform line endings.\n  - Edge cases: unterminated strings/comments, invalid escapes, extremely long tokens.\n  - PRD key examples compile through lexing without lexer errors.\n- Contribute to PRD compile-time target by ensuring lexing is not the bottleneck for simple scripts (< 2s end-to-end).\nEstimated Complexity: High - requires careful state management and performance considerations.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -38,7 +40,8 @@
               2
             ],
             "details": "Acceptance Criteria:\n- Implementation of all grammar rules\n- Proper handling of operator precedence\n- Support for nested expressions and statements\n- Memory-efficient parsing of large documents\n- Comprehensive test suite for all grammar constructs\n- Documentation of parsing algorithms\nEstimated Complexity: Very High - requires implementation of mutually recursive procedures and careful handling of grammar ambiguities.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -48,7 +51,8 @@
               3
             ],
             "details": "Acceptance Criteria:\n- Well-defined AST node types for all language constructs\n- Visitor pattern implementation for AST traversal\n- Position information preserved in AST nodes\n- Memory-efficient AST representation\n- Serialization/deserialization support\n- Unit tests for AST generation and traversal\nEstimated Complexity: High - requires careful design of node types and efficient memory management.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -60,7 +64,8 @@
               4
             ],
             "details": "Acceptance Criteria:\n- Clear error messages with line and column information\n- Context-aware error suggestions\n- Categorization of errors by severity\n- Recovery mechanisms to continue parsing after errors\n- Visual highlighting of error locations in source\n- Documentation of common errors and solutions\n- User testing with clinical staff\nEstimated Complexity: High - requires natural language generation and deep understanding of common user mistakes.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -69,19 +74,20 @@
             "details": "",
             "status": "done",
             "dependencies": [],
-            "parentTaskId": 1
+            "parentTaskId": 1,
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Develop Healthcare-Specific Type System",
         "description": "Implement a type system with healthcare data types, type checking for healthcare operations, and type inference.",
         "details": "Design and implement a type system that includes basic types (int, float, string, bool) and healthcare-specific types like `FHIRPatient`, `Observation`, etc. Implement type checking for healthcare-specific operations and type inference for improved developer experience. Add safety guarantees for patient data handling.\n\nThe type system should include:\n1. Core medical types: patient_id, vital, lab_result\n2. Simple trait system with MedicalRecord, PrivacyProtected traits\n3. Type inference for local variables\n\nPseudo-code for type system:\n```rust\nenum Type {\n  Int, Float, String, Bool,\n  PatientId, Vital, LabResult,\n  FHIRPatient, Observation,\n  // Other healthcare types\n}\n\ntrait MedicalRecord { /* ... */ }\ntrait PrivacyProtected { /* ... */ }\n\nfn infer_type(ast_node: &AST, context: &TypeContext) -> Result<Type, TypeError> {\n  // Implement type inference logic\n}\n\nfn check_types(ast: &AST) -> Result<(), TypeError> {\n  // Implement type checking for the entire AST\n  // Special handling for healthcare operations\n}\n```",
         "testStrategy": "Create unit tests for type checking and inference. Test with various healthcare data types and operations. Verify type safety for patient data handling. Test edge cases like type conversions and inference in complex expressions. Ensure type errors are reported with clear, healthcare-context-aware messages.",
         "priority": "high",
         "dependencies": [
-          1
+          "1"
         ],
         "status": "done",
         "subtasks": [
@@ -91,7 +97,8 @@
             "description": "Implement the core type system infrastructure including primitive types, type declarations, and basic type checking mechanisms.",
             "dependencies": [],
             "details": "Implement primitive types (string, number, boolean), type declarations syntax, type annotations, and basic type checking mechanisms. Create the TypeChecker class that will interface with the parser. Develop unit tests for each primitive type and basic type operations. Integration points: Receive AST from parser and attach type information to nodes.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -101,7 +108,8 @@
               1
             ],
             "details": "Create healthcare-specific types (PatientID, MedicalRecord, Diagnosis, Medication, LabResult, etc.). Implement type traits for healthcare data (Identifiable, Timestamped, Auditable). Develop validation rules for each healthcare type. Test with realistic healthcare data examples. Integration points: Extend the type registry from subtask 1 with healthcare types.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -112,7 +120,8 @@
               2
             ],
             "details": "Implement type inference for variable declarations and expressions. Create type checking for healthcare-specific operations (e.g., patient record merging, medication interactions). Develop error reporting for type mismatches with healthcare context. Test with complex healthcare workflows. Integration points: Hook type inference into expression evaluation in the parser.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -123,7 +132,8 @@
               3
             ],
             "details": "Implement privacy annotation types (PHI, Anonymized, Authorized). Create access control type checking for patient data. Develop data flow analysis to track sensitive information. Implement HIPAA compliance type checks. Test with privacy violation scenarios. Integration points: Integrate with error reporting system and provide safety verification API for the runtime.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -133,7 +143,8 @@
               1
             ],
             "details": "Extend the AST to support optional type annotations in let statements. Update the parser to recognize and parse type annotations in the form 'let x: Type = value;'. Modify the type checker to validate that the inferred type of the initializer matches the explicit type annotation. Implement proper error reporting for type mismatches between annotations and initializers. Add support for type checking let statements without initializers but with type annotations.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -143,20 +154,21 @@
               5
             ],
             "details": "Develop unit tests for successful type matching between annotations and initializers. Create tests for type mismatches to verify error reporting. Test type inference when annotations are omitted. Implement tests for healthcare-specific type annotations. Create tests for complex nested type annotations. Add tests for side type table assertions to verify the internal state of the type checker after processing annotations.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "Build LLVM Backend Integration for Compiler",
         "description": "Implement LLVM backend integration for efficient code generation with support for WebAssembly and initial RISC-V targets.",
         "details": "Integrate LLVM (version 15.0+) as the backend for the Medi compiler. Implement code generation from Medi AST to LLVM IR. Add support for WebAssembly target for browser deployments and initial RISC-V (RV32) support for medical IoT devices. Implement a basic optimization pipeline focused on healthcare workloads.\n\nKey components:\n1. AST to LLVM IR translation\n2. Target-specific code generation (x86-64, WebAssembly, RISC-V)\n3. Basic optimization passes for healthcare workloads\n4. Integration with the Medi type system\n\nPseudo-code for LLVM integration:\n```rust\nstruct LLVMContext { /* ... */ }\nstruct IRBuilder { /* ... */ }\n\nfn generate_llvm_ir(ast: &AST, context: &LLVMContext) -> Result<Module, CodeGenError> {\n  let builder = IRBuilder::new(context);\n  // Translate AST to LLVM IR\n  // Handle healthcare-specific constructs\n}\n\nfn optimize_module(module: &Module, level: OptLevel) -> Result<Module, OptError> {\n  // Apply optimization passes\n  // Healthcare-specific optimizations\n}\n\nfn generate_target_code(module: &Module, target: Target) -> Result<Vec<u8>, CodeGenError> {\n  // Generate machine code for the specified target\n  // Support x86-64, WebAssembly, RISC-V\n}\n```",
         "testStrategy": "Create integration tests for code generation with LLVM. Test compilation of Medi code to different targets (x86-64, WebAssembly, RISC-V). Benchmark generated code performance against the 2x C++ performance target. Test optimization passes with healthcare-specific workloads. Verify correct execution of compiled code across platforms.",
         "priority": "high",
         "dependencies": [
-          1,
-          2
+          "1",
+          "2"
         ],
         "status": "done",
         "subtasks": [
@@ -166,7 +178,8 @@
             "description": "Set up LLVM infrastructure and configure the build environment for backend integration",
             "dependencies": [],
             "details": "Install LLVM development packages (version 15.0+), configure CMake build system to link against LLVM libraries, set up header includes for LLVM API access, create wrapper classes for LLVM context, module, and builder objects, and establish the basic pipeline architecture for code generation",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -176,7 +189,8 @@
               1
             ],
             "details": "Create visitor pattern for AST traversal, implement IR generation for expressions (arithmetic, logical, comparison), handle variable declarations and assignments, implement control flow structures (if/else, loops, functions), manage memory allocations, and ensure proper scope handling for variables",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -186,7 +200,8 @@
               2
             ],
             "details": "Configure LLVM target machine for x86-64, implement x86-specific intrinsics and optimizations, handle System V ABI calling conventions, manage register allocation strategies, and ensure correct data layout and alignment for x86-64.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -197,7 +212,8 @@
               3
             ],
             "details": "Configure optimization pipeline with appropriate pass manager, implement function-level and module-level optimization passes, add healthcare-specific optimizations for numerical stability and precision, implement vectorization for SIMD operations, add memory access pattern optimizations, and create debug/release optimization profiles",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -207,7 +223,8 @@
               2
             ],
             "details": "Map language primitive types to LLVM types, implement struct and array type representations, handle function types and signatures, implement generic type specialization for LLVM, manage ABI-compliant data layout, and ensure proper type conversions and promotions",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -221,7 +238,8 @@
               5
             ],
             "details": "Create unit tests for IR generation, implement integration tests for end-to-end compilation, develop performance benchmarks for optimization evaluation, add regression tests for known edge cases, implement cross-platform validation tests, and create automated CI/CD pipeline for backend testing",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -231,7 +249,8 @@
               2
             ],
             "details": "Configure wasm32-wasi target triple, ensure correct memory model and calling conventions, implement any required intrinsics/shims, and integrate with toolchain for emitting .wasm modules. Provide example that runs in a minimal WASI runtime or browser (if applicable).",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -241,7 +260,8 @@
               2
             ],
             "details": "Configure riscv32 target triple, implement ABI/calling convention support, validate data layout and alignment, and ensure emitted code runs on a reference RV32 emulator or dev board. Provide minimal examples and measure footprint to meet edge constraints.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 9,
@@ -253,19 +273,20 @@
               8
             ],
             "details": "Create CI matrix (Linux) to validate IR, codegen, and smoke tests for x86-64, wasm32-wasi, and riscv32. Upload artifacts for inspection and gate merges on target build success.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "Implement Memory Management and Runtime System",
         "description": "Develop a memory management system with Rust-like borrow checking and a runtime system supporting multi-threading for healthcare workloads.",
         "details": "Implement a memory management system with Rust-like borrow checking for memory safety and concurrency. Create a runtime system that supports multi-threading for critical healthcare workloads and provides healthcare I/O primitives for standards-based data integration. Ensure the runtime has a small footprint for edge device deployments.\n\nKey components:\n1. Safe zone with basic garbage collection\n2. Simplified real-time zone for IoT prototypes\n3. Borrow checker for memory safety\n4. Task-based parallelism with channel-based message passing\n5. Error handling with Result type\n\nPseudo-code for memory management and runtime:\n```rust\nstruct BorrowChecker { /* ... */ }\nstruct GarbageCollector { /* ... */ }\nstruct Task { /* ... */ }\nstruct Channel<T> { /* ... */ }\n\nfn check_borrows(ast: &AST) -> Result<(), BorrowError> {\n  // Implement borrow checking logic\n}\n\nfn spawn_task(function: Fn(), priority: Priority) -> Task {\n  // Create and schedule a new task\n}\n\nfn create_channel<T>() -> (Sender<T>, Receiver<T>) {\n  // Create a message-passing channel\n}\n\nfn collect_garbage() {\n  // Perform garbage collection in the safe zone\n}\n```",
         "testStrategy": "Create unit tests for memory management components. Test borrow checking with various ownership patterns. Test multi-threading with healthcare workloads. Measure memory footprint on target devices. Test error handling with various error scenarios. Verify thread safety in concurrent healthcare data processing scenarios.",
         "priority": "medium",
         "dependencies": [
-          3
+          "3"
         ],
         "status": "done",
         "subtasks": [
@@ -275,7 +296,8 @@
             "description": "Design and implement a Rust-like borrow checker for static memory safety verification at compile time",
             "dependencies": [],
             "details": "Implement ownership rules, lifetime tracking, and reference validation. Create an abstract syntax tree (AST) analyzer to verify borrowing rules. Develop compile-time checks for mutable/immutable borrows. Test with comprehensive test suite covering edge cases like nested borrows and partial borrows. Performance requirement: Static analysis should complete within 100ms for files under 10,000 lines of code.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -285,7 +307,8 @@
               1
             ],
             "details": "Create a mark-and-sweep collector with generational optimization. Implement weak references and finalization callbacks. Develop tunable GC parameters for different workloads. Test with memory-intensive benchmarks and leak detection tools. Performance requirement: GC pauses under 10ms for heaps up to 100MB, with throughput impact less than 10%.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -295,7 +318,8 @@
               1
             ],
             "details": "Implement region-based memory allocation with compile-time size determination. Create a pool allocator for fixed-size objects. Develop static analysis tools to verify real-time constraints. Test with simulated IoT workloads and timing verification. Performance requirement: Allocation/deallocation operations must complete in constant time (O(1)) with maximum latency of 50μs.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -307,7 +331,8 @@
               3
             ],
             "details": "Create a work-stealing scheduler with priority support. Implement memory isolation between tasks. Develop channel-based message passing for inter-task communication. Test with parallel algorithms and concurrency stress tests. Performance requirement: Scaling efficiency of at least 80% up to 16 cores with task creation overhead under 5μs.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -320,20 +345,21 @@
               4
             ],
             "details": "Create a typed error system with propagation mechanisms. Implement memory safety violation reporting with source code context. Develop runtime error recovery strategies. Test with fault injection and recovery scenarios. Performance requirement: Error handling overhead should not exceed 5% of total execution time, with detailed diagnostics generation under 1ms.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Develop Core Standard Library Modules",
         "description": "Implement essential standard library modules including medi.data, medi.stats, medi.compliance, and medi.ai.",
         "details": "Develop the core standard library modules for Medi:\n\n1. `medi.data`:\n   - FHIR resource definitions and parsers\n   - Native representation of healthcare data structures\n   - Querying capabilities for patient records\n   - Data validation against healthcare standards\n\n2. `medi.stats`:\n   - Basic statistical functions for clinical data\n   - Descriptive statistics for patient cohorts\n   - Simple hypothesis testing (t-tests, etc.)\n   - Foundations for clinical trial analysis\n\n3. `medi.compliance`:\n   - HIPAA compliance checking primitives\n   - Data anonymization utilities\n   - Audit trail generation\n   - Basic regulatory reporting templates\n\n4. `medi.ai`:\n   - Interfaces for ML model integration\n   - Simple risk prediction utilities\n   - Foundation for federated learning\n\nPseudo-code for standard library implementation:\n```rust\n// medi.data module\nstruct FHIRResource { /* ... */ }\nstruct FHIRPatient : FHIRResource { /* ... */ }\nstruct FHIRObservation : FHIRResource { /* ... */ }\n\nfn fhir_query(resource_type: &str) -> QueryBuilder { /* ... */ }\nfn validate_fhir(resource: &FHIRResource) -> Result<(), ValidationError> { /* ... */ }\n\n// medi.stats module\nfn mean(values: &[f64]) -> f64 { /* ... */ }\nfn t_test(group1: &[f64], group2: &[f64]) -> TTestResult { /* ... */ }\n\n// medi.compliance module\nfn check_hipaa_compliance(data: &Data, rules: &[ComplianceRule]) -> ComplianceResult { /* ... */ }\nfn anonymize(data: &Data, method: AnonymizationMethod) -> AnonymizedData { /* ... */ }\n\n// medi.ai module\nfn load_model(path: &str) -> Model { /* ... */ }\nfn predict_risk(patient: &FHIRPatient, model: &Model) -> RiskScore { /* ... */ }\n```",
         "testStrategy": "Create comprehensive unit tests for each standard library module. Test FHIR parsing and querying with real and synthetic healthcare data. Validate statistical functions against known results. Test compliance checking against HIPAA requirements. Benchmark AI model integration. Create integration tests that use multiple modules together to solve healthcare problems from the key use cases in the PRD.",
         "priority": "high",
         "dependencies": [
-          2,
-          4
+          "2",
+          "4"
         ],
         "status": "done",
         "subtasks": [
@@ -343,7 +369,8 @@
             "description": "Create the medi.data module for standardized healthcare data structures and operations",
             "dependencies": [],
             "details": "Implement core data structures for patient records, medical events, and clinical observations. Include functions for data validation, sanitization, and transformation. Create parsers for common healthcare formats (FHIR, HL7, DICOM). Develop serialization/deserialization utilities. Implement secure storage abstractions with encryption. Add comprehensive documentation with examples. Test with real and synthetic healthcare datasets, focusing on data integrity, performance with large datasets, and compliance with standards.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -353,7 +380,8 @@
               1
             ],
             "details": "Implement statistical functions for clinical trials, epidemiology, and outcomes research. Create visualization tools for medical data. Develop risk scoring and predictive modeling utilities. Add functions for population health analysis. Implement quality metrics calculations (HEDIS, STAR). Create time-series analysis for patient monitoring data. Test with benchmark datasets, validate against established statistical packages, and ensure numerical stability across diverse datasets.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -363,7 +391,8 @@
               1
             ],
             "details": "Implement HIPAA compliance validation tools. Create audit logging mechanisms. Develop de-identification and anonymization utilities. Add consent management functions. Implement data retention policy enforcement. Create regulatory reporting templates (FDA, CMS). Develop validation for international standards (GDPR, PIPEDA). Test with compliance checklists, penetration testing for security features, and validation against regulatory requirements documentation.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -374,20 +403,21 @@
               2
             ],
             "details": "Implement medical image processing utilities. Create NLP functions for clinical text. Develop predictive modeling for disease progression. Add diagnostic decision support tools. Implement patient risk stratification. Create model validation tools specific to healthcare. Develop explainability functions for clinical AI. Test with benchmark medical datasets, validate against clinical ground truth, and perform bias testing across diverse patient populations.",
-            "status": "done"
+            "status": "done",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "Implement Privacy and Compliance Checking",
         "description": "Develop a privacy/compliance checking stage for HIPAA/GDPR rules in the compiler pipeline.",
         "details": "Implement a privacy and compliance checking stage in the compiler pipeline that verifies code against HIPAA and GDPR rules. This should include static analysis to detect potential privacy violations and ensure proper handling of protected health information (PHI).\n\nKey components:\n1. Static analysis for PHI data flows\n2. Detection of unprotected PHI usage\n3. Verification of proper anonymization\n4. Checking for compliance with the `regulate` construct\n5. Integration with the type system's PrivacyProtected trait\n\nPseudo-code for compliance checking:\n```rust\nstruct ComplianceChecker { rules: Vec<ComplianceRule> }\nstruct ComplianceViolation { location: SourceLocation, rule: ComplianceRule, message: String }\n\nfn check_compliance(ast: &AST, rules: &[ComplianceRule]) -> Vec<ComplianceViolation> {\n  let mut violations = Vec::new();\n  // Analyze AST for compliance violations\n  // Check data flows for PHI\n  // Verify proper use of regulate blocks\n  // Ensure anonymization before data export\n  violations\n}\n\nfn verify_regulate_block(regulate_node: &AST) -> Vec<ComplianceViolation> {\n  // Verify that regulate blocks properly protect data\n  // Check that standards are correctly specified\n  // Ensure all required checks are included\n}\n```",
         "testStrategy": "Create unit tests with various compliance scenarios. Test with code that violates HIPAA/GDPR rules to verify detection. Test with compliant code to ensure no false positives. Create test cases for each compliance rule. Validate against the HIPAA Safe Harbor Method requirements. Test the `regulate` construct with various configurations.",
         "priority": "medium",
         "dependencies": [
-          2,
-          5
+          "2",
+          "5"
         ],
         "status": "pending",
         "subtasks": [
@@ -397,7 +427,8 @@
             "description": "Implement static analysis to track the flow of Protected Health Information (PHI) throughout the codebase",
             "dependencies": [],
             "details": "Develop a data flow analysis tool that identifies PHI data sources, tracks variable assignments, function calls, and data persistence operations. Create a graph representation of PHI data movement. Implement detection for common PHI types (names, addresses, medical record numbers, etc.). Testing approach: Create test cases with known PHI flows and verify detection accuracy. Regulatory requirements: Document HIPAA identifiers (18 types) and GDPR personal data categories being tracked.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -407,7 +438,8 @@
               1
             ],
             "details": "Using the data flow graph from subtask 1, implement checks for: PHI transmitted without encryption, PHI stored without access controls, PHI logged to console/files, PHI exposed in UI without masking. Create severity classification for violations. Testing approach: Develop test suite with intentional violations and verify detection. Regulatory requirements: Map each detection rule to specific HIPAA/GDPR requirements for documentation.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -418,7 +450,8 @@
               2
             ],
             "details": "Develop checks for proper anonymization techniques: k-anonymity, differential privacy, pseudonymization. Create validators for common anonymization functions. Implement detection of re-identification risks. Testing approach: Test with various anonymization approaches and attempt re-identification attacks. Regulatory requirements: Document compliance with HIPAA Safe Harbor and GDPR Article 4 anonymization standards.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -430,21 +463,22 @@
               3
             ],
             "details": "Develop API for the regulate construct to access compliance checking results. Implement policy enforcement mechanisms based on detected violations. Create reporting functionality for compliance status. Build remediation suggestions for detected issues. Testing approach: Test integration points with mock regulate constructs and verify policy enforcement. Regulatory requirements: Ensure integration supports documentation generation for compliance audits.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "Build Command-Line Interface and REPL",
         "description": "Develop the medic compiler CLI with basic options, a REPL for interactive development, and package manager foundation.",
         "details": "Implement a command-line interface (CLI) for the Medi compiler (`medic`) with basic compilation options. Create a Read-Eval-Print Loop (REPL) for interactive development. Lay the foundation for a package manager (`medipack`). Implement a basic documentation generator.\n\nNote: This umbrella task is superseded by Tasks 12–15 which track each deliverable explicitly.\n\nKey components:\n1. Compiler CLI with options for target selection, optimization level, etc.\n2. Interactive REPL with healthcare data visualization\n3. Package manager foundation with dependency resolution\n4. Documentation generator for Medi code\n\nPseudo-code for CLI implementation:\n```rust\nstruct CompilerOptions {\n  input_file: String,\n  output_file: Option<String>,\n  target: Target,\n  opt_level: OptLevel,\n  // Other options\n}\n\nfn parse_cli_args() -> CompilerOptions { /* ... */ }\n\nfn compile_file(options: &CompilerOptions) -> Result<(), CompileError> { /* ... */ }\n\nfn run_repl() -> Result<(), ReplError> {\n  loop {\n    // Read input\n    // Parse and evaluate\n    // Print result\n    // Handle special commands\n  }\n}\n\nfn generate_docs(input_files: &[String], output_dir: &str) -> Result<(), DocError> { /* ... */ }\n```",
         "testStrategy": "Create integration tests for the CLI with various command-line options. Test the REPL with interactive sessions including healthcare data analysis. Test documentation generation with sample Medi code. Verify correct handling of compiler errors and warnings. Test package management functionality with mock packages.",
         "priority": "medium",
         "dependencies": [
-          3,
-          4,
-          5
+          "3",
+          "4",
+          "5"
         ],
         "status": "deferred",
         "subtasks": [
@@ -454,7 +488,8 @@
             "description": "Develop a robust CLI for the compiler that handles command-line arguments, file processing, and execution options",
             "dependencies": [],
             "details": "Create a CLI that supports: 1) File input/output options, 2) Compilation flags and optimization levels, 3) Error reporting with clear messages and line numbers, 4) Verbose mode for debugging, 5) Help documentation, 6) Version information. Integrate with the compiler pipeline to process source files. Implement proper exit codes for success/failure states. Design for extensibility to add new options in future releases. Ensure cross-platform compatibility.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -464,7 +499,8 @@
               1
             ],
             "details": "Build a REPL environment that: 1) Provides immediate feedback for code snippets, 2) Supports multi-line input with syntax highlighting, 3) Implements healthcare-specific visualization commands for patient data, trends, and metrics, 4) Includes data import/export capabilities for common healthcare formats, 5) Offers context-aware autocompletion, 6) Maintains session history. Ensure visualizations are accessible and clinically relevant. Integrate with the compiler's interpreter mode for real-time execution.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -474,21 +510,22 @@
               1
             ],
             "details": "Develop a documentation generator that: 1) Extracts documentation comments from source code, 2) Generates structured documentation in multiple formats (HTML, PDF, Markdown), 3) Creates cross-references between related components, 4) Includes examples and usage patterns, 5) Documents healthcare-specific functions with clinical context. Add CLI commands to generate documentation on demand. Implement templates for consistent documentation styling. Include validation to ensure documentation completeness and accuracy.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Develop Basic IDE with Visual Analytics",
         "description": "Create a basic IDE with visual analytics capabilities, syntax highlighting, and code completion for Medi.",
         "details": "Develop a basic Integrated Development Environment (IDE) for Medi with visual analytics capabilities, support for `.medi` file recognition, syntax highlighting, and basic code completion. Create a prototype of the visual programming interface.\n\nKey components:\n1. Text editor with syntax highlighting for Medi\n2. Code completion using the type system\n3. Visual analytics for healthcare data\n4. Integration with the medic compiler\n5. Prototype visual programming interface\n\nImplementation approach:\n1. Build on existing open-source editor frameworks\n2. Implement Medi language server protocol\n3. Create visualization components for healthcare data\n4. Design visual programming blocks for healthcare operations\n\nPseudo-code for IDE components:\n```typescript\nclass MediLanguageServer {\n  // Implement Language Server Protocol\n  onCompletion(document: TextDocument, position: Position): CompletionItem[] { /* ... */ }\n  onHover(document: TextDocument, position: Position): Hover { /* ... */ }\n  // Other LSP methods\n}\n\nclass HealthcareVisualizer {\n  renderPatientData(patient: FHIRPatient): SVGElement { /* ... */ }\n  renderStatistics(data: StatisticalResult): SVGElement { /* ... */ }\n  // Other visualization methods\n}\n\nclass VisualProgrammingInterface {\n  createBlock(blockType: string): Block { /* ... */ }\n  connectBlocks(source: Block, target: Block): Connection { /* ... */ }\n  generateCode(): string { /* ... */ }\n  // Other visual programming methods\n}\n```",
         "testStrategy": "Create UI tests for the IDE components. Test syntax highlighting with various Medi code samples. Test code completion with healthcare-specific constructs. Verify visual analytics with sample healthcare data. Test integration with the compiler. Conduct usability testing with target users (clinicians, researchers, developers).",
         "priority": "low",
         "dependencies": [
-          1,
-          2,
-          5
+          "1",
+          "2",
+          "5"
         ],
         "status": "pending",
         "subtasks": [
@@ -498,7 +535,8 @@
             "description": "Develop a text editor component with syntax highlighting capabilities for multiple programming languages",
             "dependencies": [],
             "details": "Implementation details: Use Monaco Editor or CodeMirror as the base editor component. Implement syntax highlighting for Python, JavaScript, and SQL at minimum. Add line numbering, bracket matching, and code folding features. User experience requirements: Ensure responsive editing with minimal lag, customizable themes (light/dark), and keyboard shortcuts for common operations. Integration points: Create a modular architecture that allows other components to access and modify editor content programmatically.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -508,7 +546,8 @@
               1
             ],
             "details": "Implementation details: Integrate with Language Server Protocol (LSP) for language-aware code completion. Implement type inference for dynamically typed languages. Create a suggestion display component that shows parameter hints and documentation. User experience requirements: Low-latency suggestions (under 200ms), filtering capabilities, and keyboard navigation for completion items. Integration points: Connect with the text editor component, access to project files for context-aware completion, and hooks for custom completion providers.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -518,7 +557,8 @@
               1
             ],
             "details": "Implementation details: Build reusable chart components (line charts, scatter plots, heatmaps) optimized for healthcare metrics. Implement data preprocessing utilities for common healthcare data formats (FHIR, HL7). Create interactive dashboards with filtering capabilities. User experience requirements: Accessible visualizations following healthcare UI guidelines, tooltips with detailed information, and export functionality. Integration points: Data connectors to common healthcare databases, integration with the editor for custom visualization code, and APIs for extending with new visualization types.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -530,20 +570,21 @@
               3
             ],
             "details": "Implementation details: Develop a node-based programming canvas using a library like D3.js or React Flow. Implement drag-and-drop functionality for code blocks and data sources. Create a bidirectional sync between visual representation and text code. User experience requirements: Intuitive connection mechanism between nodes, undo/redo functionality, and visual feedback for execution flow. Integration points: Conversion between visual representation and text code, integration with code completion system, and hooks into the healthcare visualization components.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Implement Example Use Cases",
         "description": "Develop working examples for the key use cases: Clinical Data Exploration, Basic Regulatory Compliance, Simple Statistical Analysis, and Synthetic Data Testing.",
         "details": "Implement working examples for the four key use cases specified in the PRD:\n\n1. Clinical Data Exploration:\n```medi\nlet patients = fhir_query(\"Patient\")\n    .filter(p => p.age > 65 && p.condition(\"diabetes\"))\n    .limit(100);\n\nlet avg_a1c = patients.observation(\"hba1c\").mean();\nprintln!(\"Average HbA1c: {:.1}%\", avg_a1c);\n```\n\n2. Basic Regulatory Compliance:\n```medi\nregulate {\n  standard: \"HIPAA\",\n  data: patient_records,\n  checks: [\"de_identification\", \"minimum_necessary\"]\n};\n\nlet analysis = analyze(patient_records);\n```\n\n3. Simple Statistical Analysis:\n```medi\nlet trial_data = load_csv(\"trial_results.csv\");\nlet treatment_group = trial_data.filter(p => p.group == \"treatment\");\nlet control_group = trial_data.filter(p => p.group == \"control\");\n\nlet t_test = stats.t_test(treatment_group.outcome, control_group.outcome);\nprintln!(\"P-value: {:.4}\", t_test.p_value);\n```\n\n4. Synthetic Data Testing:\n```medi\nlet synthetic_patients = generate_synthetic_patients(100, {\n  demographics: \"realistic\",\n  conditions: [\"diabetes\", \"hypertension\"],\n  observations: [\"glucose\", \"blood_pressure\"]\n});\n\nlet analysis = run_risk_model(synthetic_patients);\n```\n\nEnsure that all examples work end-to-end with the implemented compiler and standard library. Create sample datasets for testing these examples.",
         "testStrategy": "Create end-to-end tests for each use case. Test with real and synthetic healthcare data. Verify correct output for each example. Measure performance against the targets specified in the PRD. Test integration with the standard library modules. Ensure compliance checking works correctly in the regulatory example.",
         "priority": "medium",
         "dependencies": [
-          5,
-          6
+          "5",
+          "6"
         ],
         "status": "pending",
         "subtasks": [
@@ -553,7 +594,8 @@
             "description": "Develop a comprehensive example demonstrating how to explore and analyze clinical datasets using the language's data manipulation features.",
             "dependencies": [],
             "details": "Create a step-by-step tutorial showing how to load clinical data (FHIR or similar format), filter patients by criteria, extract relevant medical information, and visualize key metrics. Include code samples for common operations like cohort selection, timeline visualization, and basic patient statistics. Use realistic (but anonymized) sample data and document all functions used.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -563,7 +605,8 @@
               1
             ],
             "details": "Develop a tutorial demonstrating data anonymization techniques, audit logging, access control implementation, and secure data storage patterns. Include code examples for de-identification functions, consent management, and automated compliance checking. Document how the language's features specifically address regulatory requirements with concrete implementation examples.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -573,7 +616,8 @@
               1
             ],
             "details": "Create a comprehensive example that demonstrates descriptive statistics, hypothesis testing, correlation analysis, and basic predictive modeling on healthcare data. Include code for analyzing treatment outcomes, identifying risk factors, and generating statistical reports. Provide sample datasets and expected outputs with interpretations of the results.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -585,27 +629,28 @@
               3
             ],
             "details": "Create a tutorial demonstrating how to generate realistic synthetic patient records, medical events, and longitudinal data. Include code for data validation, statistical similarity testing with real data, and integration testing scenarios. Document methods for controlling data characteristics, ensuring clinical plausibility, and scaling data generation for different testing needs.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Create Documentation and Performance Benchmarks",
         "description": "Develop comprehensive documentation for all implemented features and create performance benchmarks against Python/R for healthcare tasks.",
         "details": "Create comprehensive documentation covering all implemented features of the Medi language. Develop performance benchmarks comparing Medi against Python and R for common healthcare tasks. Document the language specification, standard library API, and development tools.\n\nDocumentation components:\n1. Language specification\n2. Standard library API reference\n3. Compiler and tools usage guide\n4. Tutorial for healthcare developers\n5. Example code repository\n\nBenchmarking components:\n1. Performance comparison with Python/R for statistical analysis\n2. Memory usage benchmarks\n3. Compilation speed measurements\n4. Healthcare-specific workload benchmarks\n\nImplementation approach:\n1. Use a documentation generator for API references\n2. Create markdown documentation for guides and tutorials\n3. Implement benchmark suite with comparable implementations in Python/R\n4. Measure and report performance metrics\n\nPseudo-code for benchmarking:\n```rust\nstruct BenchmarkResult {\n  language: String,\n  task: String,\n  execution_time_ms: f64,\n  memory_usage_mb: f64,\n}\n\nfn run_benchmarks() -> Vec<BenchmarkResult> {\n  let mut results = Vec::new();\n  // Run Medi benchmarks\n  // Run equivalent Python benchmarks\n  // Run equivalent R benchmarks\n  // Collect and compare results\n  results\n}\n\nfn generate_benchmark_report(results: &[BenchmarkResult], output_file: &str) { /* ... */ }\n```",
         "testStrategy": "Verify documentation accuracy with code examples. Test documentation generator with all standard library modules. Run benchmarks on different hardware configurations. Compare benchmark results against the performance targets in the PRD. Ensure documentation covers all implemented features. Test tutorials with users unfamiliar with Medi.",
         "priority": "medium",
         "dependencies": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
         ],
         "status": "pending",
         "subtasks": [
@@ -615,7 +660,8 @@
             "description": "Create comprehensive documentation for the Medi language syntax, features, and standard library APIs",
             "dependencies": [],
             "details": "Implement detailed documentation covering: language syntax, control structures, data types, standard library functions, error handling, and development tools. Include code examples for each feature. Documentation should be organized in a hierarchical structure with clear navigation. Quality criteria: completeness (all features documented), clarity (understandable to beginners), accuracy (no errors), and usefulness (practical examples). Deliver as HTML/Markdown files with proper formatting, syntax highlighting, and searchable index.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -625,7 +671,8 @@
               1
             ],
             "details": "Create benchmarks measuring: computation speed, memory usage, I/O performance, concurrency handling, and statistical analysis operations. Implement automated testing framework that runs benchmarks in controlled environments with consistent hardware/software configurations. Include small, medium, and large dataset tests. Quality criteria: reproducibility, statistical validity (multiple runs with variance analysis), and comprehensive coverage of language features. Deliver as executable test suite with configuration files and logging capabilities.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -635,21 +682,22 @@
               2
             ],
             "details": "Perform side-by-side comparison of Medi vs Python vs R across: execution speed for common data science tasks, memory efficiency, code readability, feature completeness, and ecosystem integration. Create equivalent implementations of benchmark tasks in all three languages. Analyze strengths/weaknesses of each approach. Quality criteria: fairness (unbiased comparison), thoroughness (covers major use cases), and actionable insights. Deliver as detailed report with data visualizations, statistical analysis of performance differences, and recommendations for Medi improvement areas.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 11,
+        "id": "11",
         "title": "Implement Python FFI Prototype",
         "description": "Create a Python FFI prototype to enable basic interoperability between Medi and Python, as specified in PRD Phase 1 (Platform Support: Python FFI prototype).",
         "details": "Implement an initial Foreign Function Interface (FFI) between Medi (Rust) and Python to support: 1) Calling selected Medi-compiled functions from Python, 2) Invoking Python libraries from Medi where appropriate via a safe boundary. Use Rust's PyO3/maturin toolchain to expose a minimal set of APIs for demonstration.\n\nScope (Phase 1 prototype):\n- Build a small Rust crate that wraps core Medi functionality and exposes it as a Python module (e.g., `pymedi`).\n- Support passing simple data types and a basic FHIR-like structure for demo purposes.\n- Provide examples: calling a Medi `mean` function and a simple `fhir_query`-like stub from Python.\n- Document build/setup using maturin and Python virtualenv.\n\nOut of scope (defer to Phase 2+):\n- Full bidirectional interop and complex zero-copy buffers\n- Rich error mapping and async interop\n\nDeliverables:\n- `pymedi` prototype wheel build instructions\n- Example Python scripts demonstrating calls into Medi\n- Minimal CI job to build the wheel on Linux\n",
         "testStrategy": "Create Python-based tests that import the generated `pymedi` module and exercise: 1) Basic function calls with primitives, 2) Passing a small dict representing a FHIR resource, 3) Error handling paths. Verify that the build works on Linux with Python 3.10+. Benchmark overhead compared to native Medi for a trivial function.",
         "priority": "medium",
         "dependencies": [
-          1,
-          3,
-          5
+          "1",
+          "3",
+          "5"
         ],
         "status": "pending",
         "subtasks": [
@@ -659,7 +707,8 @@
             "description": "Configure Rust crate with PyO3 and maturin for building a Python wheel",
             "dependencies": [],
             "details": "Add PyO3 and maturin dependencies, configure `Cargo.toml` for a `cdylib` target, and set up a basic GitHub Actions or local script to build the wheel. Document Python environment setup and build steps.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -669,7 +718,8 @@
               1
             ],
             "details": "Implement PyO3 wrappers for at least two functions. Ensure type conversions for primitives and a small dict payload. Provide example Python scripts.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -680,21 +730,22 @@
               2
             ],
             "details": "Write pytest or simple assert-based tests to validate function calls and error handling. Provide a README with usage instructions and expected outputs.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 12,
+        "id": "12",
         "title": "Implement CLI Compiler (medic)",
         "description": "Create the command-line compiler with compile/run modes, target selection, and diagnostics.",
         "details": "Implement `medic` with: 1) compile to IR/obj/asm; 2) run mode; 3) flags: -o, --target (x86-64, wasm32-wasi, riscv32), --emit, --opt-level; 4) rich diagnostics with clinician-friendly messages; 5) help/version. Wire parser, type checker, and backend stages.",
         "testStrategy": "Snapshot tests for CLI help/usage; E2E compile-and-run smoke tests for sample programs across targets; diagnostics golden tests for typical errors.",
         "priority": "high",
         "dependencies": [
-          1,
-          2,
-          3
+          "1",
+          "2",
+          "3"
         ],
         "status": "pending",
         "subtasks": [
@@ -704,7 +755,8 @@
             "description": "Design CLI flags and UX, implement help/version and validation",
             "dependencies": [],
             "details": "Use a robust arg parser; ensure clear error messages and examples.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -714,7 +766,8 @@
               1
             ],
             "details": "Implement clean compile pipeline with proper exit codes.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -724,7 +777,8 @@
               2
             ],
             "details": "Emit IR/obj/asm; integrate with Task 3 targets.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -732,21 +786,22 @@
             "description": "Clinician-friendly diagnostics with code frames",
             "dependencies": [],
             "details": "Pretty-print errors and warnings with suggestions.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 13,
+        "id": "13",
         "title": "Implement REPL",
         "description": "Interactive shell for evaluating Medi expressions with clinician-friendly errors.",
         "details": "Line editing/history; multi-line input; incremental parsing/type checking; evaluation via runtime; pretty-print values and errors; session commands (load, vars, help).",
         "testStrategy": "Transcript-based tests of interactive sessions; unit tests for incremental compilation and error recovery.",
         "priority": "high",
         "dependencies": [
-          1,
-          2,
-          4
+          "1",
+          "2",
+          "4"
         ],
         "status": "pending",
         "subtasks": [
@@ -756,7 +811,8 @@
             "description": "Implement readable prompt, history, and multi-line input",
             "dependencies": [],
             "details": "Add commands: :help, :load, :quit.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -766,7 +822,8 @@
               1
             ],
             "details": "Preserve state across inputs for names/types.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -776,20 +833,21 @@
               2
             ],
             "details": "Clinician-friendly formatting and summaries.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 14,
+        "id": "14",
         "title": "Package Manager Foundation (medipack)",
         "description": "Initialize projects and build with a minimal manifest; stub dependency resolution for Phase 1.",
         "details": "Commands: medipack init (scaffold), medipack build (invoke medic); manifest medi.toml (name, version, deps placeholder). Prepare for future registry.",
         "testStrategy": "E2E tests for init/build; manifest parser validation; integration test with medic.",
         "priority": "medium",
         "dependencies": [
-          1,
-          12
+          "1",
+          "12"
         ],
         "status": "pending",
         "subtasks": [
@@ -799,7 +857,8 @@
             "description": "Define medi.toml schema and parser",
             "dependencies": [],
             "details": "Fields: name, version, deps (stub).",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -809,7 +868,8 @@
               1
             ],
             "details": "Create src/main.medi, medi.toml, README.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -819,20 +879,21 @@
               2
             ],
             "details": "Pipe flags and handle build artifacts.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 15,
+        "id": "15",
         "title": "Documentation Generator",
         "description": "Generate reference docs/examples from source and comments; integrate with CLI.",
         "details": "Extract doc comments; render Markdown/HTML; build example index; link to standard library APIs; CLI command to generate docs.",
         "testStrategy": "Golden-file snapshots of generated docs; example extraction and linking tests.",
         "priority": "medium",
         "dependencies": [
-          1,
-          5
+          "1",
+          "5"
         ],
         "status": "pending",
         "subtasks": [
@@ -842,7 +903,8 @@
             "description": "Parse source for doc comments and metadata",
             "dependencies": [],
             "details": "Support modules/functions/types.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -852,7 +914,8 @@
               1
             ],
             "details": "Support code fences and links.",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -862,32 +925,33 @@
               2
             ],
             "details": "medic docs --out ./docs",
-            "status": "pending"
+            "status": "pending",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 16,
+        "id": "16",
         "title": "Implement Feature-Gated Pipeline Operator",
         "description": "Add support for a single-token pipeline operator '|>' in the Medi lexer, gated behind a Cargo feature flag to preserve backward compatibility.",
         "details": "Implement a feature-gated single-token pipeline operator '|>' across the medic_lexer module with the following steps:\n\n1. Add new token types:\n   - Add `LogosToken::PipeGreater` to the Logos token enum\n   - Add `TokenType::PipeGreater` to the token type enum\n\n2. Update token conversion:\n   - Modify `convert_logos_to_token()` to handle the new token type\n   - Ensure proper span information is preserved\n\n3. Enable recognition in lexer modules:\n   - Update `lexer/mod.rs` to recognize the new token\n   - Update `streaming_lexer.rs` to handle the token in streaming contexts\n   - Update `chunked_lexer.rs` to properly handle the token, including special handling for chunk boundaries where '|' and '>' might be split across chunks\n\n4. Add a new Cargo feature flag:\n   - Create a new feature flag (e.g., `pipeline-operator`) that is disabled by default\n   - Gate the single-token behavior behind this feature\n   - When the feature is disabled, the lexer should continue to recognize '|' and '>' as separate tokens (BitOr and Greater)\n   - When enabled, recognize '|>' as a single PipeGreater token\n\n5. Update documentation:\n   - Add the new token to the language specification in LANG_SPEC.md\n   - Document the feature flag in relevant README files\n   - Add usage examples showing both default and feature-enabled behavior\n\n6. Ensure backward compatibility:\n   - Verify that existing tests pass with the feature disabled\n   - Confirm that the lexer behavior is unchanged for existing code when the feature is off",
         "testStrategy": "1. Unit tests for token recognition:\n   - Test that '|>' is recognized as a single token when the feature is enabled\n   - Test that '|' and '>' are recognized as separate tokens when the feature is disabled\n   - Test edge cases like whitespace between '|' and '>'\n\n2. Chunked lexer tests:\n   - Test recognition when '|' and '>' are in the same chunk\n   - Test recognition when '|' is at the end of one chunk and '>' is at the beginning of the next\n   - Verify correct behavior with various chunk sizes\n\n3. Streaming lexer tests:\n   - Test streaming recognition of the pipeline operator\n   - Verify correct token boundaries in streaming mode\n\n4. Feature flag tests:\n   - Create test modules that conditionally compile based on the feature flag\n   - Verify both behaviors (single token vs. two tokens) with appropriate test cases\n\n5. Integration tests:\n   - Test the lexer in the context of the full parser\n   - Verify that expressions using the pipeline operator are correctly parsed\n\n6. Regression tests:\n   - Run the existing test suite with the feature disabled to ensure no regressions\n   - Create a comprehensive test suite that passes regardless of feature flag state",
         "status": "pending",
         "dependencies": [
-          1
+          "1"
         ],
         "priority": "medium",
         "subtasks": []
       },
       {
-        "id": 17,
+        "id": "17",
         "title": "Clinician User Testing and Feedback Integration (Diagnostics)",
         "description": "Plan and conduct clinician user testing for diagnostic output; collect feedback; integrate improvements into severity mapping, wording, help text, and snippet visuals.",
         "details": "Acceptance Criteria:\n- Recruit 3–5 clinicians or clinician-adjacent users\n- Prepare test scripts with representative error scenarios and snippet outputs\n- Run moderated sessions (remote or in-person); capture notes and key observations\n- Aggregate feedback into an actionable report with prioritized recommendations\n- Create tracked issues/tasks for the top findings (e.g., severity tuning, messages, guidance)\n- Implement at least 3 high-impact improvements and corresponding tests\n- Update docs with a section informed by user findings (examples, guidance)\nDeliverables:\n- Test plan, session notes, and summary report\n- Issue list with priorities and owners\n- PRs implementing improvements and updated tests",
         "testStrategy": "User-research task. Verify via artifacts (plan, notes, report), created issues, and merged PRs with passing tests.",
         "priority": "medium",
         "dependencies": [
-          5
+          "5"
         ],
         "status": "pending",
         "subtasks": [
@@ -898,7 +962,8 @@
             "dependencies": [],
             "details": "Ensure participants have relevant clinical experience and are available for scheduled moderated sessions. Confirm consent and provide necessary background on the testing process.",
             "status": "pending",
-            "testStrategy": "Verify recruitment by maintaining a participant list with roles and confirmation of participation."
+            "testStrategy": "Verify recruitment by maintaining a participant list with roles and confirmation of participation.",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -909,7 +974,8 @@
             ],
             "details": "Scripts should cover a range of diagnostic outputs, including varying severity levels, wording, help text, and snippet visuals. Pilot scripts internally to ensure clarity and relevance.",
             "status": "pending",
-            "testStrategy": "Review scripts with at least one subject matter expert and revise based on feedback before use in sessions."
+            "testStrategy": "Review scripts with at least one subject matter expert and revise based on feedback before use in sessions.",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -920,7 +986,8 @@
             ],
             "details": "Facilitate think-aloud protocols and cognitive walkthroughs. Record sessions (audio/video/screenshare) and collect both qualitative and quantitative feedback.",
             "status": "pending",
-            "testStrategy": "Ensure each session is documented with session notes and recordings; confirm all scenarios are covered for each participant."
+            "testStrategy": "Ensure each session is documented with session notes and recordings; confirm all scenarios are covered for each participant.",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -931,7 +998,8 @@
             ],
             "details": "Categorize feedback by theme (e.g., usability, workflow fit, terminology). Prioritize findings based on frequency, severity, and clinician impact. Assign owners for follow-up actions.",
             "status": "pending",
-            "testStrategy": "Produce a summary report with prioritized recommendations and a tracked issue list; review with stakeholders for completeness."
+            "testStrategy": "Produce a summary report with prioritized recommendations and a tracked issue list; review with stakeholders for completeness.",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -942,12 +1010,13 @@
             ],
             "details": "Track changes via issues/PRs, ensure improvements are validated by tests, and update documentation with a section informed by user findings, including examples and guidance.",
             "status": "pending",
-            "testStrategy": "Verify merged PRs, passing tests for improvements, and updated documentation reflecting user-driven changes."
+            "testStrategy": "Verify merged PRs, passing tests for improvements, and updated documentation reflecting user-driven changes.",
+            "parentId": "undefined"
           }
         ]
       },
       {
-        "id": 18,
+        "id": "18",
         "title": "Expand FHIR Resource Types in medi_data",
         "description": "Implement 5+ new FHIR resource types including Medication, Procedure, Condition, Encounter, and DiagnosticReport with proper validation and documentation.",
         "details": "Create struct definitions for each new FHIR resource type with appropriate fields and validation logic. Implementation should follow the structure provided in the PRD:\n\n```rust\n// New resource types\npub struct FHIRMedication {\n    pub id: String,\n    pub code: String,\n    pub form: Option<String>,\n    pub ingredient: Vec<MedicationIngredient>,\n}\n\npub struct FHIRProcedure {\n    pub id: String,\n    pub code: String,\n    pub performed_date: Option<String>,\n    pub subject: String, // patient reference\n}\n\npub struct FHIRCondition {\n    pub id: String,\n    pub code: String,\n    pub clinical_status: String,\n    pub verification_status: String,\n    pub subject: String,\n}\n```\n\nImplement serialization/deserialization for each resource type. Add validation methods to ensure each resource conforms to FHIR specifications. Create comprehensive documentation with usage examples for each resource type.",
@@ -963,7 +1032,8 @@
             "dependencies": [],
             "details": "Follow the PRD structure and FHIR specifications for each resource type. Include fields such as id, code, and resource-specific attributes. Ensure extensibility for future additions.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -974,7 +1044,8 @@
             ],
             "details": "Implement checks for required fields, valid value ranges, and FHIR-specific constraints. Include support for extensions and modifier extensions where applicable.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -985,7 +1056,8 @@
             ],
             "details": "Use Rust traits and libraries (e.g., serde) to enable seamless conversion between Rust structs and FHIR-compliant JSON representations.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -998,7 +1070,8 @@
             ],
             "details": "Provide clear explanations of each struct, validation logic, and serialization methods. Include sample code snippets demonstrating typical usage.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1011,7 +1084,8 @@
             ],
             "details": "Ensure robust test coverage for all implemented logic, including boundary conditions and error handling. Use Rust testing frameworks for automation.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1024,19 +1098,23 @@
             ],
             "details": "Identify scenarios where conversion is needed (e.g., linking Encounter to Condition) and implement conversion functions with appropriate validation.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Break down the implementation of each new FHIR resource type (Medication, Procedure, Condition, Encounter, DiagnosticReport) into separate subtasks: (1) struct definition, (2) validation logic, (3) serialization/deserialization, (4) documentation with usage examples, (5) unit tests for each resource, (6) cross-resource conversion logic where applicable."
       },
       {
-        "id": 19,
+        "id": "19",
         "title": "Implement FHIR Profile Validation Framework",
         "description": "Create a configurable profile validation system for FHIR resources that enforces cardinality checks and required field validation.",
         "details": "Implement the validation profile system as specified in the PRD:\n\n```rust\npub struct ValidationProfile {\n    pub name: String,\n    pub resource_type: String,\n    pub required_fields: Vec<String>,\n    pub cardinality: HashMap<String, (u32, Option<u32>)>,\n}\n\npub fn validate_with_profile(\n    resource: &dyn FHIRResource,\n    profile: &ValidationProfile\n) -> Result<(), ValidationError>;\n```\n\nThe validation framework should:\n1. Allow defining custom profiles for different resource types\n2. Check that all required fields are present\n3. Validate cardinality constraints (min and max occurrences)\n4. Provide clear error messages for validation failures\n5. Support loading profiles from configuration files\n\nInclude pre-defined profiles for common use cases (US Core, International Patient Summary, etc.).",
         "testStrategy": "1. Unit tests for the validation framework with various constraint combinations\n2. Tests with valid resources that pass profile validation\n3. Tests with invalid resources that fail validation in different ways\n4. Tests for loading profiles from configuration\n5. Performance tests with complex profiles\n6. Edge case testing (empty profiles, resources with minimal fields)",
         "priority": "high",
         "dependencies": [
-          18
+          "18"
         ],
         "status": "done",
         "subtasks": [
@@ -1047,7 +1125,8 @@
             "dependencies": [],
             "details": "Implement the `ValidationProfile` struct in Rust, ensuring it supports extensible resource types, required fields, and cardinality rules as specified in the PRD.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1058,7 +1137,8 @@
             ],
             "details": "Support reading profile definitions from external configuration files (e.g., JSON, YAML), and instantiate `ValidationProfile` objects accordingly.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1070,7 +1150,8 @@
             ],
             "details": "Implement checks in `validate_with_profile` to ensure every required field in the profile exists in the resource, returning errors for missing fields.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1082,7 +1163,8 @@
             ],
             "details": "Implement cardinality checks in `validate_with_profile`, ensuring fields meet the specified minimum and maximum occurrence requirements.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1094,7 +1176,8 @@
             ],
             "details": "Ensure that validation errors are returned as structured messages, indicating the type and details of each failure (e.g., missing field, cardinality violation).",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1106,7 +1189,8 @@
             ],
             "details": "Implement and document built-in profiles for widely used FHIR standards, making them available for immediate use and testing.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -1120,20 +1204,24 @@
             ],
             "details": "Write unit tests for required field and cardinality validation, error reporting, and configuration loading. Develop integration tests using real and synthetic FHIR resources against multiple profiles.",
             "status": "done",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 7,
+        "expansionPrompt": "Decompose the framework into: (1) profile definition and parsing, (2) required field validation, (3) cardinality checks, (4) error reporting, (5) profile configuration loading, (6) predefined profile templates (e.g., US Core), (7) comprehensive unit and integration tests."
       },
       {
-        "id": 20,
+        "id": "20",
         "title": "Add FHIR Bundle Support",
         "description": "Implement FHIR bundle functionality to support collections, transactions, and batches of resources with proper validation.",
         "details": "Create the bundle implementation as specified in the PRD:\n\n```rust\npub struct FHIRBundle {\n    pub bundle_type: BundleType,\n    pub entries: Vec<FHIRAny>,\n}\n\npub enum BundleType {\n    Collection,\n    Transaction,\n    Batch,\n}\n```\n\nImplementation should include:\n1. Bundle creation from individual resources\n2. Parsing bundles from JSON/XML\n3. Validation of bundle structure and contents\n4. Support for different bundle types (Collection, Transaction, Batch)\n5. Methods to extract specific resources from bundles\n6. Transaction processing logic for transaction bundles\n7. Batch processing for batch bundles\n\nEnsure proper error handling for malformed bundles and transaction failures.",
         "testStrategy": "1. Unit tests for bundle creation with different types\n2. Tests for parsing bundles from JSON/XML\n3. Validation tests for bundle structure\n4. Tests for transaction processing\n5. Tests for batch processing\n6. Performance tests with large bundles (1000+ entries)\n7. Error handling tests for malformed bundles",
         "priority": "medium",
         "dependencies": [
-          18,
-          19
+          "18",
+          "19"
         ],
         "status": "pending",
         "subtasks": [
@@ -1144,7 +1232,8 @@
             "dependencies": [],
             "details": "Translate the PRD definitions into Rust code, add documentation, and ensure fields support all required FHIR bundle metadata (e.g., identifier, timestamp, type, entries).",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1155,7 +1244,8 @@
             ],
             "details": "Provide constructors or builder patterns for assembling bundles from resource vectors, and set bundle type and metadata according to FHIR standards.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1166,7 +1256,8 @@
             ],
             "details": "Use or extend existing Rust libraries for FHIR serialization/deserialization. Validate round-trip integrity and handle format-specific edge cases.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1179,7 +1270,8 @@
             ],
             "details": "Ensure validation covers FHIR rules for each bundle type, such as required entry fields, correct resource references, and transaction constraints.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1192,7 +1284,8 @@
             ],
             "details": "Follow FHIR semantics for transaction atomicity and batch partial success. Integrate with resource storage and update mechanisms, and ensure compliance with FHIR server behavior.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1207,19 +1300,23 @@
             ],
             "details": "Implement resource filtering, lookup, and extraction methods. Standardize error types and reporting for all bundle operations, ensuring clear diagnostics for developers and users.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Divide the task into: (1) bundle struct and enum definitions, (2) bundle creation logic, (3) JSON/XML parsing, (4) bundle validation, (5) transaction and batch processing logic, (6) extraction and error handling utilities."
       },
       {
-        "id": 21,
+        "id": "21",
         "title": "Implement Enhanced Compliance Rule Engine",
         "description": "Develop a robust rule evaluation engine for compliance checks supporting pattern matching, data inspection, and multiple standards (HIPAA, GDPR).",
         "details": "Implement the enhanced compliance rule engine as specified in the PRD:\n\n```rust\npub enum RuleCondition {\n    ContainsKeyword(Vec<String>),\n    MatchesPattern(Regex),\n    FieldPresent(String),\n    FieldAbsent(String),\n    FieldValueEquals { field: String, value: String },\n    And(Vec<RuleCondition>),\n    Or(Vec<RuleCondition>),\n    Not(Box<RuleCondition>),\n}\n\npub struct EnhancedComplianceRule {\n    pub id: String,\n    pub description: String,\n    pub standard: ComplianceStandard,\n    pub severity: RuleSeverity,\n    pub condition: RuleCondition,\n    pub remediation: Option<String>,\n}\n\npub struct ComplianceEngine {\n    rules: Vec<EnhancedComplianceRule>,\n}\n\nimpl ComplianceEngine {\n    pub fn evaluate(&self, data: &str) -> Vec<DetailedComplianceResult>;\n    pub fn evaluate_json(&self, data: &serde_json::Value) -> Vec<DetailedComplianceResult>;\n}\n```\n\nImplement at least 10 real HIPAA rules and GDPR rules as specified. The engine should support:\n1. Rule composition with AND/OR/NOT logic\n2. Pattern matching with regex\n3. Field presence/absence checks\n4. Value equality checks\n5. Severity-based reporting (info/warning/error)\n6. Remediation suggestions\n7. Evidence collection for rule violations\n\nEnsure performance meets the requirement of evaluating 100 rules against 1MB data in <100ms.",
         "testStrategy": "1. Unit tests for each rule condition type\n2. Integration tests with real PHI examples\n3. False positive/negative analysis\n4. Performance benchmarks with large datasets\n5. Compliance report generation tests\n6. Tests for each predefined HIPAA and GDPR rule\n7. Edge case testing with malformed data",
         "priority": "high",
         "dependencies": [],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -1228,7 +1325,8 @@
             "dependencies": [],
             "details": "Ensure the parser can interpret structured rule definitions and the evaluator can process both string and JSON data inputs as specified in the PRD.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1239,7 +1337,8 @@
             ],
             "details": "Enable nested and multi-level logical combinations of RuleCondition objects, ensuring correct short-circuit and precedence behavior.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1250,7 +1349,8 @@
             ],
             "details": "Utilize Rust's regex crate for MatchesPattern conditions and optimize for evaluating large datasets within performance constraints.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1261,7 +1361,8 @@
             ],
             "details": "Ensure robust handling of nested fields and edge cases, including malformed or missing data.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1274,7 +1375,8 @@
             ],
             "details": "Design output structures for compliance results, supporting downstream reporting and analytics.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1285,7 +1387,8 @@
             ],
             "details": "Ensure each DetailedComplianceResult includes remediation guidance and relevant evidence for audit and compliance purposes.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -1301,7 +1404,8 @@
             ],
             "details": "Ensure rules reflect actual regulatory requirements and are easily extensible for future standards.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -1318,12 +1422,17 @@
             ],
             "details": "Implement benchmarking tests and tune data structures, concurrency, and caching as needed for scalability.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 9,
+        "recommendedSubtasks": 8,
+        "expansionPrompt": "Expand into: (1) rule condition parser and evaluator, (2) rule composition logic (AND/OR/NOT), (3) pattern matching and regex support, (4) field presence/value checks, (5) severity-based reporting, (6) remediation and evidence collection, (7) predefined HIPAA/GDPR rule sets, (8) performance optimization and benchmarking.",
+        "updatedAt": "2025-11-23T21:54:47.664Z"
       },
       {
-        "id": 22,
+        "id": "22",
         "title": "Develop Model Registry and Pluggable Backend System",
         "description": "Create a model registry with versioning and metadata support, along with a pluggable backend interface for different ML frameworks.",
         "details": "Implement the model registry and backend system as specified in the PRD:\n\n```rust\npub struct ModelRegistry {\n    models: HashMap<String, RegisteredModel>,\n}\n\npub struct RegisteredModel {\n    pub id: String,\n    pub version: String,\n    pub backend: Box<dyn ModelBackend>,\n    pub metadata: ModelMetadata,\n}\n\npub struct ModelMetadata {\n    pub name: String,\n    pub description: String,\n    pub input_features: Vec<String>,\n    pub output_type: OutputType,\n    pub created_at: String,\n    pub performance_metrics: HashMap<String, f64>,\n}\n\npub trait ModelBackend: Send + Sync {\n    fn predict(&self, features: &[f64]) -> Result<Vec<f64>, ModelError>;\n    fn predict_batch(&self, features: &[Vec<f64>]) -> Result<Vec<Vec<f64>>, ModelError>;\n    fn backend_type(&self) -> &str;\n}\n```\n\nImplement concrete backends for:\n1. ONNX Runtime\n2. TensorFlow Lite\n3. Custom backends\n\nThe registry should support:\n1. Model registration with metadata\n2. Version tracking\n3. Model lookup by ID/version\n4. Serialization/deserialization of model registry\n5. Performance metrics tracking",
@@ -1339,7 +1448,8 @@
             "dependencies": [],
             "details": "Specify fields for model storage, metadata, and versioning. Ensure the data structures support efficient lookup and future extensibility.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1350,7 +1460,8 @@
             ],
             "details": "Implement the trait with methods for single and batch prediction, backend type identification, and error handling. Ensure trait is object-safe and thread-safe.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1361,7 +1472,8 @@
             ],
             "details": "Integrate ONNX Runtime Rust bindings, handle model loading, prediction, and error propagation. Ensure compatibility with the registry interface.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1372,7 +1484,8 @@
             ],
             "details": "Integrate TensorFlow Lite Rust bindings, handle model loading, prediction, and error propagation. Ensure compatibility with the registry interface.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1383,7 +1496,8 @@
             ],
             "details": "Document trait requirements and provide examples or templates for custom backend implementations. Ensure registry can accept arbitrary ModelBackend implementations.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1394,7 +1508,8 @@
             ],
             "details": "Implement methods for registering models with metadata, updating and querying versions, and tracking performance metrics.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -1406,19 +1521,23 @@
             ],
             "details": "Use appropriate Rust crates (e.g., serde, parking_lot or std::sync) to serialize/deserialize registry state and protect concurrent access.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 7,
+        "expansionPrompt": "Break down into: (1) model registry core data structures, (2) backend trait and interface, (3) ONNX backend implementation, (4) TensorFlow Lite backend, (5) custom backend support, (6) metadata and versioning logic, (7) serialization/deserialization and thread safety."
       },
       {
-        "id": 23,
+        "id": "23",
         "title": "Implement Model Calibration and Validation Utilities",
         "description": "Create model calibration utilities (Platt scaling, isotonic regression) and validation framework with metrics for model performance assessment.",
         "details": "Implement the calibration and validation utilities as specified in the PRD:\n\n```rust\npub struct PlattScaling {\n    a: f64,\n    b: f64,\n}\n\nimpl PlattScaling {\n    pub fn fit(predictions: &[f64], labels: &[bool]) -> Self;\n    pub fn transform(&self, prediction: f64) -> f64;\n}\n\npub struct ModelValidator {\n    pub metrics: Vec<Box<dyn ValidationMetric>>,\n}\n\npub trait ValidationMetric {\n    fn name(&self) -> &str;\n    fn compute(&self, predictions: &[f64], labels: &[bool]) -> f64;\n}\n\npub struct RocAuc;\npub struct CalibrationError;\npub struct DemographicParity;\n```\n\nImplement model explainability helpers:\n```rust\npub fn compute_feature_importance(\n    model: &dyn ModelBackend,\n    baseline: &[f64],\n    features: &[f64],\n) -> Vec<f64>;\n```\n\nThe implementation should include:\n1. Platt scaling for probability calibration\n2. Isotonic regression as an alternative calibration method\n3. Validation metrics (ROC-AUC, precision, recall, F1, etc.)\n4. Fairness metrics (demographic parity, equal opportunity)\n5. Feature importance calculation\n6. Model quantization support for edge deployment",
         "testStrategy": "1. Unit tests for calibration methods with synthetic data\n2. Tests for each validation metric\n3. Comparison tests against known implementations\n4. Tests for feature importance calculation\n5. Quantization tests with accuracy comparison\n6. Performance benchmarks\n7. Tests with real-world datasets",
         "priority": "medium",
         "dependencies": [
-          22
+          "22"
         ],
         "status": "pending",
         "subtasks": [
@@ -1429,7 +1548,8 @@
             "dependencies": [],
             "details": "Implement the PlattScaling struct with fields for parameters a and b. Provide the fit method to estimate parameters from predictions and labels, and the transform method to calibrate new predictions.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1440,7 +1560,8 @@
             ],
             "details": "Design and implement a struct and methods for isotonic regression calibration, including fitting to data and transforming predictions. Ensure compatibility with the validation framework.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1452,7 +1573,8 @@
             ],
             "details": "Define the ValidationMetric trait and implement concrete metrics (RocAuc, Precision, Recall, F1). Integrate these into the ModelValidator for flexible metric computation.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1463,7 +1585,8 @@
             ],
             "details": "Implement structs and logic for fairness metrics, ensuring they conform to the ValidationMetric trait and can be used within ModelValidator.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1474,7 +1597,8 @@
             ],
             "details": "Implement the compute_feature_importance function, supporting various model backends and providing meaningful importance scores for input features.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1485,12 +1609,16 @@
             ],
             "details": "Develop functions or modules to quantize model parameters (e.g., from f32 to i16), ensuring minimal loss in accuracy and compatibility with the calibration and validation framework.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 7,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Divide into: (1) Platt scaling implementation, (2) isotonic regression, (3) validation metrics (ROC-AUC, precision, recall, F1), (4) fairness metrics, (5) feature importance calculation, (6) model quantization utilities."
       },
       {
-        "id": 24,
+        "id": "24",
         "title": "Implement Advanced Statistical Capabilities",
         "description": "Add numerically stable algorithms, streaming statistics, survival analysis, and time-series analysis capabilities to the statistics module.",
         "details": "Implement the statistical capabilities as specified in the PRD:\n\n```rust\npub struct StreamingStats {\n    count: u64,\n    mean: f64,\n    m2: f64, // for variance\n}\n\nimpl StreamingStats {\n    pub fn new() -> Self;\n    pub fn update(&mut self, value: f64);\n    pub fn mean(&self) -> f64;\n    pub fn variance(&self) -> f64;\n    pub fn stddev(&self) -> f64;\n}\n\npub struct KaplanMeier {\n    pub times: Vec<f64>,\n    pub survival_prob: Vec<f64>,\n    pub at_risk: Vec<usize>,\n    pub events: Vec<usize>,\n}\n\npub fn kaplan_meier(\n    times: &[f64],\n    events: &[bool], // true = event, false = censored\n) -> KaplanMeier;\n\npub fn log_rank_test(\n    group1_times: &[f64],\n    group1_events: &[bool],\n    group2_times: &[f64],\n    group2_events: &[bool],\n) -> f64; // p-value\n\npub struct ExponentialSmoothing {\n    alpha: f64,\n    current: f64,\n}\n\nimpl ExponentialSmoothing {\n    pub fn new(alpha: f64, initial: f64) -> Self;\n    pub fn update(&mut self, value: f64) -> f64;\n}\n\npub fn bootstrap_ci(\n    data: &[f64],\n    statistic: fn(&[f64]) -> f64,\n    n_bootstrap: usize,\n    confidence: f64,\n) -> (f64, f64); // (lower, upper)\n```\n\nImplementation should include:\n1. Numerically stable algorithms (Welford's for variance, Kahan summation)\n2. Streaming/online statistics (mean, variance, quantiles)\n3. Survival analysis (Kaplan-Meier, log-rank test)\n4. Time-series analysis (moving averages, exponential smoothing)\n5. Statistical power analysis utilities\n6. Bootstrap and permutation test helpers",
@@ -1506,7 +1634,8 @@
             "dependencies": [],
             "details": "Ensure all mean, variance, and summation operations in the statistics module use numerically stable techniques. Provide unit tests with pathological inputs to validate stability.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1517,7 +1646,8 @@
             ],
             "details": "Design and implement the StreamingStats struct and associated methods for real-time data analysis. Validate against known distributions and compare with existing Rust libraries for streaming stats.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1528,7 +1658,8 @@
             ],
             "details": "Create KaplanMeier struct and log_rank_test function as specified. Test with benchmark datasets and ensure results match established statistical packages.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1539,7 +1670,8 @@
             ],
             "details": "Implement ExponentialSmoothing struct and moving average utilities. Validate with synthetic time-series data and ensure correct handling of streaming updates.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1550,7 +1682,8 @@
             ],
             "details": "Implement functions for power calculations (e.g., for t-tests, log-rank tests). Include documentation and example usage for clinical and research scenarios.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1561,7 +1694,8 @@
             ],
             "details": "Create bootstrap_ci and permutation test functions as specified. Ensure coverage with unit tests and validate results against established statistical libraries.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -1576,25 +1710,29 @@
             ],
             "details": "Design and execute performance and accuracy benchmarks using real and synthetic datasets. Document findings and identify any discrepancies or optimization opportunities.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 8,
+        "recommendedSubtasks": 7,
+        "expansionPrompt": "Expand into: (1) numerically stable algorithms (Welford, Kahan), (2) streaming statistics, (3) survival analysis (Kaplan-Meier, log-rank), (4) time-series analysis (moving averages, exponential smoothing), (5) statistical power analysis, (6) bootstrap/permutation tests, (7) benchmarking and comparison with established packages."
       },
       {
-        "id": 25,
+        "id": "25",
         "title": "Create Comprehensive Integration Test Suite",
         "description": "Develop end-to-end integration tests covering multi-crate workflows and key use cases with performance benchmarks.",
         "details": "Implement at least 10 integration test scenarios as specified in the PRD, including:\n\n```rust\n#[test]\nfn test_hl7_to_fhir_to_storage_to_query() {\n    // 1. Parse HL7 message\n    let hl7_msg = \"MSH|^~\\\\&|...\";\n    let patient = hl7_to_fhir_patient_minimal(hl7_msg).unwrap();\n    \n    // 2. Validate FHIR\n    validate_patient(&patient).unwrap();\n    \n    // 3. Store\n    let store = FileStore::new(temp_dir()).unwrap();\n    store.save(\"patient_001\", &patient).unwrap();\n    \n    // 4. Query\n    let query = fhir_query(\"Patient\")\n        .filter_family_name_ci_contains(\"doe\")\n        .build();\n    let results = query.execute_patients(&[patient]);\n    assert_eq!(results.len(), 1);\n}\n\n#[test]\nfn test_compliance_anonymize_report() {\n    // 1. Load patient data with PHI\n    let patient = create_test_patient_with_phi();\n    \n    // 2. Check compliance\n    let engine = ComplianceEngine::new(default_hipaa_rules());\n    let results = engine.evaluate_json(&serde_json::to_value(&patient).unwrap());\n    \n    // 3. Anonymize based on failures\n    let anonymized = anonymize_patient(&patient, &results);\n    \n    // 4. Generate report\n    let report = generate_compliance_report(&results);\n    assert!(report.contains(\"PHI detected\"));\n}\n\n#[test]\nfn test_risk_prediction_workflow() {\n    // 1. Load patient data\n    let patient = create_test_patient();\n    \n    // 2. Extract features\n    let features = extract_risk_features(&patient);\n    \n    // 3. Load model\n    let model = load_model(\"models/diabetes_risk.json\").unwrap();\n    \n    // 4. Predict\n    let risk = model.predict(&features);\n    \n    // 5. Stratify\n    let stratum = stratify_risk(&RiskPrediction {\n        score: risk,\n        condition: \"diabetes\".into(),\n        timeframe: \"5y\".into(),\n    });\n    \n    assert!(matches!(stratum, RiskStratum::Low | RiskStratum::Medium | RiskStratum::High));\n}\n```\n\nThe integration tests should cover:\n1. HL7 → FHIR → validate → store → query flow\n2. FHIR → compliance check → anonymize → report flow\n3. Patient data → risk prediction → stratification flow\n4. Multi-resource bundle → validation → storage flow\n5. Performance benchmarks for integration flows\n\nCreate test data generators for realistic scenarios and document each test case thoroughly.",
         "testStrategy": "1. Each integration test should be self-contained\n2. Use realistic test data (synthetic but representative)\n3. Measure performance and set regression thresholds\n4. Test error paths and recovery\n5. Document expected behavior and edge cases\n6. Set up CI integration with test coverage reporting\n7. Create performance benchmarks for key workflows",
         "priority": "high",
         "dependencies": [
-          18,
-          19,
-          20,
-          21,
-          22,
-          23,
-          24
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24"
         ],
         "status": "pending",
         "subtasks": [
@@ -1605,7 +1743,8 @@
             "dependencies": [],
             "details": "Include scenarios for successful conversions, validation failures, storage errors, and query edge cases. Ensure tests use realistic HL7 and FHIR data.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1614,7 +1753,8 @@
             "dependencies": [],
             "details": "Test both compliant and non-compliant data, verify anonymization logic, and assert report content for PHI detection.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1623,7 +1763,8 @@
             "dependencies": [],
             "details": "Cover scenarios for different risk levels, model loading errors, and feature extraction edge cases.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1632,7 +1773,8 @@
             "dependencies": [],
             "details": "Test bundles with valid and invalid resources, partial failures, and storage consistency.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1646,7 +1788,8 @@
             ],
             "details": "Set up benchmarks for HL7→FHIR, compliance, and risk prediction flows. Define regression thresholds and report results.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1655,7 +1798,8 @@
             "dependencies": [],
             "details": "Support parameterized data generation for edge cases, large datasets, and negative testing.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 7,
@@ -1670,7 +1814,8 @@
             ],
             "details": "Set up CI workflows, fail builds on test or coverage regression, and publish coverage reports.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 8,
@@ -1686,25 +1831,29 @@
             ],
             "details": "Provide inline documentation, external test case descriptions, and usage guides for test data generators.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 9,
+        "recommendedSubtasks": 8,
+        "expansionPrompt": "Break down into: (1) HL7→FHIR→validate→store→query flow tests, (2) FHIR→compliance→anonymize→report flow tests, (3) risk prediction workflow tests, (4) multi-resource bundle validation/storage tests, (5) performance benchmarks, (6) test data generators, (7) CI integration and coverage reporting, (8) documentation of test cases."
       },
       {
-        "id": 26,
+        "id": "26",
         "title": "Create Comprehensive Documentation and Examples",
         "description": "Update documentation for all new features, create getting-started guides, API documentation, and cookbook with common patterns.",
         "details": "Documentation tasks include:\n1. Update README for each stdlib crate with new features\n2. Create getting-started guides for each major feature\n3. Add API documentation with examples for all public functions\n4. Create cookbook with common patterns\n5. Add performance tuning guide\n6. Create migration guide from v0.0.4 to v0.0.5\n7. Add troubleshooting section\n\nAll examples must compile and pass tests. Use doc comments with examples for all public APIs:\n\n```rust\n/// Validates a FHIR resource against a profile\n///\n/// # Examples\n///\n/// ```\n/// use medi_data::{FHIRPatient, ValidationProfile};\n///\n/// let patient = FHIRPatient {\n///     id: \"patient1\".to_string(),\n///     // ... other fields\n/// };\n///\n/// let profile = ValidationProfile {\n///     name: \"US Core Patient\".to_string(),\n///     resource_type: \"Patient\".to_string(),\n///     required_fields: vec![\"id\".to_string(), \"name\".to_string()],\n///     cardinality: HashMap::new(),\n/// };\n///\n/// let result = validate_with_profile(&patient, &profile);\n/// assert!(result.is_ok());\n/// ```\n```\n\nCreate examples/ directory in each crate with runnable examples for key features.",
         "testStrategy": "1. Ensure all documentation examples compile and run\n2. Verify README instructions are accurate\n3. Check that all public APIs have documentation\n4. Test migration guide with v0.0.4 code\n5. Review documentation for clarity and completeness\n6. Verify troubleshooting section addresses common issues\n7. Test cookbook examples with different scenarios",
         "priority": "medium",
         "dependencies": [
-          18,
-          19,
-          20,
-          21,
-          22,
-          23,
-          24
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24"
         ],
         "status": "pending",
         "subtasks": [
@@ -1715,7 +1864,8 @@
             "dependencies": [],
             "details": "Each README should highlight new features, provide setup instructions, and include at least one working example for major functionalities.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1726,7 +1876,8 @@
             ],
             "details": "Each guide should include prerequisites, setup steps, and runnable code snippets that demonstrate basic usage.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1737,7 +1888,8 @@
             ],
             "details": "Ensure every public function has a doc comment with at least one example. All examples must be tested for correctness.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1749,7 +1901,8 @@
             ],
             "details": "Include recipes for typical workflows, such as resource validation, serialization, and integration with external systems. Each recipe should have runnable code.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1762,7 +1915,8 @@
             ],
             "details": "Migration guide should include code examples for breaking changes and upgrade steps. Troubleshooting should cover frequent errors and debugging tips.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 6,
@@ -1776,27 +1930,31 @@
             ],
             "details": "Examples should cover major features, cookbook recipes, and migration scenarios. Integrate with CI to verify compilation and correctness.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 6,
+        "recommendedSubtasks": 6,
+        "expansionPrompt": "Divide into: (1) README updates for each crate, (2) getting-started guides, (3) API documentation with examples, (4) cookbook with common patterns, (5) migration and troubleshooting guides, (6) runnable examples directory."
       },
       {
-        "id": 27,
+        "id": "27",
         "title": "Prepare Version Bump and Release",
         "description": "Update versions, changelog, and prepare release artifacts for v0.0.5 release.",
         "details": "Release preparation tasks include:\n1. Bump all stdlib crate versions to 0.2.0 in Cargo.toml files:\n```toml\n[package]\nversion = \"0.2.0\"\n```\n2. Update CHANGELOG.md with v0.0.5 section listing all new features and changes\n3. Run full test suite and ensure 100% pass rate\n4. Run clippy with -D warnings and fix all issues\n5. Run cargo fmt on all crates\n6. Update version compatibility matrix\n7. Create release notes\n8. Tag release in git\n\nEnsure all dependencies between crates are correctly specified with the new versions.",
         "testStrategy": "1. Run `cargo test --all-features` on all crates\n2. Run `cargo clippy --all-features -- -D warnings`\n3. Run `cargo fmt --all -- --check`\n4. Verify examples compile and run\n5. Run integration tests\n6. Check documentation builds\n7. Verify CHANGELOG.md is complete and accurate\n8. Test installation from the new release tag",
         "priority": "medium",
         "dependencies": [
-          18,
-          19,
-          20,
-          21,
-          22,
-          23,
-          24,
-          25,
-          26
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26"
         ],
         "status": "pending",
         "subtasks": [
@@ -1807,7 +1965,8 @@
             "dependencies": [],
             "details": "Manually or with a tool, edit each Cargo.toml to set version = \"0.2.0\". Update dependency specifications for internal crates to match the new version.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 2,
@@ -1818,7 +1977,8 @@
             ],
             "details": "Review commits and merged PRs since last release. Summarize changes, features, and bug fixes. Write release notes for distribution.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 3,
@@ -1829,7 +1989,8 @@
             ],
             "details": "Run `cargo test --all-features`, `cargo clippy --all-features -- -D warnings`, and `cargo fmt --all`. Fix any issues found.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 4,
@@ -1840,7 +2001,8 @@
             ],
             "details": "Check and update documentation or matrix files showing supported crate versions and their compatibility. Ensure all Cargo.toml dependencies are accurate.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           },
           {
             "id": 5,
@@ -1853,15 +2015,23 @@
             ],
             "details": "Build release binaries or packages, verify artifacts, create and push a git tag (e.g., v0.0.5), and publish release notes.",
             "status": "pending",
-            "testStrategy": ""
+            "testStrategy": "",
+            "parentId": "undefined"
           }
-        ]
+        ],
+        "complexity": 5,
+        "recommendedSubtasks": 5,
+        "expansionPrompt": "Break down into: (1) version bump in all Cargo.toml files, (2) changelog and release notes update, (3) full test suite and linting, (4) release artifact creation and tagging, (5) dependency and compatibility matrix update."
       }
     ],
     "metadata": {
-      "created": "2025-08-23T01:27:51.072Z",
-      "updated": "2025-11-21T23:48:42.263Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2025-11-23T21:54:47.669Z",
+      "taskCount": 27,
+      "completedCount": 7,
+      "tags": [
+        "master"
+      ]
     }
   }
 }

@@ -1,4 +1,8 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
+
+#[allow(unused_imports)]
+use regex::Regex;
 
 /// Basic HIPAA compliance rule primitive
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -554,5 +558,238 @@ pub fn build_compliance_report_summary(
         kind,
         profile,
         summary,
+    }
+}
+
+// ===== Rule Engine (Task 21 foundation) =====
+
+/// Atomic condition operators supported by the rule engine.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ConditionOp {
+    /// Check that a field at `path` exists (or not) in a JSON-like payload.
+    Exists { path: String, should_exist: bool },
+    /// Check equality of a field value to a constant.
+    Equals { path: String, value: JsonValue },
+    /// Check that a field matches a regex pattern (string fields only).
+    Regex { path: String, pattern: String },
+}
+
+/// A boolean expression over conditions.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum RuleExpr {
+    Condition(ConditionOp),
+    And(Vec<RuleExpr>),
+    Or(Vec<RuleExpr>),
+    Not(Box<RuleExpr>),
+}
+
+/// Evidence item produced during evaluation when a rule fails or matches.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EvidenceItem {
+    pub path: String,
+    pub value_snippet: Option<String>,
+}
+
+/// Evaluate a rule expression against JSON data and return (passed, evidence).
+pub fn evaluate_rule_expr(data: &JsonValue, expr: &RuleExpr) -> (bool, Vec<EvidenceItem>) {
+    match expr {
+        RuleExpr::Condition(cond) => evaluate_condition(data, cond),
+        RuleExpr::And(list) => {
+            let mut ev = Vec::new();
+            for e in list {
+                let (ok, sub) = evaluate_rule_expr(data, e);
+                ev.extend(sub);
+                if !ok {
+                    return (false, ev);
+                }
+            }
+            (true, ev)
+        }
+        RuleExpr::Or(list) => {
+            let mut all_ev = Vec::new();
+            for e in list {
+                let (ok, sub) = evaluate_rule_expr(data, e);
+                if ok {
+                    return (true, sub);
+                }
+                all_ev.extend(sub);
+            }
+            (false, all_ev)
+        }
+        RuleExpr::Not(inner) => {
+            let (ok, ev) = evaluate_rule_expr(data, inner);
+            (!ok, ev)
+        }
+    }
+}
+
+fn evaluate_condition(data: &JsonValue, cond: &ConditionOp) -> (bool, Vec<EvidenceItem>) {
+    match cond {
+        ConditionOp::Exists { path, should_exist } => {
+            let v = get_path(data, path);
+            let exists = v.is_some();
+            let pass = exists == *should_exist;
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: v.map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::Equals { path, value } => {
+            let v = get_path(data, path);
+            let pass = v == Some(value);
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: v.map(snippet),
+            };
+            (pass, vec![ev])
+        }
+        ConditionOp::Regex { path, pattern } => {
+            let v = get_path(data, path);
+            let pass = match (v, Regex::new(pattern)) {
+                (Some(JsonValue::String(s)), Ok(re)) => re.is_match(s),
+                _ => false,
+            };
+            let ev = EvidenceItem {
+                path: path.clone(),
+                value_snippet: get_path(data, path).map(snippet),
+            };
+            (pass, vec![ev])
+        }
+    }
+}
+
+/// Retrieve a value by a simple dot-path (e.g., "patient.name.family", indexes like [0] supported).
+fn get_path<'a>(data: &'a JsonValue, path: &str) -> Option<&'a JsonValue> {
+    let mut cur = data;
+    if path.is_empty() {
+        return Some(cur);
+    }
+    for seg in path.split('.') {
+        if let Some((name, idx_opt)) = parse_segment(seg) {
+            cur = cur.get(name)?;
+            if let Some(idx) = idx_opt {
+                cur = cur.get(idx)?;
+            }
+        } else {
+            // No bracket, treat as plain key
+            cur = cur.get(seg)?;
+        }
+    }
+    Some(cur)
+}
+
+fn parse_segment(seg: &str) -> Option<(&str, Option<usize>)> {
+    if let Some(bracket) = seg.find('[') {
+        let name = &seg[..bracket];
+        let rest = &seg[bracket..];
+        if rest.ends_with(']') {
+            let inner = &rest[1..rest.len() - 1];
+            if let Ok(idx) = inner.parse::<usize>() {
+                return Some((name, Some(idx)));
+            }
+        }
+        Some((name, None))
+    } else {
+        None
+    }
+}
+
+fn snippet(v: &JsonValue) -> String {
+    match v {
+        JsonValue::String(s) => {
+            if s.len() > 64 {
+                format!("{}…", &s[..64])
+            } else {
+                s.clone()
+            }
+        }
+        _ => format!("{v}"),
+    }
+}
+
+/// Convenience: evaluate a rule and return a ComplianceResult using severity/message.
+pub fn evaluate_rule_to_result(
+    rule_id: &str,
+    severity: RuleSeverity,
+    expr: &RuleExpr,
+    data: &JsonValue,
+) -> ComplianceResult {
+    let (passed, evidence) = evaluate_rule_expr(data, expr);
+    let message = if passed {
+        None
+    } else {
+        let mut msg = format!("Rule '{rule_id}' failed (severity: {severity:?})");
+        if !evidence.is_empty() {
+            let details: Vec<String> = evidence
+                .iter()
+                .map(|e| match &e.value_snippet {
+                    Some(v) => format!("{}={}", e.path, v),
+                    None => e.path.clone(),
+                })
+                .collect();
+            msg.push_str(&format!("; evidence: {}", details.join(", ")));
+        }
+        Some(msg)
+    };
+    ComplianceResult {
+        rule_id: rule_id.to_string(),
+        passed,
+        message,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rule_engine_basic_conditions_and_composition() {
+        let data = serde_json::json!({
+            "patient": { "id": "p1", "name": { "family": "Doe", "given": ["Jane"] } },
+            "note": "Allergic to penicillin"
+        });
+
+        // Exists true
+        let c1 = RuleExpr::Condition(ConditionOp::Exists {
+            path: "patient.name.family".to_string(),
+            should_exist: true,
+        });
+        assert!(evaluate_rule_expr(&data, &c1).0);
+
+        // Equals
+        let c2 = RuleExpr::Condition(ConditionOp::Equals {
+            path: "patient.id".to_string(),
+            value: JsonValue::String("p1".to_string()),
+        });
+        assert!(evaluate_rule_expr(&data, &c2).0);
+
+        // Regex
+        let c3 = RuleExpr::Condition(ConditionOp::Regex {
+            path: "note".to_string(),
+            pattern: "penicil+in".to_string(),
+        });
+        assert!(evaluate_rule_expr(&data, &c3).0);
+
+        // Not
+        let not_id = RuleExpr::Not(Box::new(RuleExpr::Condition(ConditionOp::Equals {
+            path: "patient.id".to_string(),
+            value: JsonValue::String("p2".to_string()),
+        })));
+        assert!(evaluate_rule_expr(&data, &not_id).0);
+
+        // And
+        let and = RuleExpr::And(vec![c1.clone(), c2.clone(), c3.clone()]);
+        assert!(evaluate_rule_expr(&data, &and).0);
+
+        // Or
+        let or = RuleExpr::Or(vec![
+            RuleExpr::Condition(ConditionOp::Equals {
+                path: "patient.id".to_string(),
+                value: JsonValue::String("no".to_string()),
+            }),
+            c2.clone(),
+        ]);
+        assert!(evaluate_rule_expr(&data, &or).0);
     }
 }
