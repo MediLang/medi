@@ -287,21 +287,11 @@ impl ChunkedLexer {
                                 }
                             }
                         }
-                        // Allow underscores only when followed by at least one digit (e.g., 1_000).
-                        // Do NOT consume a trailing underscore with no following digit (e.g., 0_)
-                        // to match non-chunked behavior (Error("0"), then Underscore token).
-                        while i + 1 < n && bytes[i] == b'_' && bytes[i + 1].is_ascii_digit() {
-                            _consumed_any = true;
-                            // consume '_' and subsequent digit run
-                            i += 1;
-                            let after_us = i;
-                            while i < n && bytes[i].is_ascii_digit() {
-                                i += 1;
-                            }
-                            if i == after_us {
-                                break;
-                            }
-                        }
+                        // Do NOT consume underscores as part of a numeric error lexeme.
+                        // The non-chunked lexer treats sequences like "0_0" as Error("0")
+                        // followed by Identifier("_0"). To maintain parity, stop expansion
+                        // before an underscore and leave the remainder to be tokenized
+                        // separately in this or subsequent steps.
                         // Exponent: only include an 'e'/'E' if it's actually part of an exponent prefix.
                         // Do NOT consume 'e' when it's the start of an identifier (e.g., "0else").
                         if i < n && (bytes[i] == b'e' || bytes[i] == b'E') {

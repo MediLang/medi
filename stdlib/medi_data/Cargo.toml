@@ -16,6 +16,7 @@ encryption-aes-gcm = ["aes-gcm", "rand_core", "hex"]
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "1"
 
 [dependencies.aes-gcm]
 version = "0.10"

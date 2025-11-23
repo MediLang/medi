@@ -1223,7 +1223,7 @@
           "18",
           "19"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1231,9 +1231,10 @@
             "description": "Implement the core Rust data structures for FHIR bundles, including the FHIRBundle struct and BundleType enum, ensuring alignment with the FHIR specification and extensibility for future bundle types.",
             "dependencies": [],
             "details": "Translate the PRD definitions into Rust code, add documentation, and ensure fields support all required FHIR bundle metadata (e.g., identifier, timestamp, type, entries).",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:06:19.728Z"
           },
           {
             "id": 2,
@@ -1243,9 +1244,10 @@
               "20.1"
             ],
             "details": "Provide constructors or builder patterns for assembling bundles from resource vectors, and set bundle type and metadata according to FHIR standards.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:06:22.048Z"
           },
           {
             "id": 3,
@@ -1255,9 +1257,10 @@
               "20.1"
             ],
             "details": "Use or extend existing Rust libraries for FHIR serialization/deserialization. Validate round-trip integrity and handle format-specific edge cases.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:06:24.383Z"
           },
           {
             "id": 4,
@@ -1269,9 +1272,10 @@
               "20.3"
             ],
             "details": "Ensure validation covers FHIR rules for each bundle type, such as required entry fields, correct resource references, and transaction constraints.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:06:26.700Z"
           },
           {
             "id": 5,
@@ -1283,9 +1287,10 @@
               "20.4"
             ],
             "details": "Follow FHIR semantics for transaction atomicity and batch partial success. Integrate with resource storage and update mechanisms, and ensure compliance with FHIR server behavior.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:06:29.100Z"
           },
           {
             "id": 6,
@@ -1299,14 +1304,16 @@
               "20.5"
             ],
             "details": "Implement resource filtering, lookup, and extraction methods. Standardize error types and reporting for all bundle operations, ensuring clear diagnostics for developers and users.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:06:31.434Z"
           }
         ],
         "complexity": 7,
         "recommendedSubtasks": 6,
-        "expansionPrompt": "Divide the task into: (1) bundle struct and enum definitions, (2) bundle creation logic, (3) JSON/XML parsing, (4) bundle validation, (5) transaction and batch processing logic, (6) extraction and error handling utilities."
+        "expansionPrompt": "Divide the task into: (1) bundle struct and enum definitions, (2) bundle creation logic, (3) JSON/XML parsing, (4) bundle validation, (5) transaction and batch processing logic, (6) extraction and error handling utilities.",
+        "updatedAt": "2025-11-23T23:06:31.434Z"
       },
       {
         "id": "21",
@@ -1316,7 +1323,7 @@
         "testStrategy": "1. Unit tests for each rule condition type\n2. Integration tests with real PHI examples\n3. False positive/negative analysis\n4. Performance benchmarks with large datasets\n5. Compliance report generation tests\n6. Tests for each predefined HIPAA and GDPR rule\n7. Edge case testing with malformed data",
         "priority": "high",
         "dependencies": [],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1324,9 +1331,10 @@
             "description": "Implement a parser and evaluator for RuleCondition variants, supporting keyword matching, regex, field presence/absence, value equality, and logical composition.",
             "dependencies": [],
             "details": "Ensure the parser can interpret structured rule definitions and the evaluator can process both string and JSON data inputs as specified in the PRD.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:35.589Z"
           },
           {
             "id": 2,
@@ -1336,9 +1344,10 @@
               "21.1"
             ],
             "details": "Enable nested and multi-level logical combinations of RuleCondition objects, ensuring correct short-circuit and precedence behavior.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:37.971Z"
           },
           {
             "id": 3,
@@ -1348,9 +1357,10 @@
               "21.1"
             ],
             "details": "Utilize Rust's regex crate for MatchesPattern conditions and optimize for evaluating large datasets within performance constraints.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:40.365Z"
           },
           {
             "id": 4,
@@ -1360,9 +1370,10 @@
               "21.1"
             ],
             "details": "Ensure robust handling of nested fields and edge cases, including malformed or missing data.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:42.709Z"
           },
           {
             "id": 5,
@@ -1374,9 +1385,10 @@
               "21.4"
             ],
             "details": "Design output structures for compliance results, supporting downstream reporting and analytics.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:45.095Z"
           },
           {
             "id": 6,
@@ -1386,9 +1398,10 @@
               "21.5"
             ],
             "details": "Ensure each DetailedComplianceResult includes remediation guidance and relevant evidence for audit and compliance purposes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:47.425Z"
           },
           {
             "id": 7,
@@ -1403,9 +1416,10 @@
               "21.6"
             ],
             "details": "Ensure rules reflect actual regulatory requirements and are easily extensible for future standards.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:49.804Z"
           },
           {
             "id": 8,
@@ -1421,15 +1435,16 @@
               "21.7"
             ],
             "details": "Implement benchmarking tests and tune data structures, concurrency, and caching as needed for scalability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-23T23:14:52.171Z"
           }
         ],
         "complexity": 9,
         "recommendedSubtasks": 8,
         "expansionPrompt": "Expand into: (1) rule condition parser and evaluator, (2) rule composition logic (AND/OR/NOT), (3) pattern matching and regex support, (4) field presence/value checks, (5) severity-based reporting, (6) remediation and evidence collection, (7) predefined HIPAA/GDPR rule sets, (8) performance optimization and benchmarking.",
-        "updatedAt": "2025-11-23T21:54:47.664Z"
+        "updatedAt": "2025-11-23T23:14:52.171Z"
       },
       {
         "id": "22",
@@ -2026,9 +2041,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-23T21:54:47.669Z",
+      "lastModified": "2025-11-23T23:14:52.174Z",
       "taskCount": 27,
-      "completedCount": 7,
+      "completedCount": 9,
       "tags": [
         "master"
       ]

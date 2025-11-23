@@ -82,6 +82,7 @@ pub mod convert;
 pub mod dicom;
 pub mod fhir;
 pub mod fhir_any;
+pub mod fhir_bundle;
 pub mod hl7;
 pub mod hl7_fhir;
 pub mod hl7_fhir_more;
@@ -100,6 +101,7 @@ pub use fhir::{
     FHIRPatient, FHIRProcedure, FHIRResource,
 };
 pub use fhir_any::FHIRAny;
+pub use fhir_bundle::{BundleType, FHIRBundle};
 pub use query::{fhir_query, Query, QueryBuilder};
 pub use validate::{validate_fhir, ValidationError};
 pub use validation_profile::{
