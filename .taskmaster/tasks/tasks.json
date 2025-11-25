@@ -1562,7 +1562,7 @@
         "dependencies": [
           "22"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1570,9 +1570,10 @@
             "description": "Develop the PlattScaling struct and its methods for fitting and transforming model predictions to calibrated probabilities using logistic regression.",
             "dependencies": [],
             "details": "Implement the PlattScaling struct with fields for parameters a and b. Provide the fit method to estimate parameters from predictions and labels, and the transform method to calibrate new predictions.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T21:33:07.674Z"
           },
           {
             "id": 2,
@@ -1582,9 +1583,10 @@
               "23.1"
             ],
             "details": "Design and implement a struct and methods for isotonic regression calibration, including fitting to data and transforming predictions. Ensure compatibility with the validation framework.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T17:20:15.585Z"
           },
           {
             "id": 3,
@@ -1595,9 +1597,10 @@
               "23.2"
             ],
             "details": "Define the ValidationMetric trait and implement concrete metrics (RocAuc, Precision, Recall, F1). Integrate these into the ModelValidator for flexible metric computation.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T17:20:17.914Z"
           },
           {
             "id": 4,
@@ -1607,9 +1610,10 @@
               "23.3"
             ],
             "details": "Implement structs and logic for fairness metrics, ensuring they conform to the ValidationMetric trait and can be used within ModelValidator.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T17:20:20.209Z"
           },
           {
             "id": 5,
@@ -1619,9 +1623,10 @@
               "23.3"
             ],
             "details": "Implement the compute_feature_importance function, supporting various model backends and providing meaningful importance scores for input features.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T17:20:23.174Z"
           },
           {
             "id": 6,
@@ -1631,15 +1636,16 @@
               "23.3"
             ],
             "details": "Develop functions or modules to quantize model parameters (e.g., from f32 to i16), ensuring minimal loss in accuracy and compatibility with the calibration and validation framework.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T17:20:25.480Z"
           }
         ],
         "complexity": 7,
         "recommendedSubtasks": 6,
         "expansionPrompt": "Divide into: (1) Platt scaling implementation, (2) isotonic regression, (3) validation metrics (ROC-AUC, precision, recall, F1), (4) fairness metrics, (5) feature importance calculation, (6) model quantization utilities.",
-        "updatedAt": "2025-11-25T16:38:45.903Z"
+        "updatedAt": "2025-11-25T21:33:07.674Z"
       },
       {
         "id": "24",
@@ -2050,9 +2056,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-25T16:38:45.905Z",
+      "lastModified": "2025-11-25T21:33:07.677Z",
       "taskCount": 27,
-      "completedCount": 10,
+      "completedCount": 11,
       "tags": [
         "master"
       ]
