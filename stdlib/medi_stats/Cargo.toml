@@ -16,6 +16,9 @@ fhir = ["medi_data"]
 [dev-dependencies]
 approx = "0.5"
 
+[dependencies]
+rand = "0.8"
+
 [dependencies.statrs]
 version = "0.16"
 optional = true

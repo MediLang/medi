@@ -1,3 +1,4 @@
+mod bootstrap;
 /// Basic statistical functions for Medi.
 ///
 /// P-value example (two-sided Welch t-test) using a t distribution (example ignored in doctest):
@@ -22,9 +23,13 @@ mod population;
 mod predictive;
 mod quality;
 mod risk;
+mod stable;
+mod streaming;
+mod survival;
 mod timeseries;
 mod viz;
 
+pub use bootstrap::*;
 pub use clinical::*;
 pub use epidemiology::*;
 #[cfg(feature = "fhir")]
@@ -33,6 +38,9 @@ pub use population::*;
 pub use predictive::*;
 pub use quality::*;
 pub use risk::*;
+pub use stable::*;
+pub use streaming::*;
+pub use survival::*;
 pub use timeseries::*;
 pub use viz::*;
 

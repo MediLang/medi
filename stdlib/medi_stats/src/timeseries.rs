@@ -16,6 +16,25 @@ pub fn moving_average(xs: &[f64], window: usize) -> Vec<f64> {
     out
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ExponentialSmoothing {
+    alpha: f64,
+    current: f64,
+}
+
+impl ExponentialSmoothing {
+    pub fn new(alpha: f64, initial: f64) -> Self {
+        Self {
+            alpha,
+            current: initial,
+        }
+    }
+    pub fn update(&mut self, value: f64) -> f64 {
+        self.current = self.alpha * value + (1.0 - self.alpha) * self.current;
+        self.current
+    }
+}
+
 pub fn exponential_moving_average(xs: &[f64], alpha: f64) -> Vec<f64> {
     if xs.is_empty() {
         return Vec::new();
