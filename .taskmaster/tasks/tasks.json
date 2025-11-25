@@ -1655,7 +1655,7 @@
         "testStrategy": "1. Numerical stability tests with pathological inputs\n2. Streaming stats tests with known distributions\n3. Survival analysis tests with benchmark datasets\n4. Time series tests with synthetic data\n5. Bootstrap CI coverage tests\n6. Comparison tests against established statistical packages\n7. Performance benchmarks for large datasets",
         "priority": "medium",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1663,9 +1663,10 @@
             "description": "Develop core numerically stable algorithms such as Welford's method for variance and Kahan summation for improved floating-point accuracy in statistical calculations.",
             "dependencies": [],
             "details": "Ensure all mean, variance, and summation operations in the statistics module use numerically stable techniques. Provide unit tests with pathological inputs to validate stability.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T23:39:17.347Z"
           },
           {
             "id": 2,
@@ -1675,9 +1676,10 @@
               "24.1"
             ],
             "details": "Design and implement the StreamingStats struct and associated methods for real-time data analysis. Validate against known distributions and compare with existing Rust libraries for streaming stats.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T23:39:19.663Z"
           },
           {
             "id": 3,
@@ -1687,9 +1689,10 @@
               "24.1"
             ],
             "details": "Create KaplanMeier struct and log_rank_test function as specified. Test with benchmark datasets and ensure results match established statistical packages.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T23:39:21.966Z"
           },
           {
             "id": 4,
@@ -1699,9 +1702,10 @@
               "24.1"
             ],
             "details": "Implement ExponentialSmoothing struct and moving average utilities. Validate with synthetic time-series data and ensure correct handling of streaming updates.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T23:39:24.264Z"
           },
           {
             "id": 5,
@@ -1711,9 +1715,10 @@
               "24.1"
             ],
             "details": "Implement functions for power calculations (e.g., for t-tests, log-rank tests). Include documentation and example usage for clinical and research scenarios.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T23:39:26.551Z"
           },
           {
             "id": 6,
@@ -1723,9 +1728,10 @@
               "24.1"
             ],
             "details": "Create bootstrap_ci and permutation test functions as specified. Ensure coverage with unit tests and validate results against established statistical libraries.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T23:40:33.241Z"
           },
           {
             "id": 7,
@@ -1746,7 +1752,8 @@
         ],
         "complexity": 8,
         "recommendedSubtasks": 7,
-        "expansionPrompt": "Expand into: (1) numerically stable algorithms (Welford, Kahan), (2) streaming statistics, (3) survival analysis (Kaplan-Meier, log-rank), (4) time-series analysis (moving averages, exponential smoothing), (5) statistical power analysis, (6) bootstrap/permutation tests, (7) benchmarking and comparison with established packages."
+        "expansionPrompt": "Expand into: (1) numerically stable algorithms (Welford, Kahan), (2) streaming statistics, (3) survival analysis (Kaplan-Meier, log-rank), (4) time-series analysis (moving averages, exponential smoothing), (5) statistical power analysis, (6) bootstrap/permutation tests, (7) benchmarking and comparison with established packages.",
+        "updatedAt": "2025-11-25T23:40:36.143Z"
       },
       {
         "id": "25",
@@ -2056,9 +2063,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-25T21:33:07.677Z",
+      "lastModified": "2025-11-25T23:40:36.146Z",
       "taskCount": 27,
-      "completedCount": 11,
+      "completedCount": 12,
       "tags": [
         "master"
       ]
