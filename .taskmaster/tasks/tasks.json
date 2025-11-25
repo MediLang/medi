@@ -1562,7 +1562,7 @@
         "dependencies": [
           "22"
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -1638,7 +1638,8 @@
         ],
         "complexity": 7,
         "recommendedSubtasks": 6,
-        "expansionPrompt": "Divide into: (1) Platt scaling implementation, (2) isotonic regression, (3) validation metrics (ROC-AUC, precision, recall, F1), (4) fairness metrics, (5) feature importance calculation, (6) model quantization utilities."
+        "expansionPrompt": "Divide into: (1) Platt scaling implementation, (2) isotonic regression, (3) validation metrics (ROC-AUC, precision, recall, F1), (4) fairness metrics, (5) feature importance calculation, (6) model quantization utilities.",
+        "updatedAt": "2025-11-25T16:38:45.903Z"
       },
       {
         "id": "24",
@@ -2049,7 +2050,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-25T16:29:31.859Z",
+      "lastModified": "2025-11-25T16:38:45.905Z",
       "taskCount": 27,
       "completedCount": 10,
       "tags": [
