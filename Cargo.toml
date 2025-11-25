@@ -14,5 +14,5 @@ members = [
     "stdlib/medi_data",
     "stdlib/medi_stats",
     "stdlib/medi_compliance",
-    "stdlib/medi_ai",
+    "stdlib/medi_ai", "stdlib/medi_model",
 ]
