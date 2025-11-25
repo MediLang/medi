@@ -1462,9 +1462,10 @@
             "description": "Define and implement the core Rust structs for ModelRegistry, RegisteredModel, and ModelMetadata, ensuring extensibility and alignment with the PRD.",
             "dependencies": [],
             "details": "Specify fields for model storage, metadata, and versioning. Ensure the data structures support efficient lookup and future extensibility.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T14:38:20.035Z"
           },
           {
             "id": 2,
@@ -1474,9 +1475,10 @@
               "22.1"
             ],
             "details": "Implement the trait with methods for single and batch prediction, backend type identification, and error handling. Ensure trait is object-safe and thread-safe.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T14:38:24.971Z"
           },
           {
             "id": 3,
@@ -1486,9 +1488,10 @@
               "22.2"
             ],
             "details": "Integrate ONNX Runtime Rust bindings, handle model loading, prediction, and error propagation. Ensure compatibility with the registry interface.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T14:38:30.252Z"
           },
           {
             "id": 4,
@@ -1522,9 +1525,10 @@
               "22.1"
             ],
             "details": "Implement methods for registering models with metadata, updating and querying versions, and tracking performance metrics.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T14:38:33.773Z"
           },
           {
             "id": 7,
@@ -1535,15 +1539,16 @@
               "22.6"
             ],
             "details": "Use appropriate Rust crates (e.g., serde, parking_lot or std::sync) to serialize/deserialize registry state and protect concurrent access.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-25T14:38:37.137Z"
           }
         ],
         "complexity": 8,
         "recommendedSubtasks": 7,
         "expansionPrompt": "Break down into: (1) model registry core data structures, (2) backend trait and interface, (3) ONNX backend implementation, (4) TensorFlow Lite backend, (5) custom backend support, (6) metadata and versioning logic, (7) serialization/deserialization and thread safety.",
-        "updatedAt": "2025-11-25T14:27:58.672Z"
+        "updatedAt": "2025-11-25T14:38:37.137Z"
       },
       {
         "id": "23",
@@ -2042,7 +2047,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-25T14:27:58.675Z",
+      "lastModified": "2025-11-25T14:38:37.139Z",
       "taskCount": 27,
       "completedCount": 9,
       "tags": [
