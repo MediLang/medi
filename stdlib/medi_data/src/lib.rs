@@ -113,3 +113,6 @@ pub use validation_profile::{
 pub mod storage_aes_gcm;
 #[cfg(feature = "encryption-aes-gcm")]
 pub mod storage_encrypted;
+
+/// Test data generators (patients, bundles, labs) for integration tests/benches
+pub mod testdata;
