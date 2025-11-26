@@ -1771,7 +1771,7 @@
           "23",
           "24"
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -1779,9 +1779,10 @@
             "description": "Develop integration tests that cover the end-to-end workflow from parsing HL7 messages, converting to FHIR, validating, storing, and querying patient data.",
             "dependencies": [],
             "details": "Include scenarios for successful conversions, validation failures, storage errors, and query edge cases. Ensure tests use realistic HL7 and FHIR data.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-26T04:59:59.110Z"
           },
           {
             "id": 2,
@@ -1789,9 +1790,10 @@
             "description": "Create tests for workflows that check FHIR data compliance, anonymize PHI, and generate compliance reports.",
             "dependencies": [],
             "details": "Test both compliant and non-compliant data, verify anonymization logic, and assert report content for PHI detection.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-26T05:00:01.360Z"
           },
           {
             "id": 3,
@@ -1799,9 +1801,10 @@
             "description": "Develop integration tests for patient data ingestion, feature extraction, model loading, risk prediction, and risk stratification.",
             "dependencies": [],
             "details": "Cover scenarios for different risk levels, model loading errors, and feature extraction edge cases.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-26T05:00:03.585Z"
           },
           {
             "id": 4,
@@ -1809,9 +1812,10 @@
             "description": "Write tests for workflows involving FHIR bundles with multiple resources, including validation and storage operations.",
             "dependencies": [],
             "details": "Test bundles with valid and invalid resources, partial failures, and storage consistency.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-26T05:00:06.144Z"
           },
           {
             "id": 5,
@@ -1824,9 +1828,10 @@
               "25.4"
             ],
             "details": "Set up benchmarks for HL7→FHIR, compliance, and risk prediction flows. Define regression thresholds and report results.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-26T05:00:08.397Z"
           },
           {
             "id": 6,
@@ -1834,9 +1839,10 @@
             "description": "Implement utilities to generate synthetic but representative HL7, FHIR, and patient data for use in integration tests.",
             "dependencies": [],
             "details": "Support parameterized data generation for edge cases, large datasets, and negative testing.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-26T05:00:10.884Z"
           },
           {
             "id": 7,
@@ -1874,7 +1880,8 @@
         ],
         "complexity": 9,
         "recommendedSubtasks": 8,
-        "expansionPrompt": "Break down into: (1) HL7→FHIR→validate→store→query flow tests, (2) FHIR→compliance→anonymize→report flow tests, (3) risk prediction workflow tests, (4) multi-resource bundle validation/storage tests, (5) performance benchmarks, (6) test data generators, (7) CI integration and coverage reporting, (8) documentation of test cases."
+        "expansionPrompt": "Break down into: (1) HL7→FHIR→validate→store→query flow tests, (2) FHIR→compliance→anonymize→report flow tests, (3) risk prediction workflow tests, (4) multi-resource bundle validation/storage tests, (5) performance benchmarks, (6) test data generators, (7) CI integration and coverage reporting, (8) documentation of test cases.",
+        "updatedAt": "2025-11-26T05:00:10.884Z"
       },
       {
         "id": "26",
@@ -2063,7 +2070,7 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-25T23:40:36.146Z",
+      "lastModified": "2025-11-26T05:00:10.887Z",
       "taskCount": 27,
       "completedCount": 12,
       "tags": [
