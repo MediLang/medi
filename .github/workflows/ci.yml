@@ -290,6 +290,17 @@ jobs:
           toolchain: stable
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
+      - name: Install LLVM 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libllvm15 llvm-15-runtime clang-15 libpolly-15-dev
+          sudo ln -sf /usr/bin/llvm-config-15 /usr/bin/llvm-config
+        env:
+          DEBIAN_FRONTEND: noninteractive
+      - name: Set LLVM environment variables
+        run: |
+          echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+          echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
       - name: Install tarpaulin
         run: |
           cargo install cargo-tarpaulin --locked
