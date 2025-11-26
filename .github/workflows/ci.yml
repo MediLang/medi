@@ -298,7 +298,7 @@ jobs:
           RUSTFLAGS: "-C debuginfo=2"
         run: |
           set -euo pipefail
-          cargo tarpaulin --workspace --timeout 120 --out Xml --engine Trace
+          cargo tarpaulin --workspace --timeout 120 --out Xml --engine Auto
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
