@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.5] - 2025-12-03
+
+### Added
+- Documentation: new Cookbook (`docs/content/cookbook.md`) with runnable-style snippets:
+  - FHIR validation and queries (`medi_data`)
+  - De-identification and compliance (`medi_compliance`)
+  - Risk prediction utilities (`medi_ai`)
+  - Basic stats (`medi_stats`)
+- Docs navigation updated to include Cookbook in `docs/mkdocs.yml`.
+
+### Changed
+- Codegen: normalized LLVM IR labels for unit conversions (`uconv.f` instead of `uconv.fi`) to align with tests.
+- Tests: adjusted AST construction in borrow checker and let-annotation tests for SmallVec/Vec consistency.
+
+### Fixed
+- Task file cleanup: resolved malformed JSON and duplicate blocks in `.taskmaster/tasks/tasks.json`.
+- Clippy warnings: removed redundant `.into()` conversions in tests; added targeted `#[allow(clippy::useless_conversion)]` in test modules where feature matrices require it.
+
 ## [v0.0.4] - 2025-10-24
 
 ### Added

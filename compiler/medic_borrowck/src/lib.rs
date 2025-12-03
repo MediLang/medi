@@ -126,6 +126,7 @@ impl Visitor for RtConstraintChecker {
 }
 
 #[cfg(test)]
+#[allow(clippy::useless_conversion)]
 mod rt_tests {
     use super::*;
 
@@ -149,7 +150,8 @@ mod rt_tests {
                 StatementNode::Expr(call("rt_begin")),
                 StatementNode::Expr(call("medi_gc_alloc_string")),
                 StatementNode::Expr(call("rt_end")),
-            ],
+            ]
+            .into(),
         };
         let disallowed = [
             "medi_gc_alloc_string".to_string(),
@@ -164,7 +166,7 @@ mod rt_tests {
     #[test]
     fn rt_checker_allows_calls_outside_markers() {
         let program = ProgramNode {
-            statements: vec![StatementNode::Expr(call("medi_gc_alloc_string"))],
+            statements: vec![StatementNode::Expr(call("medi_gc_alloc_string"))].into(),
         };
         let disallowed = ["medi_gc_alloc_string".to_string()];
         let checker = RtConstraintChecker::new("rt_begin", "rt_end", disallowed);
@@ -230,6 +232,7 @@ impl SymbolTable {
 }
 
 #[cfg(test)]
+#[allow(clippy::useless_conversion)]
 mod tests {
     use super::*;
     use medic_ast::visit::Span;
@@ -275,7 +278,8 @@ mod tests {
                     ExpressionNode::Literal(Spanned::new(LiteralNode::Int(2), Span::default())),
                 ),
                 StatementNode::Expr(ident("x")),
-            ],
+            ]
+            .into(),
         };
 
         let mut b = BorrowChecker::new();
@@ -296,7 +300,8 @@ mod tests {
                     ))),
                 ),
                 assign_stmt("x", ident("x")),
-            ],
+            ]
+            .into(),
         };
 
         let mut b = BorrowChecker::new();
@@ -336,7 +341,8 @@ mod tests {
                     value: index_expr(ident("arr"), 0),
                     span: Span::default(),
                 })),
-            ],
+            ]
+            .into(),
         };
         let mut b = BorrowChecker::new();
         let res = b.check_program(&program);
@@ -360,7 +366,8 @@ mod tests {
                     value: index_expr(ident("arr"), 0),
                     span: Span::default(),
                 })),
-            ],
+            ]
+            .into(),
         };
         let mut b = BorrowChecker::new();
         let res = b.check_program(&program);
@@ -374,7 +381,7 @@ mod tests {
         let call = ExpressionNode::Call(Spanned::new(
             Box::new(CallExpressionNode {
                 callee: ident("ret_ref_to_arg"),
-                arguments: vec![ident("x")],
+                arguments: vec![ident("x")].into(),
             }),
             Span::default(),
         ));
@@ -393,7 +400,8 @@ mod tests {
                     value: call,
                     span: Span::default(),
                 })),
-            ],
+            ]
+            .into(),
         };
 
         let mut b = BorrowChecker::new();

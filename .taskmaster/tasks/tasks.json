@@ -1970,15 +1970,15 @@
           "25",
           "26"
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
             "title": "Bump Versions in All Cargo.toml Files",
-            "description": "Update the version field to 0.2.0 in every stdlib crate's Cargo.toml file and ensure all inter-crate dependencies reference the new version.",
+            "description": "Update the version field to 0.0.5 in every stdlib crate's Cargo.toml file and ensure all inter-crate dependencies reference the new version.",
             "dependencies": [],
-            "details": "Manually or with a tool, edit each Cargo.toml to set version = \"0.2.0\". Update dependency specifications for internal crates to match the new version.",
-            "status": "pending",
+            "details": "Manually or with a tool, edit each Cargo.toml to set version = \"0.0.5\". Update dependency specifications for internal crates to match the new version.",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
