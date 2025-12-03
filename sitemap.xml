@@ -5,7 +5,19 @@
          <lastmod>2025-12-03</lastmod>
     </url>
     <url>
+         <loc>https://medilang.github.io/medi/cookbook/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
          <loc>https://medilang.github.io/medi/glossary/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
+         <loc>https://medilang.github.io/medi/migration_v0_0_4_to_v0_0_5/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
+         <loc>https://medilang.github.io/medi/troubleshooting/</loc>
          <lastmod>2025-12-03</lastmod>
     </url>
     <url>
@@ -57,7 +69,19 @@
          <lastmod>2025-12-03</lastmod>
     </url>
     <url>
+         <loc>https://medilang.github.io/medi/getting-started/ai/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
          <loc>https://medilang.github.io/medi/getting-started/basic-syntax/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
+         <loc>https://medilang.github.io/medi/getting-started/compliance/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
+         <loc>https://medilang.github.io/medi/getting-started/data/</loc>
          <lastmod>2025-12-03</lastmod>
     </url>
     <url>
@@ -66,6 +90,10 @@
     </url>
     <url>
          <loc>https://medilang.github.io/medi/getting-started/installation/</loc>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
+         <loc>https://medilang.github.io/medi/getting-started/stats/</loc>
          <lastmod>2025-12-03</lastmod>
     </url>
     <url>
