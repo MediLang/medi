@@ -113,6 +113,7 @@ nav:
     - Medical Data Science & AI: key-features/medical-data-science.md
   - Examples:
     - Overview: examples/index.md
+  - Cookbook: cookbook.md
   - Technical Documentation:
     - Architecture: technical/architecture.md
     - Diagnostics: technical/diagnostics-snippets.md

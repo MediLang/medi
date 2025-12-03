@@ -419,7 +419,7 @@
           "2",
           "5"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1747,7 +1747,7 @@
               "24.6"
             ],
             "details": "Design and execute performance and accuracy benchmarks using real and synthetic datasets. Document findings and identify any discrepancies or optimization opportunities.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           }
@@ -1901,7 +1901,7 @@
           "23",
           "24"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1909,7 +1909,7 @@
             "description": "Revise the README files for all standard library crates to document new features, usage instructions, and key changes. Ensure instructions are accurate and examples compile and pass tests.",
             "dependencies": [],
             "details": "Each README should highlight new features, provide setup instructions, and include at least one working example for major functionalities.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
@@ -1921,7 +1921,7 @@
               "26.1"
             ],
             "details": "Each guide should include prerequisites, setup steps, and runnable code snippets that demonstrate basic usage.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
@@ -1933,7 +1933,7 @@
               "26.1"
             ],
             "details": "Ensure every public function has a doc comment with at least one example. All examples must be tested for correctness.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
@@ -1946,51 +1946,19 @@
               "26.3"
             ],
             "details": "Include recipes for typical workflows, such as resource validation, serialization, and integration with external systems. Each recipe should have runnable code.",
-            "status": "pending",
-            "testStrategy": "",
-            "parentId": "undefined"
-          },
-          {
-            "id": 5,
-            "title": "Create Migration and Troubleshooting Guides",
-            "description": "Write a migration guide for upgrading from v0.0.4 to v0.0.5 and a troubleshooting section addressing common issues and solutions.",
-            "dependencies": [
-              "26.1",
-              "26.2",
-              "26.3"
-            ],
-            "details": "Migration guide should include code examples for breaking changes and upgrade steps. Troubleshooting should cover frequent errors and debugging tips.",
-            "status": "pending",
-            "testStrategy": "",
-            "parentId": "undefined"
-          },
-          {
-            "id": 6,
-            "title": "Create Runnable Examples Directory in Each Crate",
-            "description": "Set up an 'examples/' directory in each crate containing runnable example programs for key features. Ensure all examples compile and pass tests.",
-            "dependencies": [
-              "26.1",
-              "26.2",
-              "26.3",
-              "26.4"
-            ],
-            "details": "Examples should cover major features, cookbook recipes, and migration scenarios. Integrate with CI to verify compilation and correctness.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           }
         ],
-        "complexity": 6,
-        "recommendedSubtasks": 6,
-        "expansionPrompt": "Divide into: (1) README updates for each crate, (2) getting-started guides, (3) API documentation with examples, (4) cookbook with common patterns, (5) migration and troubleshooting guides, (6) runnable examples directory."
+        "complexity": 5,
+        "recommendedSubtasks": 4,
+        "expansionPrompt": "Break down into: (1) README updates, (2) getting-started guides, (3) API documentation, (4) cookbook creation."
       },
       {
         "id": "27",
-        "title": "Prepare Version Bump and Release",
-        "description": "Update versions, changelog, and prepare release artifacts for v0.0.5 release.",
-        "details": "Release preparation tasks include:\n1. Bump all stdlib crate versions to 0.2.0 in Cargo.toml files:\n```toml\n[package]\nversion = \"0.2.0\"\n```\n2. Update CHANGELOG.md with v0.0.5 section listing all new features and changes\n3. Run full test suite and ensure 100% pass rate\n4. Run clippy with -D warnings and fix all issues\n5. Run cargo fmt on all crates\n6. Update version compatibility matrix\n7. Create release notes\n8. Tag release in git\n\nEnsure all dependencies between crates are correctly specified with the new versions.",
-        "testStrategy": "1. Run `cargo test --all-features` on all crates\n2. Run `cargo clippy --all-features -- -D warnings`\n3. Run `cargo fmt --all -- --check`\n4. Verify examples compile and run\n5. Run integration tests\n6. Check documentation builds\n7. Verify CHANGELOG.md is complete and accurate\n8. Test installation from the new release tag",
-        "priority": "medium",
+        "title": "Release v0.0.5",
+        "description": "Prepare and publish the v0.0.5 release of the library.",
         "dependencies": [
           "18",
           "19",

@@ -2972,7 +2972,7 @@ impl<'ctx> CodeGen<'ctx> {
                                     {
                                         "uconv.qty"
                                     } else {
-                                        "uconv.fi"
+                                        "uconv.f"
                                     };
                                     return Ok(self.builder.build_float_mul(lf, fac, label).into());
                                 }
