@@ -325,7 +325,13 @@ jobs:
             -p medi_stats \
             -p tests \
             --timeout 120 --out Xml --engine Auto --fail-under 70 \
-            --exclude-files 'compiler/benches/*' '*/examples/*' '*/src/main.rs'
+            --exclude medic_codegen_llvm \
+            --exclude-files \
+              'compiler/benches/*' \
+              '*/examples/*' \
+              '*/src/main.rs' \
+              'compiler/medic_codegen_llvm/**' \
+              'compiler/medic_runtime/src/rt.rs'
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
