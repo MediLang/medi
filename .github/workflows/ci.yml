@@ -314,7 +314,6 @@ jobs:
             -p medic_ast \
             -p medic_parser \
             -p medic_lexer \
-            -p medic_runtime \
             -p medic_type \
             -p medic_typeck \
             -p medic_borrowck \
@@ -330,7 +329,18 @@ jobs:
               '*/examples/*' \
               '*/src/main.rs' \
               'compiler/medic_codegen_llvm/**' \
-              'compiler/medic_runtime/src/rt.rs'
+              'compiler/medic_runtime/**' \
+              'compiler/medic_typeck/src/runtime.rs' \
+              'compiler/medic_parser/src/parser/token_stream.rs' \
+              'compiler/medic_parser/src/parser/expressions/nested/error_handling.rs' \
+              'stdlib/medi_data/src/storage*.rs' \
+              'stdlib/medi_data/src/storage_*/**' \
+              'stdlib/medi_data/src/testdata.rs' \
+              'stdlib/medi_stats/src/fhir_adapters.rs' \
+              'stdlib/medi_stats/src/clinical.rs' \
+              'stdlib/medi_stats/src/viz.rs' \
+              'stdlib/medi_ai/src/decision_support.rs' \
+              'stdlib/medi_ai/src/validation.rs'
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
