@@ -137,7 +137,7 @@ mod rt_tests {
                     IdentifierNode::from_str_name(name),
                     Span::default(),
                 )),
-                arguments: vec![],
+                arguments: vec![].into(),
             }),
             Span::default(),
         ))

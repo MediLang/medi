@@ -1,3 +1,4 @@
+#![allow(clippy::useless_conversion)]
 use medic_ast::ast::*;
 use medic_ast::visit::Span;
 use medic_env::env::TypeEnv;
@@ -69,7 +70,8 @@ fn complex_nested_type_annotations_across_typedecls() {
                 name: IdentifierNode::from_str_name("unit").name,
                 type_annotation: fld_unit_ann,
             },
-        ],
+        ]
+        .into(),
         span: type_span,
     }));
 
@@ -94,7 +96,8 @@ fn complex_nested_type_annotations_across_typedecls() {
         fields: vec![TypeField {
             name: IdentifierNode::from_str_name("reading").name,
             type_annotation: reading_ann,
-        }],
+        }]
+        .into(),
         span: outer_span,
     }));
 
@@ -142,7 +145,8 @@ fn complex_nested_type_annotations_across_typedecls() {
                         },
                     )),
                 },
-            ],
+            ]
+            .into(),
         }),
         let_span,
     ));
@@ -152,7 +156,8 @@ fn complex_nested_type_annotations_across_typedecls() {
             fields: vec![StructField {
                 name: IdentifierNode::from_str_name("reading").name,
                 value: inner_struct,
-            }],
+            }]
+            .into(),
         }),
         let_span,
     ));
@@ -338,7 +343,8 @@ fn struct_annotation_via_typedecl_and_matching_initializer() {
                 name: IdentifierNode::from_str_name("unit").name,
                 type_annotation: field_unit_ann,
             },
-        ],
+        ]
+        .into(),
         span: type_span,
     }));
 
@@ -386,7 +392,8 @@ fn struct_annotation_via_typedecl_and_matching_initializer() {
                         },
                     )),
                 },
-            ],
+            ]
+            .into(),
         }),
         let_span,
     ));
