@@ -1970,7 +1970,7 @@
           "25",
           "26"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1990,7 +1990,7 @@
               "27.1"
             ],
             "details": "Review commits and merged PRs since last release. Summarize changes, features, and bug fixes. Write release notes for distribution.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
@@ -2002,7 +2002,7 @@
               "27.1"
             ],
             "details": "Run `cargo test --all-features`, `cargo clippy --all-features -- -D warnings`, and `cargo fmt --all`. Fix any issues found.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
@@ -2014,7 +2014,7 @@
               "27.1"
             ],
             "details": "Check and update documentation or matrix files showing supported crate versions and their compatibility. Ensure all Cargo.toml dependencies are accurate.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           },
@@ -2028,7 +2028,7 @@
               "27.4"
             ],
             "details": "Build release binaries or packages, verify artifacts, create and push a git tag (e.g., v0.0.5), and publish release notes.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "",
             "parentId": "undefined"
           }

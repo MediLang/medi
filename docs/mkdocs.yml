@@ -120,6 +120,7 @@ nav:
     - Common Errors: technical/common-errors.md
   - Reference:
     - Standard Library: reference/index.md
+    - Compatibility Matrix: reference/compatibility-matrix.md
   - Roadmap: roadmap/index.md
   - Contributing: contributing/index.md
   - Community: community/index.md
