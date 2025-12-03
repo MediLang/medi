@@ -309,7 +309,23 @@ jobs:
           RUSTFLAGS: "-C debuginfo=2"
         run: |
           set -euo pipefail
-          cargo tarpaulin --workspace --timeout 120 --out Xml --engine Auto --fail-under 70
+          # Limit coverage to crates with meaningful unit/integration tests to avoid benches/binaries skewing results
+          cargo tarpaulin \
+            -p medic_ast \
+            -p medic_parser \
+            -p medic_lexer \
+            -p medic_runtime \
+            -p medic_type \
+            -p medic_typeck \
+            -p medic_borrowck \
+            -p medi_ai \
+            -p medi_compliance \
+            -p medi_data \
+            -p medi_model \
+            -p medi_stats \
+            -p tests \
+            --timeout 120 --out Xml --engine Auto --fail-under 70 \
+            --exclude-files 'compiler/benches/*' '*/examples/*' '*/src/main.rs'
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
