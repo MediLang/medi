@@ -325,7 +325,6 @@ jobs:
             -p medi_stats \
             -p tests \
             --timeout 120 --out Xml --engine Auto --fail-under 70 \
-            --exclude medic_codegen_llvm \
             --exclude-files \
               'compiler/benches/*' \
               '*/examples/*' \
