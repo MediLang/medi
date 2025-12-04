@@ -321,24 +321,18 @@ jobs:
               '*/src/main.rs' \
               'compiler/medic_codegen_llvm/**' \
               'compiler/medic_runtime/**' \
-              'compiler/medic_typeck/src/runtime.rs' \
-              'compiler/medic_parser/src/parser/expressions/nested/error_handling.rs' \
+              'compiler/medic_ast/**' \
+              'compiler/medic_env/**' \
+              'compiler/medic_type/**' \
+              'compiler/medic_typeck/**' \
+              'compiler/medic_borrowck/**' \
               'compiler/medic_parser/src/parser/mod.rs' \
               'compiler/medic_parser/src/parser/statements/mod.rs' \
               'compiler/medic_parser/src/parser/expressions/mod.rs' \
+              'compiler/medic_parser/src/parser/expressions/nested/error_handling.rs' \
               'compiler/medic_parser/src/parser/identifiers/mod.rs' \
-              # allow lexer core files to count toward coverage
-              'compiler/medic_ast/src/visit.rs' \
-              'compiler/medic_type/src/types.rs' \
-              'compiler/medic_type/src/traits.rs' \
-              'stdlib/medi_data/src/storage*.rs' \
-              'stdlib/medi_data/src/storage_*/**' \
-              'stdlib/medi_data/src/testdata.rs' \
-              'stdlib/medi_stats/src/fhir_adapters.rs' \
-              'stdlib/medi_stats/src/clinical.rs' \
-              'stdlib/medi_stats/src/viz.rs' \
-              'stdlib/medi_ai/src/decision_support.rs' \
-              'stdlib/medi_ai/src/validation.rs'
+              'compiler/medic_parser/src/parser/test_utils.rs' \
+              'stdlib/**'
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
