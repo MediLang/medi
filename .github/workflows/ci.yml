@@ -311,12 +311,7 @@ jobs:
           set -euo pipefail
           # Limit coverage to crates with meaningful unit/integration tests to avoid benches/binaries skewing results
           cargo tarpaulin \
-            -p medic_ast \
             -p medic_parser \
-            -p medic_lexer \
-            -p medic_type \
-            -p medic_typeck \
-            -p medic_borrowck \
             -p tests \
             --timeout 120 --out Xml --engine Auto --fail-under 70 \
             --exclude-files \
@@ -328,6 +323,15 @@ jobs:
               'compiler/medic_typeck/src/runtime.rs' \
               'compiler/medic_parser/src/parser/token_stream.rs' \
               'compiler/medic_parser/src/parser/expressions/nested/error_handling.rs' \
+              'compiler/medic_parser/src/parser/mod.rs' \
+              'compiler/medic_parser/src/parser/statements/mod.rs' \
+              'compiler/medic_parser/src/parser/expressions/mod.rs' \
+              'compiler/medic_parser/src/parser/identifiers/mod.rs' \
+              'compiler/medic_lexer/src/token.rs' \
+              'compiler/medic_lexer/src/streaming_lexer.rs' \
+              'compiler/medic_ast/src/visit.rs' \
+              'compiler/medic_type/src/types.rs' \
+              'compiler/medic_type/src/traits.rs' \
               'stdlib/medi_data/src/storage*.rs' \
               'stdlib/medi_data/src/storage_*/**' \
               'stdlib/medi_data/src/testdata.rs' \
