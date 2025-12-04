@@ -81,3 +81,90 @@ impl<'a> TokenStream<'a> {
         self.position >= self.tokens.len()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medic_lexer::token::Location;
+
+    fn tok(tt: TokenType) -> Token {
+        Token::new(tt, "", Location::default())
+    }
+
+    #[test]
+    fn peek_and_next_work() {
+        let mut ts = TokenStream::new(&[tok(TokenType::Let), tok(TokenType::Identifier("x".into()))]);
+        assert!(matches!(ts.peek().map(|t| &t.token_type), Some(TokenType::Let)));
+        assert!(matches!(ts.next().map(|t| &t.token_type), Some(TokenType::Let)));
+        assert!(matches!(ts.peek().map(|t| &t.token_type), Some(TokenType::Identifier(_))));
+        assert!(!ts.is_empty());
+        ts.next();
+        assert!(ts.is_empty());
+    }
+
+    #[test]
+    fn remaining_slices_advance() {
+        let tokens = [tok(TokenType::Fn), tok(TokenType::Identifier("f".into())), tok(TokenType::LeftParen)];
+        let mut ts = TokenStream::new(&tokens);
+        assert_eq!(ts.remaining().len(), 3);
+        ts.next();
+        assert_eq!(ts.remaining().len(), 2);
+    }
+
+    #[test]
+    fn match_token_ok_and_err() {
+        let mut ts = TokenStream::new(&[tok(TokenType::If), tok(TokenType::Else)]);
+        ts.match_token(&TokenType::If).expect("should match If");
+        let err = ts.match_token(&TokenType::If).unwrap_err();
+        // Ensure it's a nom::Err::Error
+        match err {
+            NomErr::Error(_) => {}
+            _ => panic!("expected error variant"),
+        }
+    }
+
+    #[test]
+    fn match_any_ok_and_err() {
+        let mut ts = TokenStream::new(&[tok(TokenType::Return), tok(TokenType::While)]);
+        let (_rem, first) = ts.match_any(&[TokenType::Return, TokenType::Break]).expect("match any first");
+        assert!(matches!(first.token_type, TokenType::Return));
+        // Next token is While which isn't in expected set
+        let err = ts.match_any(&[TokenType::Break, TokenType::Continue]).unwrap_err();
+        match err {
+            NomErr::Error(_) => {}
+            _ => panic!("expected error variant"),
+        }
+    }
+
+    #[test]
+    fn peek_token_checks_without_consuming() {
+        let mut ts = TokenStream::new(&[tok(TokenType::Match), tok(TokenType::LeftBrace)]);
+        assert!(ts.peek_token(&TokenType::Match));
+        // Still should match after peek
+        ts.match_token(&TokenType::Match).unwrap();
+        assert!(matches!(ts.peek().map(|t| &t.token_type), Some(TokenType::LeftBrace)));
+    }
+
+    #[test]
+    fn empty_stream_behaviour() {
+        let mut ts = TokenStream::new(&[]);
+        assert!(ts.peek().is_none());
+        assert!(ts.next().is_none());
+        assert!(ts.is_empty());
+        // error() should return a nom::Err::Error on empty
+        match ts.error(ErrorKind::Tag) {
+            NomErr::Error(_) => {}
+            _ => panic!("expected error variant"),
+        }
+    }
+
+    #[test]
+    fn match_any_on_empty_errors() {
+        let mut ts = TokenStream::new(&[]);
+        let err = ts.match_any(&[TokenType::If, TokenType::Else]).unwrap_err();
+        match err {
+            NomErr::Error(_) => {}
+            _ => panic!("expected error variant"),
+        }
+    }
+}

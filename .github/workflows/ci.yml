@@ -321,7 +321,6 @@ jobs:
               'compiler/medic_codegen_llvm/**' \
               'compiler/medic_runtime/**' \
               'compiler/medic_typeck/src/runtime.rs' \
-              'compiler/medic_parser/src/parser/token_stream.rs' \
               'compiler/medic_parser/src/parser/expressions/nested/error_handling.rs' \
               'compiler/medic_parser/src/parser/mod.rs' \
               'compiler/medic_parser/src/parser/statements/mod.rs' \
