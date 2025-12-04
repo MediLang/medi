@@ -66,3 +66,59 @@ pub fn parse_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Spanned<L
         )))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medic_lexer::token::{Location, Token};
+
+    fn loc() -> Location {
+        Location {
+            line: 1,
+            column: 1,
+            offset: 0,
+        }
+    }
+
+    #[test]
+    fn parse_float_literal() {
+        let tokens = vec![Token::new(TokenType::Float(1.5), "1.5", loc())];
+        let input = TokenSlice::new(&tokens);
+        let (_, spanned) = parse_literal(input).unwrap();
+        assert!(matches!(spanned.node, LiteralNode::Float(f) if (f - 1.5).abs() < 0.001));
+    }
+
+    #[test]
+    fn parse_string_literal() {
+        let tokens = vec![Token::new(
+            TokenType::String("hello".into()),
+            "\"hello\"",
+            loc(),
+        )];
+        let input = TokenSlice::new(&tokens);
+        let (_, spanned) = parse_literal(input).unwrap();
+        assert!(matches!(spanned.node, LiteralNode::String(ref s) if s == "hello"));
+    }
+
+    #[test]
+    fn parse_bool_literal() {
+        let tokens = vec![Token::new(TokenType::Boolean(true), "true", loc())];
+        let input = TokenSlice::new(&tokens);
+        let (_, spanned) = parse_literal(input).unwrap();
+        assert!(matches!(spanned.node, LiteralNode::Bool(true)));
+    }
+
+    #[test]
+    fn parse_unsupported_token_errors() {
+        let tokens = vec![Token::new(TokenType::Let, "let", loc())];
+        let input = TokenSlice::new(&tokens);
+        assert!(parse_literal(input).is_err());
+    }
+
+    #[test]
+    fn parse_empty_input_errors() {
+        let tokens: Vec<Token> = vec![];
+        let input = TokenSlice::new(&tokens);
+        assert!(parse_literal(input).is_err());
+    }
+}
