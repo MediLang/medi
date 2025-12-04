@@ -341,8 +341,9 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
+        continue-on-error: true  # Don't fail CI if Codecov upload fails (e.g., missing token for protected branches)
         with:
           files: cobertura.xml
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           flags: rust
           verbose: true
