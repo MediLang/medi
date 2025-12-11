@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.6] - 2025-12-11
+
+### Added
+- **Privacy and Compliance Checking (Task 6)**: Full implementation of HIPAA/GDPR compliance checking stage in the compiler pipeline.
+  - PHI data flow analysis via `PrivacyAnnotation` labels (`PHI`, `Pseudonymized`, `Anonymized`, `Authorized`, `AuthorizedFor`)
+  - Detection of unprotected PHI flowing to sinks (print, log, network, file)
+  - Verification of proper anonymization through de-identification function recognition
+  - `regulate` construct integration for scoped compliance blocks
+- New `compiler/medic_typeck/src/compliance.rs` module with `check_compliance()` function and `ComplianceViolation` types
+- AST support for `RegulateNode` with standard identifier and body block
+- Parser support for `regulate <STANDARD> { ... }` blocks
+
+### Changed
+- Compiler pipeline now runs compliance checking after type checking, surfacing violations as dedicated errors
+- Type checker tracks privacy labels per expression span for compliance analysis
+- Codegen LLVM module updated to handle regulate statements
+
 ## [v0.0.5] - 2025-12-03
 
 ### Added
