@@ -5768,6 +5768,12 @@ impl<'ctx> CodeGen<'ctx> {
                 }
                 Ok(())
             }
+            StatementNode::Regulate(reg) => {
+                // For code generation, a regulate block behaves like a normal block.
+                // Compliance checks are handled statically in the type checker.
+                // We just need to ensure the statements inside are generated.
+                self.codegen_stmt(&StatementNode::Block(Box::new(reg.body.clone())))
+            }
             StatementNode::Match(m) => self.codegen_match(m),
         }
     }

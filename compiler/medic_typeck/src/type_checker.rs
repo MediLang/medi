@@ -600,14 +600,24 @@ impl<'a> TypeChecker<'a> {
         self
     }
 
-    /// Borrow collected errors
+    /// Drain and return collected errors
+    pub fn take_errors(&mut self) -> Vec<TypeError> {
+        std::mem::take(&mut self.errors)
+    }
+
+    /// View collected errors without draining (used by compliance checker).
     pub fn errors(&self) -> &Vec<TypeError> {
         &self.errors
     }
 
-    /// Drain and return collected errors
-    pub fn take_errors(&mut self) -> Vec<TypeError> {
-        std::mem::take(&mut self.errors)
+    /// Access the ambient type environment (read-only).
+    pub fn env(&self) -> &TypeEnv {
+        self.env
+    }
+
+    /// Look up the inferred privacy label for a given span, if present.
+    pub fn privacy_label_for_span(&self, span: &Span) -> Option<PrivacyAnnotation> {
+        self.privacy_table.get(&(span.start, span.end)).copied()
     }
 
     /// Returns an immutable view of the side type table.
@@ -1158,7 +1168,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// Helper: best-effort extract identifier name from an expression (Identifier or Member callee).
-    fn extract_identifier_name(expr: &ExpressionNode) -> Option<String> {
+    pub(crate) fn extract_identifier_name(expr: &ExpressionNode) -> Option<String> {
         match expr {
             ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
                 Some(ident.name().to_string())
@@ -1954,6 +1964,20 @@ impl<'a> TypeChecker<'a> {
                     ck = ck.with_validation_ctx(ctx);
                 }
                 for s in &fun.body.statements {
+                    ck.check_stmt(s)?;
+                }
+                self.errors.extend(ck.take_errors());
+                Ok(())
+            }
+            StatementNode::Regulate(reg) => {
+                // Check body in new scope
+                let parent = self.env.clone();
+                let mut child = TypeEnv::with_parent(parent);
+                let mut ck = TypeChecker::new(&mut child);
+                if let Some(ctx) = self.validation_ctx {
+                    ck = ck.with_validation_ctx(ctx);
+                }
+                for s in &reg.body.statements {
                     ck.check_stmt(s)?;
                 }
                 self.errors.extend(ck.take_errors());

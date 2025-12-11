@@ -15,7 +15,7 @@ use medic_ast::ast::{
     AssignmentNode, BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode,
     ExpressionNode, FunctionNode, IdentifierNode, IfNode, LetStatementNode, LiteralNode,
     MatchArmNode, MatchNode, MemberExpressionNode, ParameterNode, PatternNode, ProgramNode,
-    ReturnNode, StatementNode, TypeDeclNode, TypeField, WhileNode,
+    RegulateNode, ReturnNode, StatementNode, TypeDeclNode, TypeField, WhileNode,
 };
 use medic_ast::visit::Span;
 use medic_ast::Spanned;
@@ -1298,6 +1298,49 @@ pub fn parse_function_declaration(input: TokenSlice<'_>) -> IResult<TokenSlice<'
     Ok((input, StatementNode::Function(Box::new(func))))
 }
 
+/// Parses a regulate statement:
+/// regulate <Standard> { ... }
+pub fn parse_regulate_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    log::debug!("=== parse_regulate_statement ===");
+
+    // 'regulate'
+    let (input, reg_tok) =
+        take_token_if(|tt| matches!(tt, TokenType::Regulate), ErrorKind::Tag)(input)?;
+    let start_span: Span = reg_tok.location.into();
+    let input = input.skip_whitespace();
+
+    // Standard identifier (e.g. HIPAA)
+    let (input, std_tok) = take_token_if(
+        |tt| matches!(tt, TokenType::Identifier(_)),
+        ErrorKind::Alpha,
+    )(input)?;
+
+    let standard = if let TokenType::Identifier(n) = &std_tok.token_type {
+        IdentifierNode::from_str_name(n.as_str())
+    } else {
+        unreachable!()
+    };
+
+    let input = input.skip_whitespace();
+
+    // Body block
+    let (input, body) = parse_block(input)?;
+
+    let span = Span {
+        start: start_span.start,
+        end: body.span.end,
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    let node = RegulateNode {
+        standard,
+        body,
+        span,
+    };
+    Ok((input, StatementNode::Regulate(Box::new(node))))
+}
+
 /// Parses a single statement from the input token stream.
 ///
 /// Determines the statement type based on the first token and delegates to the appropriate parser.
@@ -1353,6 +1396,10 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                 TokenType::Type => {
                     log::debug!("Found 'type' declaration");
                     return parse_type_declaration(input);
+                }
+                TokenType::Regulate => {
+                    log::debug!("Found 'regulate' statement");
+                    return parse_regulate_statement(input);
                 }
                 TokenType::Let => {
                     log::debug!("Found 'let' statement");

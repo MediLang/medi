@@ -284,6 +284,8 @@ pub enum StatementNode {
     Function(Box<FunctionNode>),
     /// A user-defined type declaration, e.g., `type Patient { id: Int, name: String }`
     TypeDecl(Box<TypeDeclNode>),
+    /// A regulation block, e.g., `regulate HIPAA { ... }`
+    Regulate(Box<RegulateNode>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -404,6 +406,14 @@ pub struct TypeField {
 
 /// Represents a user-defined type declaration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RegulateNode {
+    /// The compliance standard or policy being applied (e.g., HIPAA, GDPR)
+    pub standard: IdentifierNode,
+    pub body: BlockNode,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeDeclNode {
     pub name: IdentifierNode,
     pub fields: NodeList<TypeField>,
@@ -430,6 +440,17 @@ impl Visitable for TypeDeclNode {
             f.accept(visitor)?;
         }
         Ok(Default::default())
+    }
+}
+
+impl Visitable for RegulateNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_regulate_stmt(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        self.standard.accept(visitor)?;
+        self.body.accept(visitor)
     }
 }
 
@@ -667,6 +688,7 @@ impl Visitable for StatementNode {
             StatementNode::Return(stmt) => stmt.accept(visitor),
             StatementNode::Function(stmt) => stmt.accept(visitor),
             StatementNode::TypeDecl(stmt) => stmt.accept(visitor),
+            StatementNode::Regulate(stmt) => stmt.accept(visitor),
         }
     }
 
@@ -683,6 +705,7 @@ impl Visitable for StatementNode {
             StatementNode::Return(stmt) => stmt.visit_children(visitor),
             StatementNode::Function(stmt) => stmt.visit_children(visitor),
             StatementNode::TypeDecl(stmt) => stmt.visit_children(visitor),
+            StatementNode::Regulate(stmt) => stmt.visit_children(visitor),
         }
     }
 }
@@ -702,6 +725,7 @@ impl StatementNode {
             StatementNode::Return(stmt) => &stmt.span,
             StatementNode::Function(stmt) => &stmt.span,
             StatementNode::TypeDecl(stmt) => &stmt.span,
+            StatementNode::Regulate(stmt) => &stmt.span,
         }
     }
 }
@@ -1034,32 +1058,39 @@ impl std::fmt::Display for StatementNode {
                     write!(f, "return;")
                 }
             }
-            StatementNode::Function(fun) => {
-                write!(f, "fn {}(", fun.name.name)?;
-                for (i, p) in fun.params.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", p.name.name)?;
-                    if let Some(ty) = &p.type_annotation {
-                        write!(f, ": {ty}")?;
-                    }
+            StatementNode::Function(func) => {
+                write!(f, "fn {}(", func.name.name)?;
+                let params_str = func
+                    .params
+                    .iter()
+                    .map(|p| {
+                        if let Some(ann) = &p.type_annotation {
+                            format!("{}: {ann}", p.name.name)
+                        } else {
+                            p.name.name.to_string()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{params_str}) ")?;
+                if let Some(ret) = &func.return_type {
+                    write!(f, "-> {ret} ")?;
                 }
-                write!(f, ")")?;
-                if let Some(ret) = &fun.return_type {
-                    write!(f, " -> {ret}")?;
-                }
-                write!(f, " {}", fun.body)
+                func.body.fmt_indented(f, 0, 4)
             }
-            StatementNode::TypeDecl(td) => {
-                write!(f, "type {} {{ ", td.name.name)?;
-                for (i, field) in td.fields.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}: {}", field.name, field.type_annotation)?;
-                }
-                write!(f, " }};")
+            StatementNode::TypeDecl(decl) => {
+                write!(f, "type {} {{ ", decl.name.name)?;
+                let fields_str = decl
+                    .fields
+                    .iter()
+                    .map(|field| format!("{}: {}", field.name, field.type_annotation))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "{fields_str} }};")
+            }
+            StatementNode::Regulate(reg) => {
+                write!(f, "regulate {} ", reg.standard.name)?;
+                reg.body.fmt_indented(f, 0, 4)
             }
         }
     }

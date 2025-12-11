@@ -11,7 +11,7 @@ use medic_parser::parser::{
     parse_program_recovering, parse_program_with_diagnostics, render_snippet, TokenSlice,
 };
 use medic_runtime::{init_gc_with_params, maybe_incremental_step, GcParams};
-use medic_typeck::type_checker::TypeChecker;
+use medic_typeck::{compliance::check_compliance, type_checker::TypeChecker};
 use serde_json::Value as JsonValue;
 
 #[cfg(feature = "llvm-backend")]
@@ -310,6 +310,8 @@ fn main() {
 
                     let mut checker = TypeChecker::new(&mut env);
                     let mut type_errors = checker.check_program(&program);
+                    // Translate privacy/type policy issues into compliance violations
+                    let compliance_violations = check_compliance(&checker, &program);
                     maybe_incremental_step();
                     // Include any collected validation/type errors from expression checks
                     type_errors.extend(checker.take_errors());
@@ -317,6 +319,20 @@ fn main() {
                     if !type_errors.is_empty() {
                         for err in &type_errors {
                             eprintln!("type error: {err}");
+                        }
+                        std::process::exit(1);
+                    }
+
+                    if !compliance_violations.is_empty() {
+                        for v in &compliance_violations {
+                            if let Some(span) = v.span {
+                                eprintln!(
+                                    "compliance violation: {} (line {}, col {})",
+                                    v.message, span.line, span.column
+                                );
+                            } else {
+                                eprintln!("compliance violation: {}", v.message);
+                            }
                         }
                         std::process::exit(1);
                     }

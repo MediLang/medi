@@ -150,6 +150,10 @@ pub trait Visitor {
         self.visit_children(node)
     }
 
+    fn visit_regulate_stmt(&mut self, node: &RegulateNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
     // Program
     fn visit_program(&mut self, node: &ProgramNode) -> VisitResult<Self::Output> {
         self.visit_children(node)

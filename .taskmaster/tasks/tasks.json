@@ -427,7 +427,7 @@
             "description": "Implement static analysis to track the flow of Protected Health Information (PHI) throughout the codebase",
             "dependencies": [],
             "details": "Develop a data flow analysis tool that identifies PHI data sources, tracks variable assignments, function calls, and data persistence operations. Create a graph representation of PHI data movement. Implement detection for common PHI types (names, addresses, medical record numbers, etc.). Testing approach: Create test cases with known PHI flows and verify detection accuracy. Regulatory requirements: Document HIPAA identifiers (18 types) and GDPR personal data categories being tracked.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -438,7 +438,7 @@
               1
             ],
             "details": "Using the data flow graph from subtask 1, implement checks for: PHI transmitted without encryption, PHI stored without access controls, PHI logged to console/files, PHI exposed in UI without masking. Create severity classification for violations. Testing approach: Develop test suite with intentional violations and verify detection. Regulatory requirements: Map each detection rule to specific HIPAA/GDPR requirements for documentation.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -450,7 +450,7 @@
               2
             ],
             "details": "Develop checks for proper anonymization techniques: k-anonymity, differential privacy, pseudonymization. Create validators for common anonymization functions. Implement detection of re-identification risks. Testing approach: Test with various anonymization approaches and attempt re-identification attacks. Regulatory requirements: Document compliance with HIPAA Safe Harbor and GDPR Article 4 anonymization standards.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -463,7 +463,7 @@
               3
             ],
             "details": "Develop API for the regulate construct to access compliance checking results. Implement policy enforcement mechanisms based on detected violations. Create reporting functionality for compliance status. Build remediation suggestions for detected issues. Testing approach: Test integration points with mock regulate constructs and verify policy enforcement. Regulatory requirements: Ensure integration supports documentation generation for compliance audits.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ]

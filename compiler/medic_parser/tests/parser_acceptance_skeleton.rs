@@ -201,9 +201,18 @@ fn declarations_let_const_types() {
 }
 
 #[test]
-#[ignore]
 fn healthcare_fhir_query_regulate_blocks() {
-    // TODO: fhir_query { ... } and regulate { ... } samples from PRD
+    // regulate HIPAA { ... }
+    let src = r#"regulate HIPAA {
+        let x = 1;
+    }"#;
+    let ts = to_slice(src);
+    let (_rest, stmt) = parse_statement(ts).expect("should parse regulate statement");
+    let StatementNode::Regulate(reg) = stmt else {
+        panic!("expected regulate node")
+    };
+    assert_eq!(reg.standard.name, "HIPAA");
+    assert_eq!(reg.body.statements.len(), 1);
 }
 
 #[test]
