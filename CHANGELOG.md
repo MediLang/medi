@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.7] - 2025-12-15
+
+### Added
+- `medic` now provides a structured command-line interface with subcommands (`check`, `json`, `repl`, `docs`, `pack`) and built-in `--help/--version`.
+- REPL: `medic repl` for interactive parsing/typechecking feedback (with basic history and multi-line buffering).
+- Documentation generator: `medic docs` emits Markdown from `///` / `//!` doc comments.
+- Package manager foundation: `medic pack init|list` creates and reads a minimal `medipack.toml` manifest.
+
 ## [v0.0.6] - 2025-12-11
 
 ### Added
