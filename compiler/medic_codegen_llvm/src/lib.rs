@@ -2976,14 +2976,14 @@ impl<'ctx> CodeGen<'ctx> {
                                     };
                                     return Ok(self.builder.build_float_mul(lf, fac, label).into());
                                 }
-                                BasicValueEnum::StructValue(sv) => {
+                                BasicValueEnum::StructValue(_sv) => {
                                     // Handle quantity struct conversion
                                     #[cfg(feature = "quantity_ir")]
                                     {
                                         // Extract value from quantity struct
                                         let qty_value = self
                                             .builder
-                                            .build_extract_value(sv, 0, "qty.val")
+                                            .build_extract_value(_sv, 0, "qty.val")
                                             .unwrap()
                                             .into_float_value();
                                         let fac = self.f64.const_float(factor);
@@ -3044,12 +3044,12 @@ impl<'ctx> CodeGen<'ctx> {
                                 BasicValueEnum::IntValue(iv) => {
                                     self.builder.build_signed_int_to_float(iv, self.f64, "si2f")
                                 }
-                                BasicValueEnum::StructValue(sv) => {
+                                BasicValueEnum::StructValue(_sv) => {
                                     // Handle quantity struct in runtime conversion
                                     #[cfg(feature = "quantity_ir")]
                                     {
                                         self.builder
-                                            .build_extract_value(sv, 0, "qty.val")
+                                            .build_extract_value(_sv, 0, "qty.val")
                                             .unwrap()
                                             .into_float_value()
                                     }
@@ -3101,13 +3101,13 @@ impl<'ctx> CodeGen<'ctx> {
                                             .build_float_mul(lf, fac, "uconv.f")
                                             .into());
                                     }
-                                    BasicValueEnum::StructValue(sv) => {
+                                    BasicValueEnum::StructValue(_sv) => {
                                         // Handle quantity struct conversion
                                         #[cfg(feature = "quantity_ir")]
                                         {
                                             let qty_value = self
                                                 .builder
-                                                .build_extract_value(sv, 0, "qty.val")
+                                                .build_extract_value(_sv, 0, "qty.val")
                                                 .unwrap()
                                                 .into_float_value();
                                             let fac = self.f64.const_float(*i as f64);
@@ -3167,11 +3167,14 @@ impl<'ctx> CodeGen<'ctx> {
                                         BasicValueEnum::IntValue(li) => self
                                             .builder
                                             .build_signed_int_to_float(li, self.f64, "si2f"),
-                                        BasicValueEnum::StructValue(sv) => {
+                                        BasicValueEnum::StructValue(_sv) => {
                                             // Handle quantity struct conversion
                                             #[cfg(feature = "quantity_ir")]
                                             {
-                                                self.builder.build_extract_value(sv, 0, "qty.val").unwrap().into_float_value()
+                                                self.builder
+                                                    .build_extract_value(_sv, 0, "qty.val")
+                                                    .unwrap()
+                                                    .into_float_value()
                                             }
                                             #[cfg(not(feature = "quantity_ir"))]
                                             {
@@ -3203,12 +3206,12 @@ impl<'ctx> CodeGen<'ctx> {
                                 BasicValueEnum::IntValue(iv) => {
                                     self.builder.build_signed_int_to_float(iv, self.f64, "si2f")
                                 }
-                                BasicValueEnum::StructValue(sv) => {
+                                BasicValueEnum::StructValue(_sv) => {
                                     // Handle quantity struct in runtime conversion
                                     #[cfg(feature = "quantity_ir")]
                                     {
                                         self.builder
-                                            .build_extract_value(sv, 0, "qty.val")
+                                            .build_extract_value(_sv, 0, "qty.val")
                                             .unwrap()
                                             .into_float_value()
                                     }

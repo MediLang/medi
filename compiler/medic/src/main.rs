@@ -1,10 +1,9 @@
+use std::ffi::OsString;
 use std::fs;
 use std::io::{self, Read};
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
-#[cfg(feature = "llvm-backend")]
-use medic_ast::ast::ProgramNode;
 use medic_borrowck::BorrowChecker;
 use medic_borrowck::RtConstraintChecker;
 use medic_env::env::TypeEnv;
@@ -16,6 +15,9 @@ use medic_parser::parser::{
 use medic_runtime::{init_gc_with_params, maybe_incremental_step, GcParams};
 use medic_typeck::{compliance::check_compliance, type_checker::TypeChecker};
 use serde_json::Value as JsonValue;
+
+#[cfg(feature = "llvm-backend")]
+use medic_ast::ast::ProgramNode;
 
 #[cfg(feature = "llvm-backend")]
 use medic_codegen_llvm::{
@@ -496,6 +498,17 @@ fn maybe_emit(
             match result {
                 Ok(obj) => {
                     if let Some(path) = out_path {
+                        if let Some(parent) = std::path::Path::new(&path).parent() {
+                            if !parent.as_os_str().is_empty() {
+                                if let Err(e) = fs::create_dir_all(parent) {
+                                    eprintln!(
+                                        "error: failed to create output directory '{}': {e}",
+                                        parent.display()
+                                    );
+                                    return Some(2);
+                                }
+                            }
+                        }
                         if let Err(e) = fs::write(&path, &obj) {
                             eprintln!("error: failed to write object file '{path}': {e}");
                             return Some(2);
@@ -579,6 +592,17 @@ fn maybe_emit(
             match result {
                 Ok(wasm) => {
                     if let Some(path) = out_path {
+                        if let Some(parent) = std::path::Path::new(&path).parent() {
+                            if !parent.as_os_str().is_empty() {
+                                if let Err(e) = fs::create_dir_all(parent) {
+                                    eprintln!(
+                                        "error: failed to create output directory '{}': {e}",
+                                        parent.display()
+                                    );
+                                    return Some(2);
+                                }
+                            }
+                        }
                         if let Err(e) = fs::write(&path, &wasm) {
                             eprintln!("error: failed to write wasm file '{path}': {e}");
                             return Some(2);
@@ -657,6 +681,17 @@ fn maybe_emit(
             match result {
                 Ok(obj) => {
                     if let Some(path) = out_path {
+                        if let Some(parent) = std::path::Path::new(&path).parent() {
+                            if !parent.as_os_str().is_empty() {
+                                if let Err(e) = fs::create_dir_all(parent) {
+                                    eprintln!(
+                                        "error: failed to create output directory '{}': {e}",
+                                        parent.display()
+                                    );
+                                    return Some(2);
+                                }
+                            }
+                        }
                         if let Err(e) = fs::write(&path, &obj) {
                             eprintln!("error: failed to write object file '{path}': {e}");
                             return Some(2);
@@ -880,9 +915,44 @@ fn run_pack(args: &PackArgs) -> i32 {
     }
 }
 
+fn normalized_cli_args() -> Vec<OsString> {
+    let args: Vec<OsString> = std::env::args_os().collect();
+    if args.len() <= 1 {
+        return args;
+    }
+
+    let first = args[1].to_string_lossy();
+    let is_known_subcommand = matches!(
+        first.as_ref(),
+        "check" | "json" | "repl" | "docs" | "pack" | "help" | "--help" | "-h" | "--version" | "-V"
+    );
+    if is_known_subcommand {
+        return args;
+    }
+
+    let mut out: Vec<OsString> = Vec::with_capacity(args.len() + 1);
+    out.push(args[0].clone());
+
+    let mut subcmd = OsString::from("check");
+    let mut rest: Vec<OsString> = Vec::with_capacity(args.len().saturating_sub(1));
+    let iter = args.into_iter().skip(1);
+    for a in iter {
+        let s = a.to_string_lossy();
+        if s == "--json" || s == "-j" {
+            subcmd = OsString::from("json");
+            continue;
+        }
+        rest.push(a);
+    }
+
+    out.push(subcmd);
+    out.extend(rest);
+    out
+}
+
 fn run_cli() -> i32 {
     init_gc_from_env();
-    let cli = Cli::parse();
+    let cli = Cli::parse_from(normalized_cli_args());
 
     let cmd = cli.command.unwrap_or(Command::Check(CheckArgs {
         input: None,

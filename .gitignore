@@ -35,6 +35,9 @@ venv/
 # Added by cargo
 /target
 
+# Local build artifacts from medic CLI emission
+artifacts/
+
 # Task files
 # tasks.json
 # tasks/
