@@ -3,6 +3,8 @@ use std::io::{self, Read};
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
+#[cfg(feature = "llvm-backend")]
+use medic_ast::ast::ProgramNode;
 use medic_borrowck::BorrowChecker;
 use medic_borrowck::RtConstraintChecker;
 use medic_env::env::TypeEnv;
@@ -398,7 +400,7 @@ fn maybe_emit(
     args: &CheckArgs,
     _source: &str,
     _tokens: &[Token],
-    program: &medic_ast::Program,
+    program: &ProgramNode,
     mut env: TypeEnv,
 ) -> Option<i32> {
     let emit_s = args.emit.as_deref()?;
@@ -406,8 +408,8 @@ fn maybe_emit(
         Some(t) => t,
         None => {
             eprintln!(
-                 "warning: unknown emit target '{emit_s}', expected x86_64|wasm32|wasm32-unknown|riscv32"
-             );
+                "warning: unknown emit target '{emit_s}', expected x86_64|wasm32|wasm32-unknown|riscv32"
+            );
             return Some(2);
         }
     };
