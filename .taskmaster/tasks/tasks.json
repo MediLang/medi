@@ -488,7 +488,7 @@
             "description": "Develop a robust CLI for the compiler that handles command-line arguments, file processing, and execution options",
             "dependencies": [],
             "details": "Create a CLI that supports: 1) File input/output options, 2) Compilation flags and optimization levels, 3) Error reporting with clear messages and line numbers, 4) Verbose mode for debugging, 5) Help documentation, 6) Version information. Integrate with the compiler pipeline to process source files. Implement proper exit codes for success/failure states. Design for extensibility to add new options in future releases. Ensure cross-platform compatibility.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -499,7 +499,7 @@
               1
             ],
             "details": "Build a REPL environment that: 1) Provides immediate feedback for code snippets, 2) Supports multi-line input with syntax highlighting, 3) Implements healthcare-specific visualization commands for patient data, trends, and metrics, 4) Includes data import/export capabilities for common healthcare formats, 5) Offers context-aware autocompletion, 6) Maintains session history. Ensure visualizations are accessible and clinically relevant. Integrate with the compiler's interpreter mode for real-time execution.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -510,7 +510,7 @@
               1
             ],
             "details": "Develop a documentation generator that: 1) Extracts documentation comments from source code, 2) Generates structured documentation in multiple formats (HTML, PDF, Markdown), 3) Creates cross-references between related components, 4) Includes examples and usage patterns, 5) Documents healthcare-specific functions with clinical context. Add CLI commands to generate documentation on demand. Implement templates for consistent documentation styling. Include validation to ensure documentation completeness and accuracy.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ],
@@ -528,7 +528,7 @@
           "2",
           "5"
         ],
-        "status": "done",
+        "status": "pending",
         "subtasks": [
           {
             "id": 1,
