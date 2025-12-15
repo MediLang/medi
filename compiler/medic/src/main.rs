@@ -915,8 +915,7 @@ fn run_pack(args: &PackArgs) -> i32 {
     }
 }
 
-fn normalized_cli_args() -> Vec<OsString> {
-    let args: Vec<OsString> = std::env::args_os().collect();
+fn normalize_cli_args(args: Vec<OsString>) -> Vec<OsString> {
     if args.len() <= 1 {
         return args;
     }
@@ -948,6 +947,10 @@ fn normalized_cli_args() -> Vec<OsString> {
     out.push(subcmd);
     out.extend(rest);
     out
+}
+
+fn normalized_cli_args() -> Vec<OsString> {
+    normalize_cli_args(std::env::args_os().collect())
 }
 
 fn run_cli() -> i32 {
@@ -1044,4 +1047,60 @@ fn run_cli() -> i32 {
 
 fn main() {
     std::process::exit(run_cli());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_args_are_mapped_to_check_subcommand() {
+        let args = vec![
+            OsString::from("medic"),
+            OsString::from("--emit=x86_64"),
+            OsString::from("--opt=2"),
+            OsString::from("--out=artifacts/x86_64.o"),
+            OsString::from("input.medi"),
+        ];
+        let out = normalize_cli_args(args);
+        assert_eq!(out[1].to_string_lossy(), "check");
+    }
+
+    #[test]
+    fn legacy_json_flag_is_mapped_to_json_subcommand() {
+        let args = vec![OsString::from("medic"), OsString::from("--json")];
+        let out = normalize_cli_args(args);
+        assert_eq!(out[1].to_string_lossy(), "json");
+    }
+
+    #[test]
+    fn docs_and_pack_commands_work_on_temp_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let old = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let input_path = dir.path().join("sample.medi");
+        fs::write(&input_path, "/// hello\nfn main() {}\n").unwrap();
+        let out_dir = dir.path().join("out_docs");
+        let rc = run_docs(&DocsArgs {
+            out_dir: Some(out_dir.clone()),
+            inputs: vec![input_path.clone()],
+        });
+        assert_eq!(rc, 0);
+        assert!(out_dir.join("index.md").exists());
+        assert!(out_dir.join("sample.md").exists());
+
+        let rc = run_pack(&PackArgs {
+            command: Some(PackCommand::Init),
+        });
+        assert_eq!(rc, 0);
+        assert!(dir.path().join("medipack.toml").exists());
+
+        let rc = run_pack(&PackArgs {
+            command: Some(PackCommand::List),
+        });
+        assert_eq!(rc, 0);
+
+        std::env::set_current_dir(old).unwrap();
+    }
 }

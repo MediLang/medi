@@ -18,6 +18,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 medic_codegen_llvm = { path = "../medic_codegen_llvm", optional = true }
 
+[dev-dependencies]
+tempfile = "3.9.0"
+
 [features]
 # Enable the LLVM backend integration (requires system LLVM 15.x)
 llvm-backend = ["medic_codegen_llvm/llvm"]
