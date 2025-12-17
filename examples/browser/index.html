@@ -3,19 +3,95 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Medi Browser WASM Demo</title>
+    <title>Medi Web IDE Prototype</title>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 1.25rem; }
       pre { background: #f6f8fa; padding: 1rem; border-radius: 8px; overflow: auto; }
       .ok { color: #0a7a0a; }
       .err { color: #b00020; }
+
+      .layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; align-items: start; }
+      .panel { border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.75rem; background: #fff; }
+      .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.75rem 0 1rem; }
+      .toolbar > * { height: 2.25rem; }
+      .toolbar button { padding: 0 0.75rem; border-radius: 8px; border: 1px solid #d1d5db; background: #f9fafb; cursor: pointer; }
+      .toolbar select { padding: 0 0.5rem; border-radius: 8px; border: 1px solid #d1d5db; background: #fff; }
+      .toolbar input[type="file"] { border-radius: 8px; border: 1px solid #d1d5db; padding: 0 0.5rem; background: #fff; }
+      #editor { height: 65vh; }
+      .kvs { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+      .list { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+      .muted { color: #6b7280; }
+      .vp-btn { padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; font-size: 0.8rem; }
+      .vp-btn:hover { background: #f3f4f6; }
+      .vp-node { position: absolute; min-width: 120px; background: #fff; border: 2px solid #3b82f6; border-radius: 8px; padding: 0.5rem; cursor: move; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); user-select: none; }
+      .vp-node.query { border-color: #22c55e; }
+      .vp-node.filter { border-color: #f59e0b; }
+      .vp-node.output { border-color: #ef4444; }
+      .vp-node-title { font-weight: 600; margin-bottom: 0.25rem; }
+      .vp-node-input { width: 100%; padding: 0.2rem; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 0.7rem; margin-top: 0.25rem; }
+      .vp-port { width: 10px; height: 10px; background: #6b7280; border-radius: 50%; position: absolute; cursor: crosshair; }
+      .vp-port.in { left: -5px; top: 50%; transform: translateY(-50%); }
+      .vp-port.out { right: -5px; top: 50%; transform: translateY(-50%); }
     </style>
   </head>
   <body>
-    <h1>Medi Browser WASM Demo</h1>
-    <p>This page loads a Medi-compiled <code>wasm32-unknown-unknown</code> module and calls its <code>main()</code> export.</p>
-    <button id="runBtn">Load & Run</button>
-    <div id="out"></div>
+    <h1>Medi Web IDE Prototype</h1>
+    <p class="muted">Editor + diagnostics + privacy spans. Run the local server at <code>http://127.0.0.1:8710</code> for analysis.</p>
+
+    <div class="toolbar">
+      <select id="langSelect">
+        <option value="medi" selected>Medi</option>
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+        <option value="sql">SQL</option>
+      </select>
+      <input id="fileInput" type="file" accept=".medi,.txt" />
+      <button id="analyzeBtn">Analyze</button>
+      <button id="runBtn">Load & Run</button>
+      <span id="status" class="muted"></span>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <div id="editor"></div>
+      </div>
+      <div class="kvs">
+        <div class="panel">
+          <h2 style="margin: 0; font-size: 1rem;">Diagnostics</h2>
+          <div id="diagnostics" class="muted" style="margin-top: 0.5rem;">No diagnostics yet.</div>
+        </div>
+        <div class="panel">
+          <h2 style="margin: 0; font-size: 1rem;">Privacy</h2>
+          <div id="privacy" class="muted" style="margin-top: 0.5rem;">No privacy spans yet.</div>
+        </div>
+        <div class="panel">
+          <h2 style="margin: 0; font-size: 1rem;">Runtime Output</h2>
+          <div id="out"></div>
+        </div>
+        <div class="panel">
+          <h2 style="margin: 0; font-size: 1rem;">Visual Analytics</h2>
+          <div id="analytics" style="margin-top: 0.5rem;">
+            <canvas id="analyticsChart" width="400" height="200"></canvas>
+            <div id="analyticsInfo" class="muted">Run analysis to see healthcare data visualizations.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top: 1rem;">
+      <h2 style="margin: 0 0 0.5rem; font-size: 1rem;">Visual Programming (Prototype)</h2>
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+        <button id="addQueryNode" class="vp-btn">+ FHIR Query</button>
+        <button id="addFilterNode" class="vp-btn">+ Filter</button>
+        <button id="addOutputNode" class="vp-btn">+ Output</button>
+        <button id="generateCode" class="vp-btn" style="margin-left: auto;">Generate Code</button>
+        <button id="clearCanvas" class="vp-btn">Clear</button>
+      </div>
+      <div id="vpCanvas" style="position: relative; width: 100%; height: 300px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fafafa; overflow: hidden;">
+        <svg id="vpConnections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>
+      </div>
+      <div id="vpOutput" class="muted" style="margin-top: 0.5rem; font-size: 0.875rem;">Drag nodes to arrange. Click Generate Code to see Medi code.</div>
+    </div>
     <script type="module" src="main.js"></script>
   </body>
 </html>

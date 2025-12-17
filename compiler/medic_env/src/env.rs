@@ -100,6 +100,50 @@ impl TypeEnv {
         env.set_rt_unsafe_fn("spawn_task");
         env.set_rt_unsafe_fn("create_channel");
         // Other kinds left unset by default; projects may configure as needed
+
+        // Common Medi functions with their types
+        env.insert(
+            "fhir_query".to_string(),
+            MediType::Function {
+                params: vec![MediType::String],
+                return_type: Box::new(MediType::List(Box::new(MediType::FHIRPatient))),
+            },
+        );
+        env.insert(
+            "println".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::Void),
+            },
+        );
+        env.insert(
+            "print".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::Void),
+            },
+        );
+        env.insert(
+            "log".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::Void),
+            },
+        );
+        env.insert(
+            "deidentify".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::Unknown),
+            },
+        );
+        env.insert(
+            "anonymize".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::Unknown),
+            },
+        );
         env
     }
 
@@ -145,6 +189,25 @@ impl TypeEnv {
                     out.push((k.clone(), v.clone()));
                     seen.insert(k.clone());
                 }
+            }
+            cur = env.parent.as_deref();
+        }
+        out
+    }
+
+    pub fn collect_symbol_types(&self) -> Vec<(String, MediType)> {
+        use std::collections::HashSet;
+        let mut out: Vec<(String, MediType)> = Vec::new();
+        let mut seen: HashSet<String> = HashSet::new();
+
+        let mut cur: Option<&TypeEnv> = Some(self);
+        while let Some(env) = cur {
+            for (k, v) in env.symbols.iter() {
+                if seen.contains(k) {
+                    continue;
+                }
+                out.push((k.clone(), v.clone()));
+                seen.insert(k.clone());
             }
             cur = env.parent.as_deref();
         }

@@ -9,6 +9,7 @@ members = [
     "compiler/medic_type",
     "compiler/medic_typeck",
     "compiler/medic_codegen_llvm",
+    "compiler/medic_ide_server",
     "compiler/benches",
     "tests",
     "stdlib/medi_data",

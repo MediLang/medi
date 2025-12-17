@@ -528,7 +528,7 @@
           "2",
           "5"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -536,7 +536,7 @@
             "description": "Develop a text editor component with syntax highlighting capabilities for multiple programming languages",
             "dependencies": [],
             "details": "Implementation details: Use Monaco Editor or CodeMirror as the base editor component. Implement syntax highlighting for Python, JavaScript, and SQL at minimum. Add line numbering, bracket matching, and code folding features. User experience requirements: Ensure responsive editing with minimal lag, customizable themes (light/dark), and keyboard shortcuts for common operations. Integration points: Create a modular architecture that allows other components to access and modify editor content programmatically.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -547,7 +547,7 @@
               1
             ],
             "details": "Implementation details: Integrate with Language Server Protocol (LSP) for language-aware code completion. Implement type inference for dynamically typed languages. Create a suggestion display component that shows parameter hints and documentation. User experience requirements: Low-latency suggestions (under 200ms), filtering capabilities, and keyboard navigation for completion items. Integration points: Connect with the text editor component, access to project files for context-aware completion, and hooks for custom completion providers.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -558,7 +558,7 @@
               1
             ],
             "details": "Implementation details: Build reusable chart components (line charts, scatter plots, heatmaps) optimized for healthcare metrics. Implement data preprocessing utilities for common healthcare data formats (FHIR, HL7). Create interactive dashboards with filtering capabilities. User experience requirements: Accessible visualizations following healthcare UI guidelines, tooltips with detailed information, and export functionality. Integration points: Data connectors to common healthcare databases, integration with the editor for custom visualization code, and APIs for extending with new visualization types.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -571,7 +571,7 @@
               3
             ],
             "details": "Implementation details: Develop a node-based programming canvas using a library like D3.js or React Flow. Implement drag-and-drop functionality for code blocks and data sources. Create a bidirectional sync between visual representation and text code. User experience requirements: Intuitive connection mechanism between nodes, undo/redo functionality, and visual feedback for execution flow. Integration points: Conversion between visual representation and text code, integration with code completion system, and hooks into the healthcare visualization components.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ],

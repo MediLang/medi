@@ -8,6 +8,7 @@ members = [
     "medic_parser",
     "medic_type",
     "medic_typeck",
+    "medic_ide_server",
     "medic_codegen_llvm",
     "benches",
     "medic_borrowck",
