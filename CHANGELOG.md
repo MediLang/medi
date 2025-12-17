@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.8] - 2025-12-17
+
+### Added
+- **Basic IDE with Visual Analytics (Task 8)**: Web-based IDE prototype with compiler-backed analysis.
+  - New `medic_ide_server` crate providing HTTP API endpoints:
+    - `/analyze`: diagnostics and privacy span analysis
+    - `/complete`: code completion with keywords, builtins, and prelude symbols
+    - `/hover`: type info, privacy labels, and units for tokens
+  - CodeMirror 6 editor in `examples/browser/` with:
+    - Medi syntax highlighting (comments, strings, keywords, operators)
+    - Multi-language support (Medi, Python, JavaScript, SQL)
+    - Server-backed async code completion with local fallback
+    - Hover info display on cursor movement (keyup/mouseup)
+  - Visual Analytics panel with privacy distribution bar chart
+  - Visual Programming prototype:
+    - Node-based canvas with FHIR Query, Filter, Output nodes
+    - Drag-and-drop positioning and port-based connections
+    - Code generation that appends Medi code to editor
+
+### Changed
+- `TypeEnv::with_prelude()` now includes common function types (`fhir_query`, `println`, `print`, `log`, `deidentify`, `anonymize`)
+- Added `collect_symbol_types()` method to `TypeEnv` for IDE completion support
+
 ## [v0.0.7] - 2025-12-15
 
 ### Added
