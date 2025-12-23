@@ -1157,6 +1157,7 @@ dependencies = [
  "aes-gcm",
  "criterion",
  "hex",
+ "medi_stats",
  "once_cell",
  "rand_core",
  "serde",

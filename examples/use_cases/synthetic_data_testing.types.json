@@ -1,0 +1,7 @@
+{
+  "functions": [
+    {"name": "println", "params": ["Unknown"], "return": "Void"},
+    {"name": "generate_synthetic_patients", "params": ["Int"], "return": "Unknown"},
+    {"name": "run_risk_model", "params": ["Unknown"], "return": "Unknown"}
+  ]
+}

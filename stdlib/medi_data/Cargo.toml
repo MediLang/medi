@@ -34,6 +34,7 @@ optional = true
 once_cell = "1"
 tempfile = "3"
 criterion = "0.5"
+medi_stats = { path = "../medi_stats" }
 
 [[bench]]
 name = "query_bench"

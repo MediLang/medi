@@ -1,0 +1,6 @@
+[
+  {"id":"o1","code":"HBA1C","value":7.2,"unit":"%"},
+  {"id":"o2","code":"HBA1C","value":6.8,"unit":"%"},
+  {"id":"o3","code":"GLU","value":102.0,"unit":"mg/dL"},
+  {"id":"o4","code":"HBA1C","value":8.1,"unit":"%"}
+]

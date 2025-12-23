@@ -1,0 +1,16 @@
+fn main() -> int {
+    let standard = "HIPAA";
+    let raw_note = "Patient Jane Doe (SSN 123-45-6789)";
+
+    // Demonstrate de-identification helpers (host-provided)
+    let masked = mask_phi(raw_note);
+    let hashed = hash_phi(raw_note);
+    let redacted = redact_phi(raw_note);
+
+    println(standard);
+    println(masked);
+    println(hashed);
+    println(redacted);
+
+    return 0
+}

@@ -1,0 +1,5 @@
+[
+  {"id":"p1","given_name":"Jane","family_name":"Doe","birth_date":"1948-04-12"},
+  {"id":"p2","given_name":"John","family_name":"Doe","birth_date":"1979-11-03"},
+  {"id":"p3","given_name":"Amina","family_name":"Khan","birth_date":"1955-01-30"}
+]

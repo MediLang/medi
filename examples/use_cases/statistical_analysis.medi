@@ -1,0 +1,9 @@
+fn main() -> int {
+    let path = "examples/use_cases/trial_results.csv";
+
+    // Host-provided helpers for Phase 1 demos
+    let res = t_test_csv(path);
+    println(res);
+
+    return 0
+}

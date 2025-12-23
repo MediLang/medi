@@ -1,0 +1,18 @@
+{
+  "patient": {
+    "id": "p1",
+    "name": {
+      "given": "Jane",
+      "family": "Doe"
+    },
+    "dob": "1948-04-12",
+    "ssn": "123-45-6789",
+    "phone": "+1-555-0100"
+  },
+  "visit": {
+    "encounter_id": "e1",
+    "facility": "Demo Hospital",
+    "reason": "diabetes follow-up"
+  },
+  "note": "Patient Jane Doe (SSN 123-45-6789) discussed treatment plan."
+}

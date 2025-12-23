@@ -1,0 +1,8 @@
+{
+  "functions": [
+    {"name": "println", "params": ["Unknown"], "return": "Void"},
+    {"name": "mask_phi", "params": ["String"], "return": "String"},
+    {"name": "hash_phi", "params": ["String"], "return": "String"},
+    {"name": "redact_phi", "params": ["String"], "return": "String"}
+  ]
+}
