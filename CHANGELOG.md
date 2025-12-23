@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.9] - 2025-12-23
+
+### Added
+- **End-to-end example use cases (Task 9)** with runnable artifacts:
+  - Clinical Data Exploration (`examples/use_cases/clinical_data_exploration.medi` + datasets + Rust harness)
+  - Basic Regulatory Compliance (`examples/use_cases/regulatory_compliance.medi` + PHI sample + Rust harness)
+  - Simple Statistical Analysis (`examples/use_cases/statistical_analysis.medi` + trial CSV + Rust harness)
+  - Synthetic Data Testing (`examples/use_cases/synthetic_data_testing.medi` + Rust harness)
+
+### Fixed
+- Example code cleanup for strict workspace linting (fmt/clippy) and deterministic runs.
+
 ## [v0.0.8] - 2025-12-17
 
 ### Added

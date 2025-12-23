@@ -1132,7 +1132,7 @@ dependencies = [
 
 [[package]]
 name = "medi_ai"
-version = "0.0.5"
+version = "0.0.9"
 dependencies = [
  "serde",
  "serde_json",
@@ -1141,7 +1141,7 @@ dependencies = [
 
 [[package]]
 name = "medi_compliance"
-version = "0.0.5"
+version = "0.0.9"
 dependencies = [
  "criterion",
  "regex",
@@ -1152,7 +1152,7 @@ dependencies = [
 
 [[package]]
 name = "medi_data"
-version = "0.0.5"
+version = "0.0.9"
 dependencies = [
  "aes-gcm",
  "criterion",
@@ -1168,7 +1168,7 @@ dependencies = [
 
 [[package]]
 name = "medi_model"
-version = "0.0.5"
+version = "0.0.9"
 dependencies = [
  "chrono",
  "parking_lot",
@@ -1179,7 +1179,7 @@ dependencies = [
 
 [[package]]
 name = "medi_stats"
-version = "0.0.5"
+version = "0.0.9"
 dependencies = [
  "approx",
  "medi_data",
@@ -1189,7 +1189,7 @@ dependencies = [
 
 [[package]]
 name = "medic"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "clap",
  "medic_ast",
@@ -1209,7 +1209,7 @@ dependencies = [
 
 [[package]]
 name = "medic_ast"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "medic_lexer",
  "pretty_assertions",
@@ -1242,7 +1242,7 @@ dependencies = [
 
 [[package]]
 name = "medic_borrowck"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "medic_ast",
  "thiserror 1.0.69",
@@ -1250,7 +1250,7 @@ dependencies = [
 
 [[package]]
 name = "medic_codegen_llvm"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "inkwell",
  "medic_ast",
@@ -1261,14 +1261,14 @@ dependencies = [
 
 [[package]]
 name = "medic_env"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "medic_type",
 ]
 
 [[package]]
 name = "medic_ide_server"
-version = "0.0.1"
+version = "0.0.9"
 dependencies = [
  "axum",
  "medic_ast",
@@ -1285,7 +1285,7 @@ dependencies = [
 
 [[package]]
 name = "medic_lexer"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "criterion",
  "env_logger",
@@ -1303,7 +1303,7 @@ dependencies = [
 
 [[package]]
 name = "medic_parser"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "env_logger",
  "log",
@@ -1316,7 +1316,7 @@ dependencies = [
 
 [[package]]
 name = "medic_runtime"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "core_affinity",
  "criterion",
@@ -1328,11 +1328,11 @@ dependencies = [
 
 [[package]]
 name = "medic_type"
-version = "0.0.8"
+version = "0.0.9"
 
 [[package]]
 name = "medic_typeck"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "log",
  "medic_ast",

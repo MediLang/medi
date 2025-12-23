@@ -197,6 +197,15 @@ Run all tests for all crates:
 cargo test --workspace
 ```
 
+## Runnable End-to-End Use Cases
+
+Small, deterministic end-to-end examples live in `examples/use_cases/`.
+
+- Clinical Data Exploration: `cargo run -p medi_data --example clinical_data_exploration`
+- Basic Regulatory Compliance: `cargo run -p medi_compliance --example regulatory_compliance`
+- Simple Statistical Analysis: `cargo run -p medi_stats --example statistical_analysis`
+- Synthetic Data Testing: `cargo run -p medi_ai --example synthetic_data_testing`
+
 ### Codegen CLI flags (x86-64)
 
 When building with the LLVM backend feature, the `medic` CLI can emit x86-64 ELF object files and provides tuning flags for optimization, CPU, and features.
