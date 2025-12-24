@@ -18,7 +18,7 @@
         <link rel="prev" href="../basic-syntax/">
       
       
-        <link rel="next" href="../../key-features/">
+        <link rel="next" href="../development-environment/">
       
       
         
@@ -996,10 +996,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-the-program" class="md-nav__link">
+  <a href="#checking-the-program" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Running the Program
+        Checking the Program
       
     </span>
   </a>
@@ -1032,6 +1032,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development-environment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Environment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1415,6 +1443,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../technical/tooling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../technical/benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1490,7 +1574,91 @@
   <span class="md-ellipsis">
     
   
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/language-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Language Specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/standard-library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
     Standard Library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/lexer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lexer
   
 
     
@@ -1658,10 +1826,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-the-program" class="md-nav__link">
+  <a href="#checking-the-program" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Running the Program
+        Checking the Program
       
     </span>
   </a>
@@ -1711,7 +1879,7 @@
 
 
 <h1 id="your-first-medi-program">Your First Medi Program</h1>
-<p>This guide walks you through creating and running your first Medi program.</p>
+<p>This guide walks you through writing a small Medi program and checking it with the current compiler CLI.</p>
 <h2 id="a-simple-health-risk-calculator">A Simple Health Risk Calculator</h2>
 <p>Let's create a simple program that calculates a basic health risk score based on patient parameters.</p>
 <p>Create a file named <code>risk_calculator.medi</code> with the following content:</p>
@@ -1753,67 +1921,32 @@
 <a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>  Patient{name: &quot;Patient C&quot;, age: 30, systolic: 115, diastolic: 75, smoker: false, diabetes: false}
 <a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>];
 <a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>// Calculate and display risk for each patient
-<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>for patient in patients {
-<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>  let risk = calculate_risk_score(
-<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>    patient.age,
-<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>    patient.systolic,
-<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>    patient.diastolic,
-<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>    patient.smoker,
-<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>    patient.diabetes
-<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>  );
-<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>
-<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>  // Display result
-<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>  println!(&quot;{} risk score: {}&quot;, patient.name, risk);
-<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>}
-<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>
-<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>  // Risk classification
-<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>  if (risk &lt; 5) {
-<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>    print(&quot;  Status: Low Risk&quot;);
-<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>  } else if (risk &lt; 10) {
-<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>    print(&quot;  Status: Moderate Risk&quot;);
-<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>  } else {
-<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>    print(&quot;  Status: High Risk&quot;);
-<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>  }
-<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>}
-<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>
-<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>// Visualize results
-<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>visualize {
-<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>  plot_bar(
-<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>    data: patients,
-<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>    x: &quot;name&quot;,
-<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>    y: (p) =&gt; calculate_risk_score(p.age, p.systolic, p.diastolic, p.smoker, p.diabetes),
-<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>    title: &quot;Patient Risk Scores&quot;,
-<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>    y_label: &quot;Risk Score&quot;
-<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>  );
-<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>}
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>// Compute a value so it stays typechecked end-to-end
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>let example_risk = calculate_risk_score(
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>  patients[0].age,
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>  patients[0].systolic,
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>  patients[0].diastolic,
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>  patients[0].smoker,
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>  patients[0].diabetes
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>);
 </code></pre></div>
-<h2 id="running-the-program">Running the Program</h2>
-<p>Save the file and run it using the Medi interpreter:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>medi<span class="w"> </span>risk_calculator.medi
+<h2 id="checking-the-program">Checking the Program</h2>
+<p>From the repository root, typecheck the file with <code>medic</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cargo<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span>medic<span class="w"> </span>--<span class="w"> </span>check<span class="w"> </span>risk_calculator.medi
 </code></pre></div>
-<p>You should see output similar to:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Patient A risk score: 9.5
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  Status: Moderate Risk
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Patient B risk score: 12
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  Status: High Risk
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>Patient C risk score: 3
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  Status: Low Risk
-</code></pre></div>
-<p>A new window will also open displaying a bar chart of the patient risk scores.</p>
 <h2 id="key-concepts-demonstrated">Key Concepts Demonstrated</h2>
 <ol>
 <li><strong>Function Definition</strong>: The <code>calculate_risk_score</code> function</li>
-<li><strong>Data Structures</strong>: Using the <code>dataset</code> type for patient records</li>
+<li><strong>Data Structures</strong>: Using a <code>record</code> type for patient records</li>
 <li><strong>Control Flow</strong>: <code>if/else</code> statements and <code>for</code> loops</li>
-<li><strong>Visualization</strong>: Simple bar chart creation with the <code>visualize</code> block</li>
+<li><strong>Types</strong>: Explicit types for parameters and returns</li>
 </ol>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
 <li>Try modifying the risk calculation formula</li>
 <li>Add more patient data</li>
-<li>Explore more complex <a href="../key-features/data-visualization.md">visualizations</a></li>
-<li>Learn about <a href="../key-features/healthcare-standards.md">integrating with healthcare standards</a> like FHIR</li>
+<li>Read the <a href="../../reference/language-spec/">Language Specification</a></li>
+<li>Learn about the <a href="../../technical/tooling/">compiler and tools</a></li>
 </ul>
 
 
