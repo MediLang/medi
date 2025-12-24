@@ -55,20 +55,6 @@ cargo run -p medi_data --example clinical_data_exploration
 | Package Manager (`medipack`) | 📋 Planned |
 | Python FFI | 📋 Planned |
 
-## Documentation
-
-| Topic | Link |
-|-------|------|
-| Getting Started | [docs/content/getting-started/](docs/content/getting-started/) |
-| Language Specification | [LANG_SPEC.md](LANG_SPEC.md) |
-| Key Features | [docs/content/key-features/](docs/content/key-features/) |
-| Standard Library | [docs/content/reference/standard-library.md](docs/content/reference/standard-library.md) |
-| Architecture | [docs/content/technical/architecture.md](docs/content/technical/architecture.md) |
-| Cookbook | [docs/content/cookbook.md](docs/content/cookbook.md) |
-| Roadmap | [docs/content/roadmap/](docs/content/roadmap/) |
-| Benchmarks | [docs/content/technical/benchmarks.md](docs/content/technical/benchmarks.md) |
-| Compatibility Matrix | [docs/content/reference/compatibility-matrix.md](docs/content/reference/compatibility-matrix.md) |
-
 ## Project Structure
 
 ```
