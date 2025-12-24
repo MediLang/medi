@@ -1781,85 +1781,109 @@
 <thead>
 <tr>
 <th>Workload</th>
+<th>Tier</th>
 <th style="text-align: right;">Iterations</th>
+<th style="text-align: right;">Repeats</th>
 <th style="text-align: right;">Avg (ms)</th>
+<th style="text-align: right;">Stddev (ms)</th>
+<th style="text-align: right;">CV (%)</th>
 <th style="text-align: right;">Min (ms)</th>
 <th style="text-align: right;">Max (ms)</th>
+<th style="text-align: right;">RSS Δ (MB)</th>
 <th style="text-align: right;">RSS (MB)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>medi_data_hl7_patient_pipeline</td>
-<td style="text-align: right;">20</td>
-<td style="text-align: right;">0.002</td>
+<td>small</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">2</td>
 <td style="text-align: right;">0.001</td>
-<td style="text-align: right;">0.004</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">14.83</td>
+<td style="text-align: right;">0.001</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.1</td>
 <td style="text-align: right;">2.5</td>
 </tr>
 <tr>
 <td>medi_data_observation_validate_query</td>
-<td style="text-align: right;">20</td>
-<td style="text-align: right;">3.574</td>
-<td style="text-align: right;">2.857</td>
-<td style="text-align: right;">4.749</td>
-<td style="text-align: right;">6.2</td>
+<td>small</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.710</td>
+<td style="text-align: right;">0.025</td>
+<td style="text-align: right;">3.52</td>
+<td style="text-align: right;">0.678</td>
+<td style="text-align: right;">0.924</td>
+<td style="text-align: right;">0.9</td>
+<td style="text-align: right;">3.5</td>
 </tr>
 <tr>
 <td>medi_data_bundle_validate</td>
-<td style="text-align: right;">10</td>
-<td style="text-align: right;">0.877</td>
-<td style="text-align: right;">0.859</td>
-<td style="text-align: right;">0.908</td>
-<td style="text-align: right;">6.2</td>
+<td>small</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.177</td>
+<td style="text-align: right;">0.008</td>
+<td style="text-align: right;">4.37</td>
+<td style="text-align: right;">0.171</td>
+<td style="text-align: right;">0.210</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">3.5</td>
 </tr>
 <tr>
-<td>medi_stats_ttest</td>
-<td style="text-align: right;">200</td>
-<td style="text-align: right;">0.029</td>
-<td style="text-align: right;">0.029</td>
-<td style="text-align: right;">0.061</td>
-<td style="text-align: right;">6.2</td>
+<td>medi_data_observation_ndjson_roundtrip</td>
+<td>small</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2.018</td>
+<td style="text-align: right;">0.060</td>
+<td style="text-align: right;">2.98</td>
+<td style="text-align: right;">1.976</td>
+<td style="text-align: right;">2.286</td>
+<td style="text-align: right;">1.9</td>
+<td style="text-align: right;">5.4</td>
 </tr>
 <tr>
-<td>medi_compliance_hipaa_keyword_scan</td>
-<td style="text-align: right;">50</td>
+<td>medi_stats_t_test_welch</td>
+<td>small</td>
+<td style="text-align: right;">2000</td>
+<td style="text-align: right;">2</td>
 <td style="text-align: right;">0.000</td>
 <td style="text-align: right;">0.000</td>
+<td style="text-align: right;">3.41</td>
 <td style="text-align: right;">0.000</td>
-<td style="text-align: right;">6.2</td>
+<td style="text-align: right;">0.001</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">5.4</td>
+</tr>
+<tr>
+<td>medi_compliance_hipaa_keywords</td>
+<td>small</td>
+<td style="text-align: right;">2000</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">23.60</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.005</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">5.4</td>
 </tr>
 <tr>
 <td>medi_ai_risk_score</td>
-<td style="text-align: right;">1000</td>
-<td style="text-align: right;">0.000</td>
-<td style="text-align: right;">0.000</td>
-<td style="text-align: right;">0.000</td>
-<td style="text-align: right;">6.2</td>
-</tr>
-<tr>
-<td>python_keyword_scan</td>
-<td style="text-align: right;">200</td>
-<td style="text-align: right;">0.001</td>
-<td style="text-align: right;">0.000</td>
-<td style="text-align: right;">0.001</td>
-<td style="text-align: right;"></td>
-</tr>
-<tr>
-<td>python_mean</td>
-<td style="text-align: right;">500</td>
-<td style="text-align: right;">0.217</td>
-<td style="text-align: right;">0.210</td>
-<td style="text-align: right;">0.266</td>
-<td style="text-align: right;"></td>
-</tr>
-<tr>
-<td>python_dot_product</td>
+<td>small</td>
 <td style="text-align: right;">2000</td>
-<td style="text-align: right;">0.001</td>
-<td style="text-align: right;">0.001</td>
-<td style="text-align: right;">0.003</td>
-<td style="text-align: right;"></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">5.09</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">5.4</td>
 </tr>
 </tbody>
 </table>
