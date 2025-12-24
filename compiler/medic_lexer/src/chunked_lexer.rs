@@ -1898,6 +1898,20 @@ mod tests {
     }
 
     #[test]
+    fn test_leading_whitespace_then_line_comment_defers_without_stalling() {
+        // Coverage + regression: ensure we make progress when deferring a line comment
+        // and there were no emitted tokens before the comment (only whitespace).
+        // This exercises the `used_end = cut_idx` progress rule.
+        let input = " // comment here\nx";
+        let plain = normalize(&Lexer::new(input).collect::<Vec<_>>());
+        let chunked = normalize(
+            &ChunkedLexer::from_reader(Cursor::new(input), ChunkedLexerConfig { chunk_size: 8 })
+                .collect::<Vec<_>>(),
+        );
+        assert_eq!(chunked, plain);
+    }
+
+    #[test]
     fn test_negative_dot_float_single_token() {
         let input = "-.5";
         // Compare to non-chunked lexer
