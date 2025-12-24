@@ -547,7 +547,10 @@ impl ChunkedLexer {
                         break;
                     }
                 }
-                used_end = cut_idx.min(used_end);
+                // Ensure we advance to the deferral boundary even if the lexer emitted no tokens
+                // before it (e.g., whitespace/comments only). Otherwise, the outer iterator may
+                // think no progress was made and stop early.
+                used_end = cut_idx;
                 partial_string = Some(chunk[cut_idx..].to_string());
             }
         }
@@ -621,7 +624,8 @@ impl ChunkedLexer {
                             break;
                         }
                     }
-                    used_end = cut_idx.min(used_end);
+                    // Same progress rule as string deferral: advance to the deferral boundary.
+                    used_end = cut_idx;
                     partial_string = Some(chunk[cut_idx..].to_string());
                 }
             }
@@ -1878,6 +1882,19 @@ mod tests {
         // Ensure there is no comment token emitted and the sequence matches non-chunked
         let tokens_plain: Vec<_> = Lexer::new(input).collect();
         assert_eq!(normalize(&tokens_chunked), normalize(&tokens_plain));
+    }
+
+    #[test]
+    fn test_back_to_back_line_comments_then_identifier_parity() {
+        // Regression for CI proptest failure:
+        // parts = ["x", "// comment here\n", "// comment here\n", "x"], chunk_size = 16
+        let input = "x// comment here\n// comment here\nx";
+        let plain = normalize(&Lexer::new(input).collect::<Vec<_>>());
+        let chunked = normalize(
+            &ChunkedLexer::from_reader(Cursor::new(input), ChunkedLexerConfig { chunk_size: 16 })
+                .collect::<Vec<_>>(),
+        );
+        assert_eq!(chunked, plain);
     }
 
     #[test]
