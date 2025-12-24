@@ -1,6 +1,6 @@
 [package]
 name = "medi_data"
-version = "0.0.9"
+version = "0.0.10"
 edition = "2021"
 description = "Medi standard library: healthcare data structures, FHIR, HL7, DICOM, storage"
 license = "Apache-2.0"

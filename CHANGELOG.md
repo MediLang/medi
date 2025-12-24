@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.10] - 2025-12-24
+
+### Added
+- **Performance Benchmarking Suite (Task 10.2)** enhancements:
+  - Config-driven benchmark runs with tier selection and CLI overrides
+  - Additional healthcare workloads including NDJSON roundtrip I/O and concurrency-focused validation
+  - Richer benchmark metadata in reports (git SHA, CLI args, thread count) and best-effort RSS deltas
+- **Comparative Analysis with Python/R (Task 10.3)**:
+  - Expanded Python/R comparator workloads to mirror Medi healthcare workloads
+  - Comparison section in benchmark report with per-workload ratios (Python/Medi, R/Medi)
+  - Generated narrative comparison report with charts under `compiler/benches/benchdata/`
+
+### Fixed
+- R comparator JSON output compatibility for stable deserialization in the Rust benchmark runner.
+
 ## [v0.0.9] - 2025-12-23
 
 ### Added

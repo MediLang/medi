@@ -1,33 +1,33 @@
-# Compatibility Matrix (v0.0.9)
+# Compatibility Matrix (v0.0.10)
 
-This page summarizes crate versions, Rust edition, and notable feature flags for the v0.0.9 release.
+This page summarizes crate versions, Rust edition, and notable feature flags for the v0.0.10 release.
 
 ## Crates
 
 - medi_ai
-  - Version: 0.0.9
+  - Version: 0.0.10
   - Edition: 2021
   - Features: None (default)
 
 - medi_compliance
-  - Version: 0.0.9
+  - Version: 0.0.10
   - Edition: 2021
   - Features: None (default)
 
 - medi_data
-  - Version: 0.0.9
+  - Version: 0.0.10
   - Edition: 2021
   - Features:
     - encryption-aes-gcm (optional)
 
 - medi_model
-  - Version: 0.0.9
+  - Version: 0.0.10
   - Edition: 2021
   - Features:
     - onnx (stub)
 
 - medi_stats
-  - Version: 0.0.9
+  - Version: 0.0.10
   - Edition: 2021
   - Features:
     - pvalue (enables `statrs`)
@@ -41,4 +41,4 @@ This page summarizes crate versions, Rust edition, and notable feature flags for
 
 Notes:
 - Internal inter-crate path dependencies are aligned to this workspace version.
-- See CHANGELOG v0.0.9 for highlights and tests for detailed coverage.
+- See CHANGELOG v0.0.10 for highlights and tests for detailed coverage.
