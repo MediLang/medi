@@ -10,17 +10,49 @@
 
 </div>
 
-**Medi** is a programming language purpose-built for healthcare—combining Python/R-like syntax, compiled performance (LLVM), and native support for FHIR, HL7, DICOM, and regulatory compliance (HIPAA, GDPR, FDA).
+Medi is a programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. With a beginner-friendly syntax inspired by Python and R, high performance rivaling Julia, Rust, and C++, and native support for healthcare standards like FHIR, HL7, and DICOM, Medi empowers clinicians, researchers, and developers to unlock insights from complex medical data.
+
+From genomic analysis to real-time patient monitoring, clinical trials to hospital operations, Medi delivers secure, scalable, and clinician-friendly solutions.
 
 ## Why Medi?
 
-| Challenge | Existing Tools | Medi's Solution |
-|-----------|---------------|-----------------|
-| Performance on big data | Python/R are slow | LLVM-compiled, near-C++ speed |
-| Healthcare standards | Manual integrations | Native FHIR, HL7, DICOM, genomics |
-| Compliance | Complex, error-prone | Built-in `regulate` blocks, PHI tracking |
-| Edge/IoT deployment | Limited options | WebAssembly, RISC-V targets |
-| Accessibility | Steep learning curve | Clinician-friendly syntax |
+Healthcare demands tools that balance accessibility, performance, security, and compliance. Existing languages fall short:
+
+- **Python/R:** Versatile but slow for big data, lack native healthcare standards, and require complex integrations.
+- **SAS/Stata:** Expensive, proprietary, and cumbersome for modern workflows.
+- **Julia:** Fast but not healthcare-specific, with a smaller ecosystem.
+
+Medi fills these gaps with:
+
+| Challenge | Medi's Solution |
+|-----------|-----------------|
+| Performance on big data | LLVM-compiled, near-C++ speed |
+| Healthcare standards | Native FHIR, HL7, DICOM, genomics (FASTQ, VCF) |
+| Compliance | Built-in `regulate` blocks, PHI tracking, HIPAA/GDPR automation |
+| Edge/IoT deployment | WebAssembly, RISC-V targets for wearables and medical devices |
+| Accessibility | Clinician-friendly syntax, visual IDE |
+
+## Key Features
+
+- **Beginner-Friendly Syntax:** Python-like readability with R-style data pipelines (`|>`). Declarative constructs like `fhir_query` and `plot_kaplan_meier` simplify complex tasks.
+- **High Performance:** Compiled to machine code via LLVM. Supports parallel processing, GPU acceleration (CUDA/OpenCL), and targets x86-64, WebAssembly, and RISC-V.
+- **Medical Data Science & AI:** Built-in statistical methods (`kaplan_meier`, `sir_model`), pre-trained models for diagnostics, federated learning for privacy-preserving analytics.
+- **Privacy & Compliance:** `federated` and `dp` constructs for differential privacy. `regulate` blocks for automated HIPAA/GDPR/FDA compliance checks.
+- **Healthcare Interoperability:** Native FHIR, HL7, DICOM support. Integration with Python (`py_call`), R (`r_call`), and healthcare systems (Epic, Cerner, AWS HealthLake).
+
+## Example
+
+```medi
+// Query patients with diabetes and analyze outcomes
+let diabetic_patients = fhir_query("Patient")
+    |> filter(condition: icd10("E11"))  // Type 2 diabetes
+    |> join(observations: "HbA1c");
+
+// Run survival analysis with compliance checks
+regulate { standard: "HIPAA", checks: ["phi_protected"] };
+let survival = kaplan_meier(diabetic_patients, event: "hospitalization");
+plot_kaplan_meier(survival, title: "Diabetes Outcomes");
+```
 
 ## Quick Start
 
