@@ -35,6 +35,10 @@ path = "benchmark_parser_scaling.rs"
 name = "benchmark_plot_scaling"
 path = "benchmark_plot_scaling.rs"
 
+[[bin]]
+name = "benchmark_healthcare_workloads"
+path = "benchmark_healthcare_workloads.rs"
+
 [[bench]]
 name = "lexer_simple_benchmark"
 path = "lexer_simple_benchmark.rs"
@@ -44,6 +48,10 @@ medic_lexer = { path = "../medic_lexer" }
 medic_parser = { path = "../medic_parser" }
 medic_ast = { path = "../medic_ast" }
 medic_borrowck = { path = "../medic_borrowck" }
+medi_data = { path = "../../stdlib/medi_data" }
+medi_stats = { path = "../../stdlib/medi_stats" }
+medi_compliance = { path = "../../stdlib/medi_compliance" }
+medi_ai = { path = "../../stdlib/medi_ai" }
 criterion = { version = "0.5", features = ["html_reports"] }
 memory-stats = "1.2.0"
 rand = "0.8"

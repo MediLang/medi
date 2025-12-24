@@ -37,39 +37,33 @@ const PI: float = 3.14159;
 
 ## Healthcare Data Types
 
-Medi includes native support for healthcare data types and integrates with healthcare standards:
+Medi supports composite types that are commonly used to model clinical data. The language specification also defines medical-specific literals for identifiers and codes.
 
 ```medi
-// FHIR resources (automatically mapped to Medi types)
-let patient = fhir::Patient.get("P-12345");
-let observations = fhir::Observation.search(patient: patient.id, category: "vital-signs");
+// Medical-specific literals
+let patient = pid("PT-12345");
+let dx = icd10("E11.65");
 
-// Working with medical records
-let record = MedicalRecord {
-  id: "MR-45678",
-  patient: patient,
-  conditions: ["Type 2 Diabetes", "Hypertension"],
-  medications: [
-    Medication { name: "Metformin", dosage: "500mg", frequency: "BID" },
-    Medication { name: "Lisinopril", dosage: "10mg", frequency: "Daily" }
-  ]
+// Structured record types
+record Vital {
+  temperature_c: float,
+  pulse_bpm: int
+}
+
+record Patient {
+  id: patient_id,
+  age: int,
+  vitals: list[Vital]
+}
+
+let p = Patient{
+  id: patient,
+  age: 45,
+  vitals: [Vital{temperature_c: 37.2, pulse_bpm: 80}]
 };
 
-// Genomic data
-let variants = vcf::load("sample.vcf");
-let pathogenic_variants = variants.filter(|v| v.clinical_significance == "Pathogenic");
-
-// Time series data (for vital signs, ECGs, etc.)
-let ecg = timeseries::from_csv("ecg_data.csv")?;
-let heart_rate_variability = ecg.calculate_hrv();
-
-// Medical imaging
-let mri = dicom::load("brain_scan.dcm")?;
-let tumor_volume = mri.segment_tumor().calculate_volume();
-
-// Working with medical codes
-let icd10 = icd10::from_code("E11.65");  // Type 2 diabetes with hyperglycemia
-let snomed = snomed::from_code("44054006");  // Diabetes mellitus
+// Map type for tagged metadata
+let tags: map[string, string] = {"site": "clinic-a", "unit": "ICU"};
 ```
 
 ## Control Flow
@@ -79,40 +73,27 @@ Medi's control flow constructs are similar to Rust and other C-like languages:
 ```medi
 // If-else statement
 if heart_rate > 100 {
-  alert("Tachycardia detected");
+  print("Tachycardia detected");
 } else if heart_rate < 60 {
-  alert("Bradycardia detected");
+  print("Bradycardia detected");
 } else {
-  log("Normal heart rate");
+  print("Normal heart rate");
 }
 
-// For loop with pattern matching
+// For loop
 for patient in patients {
   calculate_risk_score(patient);
 }
 
 // While loop
 while monitoring_active {
-  read_vitals();
-  std::thread::sleep(std::time::Duration::from_millis(1000));
+  print("monitoring...");
 }
 
-// Match expression (like switch/case but more powerful)
-match patient_status {
-  "critical" => {
-    alert_doctor();
-    increase_monitoring();
-  },
-  "stable" => log("Patient is stable"),
-  _ => log("Unknown status"),
-}
-
-// Concise match expression syntax in expression context
-// Equivalent to: match status { ... }
-status {
-  "ok" => 1,
-  "warn" => 2,
-  _ => 0,
+// Pattern matching
+match lab_result {
+  case lab_result(name: "CRP", value: v) if v > 10 => print("Elevated CRP")
+  case _ => print("Normal result")
 }
 ```
 
@@ -139,16 +120,7 @@ fn administer_medication(med_id: string, dose: float, route: string = "oral") {
 
 ## Data Pipeline Operators
 
-Medi supports data pipelines inspired by R and F#:
-
-```medi
-// Pipeline operator |>
-patients
-  |> filter(condition: "diabetes")
-  |> sort(by: "a1c_level", descending: true)
-  |> limit(10)
-  |> plot_risk_score();
-```
+The pipeline operator `|>` is **reserved for a future version** (see the Language Specification).
 
 ## Healthcare-Specific Syntax
 
@@ -173,17 +145,12 @@ federated {
 
 ## Error Handling
 
+v0.1 uses `Result<T, E>` and the `?` operator for error propagation.
+
 ```medi
-try {
-  result = analyze_bloodwork(sample_id);
-} catch (SampleNotFoundError e) {
-  log("Sample not found: " + e.message);
-  request_new_sample();
-} catch (AnalysisError e) {
-  log("Analysis failed: " + e.message);
-  retry_analysis();
-} finally {
-  cleanup_resources();
+fn load_patient(id: string) -> Result<record, Error> {
+  let patient = fhir_query("Patient", id)?
+  Ok(patient)
 }
 ```
 

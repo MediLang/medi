@@ -228,7 +228,6 @@ binding_energy = results.get_binding_energy();
 
 ## Learn More
 
-* [AI Model Reference](../reference/ai-models.md)
-* [Statistical Methods](../reference/statistical-methods.md)
-* [Visualization Gallery](../examples/visualization-gallery.md)
-* [Federated Learning Guide](../technical/federated-learning.md)
+* [Standard Library](../reference/standard-library.md)
+* [Benchmarks](../technical/benchmarks.md)
+* [Tooling](../technical/tooling.md)

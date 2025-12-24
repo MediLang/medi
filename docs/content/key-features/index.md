@@ -4,12 +4,11 @@ Medi is designed with healthcare-specific features that set it apart from genera
 
 ## Core Features
 
-* [Beginner-Friendly Syntax](syntax.md) - Intuitive language constructs ideal for healthcare professionals
 * [Medical Data Science and AI](medical-data-science.md) - Built-in tools for healthcare analytics and artificial intelligence
-* [Privacy and Compliance](privacy-compliance.md) - Native constructs for HIPAA, GDPR, and other regulatory standards
-* [Performance Optimization](performance.md) - LLVM compilation, RISC-V support, and WebAssembly output
-* [Healthcare Standards](healthcare-standards.md) - Native support for FHIR, HL7, DICOM, and genomic formats
-* [Interoperability](interoperability.md) - Seamless integration with Python, R, and healthcare systems
+* [Beginner-Friendly Syntax](../getting-started/basic-syntax.md) - Intuitive language constructs ideal for healthcare professionals
+* [Privacy and Compliance](../getting-started/compliance.md) - Compliance helpers and HIPAA-oriented primitives
+* [Performance Optimization](../technical/benchmarks.md) - Benchmarks and performance measurement
+* [Healthcare Standards](../getting-started/data.md) - Healthcare data processing and ingestion
 
 ## What Makes Medi Unique?
 

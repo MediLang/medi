@@ -13,55 +13,19 @@ Medi is currently in pre-alpha development. This guide will walk you through set
 
 ## Installation Methods
 
-### Option 1: Pre-built Binaries (Recommended)
-
-```bash
-# Download the Medi installer
-curl -sSL https://get.medi-lang.org | bash
-
-# Verify installation
-medi --version
-```
-
-### Option 2: Building from Source
+### Building from Source
 
 ```bash
 # Clone the repository
 git clone https://github.com/MediLang/medi.git
 cd medi
 
-# Install dependencies
-./scripts/install_deps.sh
+# Build the compiler CLI
+cargo build -p medic
 
-# Build Medi
-make
-
-# Install
-sudo make install
-
-# Verify installation
-medi --version
+# Run the CLI from the repository
+cargo run -p medic -- --help
 ```
-
-### Option 3: Docker Container
-
-```bash
-# Pull the Medi Docker image
-docker pull medilang/medi:latest
-
-# Run a Medi container
-docker run -it --rm medilang/medi medi --version
-```
-
-## IDE Setup
-
-The Medi IDE (Medi Studio) can be installed separately:
-
-```bash
-medi install-ide
-```
-
-Alternatively, you can use Medi with VS Code by installing the Medi extension from the marketplace.
 
 ## Next Steps
 

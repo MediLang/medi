@@ -1225,6 +1225,10 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "libc",
+ "medi_ai",
+ "medi_compliance",
+ "medi_data",
+ "medi_stats",
  "medic_ast",
  "medic_borrowck",
  "medic_codegen_llvm",

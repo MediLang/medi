@@ -1,6 +1,6 @@
 # Your First Medi Program
 
-This guide walks you through creating and running your first Medi program.
+This guide walks you through writing a small Medi program and checking it with the current compiler CLI.
 
 ## A Simple Health Risk Calculator
 
@@ -47,73 +47,34 @@ let patients: list[Patient] = [
   Patient{name: "Patient C", age: 30, systolic: 115, diastolic: 75, smoker: false, diabetes: false}
 ];
 
-// Calculate and display risk for each patient
-for patient in patients {
-  let risk = calculate_risk_score(
-    patient.age,
-    patient.systolic,
-    patient.diastolic,
-    patient.smoker,
-    patient.diabetes
-  );
-  
-  // Display result
-  println!("{} risk score: {}", patient.name, risk);
-}
-  
-  // Risk classification
-  if (risk < 5) {
-    print("  Status: Low Risk");
-  } else if (risk < 10) {
-    print("  Status: Moderate Risk");
-  } else {
-    print("  Status: High Risk");
-  }
-}
-
-// Visualize results
-visualize {
-  plot_bar(
-    data: patients,
-    x: "name",
-    y: (p) => calculate_risk_score(p.age, p.systolic, p.diastolic, p.smoker, p.diabetes),
-    title: "Patient Risk Scores",
-    y_label: "Risk Score"
-  );
-}
+// Compute a value so it stays typechecked end-to-end
+let example_risk = calculate_risk_score(
+  patients[0].age,
+  patients[0].systolic,
+  patients[0].diastolic,
+  patients[0].smoker,
+  patients[0].diabetes
+);
 ```
 
-## Running the Program
+## Checking the Program
 
-Save the file and run it using the Medi interpreter:
+From the repository root, typecheck the file with `medic`:
 
 ```bash
-medi risk_calculator.medi
+cargo run -p medic -- check risk_calculator.medi
 ```
-
-You should see output similar to:
-
-```
-Patient A risk score: 9.5
-  Status: Moderate Risk
-Patient B risk score: 12
-  Status: High Risk
-Patient C risk score: 3
-  Status: Low Risk
-```
-
-A new window will also open displaying a bar chart of the patient risk scores.
 
 ## Key Concepts Demonstrated
 
 1. **Function Definition**: The `calculate_risk_score` function
-2. **Data Structures**: Using the `dataset` type for patient records
+2. **Data Structures**: Using a `record` type for patient records
 3. **Control Flow**: `if/else` statements and `for` loops
-4. **Visualization**: Simple bar chart creation with the `visualize` block
+4. **Types**: Explicit types for parameters and returns
 
 ## Next Steps
 
 * Try modifying the risk calculation formula
 * Add more patient data
-* Explore more complex [visualizations](../key-features/data-visualization.md)
-* Learn about [integrating with healthcare standards](../key-features/healthcare-standards.md) like FHIR
+* Read the [Language Specification](../reference/language-spec.md)
+* Learn about the [compiler and tools](../technical/tooling.md)

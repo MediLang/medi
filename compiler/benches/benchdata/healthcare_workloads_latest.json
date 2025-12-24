@@ -1,0 +1,103 @@
+[
+  {
+    "name": "medi_data_hl7_patient_pipeline",
+    "iterations": 20,
+    "avg_time_ms": 0.0015850499999999997,
+    "min_time_ms": 0.001152,
+    "max_time_ms": 0.003556,
+    "rss_mb": 2.4609375,
+    "meta": {
+      "patient_id": "P12345"
+    }
+  },
+  {
+    "name": "medi_data_observation_validate_query",
+    "iterations": 20,
+    "avg_time_ms": 3.5742679499999994,
+    "min_time_ms": 2.857089,
+    "max_time_ms": 4.749442,
+    "rss_mb": 6.19921875,
+    "meta": {
+      "matched": "10000",
+      "observations": "20000"
+    }
+  },
+  {
+    "name": "medi_data_bundle_validate",
+    "iterations": 10,
+    "avg_time_ms": 0.8766581,
+    "min_time_ms": 0.858945,
+    "max_time_ms": 0.907579,
+    "rss_mb": 6.19921875,
+    "meta": {
+      "entries": "5000"
+    }
+  },
+  {
+    "name": "medi_stats_ttest",
+    "iterations": 200,
+    "avg_time_ms": 0.02948664500000001,
+    "min_time_ms": 0.029185,
+    "max_time_ms": 0.061287,
+    "rss_mb": 6.19921875,
+    "meta": {
+      "df": "9998.00",
+      "t_stat": "-0.865982"
+    }
+  },
+  {
+    "name": "medi_compliance_hipaa_keyword_scan",
+    "iterations": 50,
+    "avg_time_ms": 0.00027854,
+    "min_time_ms": 0.00026,
+    "max_time_ms": 0.000491,
+    "rss_mb": 6.19921875,
+    "meta": {
+      "failed": "1"
+    }
+  },
+  {
+    "name": "medi_ai_risk_score",
+    "iterations": 1000,
+    "avg_time_ms": 0.00010299100000000107,
+    "min_time_ms": 0.00009999999999999999,
+    "max_time_ms": 0.000221,
+    "rss_mb": 6.19921875,
+    "meta": {
+      "score": "0.550000"
+    }
+  },
+  {
+    "name": "python_keyword_scan",
+    "iterations": 200,
+    "avg_time_ms": 0.0005839311052113771,
+    "min_time_ms": 0.0004209578037261963,
+    "max_time_ms": 0.0013720709830522535,
+    "rss_mb": null,
+    "meta": {
+      "hits": "2"
+    }
+  },
+  {
+    "name": "python_mean",
+    "iterations": 500,
+    "avg_time_ms": 0.2170121991075575,
+    "min_time_ms": 0.21042092703282833,
+    "max_time_ms": 0.2657559234648943,
+    "rss_mb": null,
+    "meta": {
+      "mean": "4.950000"
+    }
+  },
+  {
+    "name": "python_dot_product",
+    "iterations": 2000,
+    "avg_time_ms": 0.0007807702058926225,
+    "min_time_ms": 0.0007208436727523804,
+    "max_time_ms": 0.002895016223192215,
+    "rss_mb": null,
+    "meta": {
+      "score": "0.550000"
+    }
+  }
+]

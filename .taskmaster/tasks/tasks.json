@@ -654,7 +654,7 @@
           "8",
           "9"
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -662,7 +662,7 @@
             "description": "Create comprehensive documentation for the Medi language syntax, features, and standard library APIs",
             "dependencies": [],
             "details": "Implement detailed documentation covering: language syntax, control structures, data types, standard library functions, error handling, and development tools. Include code examples for each feature. Documentation should be organized in a hierarchical structure with clear navigation. Quality criteria: completeness (all features documented), clarity (understandable to beginners), accuracy (no errors), and usefulness (practical examples). Deliver as HTML/Markdown files with proper formatting, syntax highlighting, and searchable index.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -673,7 +673,7 @@
               1
             ],
             "details": "Create benchmarks measuring: computation speed, memory usage, I/O performance, concurrency handling, and statistical analysis operations. Implement automated testing framework that runs benchmarks in controlled environments with consistent hardware/software configurations. Include small, medium, and large dataset tests. Quality criteria: reproducibility, statistical validity (multiple runs with variance analysis), and comprehensive coverage of language features. Deliver as executable test suite with configuration files and logging capabilities.",
-            "status": "pending",
+            "status": "in-progress",
             "parentId": "undefined"
           },
           {

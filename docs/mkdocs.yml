@@ -108,6 +108,7 @@ nav:
     - Installation: getting-started/installation.md
     - Basic Syntax: getting-started/basic-syntax.md
     - First Medi Program: getting-started/first-program.md
+    - Development Environment: getting-started/development-environment.md
   - Key Features:
     - Overview: key-features/index.md
     - Medical Data Science & AI: key-features/medical-data-science.md
@@ -118,8 +119,13 @@ nav:
     - Architecture: technical/architecture.md
     - Diagnostics: technical/diagnostics-snippets.md
     - Common Errors: technical/common-errors.md
+    - Tooling: technical/tooling.md
+    - Benchmarks: technical/benchmarks.md
   - Reference:
-    - Standard Library: reference/index.md
+    - Overview: reference/index.md
+    - Language Specification: reference/language-spec.md
+    - Standard Library: reference/standard-library.md
+    - Lexer: reference/lexer.md
     - Compatibility Matrix: reference/compatibility-matrix.md
   - Roadmap: roadmap/index.md
   - Contributing: contributing/index.md
