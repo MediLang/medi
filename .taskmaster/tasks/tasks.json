@@ -673,7 +673,7 @@
               1
             ],
             "details": "Create benchmarks measuring: computation speed, memory usage, I/O performance, concurrency handling, and statistical analysis operations. Implement automated testing framework that runs benchmarks in controlled environments with consistent hardware/software configurations. Include small, medium, and large dataset tests. Quality criteria: reproducibility, statistical validity (multiple runs with variance analysis), and comprehensive coverage of language features. Deliver as executable test suite with configuration files and logging capabilities.",
-            "status": "in-progress",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -684,7 +684,7 @@
               2
             ],
             "details": "Perform side-by-side comparison of Medi vs Python vs R across: execution speed for common data science tasks, memory efficiency, code readability, feature completeness, and ecosystem integration. Create equivalent implementations of benchmark tasks in all three languages. Analyze strengths/weaknesses of each approach. Quality criteria: fairness (unbiased comparison), thoroughness (covers major use cases), and actionable insights. Deliver as detailed report with data visualizations, statistical analysis of performance differences, and recommendations for Medi improvement areas.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ]
