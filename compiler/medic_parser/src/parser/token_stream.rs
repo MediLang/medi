@@ -31,12 +31,15 @@ impl<'a> TokenStream<'a> {
     }
 
     /// Get the next token and advance the position
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<&Token> {
-        let token = self.peek();
-        if token.is_some() {
+        if self.position < self.tokens.len() {
+            let token = &self.tokens[self.position];
             self.position += 1;
+            Some(token)
+        } else {
+            None
         }
-        token
     }
 
     /// Get the remaining tokens as a slice
@@ -45,15 +48,18 @@ impl<'a> TokenStream<'a> {
     }
 
     /// Create a nom error at the current position
-    pub fn error<T>(&self, kind: nom::error::ErrorKind) -> nom::Err<nom::error::Error<&'a [Token]>> {
+    pub fn error(&self, kind: nom::error::ErrorKind) -> nom::Err<nom::error::Error<&'a [Token]>> {
         nom::Err::Error(nom::error::Error::new(self.remaining(), kind))
     }
 
     /// Match a specific token type and consume it
-    pub fn match_token(&mut self, expected_type: &TokenType) -> Result<&Token, nom::Err<nom::error::Error<&'a [Token]>>> {
-        match self.peek() {
+    pub fn match_token(
+        &mut self,
+        expected_type: &TokenType,
+    ) -> Result<&Token, nom::Err<nom::error::Error<&'a [Token]>>> {
+        match self.tokens.get(self.position) {
             Some(token) if &token.token_type == expected_type => {
-                self.next();
+                self.position += 1;
                 Ok(token)
             }
             _ => Err(self.error(nom::error::ErrorKind::Tag)),
@@ -62,7 +68,7 @@ impl<'a> TokenStream<'a> {
 
     /// Match any token type from a list and consume it
     pub fn match_any(&mut self, expected: &[TokenType]) -> IResult<&'a [Token], &'a Token> {
-        match self.peek() {
+        match self.tokens.get(self.position) {
             Some(token) if expected.contains(&token.token_type) => {
                 self.position += 1;
                 Ok((self.remaining(), token))
@@ -93,10 +99,20 @@ mod tests {
 
     #[test]
     fn peek_and_next_work() {
-        let mut ts = TokenStream::new(&[tok(TokenType::Let), tok(TokenType::Identifier("x".into()))]);
-        assert!(matches!(ts.peek().map(|t| &t.token_type), Some(TokenType::Let)));
-        assert!(matches!(ts.next().map(|t| &t.token_type), Some(TokenType::Let)));
-        assert!(matches!(ts.peek().map(|t| &t.token_type), Some(TokenType::Identifier(_))));
+        let tokens = [tok(TokenType::Let), tok(TokenType::Identifier("x".into()))];
+        let mut ts = TokenStream::new(&tokens);
+        assert!(matches!(
+            ts.peek().map(|t| &t.token_type),
+            Some(TokenType::Let)
+        ));
+        assert!(matches!(
+            ts.next().map(|t| &t.token_type),
+            Some(TokenType::Let)
+        ));
+        assert!(matches!(
+            ts.peek().map(|t| &t.token_type),
+            Some(TokenType::Identifier(_))
+        ));
         assert!(!ts.is_empty());
         ts.next();
         assert!(ts.is_empty());
@@ -104,7 +120,11 @@ mod tests {
 
     #[test]
     fn remaining_slices_advance() {
-        let tokens = [tok(TokenType::Fn), tok(TokenType::Identifier("f".into())), tok(TokenType::LeftParen)];
+        let tokens = [
+            tok(TokenType::Fn),
+            tok(TokenType::Identifier("f".into())),
+            tok(TokenType::LeftParen),
+        ];
         let mut ts = TokenStream::new(&tokens);
         assert_eq!(ts.remaining().len(), 3);
         ts.next();
@@ -113,7 +133,8 @@ mod tests {
 
     #[test]
     fn match_token_ok_and_err() {
-        let mut ts = TokenStream::new(&[tok(TokenType::If), tok(TokenType::Else)]);
+        let tokens = [tok(TokenType::If), tok(TokenType::Else)];
+        let mut ts = TokenStream::new(&tokens);
         ts.match_token(&TokenType::If).expect("should match If");
         let err = ts.match_token(&TokenType::If).unwrap_err();
         // Ensure it's a nom::Err::Error
@@ -125,11 +146,16 @@ mod tests {
 
     #[test]
     fn match_any_ok_and_err() {
-        let mut ts = TokenStream::new(&[tok(TokenType::Return), tok(TokenType::While)]);
-        let (_rem, first) = ts.match_any(&[TokenType::Return, TokenType::Break]).expect("match any first");
+        let tokens = [tok(TokenType::Return), tok(TokenType::While)];
+        let mut ts = TokenStream::new(&tokens);
+        let (_rem, first) = ts
+            .match_any(&[TokenType::Return, TokenType::Break])
+            .expect("match any first");
         assert!(matches!(first.token_type, TokenType::Return));
         // Next token is While which isn't in expected set
-        let err = ts.match_any(&[TokenType::Break, TokenType::Continue]).unwrap_err();
+        let err = ts
+            .match_any(&[TokenType::Break, TokenType::Continue])
+            .unwrap_err();
         match err {
             NomErr::Error(_) => {}
             _ => panic!("expected error variant"),
@@ -138,11 +164,15 @@ mod tests {
 
     #[test]
     fn peek_token_checks_without_consuming() {
-        let mut ts = TokenStream::new(&[tok(TokenType::Match), tok(TokenType::LeftBrace)]);
+        let tokens = [tok(TokenType::Match), tok(TokenType::LeftBrace)];
+        let mut ts = TokenStream::new(&tokens);
         assert!(ts.peek_token(&TokenType::Match));
         // Still should match after peek
         ts.match_token(&TokenType::Match).unwrap();
-        assert!(matches!(ts.peek().map(|t| &t.token_type), Some(TokenType::LeftBrace)));
+        assert!(matches!(
+            ts.peek().map(|t| &t.token_type),
+            Some(TokenType::LeftBrace)
+        ));
     }
 
     #[test]

@@ -73,6 +73,7 @@ pub mod identifiers;
 pub mod literals;
 pub mod statements;
 pub mod test_utils;
+pub mod token_stream;
 
 // Re-export commonly used functions from submodules
 pub use diagnostics::{diagnostic_from_nom_error, render_snippet, Diagnostic, Severity};
