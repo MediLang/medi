@@ -22,6 +22,9 @@ compiler/Cargo.lock
 venv/
 .venv/
 
+__pycache__/
+*.pyc
+
 # Editor directories and files
 *.suo
 *.ntvs*
