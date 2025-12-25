@@ -701,7 +701,7 @@
           "3",
           "5"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -709,7 +709,7 @@
             "description": "Configure Rust crate with PyO3 and maturin for building a Python wheel",
             "dependencies": [],
             "details": "Add PyO3 and maturin dependencies, configure `Cargo.toml` for a `cdylib` target, and set up a basic GitHub Actions or local script to build the wheel. Document Python environment setup and build steps.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -720,7 +720,7 @@
               1
             ],
             "details": "Implement PyO3 wrappers for at least two functions. Ensure type conversions for primitives and a small dict payload. Provide example Python scripts.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -732,7 +732,7 @@
               2
             ],
             "details": "Write pytest or simple assert-based tests to validate function calls and error handling. Provide a README with usage instructions and expected outputs.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ]

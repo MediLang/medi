@@ -38,6 +38,31 @@ jobs:
       - name: Clippy check
         run: RUST_BACKTRACE=1 cargo clippy --all -- -A warnings
 
+  pymedi-wheel:
+    name: Build pymedi wheel (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Build wheel (maturin)
+        run: |
+          python -m pip install -U pip
+          python -m pip install -r bindings/pymedi/requirements-dev.txt
+          maturin build -m bindings/pymedi/Cargo.toml --release --out dist
+      - name: Install wheel + run pytest
+        run: |
+          python -m pip install dist/*.whl
+          pytest -q bindings/pymedi/tests
+
   test:
     strategy:
       fail-fast: false
