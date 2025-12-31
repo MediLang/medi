@@ -34,8 +34,24 @@ enum OutputMode {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "medic")]
+#[command(
+    name = "medic",
+    version,
+    author = "MediLang Team",
+    about = "The Medi language compiler for healthcare-safe programming",
+    long_about = "medic is the command-line compiler for the Medi programming language.\n\n\
+        Medi is designed for healthcare applications with built-in HIPAA compliance,\n\
+        privacy-aware type checking, and clinician-friendly diagnostics.\n\n\
+        EXAMPLES:\n\
+        \n  medic check patient_records.medi          Check a Medi source file\n\
+        \n  medic check --emit=x86_64 -o out.o app.medi   Compile to x86_64 object\n\
+        \n  medic check --emit=wasm32 -o app.wasm app.medi Compile to WebAssembly\n\
+        \n  medic repl                                 Start interactive REPL\n\
+        \n  echo 'let x = 1;' | medic check            Check code from stdin",
+    after_help = "For more information, visit: https://github.com/MediLang/medi"
+)]
 struct Cli {
+    /// Increase verbosity level (-v, -vv, -vvv)
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 
@@ -45,50 +61,96 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Check and optionally compile a Medi source file
+    #[command(
+        about = "Check and optionally compile a Medi source file",
+        long_about = "Parses, type-checks, and optionally compiles a Medi source file.\n\n\
+            By default, reads from the specified file or stdin if no file is given.\n\
+            Use --emit to compile to a specific target architecture."
+    )]
     Check(CheckArgs),
+
+    /// Output diagnostics and analysis as JSON
+    #[command(about = "Output diagnostics and analysis as JSON for IDE integration")]
     Json(CheckArgs),
+
+    /// Start an interactive Read-Eval-Print Loop
+    #[command(
+        about = "Start an interactive REPL session",
+        long_about = "Start an interactive Read-Eval-Print Loop for experimenting with Medi code.\n\n\
+            Commands:\n\
+            \n  :help   Show available REPL commands\n\
+            \n  :quit   Exit the REPL (also :q, :exit)"
+    )]
     Repl,
+
+    /// Generate documentation from Medi source files
+    #[command(about = "Generate Markdown documentation from doc comments")]
     Docs(DocsArgs),
+
+    /// Manage Medi packages and dependencies
+    #[command(about = "Manage Medi packages and dependencies")]
     Pack(PackArgs),
 }
 
 #[derive(Debug, Args, Clone)]
 struct CheckArgs {
+    /// Input Medi source file (reads from stdin if not provided)
+    #[arg(value_name = "FILE")]
     input: Option<PathBuf>,
 
-    #[arg(long = "types-json")]
+    /// JSON file with external type definitions for FFI functions
+    #[arg(long = "types-json", value_name = "FILE")]
     types_json: Option<PathBuf>,
 
+    /// Target architecture to compile to (x86_64, wasm32, wasm32-unknown, riscv32)
     #[cfg(feature = "llvm-backend")]
-    #[arg(long = "emit")]
+    #[arg(
+        long = "emit",
+        visible_alias = "target",
+        value_name = "TARGET",
+        value_parser = ["x86_64", "wasm32", "wasm32-unknown", "riscv32"]
+    )]
     emit: Option<String>,
 
+    /// Output file path for compiled artifacts
     #[cfg(feature = "llvm-backend")]
-    #[arg(long = "out")]
+    #[arg(short = 'o', long = "out", value_name = "FILE")]
     out: Option<PathBuf>,
 
+    /// Optimization level (0-3, default: 2 for release, 1 for debug)
     #[cfg(feature = "llvm-backend")]
-    #[arg(long = "opt")]
+    #[arg(long = "opt", value_name = "LEVEL", value_parser = clap::value_parser!(u8).range(0..=3))]
     opt: Option<u8>,
 
+    /// Target CPU model (e.g., 'x86-64', 'generic')
     #[cfg(feature = "llvm-backend")]
-    #[arg(long = "cpu")]
+    #[arg(long = "cpu", value_name = "CPU")]
     cpu: Option<String>,
 
+    /// Target CPU features (comma-separated, e.g., '+sse4.2,+avx')
     #[cfg(feature = "llvm-backend")]
-    #[arg(long = "features")]
+    #[arg(long = "features", value_name = "FEATURES")]
     features: Option<String>,
 
+    /// Optimization pipeline preset (default, minimal, aggressive, debug)
     #[cfg(feature = "llvm-backend")]
-    #[arg(long = "opt-pipeline")]
+    #[arg(
+        long = "opt-pipeline",
+        value_name = "PIPELINE",
+        value_parser = ["default", "minimal", "aggressive", "debug"]
+    )]
     opt_pipeline: Option<String>,
 }
 
 #[derive(Debug, Args, Clone)]
 struct DocsArgs {
-    #[arg(long = "out-dir")]
+    /// Output directory for generated documentation (default: docs_out)
+    #[arg(long = "out-dir", value_name = "DIR")]
     out_dir: Option<PathBuf>,
 
+    /// Medi source files to generate documentation from
+    #[arg(value_name = "FILES")]
     inputs: Vec<PathBuf>,
 }
 
@@ -100,7 +162,9 @@ struct PackArgs {
 
 #[derive(Debug, Subcommand, Clone)]
 enum PackCommand {
+    /// Initialize a new medipack.toml manifest
     Init,
+    /// List dependencies from medipack.toml
     List,
 }
 
@@ -1102,5 +1166,139 @@ mod tests {
         assert_eq!(rc, 0);
 
         std::env::set_current_dir(old).unwrap();
+    }
+
+    #[test]
+    fn cli_help_contains_expected_content() {
+        use clap::CommandFactory;
+        let mut cmd = Cli::command();
+        let mut buf = Vec::new();
+        cmd.write_long_help(&mut buf).unwrap();
+        let help = String::from_utf8(buf).unwrap();
+
+        // Verify key help content is present
+        assert!(help.contains("medic"), "help should mention 'medic'");
+        assert!(
+            help.contains("healthcare"),
+            "help should mention healthcare focus"
+        );
+        assert!(
+            help.contains("HIPAA"),
+            "help should mention HIPAA compliance"
+        );
+        assert!(
+            help.contains("EXAMPLES"),
+            "help should include examples section"
+        );
+        assert!(help.contains("check"), "help should list check subcommand");
+        assert!(help.contains("repl"), "help should list repl subcommand");
+        assert!(help.contains("--version"), "help should show version flag");
+        assert!(help.contains("--help"), "help should show help flag");
+    }
+
+    #[test]
+    fn cli_version_is_set() {
+        use clap::CommandFactory;
+        let cmd = Cli::command();
+        let version = cmd.get_version().expect("version should be set");
+        assert!(!version.is_empty(), "version should not be empty");
+    }
+
+    #[test]
+    fn check_subcommand_help_contains_expected_content() {
+        use clap::CommandFactory;
+        let cmd = Cli::command();
+        let check_cmd = cmd
+            .get_subcommands()
+            .find(|c| c.get_name() == "check")
+            .expect("check subcommand should exist");
+
+        let about = check_cmd
+            .get_about()
+            .map(|s| s.to_string())
+            .unwrap_or_default();
+        assert!(
+            about.contains("Check") || about.contains("compile"),
+            "check about should describe checking/compiling"
+        );
+    }
+
+    #[test]
+    fn repl_subcommand_help_mentions_commands() {
+        use clap::CommandFactory;
+        let cmd = Cli::command();
+        let repl_cmd = cmd
+            .get_subcommands()
+            .find(|c| c.get_name() == "repl")
+            .expect("repl subcommand should exist");
+
+        let long_about = repl_cmd
+            .get_long_about()
+            .map(|s| s.to_string())
+            .unwrap_or_default();
+        assert!(
+            long_about.contains(":help") || long_about.contains(":quit"),
+            "repl long_about should mention REPL commands"
+        );
+    }
+
+    #[test]
+    fn known_subcommands_are_not_normalized() {
+        for subcmd in [
+            "check",
+            "json",
+            "repl",
+            "docs",
+            "pack",
+            "help",
+            "--help",
+            "-h",
+            "--version",
+            "-V",
+        ] {
+            let args = vec![OsString::from("medic"), OsString::from(subcmd)];
+            let out = normalize_cli_args(args.clone());
+            assert_eq!(
+                out, args,
+                "known subcommand '{subcmd}' should not be modified"
+            );
+        }
+    }
+
+    #[test]
+    fn empty_args_are_not_modified() {
+        let args = vec![OsString::from("medic")];
+        let out = normalize_cli_args(args.clone());
+        assert_eq!(out, args, "single arg should not be modified");
+    }
+
+    #[test]
+    fn cli_parses_verbose_flag() {
+        let cli = Cli::try_parse_from(["medic", "-vvv"]).unwrap();
+        assert_eq!(cli.verbose, 3, "verbose count should be 3 for -vvv");
+    }
+
+    #[test]
+    fn cli_parses_check_with_file() {
+        let cli = Cli::try_parse_from(["medic", "check", "test.medi"]).unwrap();
+        match cli.command {
+            Some(Command::Check(args)) => {
+                assert_eq!(args.input, Some(PathBuf::from("test.medi")));
+            }
+            _ => panic!("expected Check command"),
+        }
+    }
+
+    #[test]
+    fn cli_parses_types_json_flag() {
+        let cli =
+            Cli::try_parse_from(["medic", "check", "--types-json", "types.json", "test.medi"])
+                .unwrap();
+        match cli.command {
+            Some(Command::Check(args)) => {
+                assert_eq!(args.types_json, Some(PathBuf::from("types.json")));
+            }
+            _ => panic!("expected Check command"),
+        }
     }
 }

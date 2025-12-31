@@ -1147,7 +1147,7 @@ dependencies = [
 
 [[package]]
 name = "medi_ai"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "serde",
  "serde_json",
@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "medi_compliance"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "criterion",
  "regex",
@@ -1167,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "medi_data"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "aes-gcm",
  "criterion",
@@ -1183,7 +1183,7 @@ dependencies = [
 
 [[package]]
 name = "medi_model"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "chrono",
  "parking_lot",
@@ -1194,7 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "medi_stats"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "approx",
  "medi_data",
@@ -1204,7 +1204,7 @@ dependencies = [
 
 [[package]]
 name = "medic"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "clap",
  "medic_ast",
@@ -1224,7 +1224,7 @@ dependencies = [
 
 [[package]]
 name = "medic_ast"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "medic_lexer",
  "pretty_assertions",
@@ -1236,7 +1236,7 @@ dependencies = [
 
 [[package]]
 name = "medic_benchmarks"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "criterion",
  "libc",
@@ -1261,7 +1261,7 @@ dependencies = [
 
 [[package]]
 name = "medic_borrowck"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "medic_ast",
  "thiserror 1.0.69",
@@ -1269,7 +1269,7 @@ dependencies = [
 
 [[package]]
 name = "medic_codegen_llvm"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "inkwell",
  "medic_ast",
@@ -1280,14 +1280,14 @@ dependencies = [
 
 [[package]]
 name = "medic_env"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "medic_type",
 ]
 
 [[package]]
 name = "medic_ide_server"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "axum",
  "medic_ast",
@@ -1304,7 +1304,7 @@ dependencies = [
 
 [[package]]
 name = "medic_lexer"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "criterion",
  "env_logger",
@@ -1322,7 +1322,7 @@ dependencies = [
 
 [[package]]
 name = "medic_parser"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "env_logger",
  "log",
@@ -1335,7 +1335,7 @@ dependencies = [
 
 [[package]]
 name = "medic_runtime"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "core_affinity",
  "criterion",
@@ -1347,11 +1347,11 @@ dependencies = [
 
 [[package]]
 name = "medic_type"
-version = "0.0.10"
+version = "0.0.12"
 
 [[package]]
 name = "medic_typeck"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "log",
  "medic_ast",
@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "pymedi"
-version = "0.0.1"
+version = "0.0.11"
 dependencies = [
  "medi_data",
  "medi_stats",
@@ -2233,7 +2233,7 @@ dependencies = [
 
 [[package]]
 name = "tests"
-version = "0.0.10"
+version = "0.0.12"
 dependencies = [
  "medic_ast",
  "medic_codegen_llvm",

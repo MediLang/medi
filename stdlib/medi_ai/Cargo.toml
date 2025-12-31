@@ -1,6 +1,6 @@
 [package]
 name = "medi_ai"
-version = "0.0.10"
+version = "0.0.12"
 edition = "2021"
 description = "Medi standard library: AI model interfaces and simple risk scorer"
 license = "Apache-2.0"

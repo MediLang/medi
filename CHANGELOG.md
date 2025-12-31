@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.12] - 2025-12-31
+
+### Added
+- **CLI Compiler UX improvements (Task 12)**:
+  - Expanded `medic --help` with clinician-friendly descriptions and examples
+  - Added validation and richer flag help for compilation options
+  - `--target` alias for `--emit` (LLVM backend)
+  - Additional unit tests covering CLI help/version output and argument parsing
+
+### Changed
+- Improved argument documentation for `medic check`, including typed JSON input (`--types-json`) and codegen flags when `llvm-backend` is enabled.
+
+## [v0.0.11] - 2025-12-31
+
+### Added
+- **Python FFI prototype (Task 11)**:
+  - New `bindings/pymedi` PyO3/maturin-based prototype module
+  - Exposed minimal APIs (`mean`, `validate_fhir_patient`, `fhir_query_stub`) for interop demos
+  - Example scripts under `bindings/pymedi/examples/`
+  - Python tests under `bindings/pymedi/tests/`
+  - CI job to build a Linux wheel and run pytest
+
 ## [v0.0.10] - 2025-12-24
 
 ### Added

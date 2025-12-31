@@ -749,7 +749,7 @@
           "2",
           "3"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -757,29 +757,25 @@
             "description": "Design CLI flags and UX, implement help/version and validation",
             "dependencies": [],
             "details": "Use a robust arg parser; ensure clear error messages and examples.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
             "id": 2,
             "title": "Driver Wiring",
             "description": "Connect parse -> typecheck -> codegen -> emit/run",
-            "dependencies": [
-              1
-            ],
+            "dependencies": [],
             "details": "Implement clean compile pipeline with proper exit codes.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
             "id": 3,
             "title": "Target Selection and Artifacts",
             "description": "Support x86-64, wasm32-wasi, and riscv32 outputs",
-            "dependencies": [
-              2
-            ],
+            "dependencies": [],
             "details": "Emit IR/obj/asm; integrate with Task 3 targets.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -788,7 +784,7 @@
             "description": "Clinician-friendly diagnostics with code frames",
             "dependencies": [],
             "details": "Pretty-print errors and warnings with suggestions.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ]
