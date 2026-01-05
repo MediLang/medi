@@ -8,7 +8,7 @@ name = "pymedi"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21", features = ["extension-module"] }
+pyo3 = { version = "0.24", features = ["extension-module"] }
 medi_stats = { path = "../../stdlib/medi_stats" }
 medi_data = { path = "../../stdlib/medi_data" }
 
