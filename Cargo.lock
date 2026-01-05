@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "pymedi"
-version = "0.0.11"
+version = "0.0.13"
 dependencies = [
  "medi_data",
  "medi_stats",
