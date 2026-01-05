@@ -168,6 +168,367 @@ enum PackCommand {
     List,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+enum ReplValue {
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+    String(String),
+    Unit,
+}
+
+impl std::fmt::Display for ReplValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReplValue::Int(n) => write!(f, "{n}"),
+            ReplValue::Float(x) => write!(f, "{x}"),
+            ReplValue::Bool(b) => write!(f, "{b}"),
+            ReplValue::String(s) => write!(f, "{s}"),
+            ReplValue::Unit => write!(f, "()"),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ReplSession {
+    buffer: String,
+    accumulated_source: String,
+    env: medic_env::env::TypeEnv,
+    values: std::collections::HashMap<String, ReplValue>,
+    prelude_names: std::collections::HashSet<String>,
+}
+
+impl ReplSession {
+    fn new() -> Self {
+        let prelude = medic_env::env::TypeEnv::with_prelude();
+        let prelude_names: std::collections::HashSet<String> = prelude
+            .collect_symbol_types()
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect();
+        Self {
+            buffer: String::new(),
+            accumulated_source: String::new(),
+            env: medic_env::env::TypeEnv::with_prelude(),
+            values: std::collections::HashMap::new(),
+            prelude_names,
+        }
+    }
+
+    fn prompt(&self) -> &'static str {
+        if self.buffer.is_empty() {
+            "medic> "
+        } else {
+            "....> "
+        }
+    }
+
+    fn is_complete_input(s: &str) -> bool {
+        let mut paren: i32 = 0;
+        let mut brace: i32 = 0;
+        let mut bracket: i32 = 0;
+        let mut in_str: bool = false;
+        let mut prev_backslash = false;
+
+        for ch in s.chars() {
+            if in_str {
+                if prev_backslash {
+                    prev_backslash = false;
+                    continue;
+                }
+                if ch == '\\' {
+                    prev_backslash = true;
+                    continue;
+                }
+                if ch == '"' {
+                    in_str = false;
+                }
+                continue;
+            }
+
+            match ch {
+                '"' => in_str = true,
+                '(' => paren += 1,
+                ')' => paren -= 1,
+                '{' => brace += 1,
+                '}' => brace -= 1,
+                '[' => bracket += 1,
+                ']' => bracket -= 1,
+                _ => {}
+            }
+        }
+
+        if in_str {
+            return false;
+        }
+        if paren != 0 || brace != 0 || bracket != 0 {
+            return false;
+        }
+        let trimmed = s.trim_end();
+        trimmed.ends_with(';') || trimmed.ends_with('}')
+    }
+
+    fn handle_command(&mut self, line: &str) -> (Vec<String>, bool) {
+        let trimmed = line.trim();
+        if trimmed == ":help" {
+            return (
+                vec![
+                    "commands: :help, :quit, :load <file>, :vars".to_string(),
+                    "note: end statements with ';' or close blocks with '}'".to_string(),
+                ],
+                false,
+            );
+        }
+
+        if trimmed == ":q" || trimmed == ":quit" || trimmed == ":exit" {
+            return (Vec::new(), true);
+        }
+
+        if let Some(rest) = trimmed.strip_prefix(":load") {
+            let path_s = rest.trim();
+            if path_s.is_empty() {
+                return (vec!["error: usage: :load <file>".to_string()], false);
+            }
+            let p = std::path::Path::new(path_s);
+            let text = match std::fs::read_to_string(p) {
+                Ok(t) => t,
+                Err(e) => {
+                    return (
+                        vec![format!(
+                            "error: failed to read '{}': {e}",
+                            p.to_string_lossy()
+                        )],
+                        false,
+                    )
+                }
+            };
+            let (out, _ok) = self.submit_source(&text);
+            (out, false)
+        } else if trimmed == ":vars" {
+            let mut lines = Vec::new();
+            let mut syms: Vec<(String, medic_type::types::MediType)> = self
+                .env
+                .collect_symbol_types()
+                .into_iter()
+                .filter(|(n, _)| !self.prelude_names.contains(n))
+                .collect();
+            syms.sort_by(|a, b| a.0.cmp(&b.0));
+            if syms.is_empty() {
+                lines.push("(no session bindings)".to_string());
+            } else {
+                for (n, t) in syms {
+                    lines.push(format!("{n}: {t:?}"));
+                }
+            }
+            (lines, false)
+        } else {
+            (vec![format!("error: unknown command '{trimmed}'")], false)
+        }
+    }
+
+    fn handle_line(&mut self, line: &str) -> (Vec<String>, bool, bool) {
+        let trimmed = line.trim();
+        if self.buffer.is_empty() && trimmed.starts_with(':') {
+            let (out, exit) = self.handle_command(trimmed);
+            return (out, exit, true);
+        }
+
+        if trimmed.is_empty() {
+            return (Vec::new(), false, false);
+        }
+
+        self.buffer.push_str(line);
+        self.buffer.push('\n');
+        if Self::is_complete_input(&self.buffer) {
+            let code = std::mem::take(&mut self.buffer);
+            let (out, _ok) = self.submit_source(&code);
+            return (out, false, true);
+        }
+        (Vec::new(), false, false)
+    }
+
+    fn submit_source(&mut self, src: &str) -> (Vec<String>, bool) {
+        let mut full = String::new();
+        if !self.accumulated_source.is_empty() {
+            full.push_str(&self.accumulated_source);
+            if !self.accumulated_source.ends_with('\n') {
+                full.push('\n');
+            }
+        }
+        full.push_str(src);
+
+        let tokens: Vec<medic_lexer::token::Token> =
+            medic_lexer::lexer::Lexer::new(&full).collect();
+        let input = medic_parser::parser::TokenSlice::new(&tokens);
+
+        let mut out = Vec::new();
+        let program: medic_ast::ast::ProgramNode =
+            match medic_parser::parser::parse_program_with_diagnostics(input) {
+                Ok(p) => p,
+                Err(diag) => {
+                    out.push(medic_parser::parser::render_snippet(&diag, &full));
+                    return (out, false);
+                }
+            };
+
+        let mut diags = Vec::new();
+        let _ = medic_parser::parser::parse_program_recovering(
+            medic_parser::parser::TokenSlice::new(&tokens),
+            &mut diags,
+        );
+        for d in diags {
+            out.push(medic_parser::parser::render_snippet(&d, &full));
+        }
+
+        let mut trial_env = self.env.clone();
+        let mut checker = medic_typeck::type_checker::TypeChecker::new(&mut trial_env);
+        let mut errs = checker.check_program(&program);
+        errs.extend(checker.take_errors());
+        if !errs.is_empty() {
+            for e in errs {
+                out.push(format!("type error: {e}"));
+            }
+            return (out, false);
+        }
+
+        let mut last_value: Option<ReplValue> = None;
+        for stmt in &program.statements {
+            match self.eval_stmt(stmt) {
+                Ok(v) => last_value = Some(v),
+                Err(e) => {
+                    out.push(format!("runtime error: {e}"));
+                    return (out, false);
+                }
+            }
+        }
+
+        self.env = trial_env;
+        self.accumulated_source = full;
+        if let Some(v) = last_value {
+            if v != ReplValue::Unit {
+                out.push(v.to_string());
+            } else {
+                out.push("ok".to_string());
+            }
+        } else {
+            out.push("ok".to_string());
+        }
+        (out, true)
+    }
+
+    fn eval_stmt(&mut self, stmt: &medic_ast::ast::StatementNode) -> Result<ReplValue, String> {
+        match stmt {
+            medic_ast::ast::StatementNode::Let(ls) => {
+                let v = if let Some(expr) = &ls.value {
+                    self.eval_expr(expr)?
+                } else {
+                    ReplValue::Unit
+                };
+                self.values.insert(ls.name.name().to_string(), v);
+                Ok(ReplValue::Unit)
+            }
+            medic_ast::ast::StatementNode::Assignment(assign) => {
+                if let medic_ast::ast::ExpressionNode::Identifier(id) = &assign.target {
+                    let v = self.eval_expr(&assign.value)?;
+                    self.values.insert(id.node.name.to_string(), v);
+                    Ok(ReplValue::Unit)
+                } else {
+                    Err("unsupported assignment target".to_string())
+                }
+            }
+            medic_ast::ast::StatementNode::Expr(expr) => self.eval_expr(expr),
+            _ => Ok(ReplValue::Unit),
+        }
+    }
+
+    fn eval_expr(&mut self, expr: &medic_ast::ast::ExpressionNode) -> Result<ReplValue, String> {
+        match expr {
+            medic_ast::ast::ExpressionNode::Literal(lit) => self.eval_lit(&lit.node),
+            medic_ast::ast::ExpressionNode::Identifier(id) => self
+                .values
+                .get(id.node.name.as_str())
+                .cloned()
+                .ok_or_else(|| format!("unknown identifier '{}'", id.node.name)),
+            medic_ast::ast::ExpressionNode::Binary(bin) => {
+                let l = self.eval_expr(&bin.node.left)?;
+                let r = self.eval_expr(&bin.node.right)?;
+                self.eval_binary(bin.node.operator, l, r)
+            }
+            _ => Ok(ReplValue::Unit),
+        }
+    }
+
+    fn eval_lit(&self, lit: &medic_ast::ast::LiteralNode) -> Result<ReplValue, String> {
+        match lit {
+            medic_ast::ast::LiteralNode::Int(n) => Ok(ReplValue::Int(*n)),
+            medic_ast::ast::LiteralNode::Float(x) => Ok(ReplValue::Float(*x)),
+            medic_ast::ast::LiteralNode::Bool(b) => Ok(ReplValue::Bool(*b)),
+            medic_ast::ast::LiteralNode::String(s) => Ok(ReplValue::String(s.clone())),
+        }
+    }
+
+    fn eval_binary(
+        &self,
+        op: medic_ast::ast::BinaryOperator,
+        l: ReplValue,
+        r: ReplValue,
+    ) -> Result<ReplValue, String> {
+        match op {
+            medic_ast::ast::BinaryOperator::Add => match (l, r) {
+                (ReplValue::Int(a), ReplValue::Int(b)) => Ok(ReplValue::Int(a + b)),
+                (ReplValue::Float(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a + b)),
+                (ReplValue::Int(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a as f64 + b)),
+                (ReplValue::Float(a), ReplValue::Int(b)) => Ok(ReplValue::Float(a + b as f64)),
+                (ReplValue::String(a), ReplValue::String(b)) => Ok(ReplValue::String(a + &b)),
+                _ => Err("unsupported '+' operands".to_string()),
+            },
+            medic_ast::ast::BinaryOperator::Sub => match (l, r) {
+                (ReplValue::Int(a), ReplValue::Int(b)) => Ok(ReplValue::Int(a - b)),
+                (ReplValue::Float(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a - b)),
+                (ReplValue::Int(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a as f64 - b)),
+                (ReplValue::Float(a), ReplValue::Int(b)) => Ok(ReplValue::Float(a - b as f64)),
+                _ => Err("unsupported '-' operands".to_string()),
+            },
+            medic_ast::ast::BinaryOperator::Mul => match (l, r) {
+                (ReplValue::Int(a), ReplValue::Int(b)) => Ok(ReplValue::Int(a * b)),
+                (ReplValue::Float(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a * b)),
+                (ReplValue::Int(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a as f64 * b)),
+                (ReplValue::Float(a), ReplValue::Int(b)) => Ok(ReplValue::Float(a * b as f64)),
+                _ => Err("unsupported '*' operands".to_string()),
+            },
+            medic_ast::ast::BinaryOperator::Div => match (l, r) {
+                (ReplValue::Int(_), ReplValue::Int(0)) => Err("division by zero".to_string()),
+                (ReplValue::Int(a), ReplValue::Int(b)) => Ok(ReplValue::Int(a / b)),
+                (ReplValue::Float(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a / b)),
+                (ReplValue::Int(a), ReplValue::Float(b)) => Ok(ReplValue::Float(a as f64 / b)),
+                (ReplValue::Float(a), ReplValue::Int(b)) => Ok(ReplValue::Float(a / b as f64)),
+                _ => Err("unsupported '/' operands".to_string()),
+            },
+            medic_ast::ast::BinaryOperator::Eq => Ok(ReplValue::Bool(l == r)),
+            medic_ast::ast::BinaryOperator::Ne => Ok(ReplValue::Bool(l != r)),
+            medic_ast::ast::BinaryOperator::Lt => self.eval_cmp(l, r, |a, b| a < b),
+            medic_ast::ast::BinaryOperator::Le => self.eval_cmp(l, r, |a, b| a <= b),
+            medic_ast::ast::BinaryOperator::Gt => self.eval_cmp(l, r, |a, b| a > b),
+            medic_ast::ast::BinaryOperator::Ge => self.eval_cmp(l, r, |a, b| a >= b),
+            _ => Ok(ReplValue::Unit),
+        }
+    }
+
+    fn eval_cmp<F>(&self, l: ReplValue, r: ReplValue, f: F) -> Result<ReplValue, String>
+    where
+        F: Fn(f64, f64) -> bool,
+    {
+        let (a, b) = match (l, r) {
+            (ReplValue::Int(a), ReplValue::Int(b)) => (a as f64, b as f64),
+            (ReplValue::Float(a), ReplValue::Float(b)) => (a, b),
+            (ReplValue::Int(a), ReplValue::Float(b)) => (a as f64, b),
+            (ReplValue::Float(a), ReplValue::Int(b)) => (a, b as f64),
+            _ => return Err("unsupported comparison operands".to_string()),
+        };
+        Ok(ReplValue::Bool(f(a, b)))
+    }
+}
+
 fn parse_medi_type_str(s: &str) -> Option<medic_type::types::MediType> {
     use medic_type::types::MediType as MT;
     match s {
@@ -179,6 +540,59 @@ fn parse_medi_type_str(s: &str) -> Option<medic_type::types::MediType> {
         "Unknown" | "unknown" => Some(MT::Unknown),
         other if other.starts_with("TypeVar:") => Some(MT::TypeVar(other[8..].to_string())),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod repl_tests {
+    use super::ReplSession;
+
+    #[test]
+    fn repl_help_command() {
+        let mut s = ReplSession::new();
+        let (out, exit, committed) = s.handle_line(":help");
+        assert!(!exit);
+        assert!(committed);
+        assert!(out.iter().any(|l| l.contains("commands:")));
+    }
+
+    #[test]
+    fn repl_quit_command() {
+        let mut s = ReplSession::new();
+        let (_out, exit, _committed) = s.handle_line(":quit");
+        assert!(exit);
+    }
+
+    #[test]
+    fn repl_multiline_then_commit() {
+        let mut s = ReplSession::new();
+        let (out1, exit1, committed1) = s.handle_line("let x = 1");
+        assert!(!exit1);
+        assert!(!committed1);
+        assert!(out1.is_empty());
+
+        let (out2, exit2, committed2) = s.handle_line(";");
+        assert!(!exit2);
+        assert!(committed2);
+        assert!(!out2.is_empty());
+    }
+
+    #[test]
+    fn repl_incremental_binding_visible_in_later_input() {
+        let mut s = ReplSession::new();
+        let (_o1, _e1, c1) = s.handle_line("let x = 2;");
+        assert!(c1);
+        let (o2, _e2, c2) = s.handle_line("x + 3;");
+        assert!(c2);
+        assert!(o2.iter().any(|l| l.trim() == "5"));
+    }
+
+    #[test]
+    fn repl_vars_lists_session_bindings() {
+        let mut s = ReplSession::new();
+        let (_o1, _e1, _c1) = s.handle_line("let x = 2;");
+        let (out, _exit, _committed) = s.handle_line(":vars");
+        assert!(out.iter().any(|l| l.starts_with("x:")));
     }
 }
 
@@ -804,41 +1218,29 @@ fn run_repl() -> i32 {
             return 2;
         }
     };
-    let mut buffer = String::new();
+
+    let mut session = ReplSession::new();
     loop {
-        let prompt = if buffer.is_empty() {
-            "medic> "
-        } else {
-            "....> "
-        };
+        let prompt = session.prompt();
         match rl.readline(prompt) {
             Ok(line) => {
                 let trimmed = line.trim();
-                if buffer.is_empty() {
-                    if trimmed == ":q" || trimmed == ":quit" || trimmed == ":exit" {
-                        return 0;
-                    }
-                    if trimmed == ":help" {
-                        println!("commands: :help, :quit");
-                        continue;
-                    }
-                }
                 if !trimmed.is_empty() {
                     let _ = rl.add_history_entry(trimmed);
                 }
-                buffer.push_str(&line);
-                buffer.push('\n');
-                if trimmed.ends_with(';') || trimmed.ends_with('}') {
-                    let code = buffer.clone();
-                    buffer.clear();
-                    let rc = run_check(&code, &None, OutputMode::Text);
-                    if rc == 0 {
-                        println!("ok");
-                    }
+                let (out, exit, committed) = session.handle_line(&line);
+                for l in out {
+                    println!("{l}");
+                }
+                if exit {
+                    return 0;
+                }
+                if committed {
+                    medic_runtime::maybe_incremental_step();
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                buffer.clear();
+                session.buffer.clear();
                 continue;
             }
             Err(ReadlineError::Eof) => {

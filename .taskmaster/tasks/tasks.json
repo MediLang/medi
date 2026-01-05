@@ -801,7 +801,7 @@
           "2",
           "4"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -809,7 +809,7 @@
             "description": "Implement readable prompt, history, and multi-line input",
             "dependencies": [],
             "details": "Add commands: :help, :load, :quit.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -820,7 +820,7 @@
               1
             ],
             "details": "Preserve state across inputs for names/types.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -831,7 +831,7 @@
               2
             ],
             "details": "Clinician-friendly formatting and summaries.",
-            "status": "pending",
+            "status": "done",
             "parentId": "undefined"
           }
         ]
