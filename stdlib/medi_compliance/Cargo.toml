@@ -1,6 +1,6 @@
 [package]
 name = "medi_compliance"
-version = "0.0.12"
+version = "0.0.13"
 edition = "2021"
 description = "Medi standard library: HIPAA compliance primitives, anonymization, audit trail"
 license = "Apache-2.0"

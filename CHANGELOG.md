@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.13] - 2026-01-05
+
+### Added
+- **Interactive REPL (Task 13)**:
+  - `medic repl` now supports session commands: `:help`, `:quit`/`:q`/`:exit`, `:load <file>`, and `:vars`.
+  - Improved multi-line input handling with delimiter balancing and commit detection.
+  - Incremental parse/typecheck across submissions with persisted session state.
+  - Basic evaluation and result printing for common expressions (with clinician-friendly diagnostics for parse/type errors).
+  - Unit tests covering command handling, multi-line behavior, and incremental bindings.
+
 ## [v0.0.12] - 2025-12-31
 
 ### Added
