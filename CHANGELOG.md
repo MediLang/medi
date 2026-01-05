@@ -19,6 +19,16 @@ Planned improvements and documentation updates.
   - Basic evaluation and result printing for common expressions (with clinician-friendly diagnostics for parse/type errors).
   - Unit tests covering command handling, multi-line behavior, and incremental bindings.
 
+### Changed
+- Dependency updates:
+  - Bumped `pyo3` to `0.24.1`.
+  - Bumped `js-yaml` to `3.14.2`.
+- CI:
+  - Pinned Python to `3.12` for non-Windows runners to avoid PyO3 incompatibilities with newer default Python versions.
+- Release alignment:
+  - Aligned `pymedi` versions for the `v0.0.13` release.
+  - Updated documentation compatibility matrix for `v0.0.13`.
+
 ## [v0.0.12] - 2025-12-31
 
 ### Added
