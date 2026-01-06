@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.14] - 2026-01-06
+
+### Added
+- **Medipack (Task 14)**:
+  - Introduced a dedicated `medipack` CLI crate (`compiler/medipack`) inspired by Cargo.
+  - Added `medipack init` project scaffolding with `--name`, `--description`, and `--lib`.
+  - Added `medipack check` to validate `medi.toml` without building.
+  - Added `medipack clean` to remove build artifacts (`target/`).
+  - Added `medipack build` integration with `medic` including pass-through args and a `--release` stub.
+  - Extended `medi.toml` manifest schema to include optional `description`, `authors`, `license`, `edition`, detailed dependencies (`version`/`path`/`git`), and a healthcare-specific `[fhir]` section.
+
+### Changed
+- Release alignment:
+  - Bumped workspace crate versions to `v0.0.14`.
+
 ## [v0.0.13] - 2026-01-05
 
 ### Added

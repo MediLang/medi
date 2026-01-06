@@ -82,10 +82,10 @@ cargo run -p medi_data --example clinical_data_exploration
 | Basic IDE (syntax highlighting, code completion) | ✅ Done |
 | Example Use Cases | ✅ Done |
 | Documentation & Benchmarks | 🔄 In Progress |
-| CLI Compiler (`medic`) | 📋 Planned |
-| REPL | 📋 Planned |
-| Package Manager (`medipack`) | 📋 Planned |
-| Python FFI | 📋 Planned |
+| CLI Compiler (`medic`) | ✅ Done |
+| REPL | ✅ Done |
+| Package Manager (`medipack`) | ✅ Done |
+| Python FFI | ✅ Done |
 
 ## Project Structure
 
