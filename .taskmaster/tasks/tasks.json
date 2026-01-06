@@ -840,22 +840,22 @@
         "id": "14",
         "title": "Package Manager Foundation (medipack)",
         "description": "Initialize projects and build with a minimal manifest; stub dependency resolution for Phase 1.",
-        "details": "Commands: medipack init (scaffold), medipack build (invoke medic); manifest medi.toml (name, version, deps placeholder). Prepare for future registry.",
-        "testStrategy": "E2E tests for init/build; manifest parser validation; integration test with medic.",
+        "details": "Implemented as compiler/medipack crate. Commands: medipack init (--name, --description, --lib), medipack build (--release, pass-through args), medipack check (validate manifest), medipack clean (remove target/). Manifest medi.toml supports: name, version, description, authors, license, edition, dependencies (version/path/git), [fhir] section. Global flags: -v (verbose), -q (quiet). Generates src/main.medi or src/lib.medi, README.md, .gitignore.",
+        "testStrategy": "Unit tests for manifest parsing (all fields, detailed deps, FHIR config). E2E tests: init with options, lib mode, check, clean, verbose/quiet flags, build integration with medic.",
         "priority": "medium",
         "dependencies": [
           "1",
           "12"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
             "title": "Manifest Design & Parser",
             "description": "Define medi.toml schema and parser",
             "dependencies": [],
-            "details": "Fields: name, version, deps (stub).",
-            "status": "pending",
+            "details": "Enriched schema: name, version, description, authors, license, edition, dependencies (version string or {path,git,branch,optional}), [fhir] section (version, strict). Parser uses serde+toml with proper validation.",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -865,8 +865,8 @@
             "dependencies": [
               1
             ],
-            "details": "Create src/main.medi, medi.toml, README.",
-            "status": "pending",
+            "details": "Creates src/main.medi (or src/lib.medi with --lib), medi.toml with comments, README.md, .gitignore. Supports --name and --description flags. Auto-detects project name from directory.",
+            "status": "done",
             "parentId": "undefined"
           },
           {
@@ -876,8 +876,8 @@
             "dependencies": [
               2
             ],
-            "details": "Pipe flags and handle build artifacts.",
-            "status": "pending",
+            "details": "Invokes medic check with entrypoint. Supports --release flag (stub), pass-through args to medic. Creates target/ directory. Also added check (validate manifest) and clean (remove target/) commands.",
+            "status": "done",
             "parentId": "undefined"
           }
         ]
