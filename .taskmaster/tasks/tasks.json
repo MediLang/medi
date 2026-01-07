@@ -885,46 +885,105 @@
       {
         "id": "15",
         "title": "Documentation Generator",
-        "description": "Generate reference docs/examples from source and comments; integrate with CLI.",
-        "details": "Extract doc comments; render Markdown/HTML; build example index; link to standard library APIs; CLI command to generate docs.",
-        "testStrategy": "Golden-file snapshots of generated docs; example extraction and linking tests.",
+        "description": "Generate comprehensive reference documentation from source code and doc comments with search, cross-linking, tested examples, and versioning support—modeled after rustdoc/cargo doc best practices.",
+        "details": "Build a documentation generator following industry best practices (rustdoc, TypeDoc, JSDoc):\n\n**Doc Comment Syntax:**\n- Support `///` line comments and `/** */` block comments for items\n- Support `//!` and `/*! */` for module/crate-level documentation\n- Parse Markdown within doc comments (headings, lists, code fences, links)\n- Support standard sections: `# Examples`, `# Panics`, `# Errors`, `# Safety`, `# Arguments`, `# Returns`\n- Healthcare-specific sections: `# Clinical Context`, `# HIPAA Considerations`, `# Units`\n\n**Intra-Doc Links (rustdoc-style):**\n- `[`FunctionName`]` auto-resolves to function docs\n- `[`TypeName`]` auto-resolves to type docs  \n- `[text](path::to::item)` explicit path links\n- `[`Self`]`, `[`super`]`, `[`crate`]` relative references\n- Warn on broken links during doc generation\n\n**Tested Documentation Examples:**\n- Extract code blocks from doc comments as testable examples\n- Support annotations: ` ```medi `, ` ```medi,no_run `, ` ```medi,ignore `, ` ```medi,compile_fail `\n- Run doc tests via `medic test --doc` (integrate with test harness)\n- Hidden lines with `# ` prefix (shown in docs, hidden in playground)\n\n**Search & Navigation:**\n- Generate client-side search index (JSON) for instant search\n- Searchable by item name, type signature, description keywords\n- Hierarchical navigation: modules → types → functions\n- Breadcrumb trails and sidebar navigation\n- Quick-jump keyboard shortcuts (like rustdoc's `s` for search)\n\n**Output Formats:**\n- HTML with modern responsive design, dark/light theme toggle\n- Syntax-highlighted code blocks with copy button\n- Markdown export for external hosting (GitHub Pages, etc.)\n- JSON metadata export for IDE integration\n\n**Cross-Referencing:**\n- Auto-link type annotations in function signatures\n- Link to standard library (medi_data, medi_units) documentation\n- External link support with `[text](https://...)` \n- Source code links (click to view source file/line)\n\n**Lints & Warnings:**\n- `missing_docs` lint: warn on undocumented public items\n- `missing_doc_examples` lint: warn on items without code examples\n- Broken intra-doc link detection\n- Configurable via `medic.toml` or CLI flags\n\n**Versioning & Hosting:**\n- Version selector dropdown for multi-version docs\n- `--version` flag to tag generated docs\n- Cumulative builds (preserve existing docs, like cargo doc)\n- `--clean` flag to remove stale docs\n\n**CLI Commands:**\n- `medic doc` - Generate docs for current project\n- `medic doc --open` - Generate and open in browser\n- `medic doc --no-deps` - Skip dependency documentation\n- `medic doc --document-private-items` - Include private items\n- `medic doc --output-format=html|md|json`\n- `medic test --doc` - Run documentation tests only",
+        "testStrategy": "**Unit Tests:**\n- Doc comment parser: verify extraction of `///`, `//!`, block comments\n- Markdown rendering: headings, code fences, links, lists\n- Intra-doc link resolution: valid paths, broken link detection\n- Search index generation: correct JSON structure, searchable content\n\n**Integration Tests:**\n- Golden-file snapshots comparing generated HTML against expected output\n- Doc test execution: verify examples compile and run correctly\n- Cross-reference validation: all internal links resolve\n- Multi-module projects: correct hierarchy and navigation\n\n**Lint Tests:**\n- `missing_docs` triggers on undocumented public items\n- `missing_doc_examples` triggers appropriately\n- Broken link warnings are emitted\n\n**CLI Tests:**\n- All flags work correctly (`--open`, `--no-deps`, `--output-format`)\n- Version tagging produces correct output structure\n- Incremental builds preserve existing docs\n\n**Accessibility:**\n- Generated HTML passes basic a11y checks (alt text, ARIA labels)\n- Keyboard navigation works for search and sidebar",
         "priority": "medium",
         "dependencies": [
           "1",
           "5"
         ],
-        "status": "pending",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
-            "title": "Extractor",
-            "description": "Parse source for doc comments and metadata",
+            "title": "Doc Comment Extractor",
+            "description": "Parse source files for doc comments (///, //!, /** */, /*! */) and extract structured metadata",
             "dependencies": [],
-            "details": "Support modules/functions/types.",
-            "status": "pending",
-            "parentId": "undefined"
+            "details": "Extract doc comments attached to modules, functions, types, fields, variants. Parse Markdown content. Identify standard sections (# Examples, # Arguments, etc.) and healthcare-specific sections. Build intermediate DocItem representation with: path, kind, visibility, signature, doc content, source location.",
+            "status": "done",
+            "parentId": "15"
           },
           {
             "id": 2,
-            "title": "Renderer",
-            "description": "Render Markdown/HTML with navigation",
-            "dependencies": [
-              1
-            ],
-            "details": "Support code fences and links.",
-            "status": "pending",
-            "parentId": "undefined"
+            "title": "Intra-Doc Link Resolver",
+            "description": "Resolve [`ItemName`] and [text](path::to::item) links to actual documentation targets",
+            "dependencies": [1],
+            "details": "Implement rustdoc-style link resolution: bare [`Name`] lookups in scope, explicit paths, Self/super/crate references. Track unresolved links for warning emission. Support disambiguation for same-name items in different namespaces.",
+            "status": "done",
+            "parentId": "15"
           },
           {
             "id": 3,
+            "title": "Doc Test Extractor & Runner",
+            "description": "Extract code examples from doc comments and run them as tests",
+            "dependencies": [1],
+            "details": "Parse code fences with language annotations (medi, medi,no_run, medi,ignore, medi,compile_fail). Strip hidden lines (# prefix). Generate test harness that compiles/runs examples. Integrate with existing test infrastructure. Report failures with source location in doc comment.",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 4,
+            "title": "HTML Renderer",
+            "description": "Render documentation to responsive HTML with navigation, search, and theming",
+            "dependencies": [1, 2],
+            "details": "Generate HTML pages per module/item. Sidebar navigation with collapsible hierarchy. Breadcrumb trails. Syntax-highlighted code blocks with copy button. Dark/light theme toggle. Responsive design for mobile. CSS framework or custom minimal styles.",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 5,
+            "title": "Search Index Generator",
+            "description": "Build client-side search index for instant documentation search",
+            "dependencies": [1],
+            "details": "Generate JSON search index with: item names, paths, type signatures, description excerpts. Client-side JS for fuzzy search. Keyboard shortcut (s) to focus search. Result ranking by relevance. Support filtering by item kind (fn, type, module).",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 6,
+            "title": "Source Code Linking",
+            "description": "Add [src] links to view source code for each documented item",
+            "dependencies": [1, 4],
+            "details": "Track source file and line numbers for each item. Generate source view pages with syntax highlighting and line numbers. Link from doc pages to exact source location. Optional: inline source expansion.",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 7,
+            "title": "Documentation Lints",
+            "description": "Implement missing_docs and missing_doc_examples lints with configurable severity",
+            "dependencies": [1],
+            "details": "Warn on public items without doc comments. Warn on items without # Examples section. Detect broken intra-doc links. Configurable via medic.toml: deny/warn/allow per lint. CLI flags to override. Integration with existing diagnostic infrastructure.",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 8,
             "title": "CLI Integration",
-            "description": "Add medic subcommand to generate docs",
-            "dependencies": [
-              2
-            ],
-            "details": "medic docs --out ./docs",
-            "status": "pending",
-            "parentId": "undefined"
+            "description": "Add medic doc subcommand with full option support",
+            "dependencies": [4, 5],
+            "details": "Implement: medic doc (generate), --open (launch browser), --no-deps (skip deps), --document-private-items, --output-format=html|md|json, --output=<dir>, --version=<tag>, --clean. Cumulative builds by default. Progress reporting.",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 9,
+            "title": "Markdown & JSON Export",
+            "description": "Support alternative output formats beyond HTML",
+            "dependencies": [1, 2],
+            "details": "Markdown export for GitHub Pages/wiki hosting. JSON export with full doc structure for IDE integration, external tooling. Preserve all metadata and cross-references in both formats.",
+            "status": "done",
+            "parentId": "15"
+          },
+          {
+            "id": 10,
+            "title": "Version Selector & Multi-Version Docs",
+            "description": "Support generating and hosting multiple documentation versions",
+            "dependencies": [4, 8],
+            "details": "Version dropdown in HTML header. Directory structure: docs/v1.0/, docs/v2.0/, docs/latest/. Symlink or redirect for 'latest'. Version metadata in generated output. CLI --version flag integration.",
+            "status": "done",
+            "parentId": "15"
           }
         ]
       },

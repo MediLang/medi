@@ -1,8 +1,3 @@
-use std::ffi::OsString;
-use std::fs;
-use std::io::{self, Read};
-use std::path::PathBuf;
-
 use clap::{Args, Parser, Subcommand};
 use medic_borrowck::BorrowChecker;
 use medic_borrowck::RtConstraintChecker;
@@ -15,6 +10,14 @@ use medic_parser::parser::{
 use medic_runtime::{init_gc_with_params, maybe_incremental_step, GcParams};
 use medic_typeck::{compliance::check_compliance, type_checker::TypeChecker};
 use serde_json::Value as JsonValue;
+use std::ffi::OsString;
+use std::fs;
+use std::io::{self, Read};
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command as ProcessCommand;
+
+mod docgen;
 
 #[cfg(feature = "llvm-backend")]
 use medic_ast::ast::ProgramNode;
@@ -31,6 +34,103 @@ use medic_codegen_llvm::{
 enum OutputMode {
     Text,
     Json,
+}
+
+fn run_test(args: &TestArgs) -> i32 {
+    if !args.doc {
+        eprintln!("error: no test mode selected (try: medic test --doc <files>)");
+        return 2;
+    }
+    if args.inputs.is_empty() {
+        eprintln!("error: no input files provided");
+        return 2;
+    }
+
+    let mut failures: Vec<String> = Vec::new();
+    let mut total: usize = 0;
+
+    for input in &args.inputs {
+        let src = match fs::read_to_string(input) {
+            Ok(s) => s,
+            Err(e) => {
+                failures.push(format!("failed to read '{}': {e}", input.display()));
+                continue;
+            }
+        };
+
+        let (_comments, mut items) = match docgen::extract_doc_items_from_source(&src, Some(input))
+        {
+            Ok(v) => v,
+            Err(e) => {
+                failures.push(format!(
+                    "failed to extract docs from '{}': {e}",
+                    input.display()
+                ));
+                continue;
+            }
+        };
+
+        // Link rewrite isn't required for tests, but helps ensure we don't accidentally
+        // break link parsing as docgen evolves.
+        let warnings = docgen::resolve_intra_doc_links(&mut items);
+        for w in warnings.warnings {
+            eprintln!("warning: {w}");
+        }
+
+        let tests = docgen::extract_doc_tests(&items);
+        for (i, t) in tests.into_iter().enumerate() {
+            total += 1;
+            let ok = match t.mode {
+                docgen::DocTestMode::Ignore => true,
+                docgen::DocTestMode::CompileFail => run_doctest_compile(&t.source).is_err(),
+                docgen::DocTestMode::NoRun | docgen::DocTestMode::Run => {
+                    run_doctest_compile(&t.source).is_ok()
+                }
+            };
+            if !ok {
+                failures.push(format!(
+                    "doctest failed: file='{}' item='{}' case={} mode={:?}",
+                    input.display(),
+                    t.item_name,
+                    i + 1,
+                    t.mode
+                ));
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        if total == 0 {
+            eprintln!("warning: no documentation tests found");
+        }
+        return 0;
+    }
+
+    for f in failures {
+        eprintln!("error: {f}");
+    }
+    1
+}
+
+fn run_doctest_compile(source: &str) -> Result<(), String> {
+    let tokens: Vec<Token> = Lexer::new(source).collect();
+    let input = TokenSlice::new(&tokens);
+    let program = parse_program_with_diagnostics(input).map_err(|diag| format!("{diag:?}"))?;
+
+    let mut env = TypeEnv::with_prelude();
+    let mut checker = TypeChecker::new(&mut env);
+    let mut errs = checker.check_program(&program);
+    errs.extend(checker.take_errors());
+    if errs.is_empty() {
+        Ok(())
+    } else {
+        let joined = errs
+            .into_iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        Err(joined)
+    }
 }
 
 #[derive(Debug, Parser)]
@@ -87,6 +187,10 @@ enum Command {
     /// Generate documentation from Medi source files
     #[command(about = "Generate Markdown documentation from doc comments")]
     Docs(DocsArgs),
+
+    /// Run tests (including documentation tests)
+    #[command(about = "Run Medi tests")]
+    Test(TestArgs),
 
     /// Manage Medi packages and dependencies
     #[command(about = "Manage Medi packages and dependencies")]
@@ -146,10 +250,37 @@ struct CheckArgs {
 #[derive(Debug, Args, Clone)]
 struct DocsArgs {
     /// Output directory for generated documentation (default: docs_out)
-    #[arg(long = "out-dir", value_name = "DIR")]
+    #[arg(long = "out-dir", visible_alias = "output", value_name = "DIR")]
     out_dir: Option<PathBuf>,
 
+    /// Delete the output directory before generating documentation
+    #[arg(long = "clean")]
+    clean: bool,
+
+    /// Open generated documentation in the default system viewer
+    #[arg(long = "open")]
+    open: bool,
+
+    /// Version tag for generated docs (writes into out_dir/<version>/ and updates out_dir/latest)
+    #[arg(long = "version", value_name = "TAG")]
+    version: Option<String>,
+
+    /// Output format for generated documentation (md or html)
+    #[arg(long = "output-format", value_name = "FORMAT", default_value = "md", value_parser = ["md", "html", "json"])]
+    output_format: String,
+
     /// Medi source files to generate documentation from
+    #[arg(value_name = "FILES")]
+    inputs: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args, Clone)]
+struct TestArgs {
+    /// Run documentation tests extracted from doc comments
+    #[arg(long = "doc")]
+    doc: bool,
+
+    /// Medi source files to test (for --doc)
     #[arg(value_name = "FILES")]
     inputs: Vec<PathBuf>,
 }
@@ -1255,13 +1386,36 @@ fn run_repl() -> i32 {
 }
 
 fn run_docs(args: &DocsArgs) -> i32 {
-    let out_dir = args
+    let base_out_dir = args
         .out_dir
         .clone()
         .unwrap_or_else(|| PathBuf::from("docs_out"));
+
+    let out_dir = if let Some(v) = &args.version {
+        base_out_dir.join(v)
+    } else {
+        base_out_dir.clone()
+    };
     if args.inputs.is_empty() {
         eprintln!("error: no input files provided");
         return 2;
+    }
+
+    if args.clean && out_dir.exists() {
+        if let Err(e) = fs::remove_dir_all(&out_dir) {
+            eprintln!(
+                "error: failed to clean output directory '{}': {e}",
+                out_dir.display()
+            );
+            return 2;
+        }
+    }
+
+    if args.clean {
+        let latest_dir = base_out_dir.join("latest");
+        if latest_dir.exists() {
+            let _ = fs::remove_dir_all(&latest_dir);
+        }
     }
 
     if let Err(e) = fs::create_dir_all(&out_dir) {
@@ -1272,6 +1426,46 @@ fn run_docs(args: &DocsArgs) -> i32 {
         return 2;
     }
 
+    let rc = if args.output_format == "html" {
+        run_docs_html(args, &base_out_dir, &out_dir)
+    } else if args.output_format == "json" {
+        run_docs_json(args, &out_dir)
+    } else {
+        run_docs_md(args, &out_dir)
+    };
+
+    if rc == 0 {
+        if let Some(v) = &args.version {
+            if let Err(e) = update_latest_redirect(&base_out_dir, v, &args.output_format) {
+                eprintln!("warning: failed to update latest redirect: {e}");
+            }
+        }
+    }
+
+    if rc == 0 && args.open {
+        let index_path = if args.output_format == "html" {
+            out_dir.join("index.html")
+        } else if args.output_format == "json" {
+            out_dir.join("docs.json")
+        } else {
+            out_dir.join("index.md")
+        };
+        match ProcessCommand::new("xdg-open").arg(&index_path).status() {
+            Ok(status) => {
+                if !status.success() {
+                    eprintln!("warning: failed to open docs (xdg-open exit status: {status})");
+                }
+            }
+            Err(e) => {
+                eprintln!("warning: failed to open docs: {e}");
+            }
+        }
+    }
+
+    rc
+}
+
+fn run_docs_md(args: &DocsArgs, out_dir: &Path) -> i32 {
     let mut index = String::new();
     index.push_str("# Medi Docs\n\n");
 
@@ -1290,22 +1484,41 @@ fn run_docs(args: &DocsArgs) -> i32 {
         let mut out = String::new();
         out.push_str(&format!("# {}\n\n", input.display()));
 
-        let mut any = false;
-        for line in src.lines() {
-            let t = line.trim_start();
-            if let Some(rest) = t.strip_prefix("///") {
-                any = true;
-                out.push_str(rest.trim_start());
-                out.push('\n');
-            } else if let Some(rest) = t.strip_prefix("//!") {
-                any = true;
-                out.push_str(rest.trim_start());
-                out.push('\n');
+        let (_comments, items) = match docgen::extract_doc_items_from_source(&src, Some(input)) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!(
+                    "warning: failed to extract docs from '{}': {e}",
+                    input.display()
+                );
+                continue;
             }
+        };
+
+        let mut items = items;
+        let warnings = docgen::resolve_intra_doc_links(&mut items);
+        for w in warnings.warnings {
+            eprintln!("warning: {w}");
         }
 
-        if !any {
-            out.push_str("(no doc comments found)\n");
+        let lints = docgen::lint_doc_items(&items);
+        for lint in lints {
+            eprintln!("warning: {}", lint.diagnostic.message);
+        }
+
+        if items.is_empty() {
+            out.push_str("(no documentable items found)\n");
+        } else {
+            for item in items {
+                out.push_str(&format!("## {}\n\n", item.name));
+                if let Some(doc) = item.doc {
+                    out.push_str(&doc.text);
+                    out.push('\n');
+                } else {
+                    out.push_str("(no doc comments)\n");
+                }
+                out.push('\n');
+            }
         }
 
         if let Err(e) = fs::write(&out_file, out) {
@@ -1330,6 +1543,467 @@ fn run_docs(args: &DocsArgs) -> i32 {
     }
 
     0
+}
+
+fn run_docs_json(args: &DocsArgs, out_dir: &Path) -> i32 {
+    if args.inputs.is_empty() {
+        eprintln!("error: no input files provided");
+        return 2;
+    }
+
+    let mut files: Vec<serde_json::Value> = Vec::new();
+
+    for input in &args.inputs {
+        let src = match fs::read_to_string(input) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("warning: failed to read '{}': {e}", input.display());
+                continue;
+            }
+        };
+
+        let (_comments, items0) = match docgen::extract_doc_items_from_source(&src, Some(input)) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!(
+                    "warning: failed to extract docs from '{}': {e}",
+                    input.display()
+                );
+                continue;
+            }
+        };
+
+        let mut items = items0;
+        let link_warnings = docgen::resolve_intra_doc_links(&mut items);
+        for w in link_warnings.warnings {
+            eprintln!("warning: {w}");
+        }
+
+        let lints = docgen::lint_doc_items(&items);
+        for lint in &lints {
+            eprintln!("warning: {}", lint.diagnostic.message);
+        }
+
+        let items_json: Vec<serde_json::Value> = items
+            .iter()
+            .map(|it| {
+                serde_json::json!({
+                    "name": it.name,
+                    "kind": format!("{:?}", it.kind),
+                    "span": {
+                        "start": it.span.start,
+                        "end": it.span.end,
+                        "line": it.span.line,
+                        "column": it.span.column,
+                    },
+                    "doc": it.doc.as_ref().map(|d| d.text.clone()),
+                })
+            })
+            .collect();
+
+        let lints_json: Vec<serde_json::Value> = lints
+            .iter()
+            .map(|l| {
+                serde_json::json!({
+                    "kind": format!("{:?}", l.kind),
+                    "message": l.diagnostic.message,
+                    "span": {
+                        "start": l.diagnostic.span.start,
+                        "end": l.diagnostic.span.end,
+                        "line": l.diagnostic.span.line,
+                        "column": l.diagnostic.span.column,
+                    },
+                })
+            })
+            .collect();
+
+        files.push(serde_json::json!({
+            "path": input.display().to_string(),
+            "items": items_json,
+            "lints": lints_json,
+        }));
+    }
+
+    let docset = serde_json::json!({
+        "schema_version": 1,
+        "tool": "medic docs",
+        "files": files,
+    });
+
+    let out_path = out_dir.join("docs.json");
+    let text = match serde_json::to_string_pretty(&docset) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("error: failed to serialize docs.json: {e}");
+            return 2;
+        }
+    };
+    if let Err(e) = fs::write(&out_path, text) {
+        eprintln!("error: failed to write '{}': {e}", out_path.display());
+        return 2;
+    }
+
+    0
+}
+
+fn run_docs_html(args: &DocsArgs, base_out_dir: &Path, out_dir: &Path) -> i32 {
+    let versions = list_doc_versions(base_out_dir);
+    let current_version = args.version.as_deref();
+
+    let style = r#"body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}header{position:sticky;top:0;background:#111827;color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center}header a{color:#fff;text-decoration:none;font-weight:600}main{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 48px)}nav{border-right:1px solid #e5e7eb;padding:12px 10px;overflow:auto}nav input{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px}nav ul{list-style:none;margin:10px 0 0 0;padding:0}nav li{margin:6px 0}nav a{text-decoration:none;color:#111827}nav a:hover{text-decoration:underline}article{padding:18px;max-width:900px}pre.doc{white-space:pre-wrap;background:#f9fafb;border:1px solid #e5e7eb;padding:12px;border-radius:10px}code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}h2{margin-top:28px}small.muted{color:#6b7280}"#;
+
+    let search_js = r#"async function loadIndex(){const r=await fetch('search-index.json');return await r.json();}
+function clearList(ul){while(ul.firstChild)ul.removeChild(ul.firstChild);} 
+function renderResults(ul, items){clearList(ul); for(const it of items){const li=document.createElement('li'); const a=document.createElement('a'); a.href=it.file + '#' + it.anchor; a.textContent=it.name + ' (' + it.kind + ')'; li.appendChild(a); ul.appendChild(li);} }
+document.addEventListener('DOMContentLoaded', async ()=>{const input=document.getElementById('search'); const ul=document.getElementById('results'); if(!input||!ul) return; const idx=await loadIndex(); renderResults(ul, idx.items);
+input.addEventListener('input', ()=>{const q=input.value.trim().toLowerCase(); if(!q){renderResults(ul, idx.items); return;} const filtered=idx.items.filter(x=> (x.name||'').toLowerCase().includes(q) || (x.excerpt||'').toLowerCase().includes(q)); renderResults(ul, filtered.slice(0,200));});
+document.addEventListener('keydown', (e)=>{ if(e.key==='s' && (e.target===document.body||e.target===document.documentElement)){ e.preventDefault(); input.focus(); }});
+});"#;
+
+    if let Err(e) = fs::write(out_dir.join("style.css"), style) {
+        eprintln!("error: failed to write style.css: {e}");
+        return 2;
+    }
+    if let Err(e) = fs::write(out_dir.join("search.js"), search_js) {
+        eprintln!("error: failed to write search.js: {e}");
+        return 2;
+    }
+
+    let src_dir = out_dir.join("src");
+    if let Err(e) = fs::create_dir_all(&src_dir) {
+        eprintln!("error: failed to create '{}': {e}", src_dir.display());
+        return 2;
+    }
+
+    let mut nav_links: Vec<(String, String)> = Vec::new();
+    let mut search_items: Vec<serde_json::Value> = Vec::new();
+
+    for input in &args.inputs {
+        let src = match fs::read_to_string(input) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("warning: failed to read '{}': {e}", input.display());
+                continue;
+            }
+        };
+
+        let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("doc");
+        let out_file = format!("{stem}.html");
+        let src_file = format!("{stem}.html");
+        let src_href = format!("src/{src_file}");
+        nav_links.push((input.display().to_string(), out_file.clone()));
+
+        let source_page = render_source_page(&src, &format!("{}", input.display()));
+        if let Err(e) = fs::write(src_dir.join(&src_file), source_page) {
+            eprintln!(
+                "warning: failed to write source file '{}': {e}",
+                src_dir.join(&src_file).display()
+            );
+        }
+
+        let (_comments, items0) = match docgen::extract_doc_items_from_source(&src, Some(input)) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!(
+                    "warning: failed to extract docs from '{}': {e}",
+                    input.display()
+                );
+                continue;
+            }
+        };
+
+        let mut items = items0;
+        let warnings = docgen::resolve_intra_doc_links(&mut items);
+        for w in warnings.warnings {
+            eprintln!("warning: {w}");
+        }
+
+        let lints = docgen::lint_doc_items(&items);
+        for lint in lints {
+            eprintln!("warning: {}", lint.diagnostic.message);
+        }
+
+        for it in &items {
+            let anchor = anchor_for_name(&it.name);
+            let excerpt = it
+                .doc
+                .as_ref()
+                .map(|d| excerpt_first_line(&d.text))
+                .unwrap_or_default();
+            search_items.push(serde_json::json!({
+                "name": it.name,
+                "kind": format!("{:?}", it.kind),
+                "file": out_file,
+                "anchor": anchor,
+                "excerpt": excerpt,
+            }));
+        }
+
+        let page = render_html_page(
+            &format!("{}", input.display()),
+            &nav_links,
+            &items,
+            &src_href,
+            current_version,
+            &versions,
+        );
+        if let Err(e) = fs::write(out_dir.join(&out_file), page) {
+            eprintln!(
+                "warning: failed to write docs file '{}': {e}",
+                out_dir.join(&out_file).display()
+            );
+            continue;
+        }
+    }
+
+    let index_html = render_html_index(&nav_links, current_version, &versions);
+    if let Err(e) = fs::write(out_dir.join("index.html"), index_html) {
+        eprintln!("error: failed to write index.html: {e}");
+        return 2;
+    }
+
+    let search_index = serde_json::json!({"items": search_items});
+    let search_index_path = out_dir.join("search-index.json");
+    if let Err(e) = fs::write(
+        &search_index_path,
+        serde_json::to_string_pretty(&search_index).unwrap(),
+    ) {
+        eprintln!(
+            "error: failed to write '{}': {e}",
+            search_index_path.display()
+        );
+        return 2;
+    }
+
+    0
+}
+
+fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+fn anchor_for_name(name: &str) -> String {
+    let mut out = String::new();
+    for ch in name.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        } else if ch == ' ' || ch == '-' || ch == '_' {
+            out.push('-');
+        }
+    }
+    while out.contains("--") {
+        out = out.replace("--", "-");
+    }
+    out.trim_matches('-').to_string()
+}
+
+fn excerpt_first_line(text: &str) -> String {
+    text.lines().next().unwrap_or("").trim().to_string()
+}
+
+fn render_html_index(
+    nav_links: &[(String, String)],
+    current_version: Option<&str>,
+    versions: &[String],
+) -> String {
+    let mut list = String::new();
+    for (label, href) in nav_links {
+        list.push_str(&format!(
+            "<li><a href=\"{}\">{}</a></li>",
+            html_escape(href),
+            html_escape(label)
+        ));
+    }
+
+    let version_ui = render_version_selector(current_version, versions);
+    format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Medi Docs</title><link rel=\"stylesheet\" href=\"style.css\"></head><body><header><a href=\"index.html\">Medi Docs</a><small class=\"muted\">press 's' to search</small>{}</header><main><nav><input id=\"search\" placeholder=\"Search...\" autocomplete=\"off\"><ul id=\"results\">{}</ul></nav><article><h1>Medi Docs</h1><p>Open a file from the sidebar or use search.</p><h2>Files</h2><ul>{}</ul></article></main><script src=\"search.js\"></script>{}</body></html>",
+        version_ui.0,
+        list,
+        list,
+        version_ui.1
+    )
+}
+
+fn render_html_page(
+    title: &str,
+    nav_links: &[(String, String)],
+    items: &[docgen::DocItem],
+    src_href: &str,
+    current_version: Option<&str>,
+    versions: &[String],
+) -> String {
+    let mut nav = String::new();
+    for (label, href) in nav_links {
+        nav.push_str(&format!(
+            "<li><a href=\"{}\">{}</a></li>",
+            html_escape(href),
+            html_escape(label)
+        ));
+    }
+
+    let mut body = String::new();
+    body.push_str(&format!("<h1>{}</h1>", html_escape(title)));
+    if items.is_empty() {
+        body.push_str("<p>(no documentable items found)</p>");
+    } else {
+        for it in items {
+            let anchor = anchor_for_name(&it.name);
+            let line = it.span.line.max(1);
+            let src_link = format!("{src_href}#L{line}");
+            body.push_str(&format!(
+                "<h2 id=\"{}\">{} <a class=\"muted\" href=\"{}\">[src]</a></h2>",
+                html_escape(&anchor),
+                html_escape(&it.name),
+                html_escape(&src_link)
+            ));
+            if let Some(doc) = &it.doc {
+                body.push_str("<pre class=\"doc\"><code>");
+                body.push_str(&html_escape(&doc.text));
+                body.push_str("</code></pre>");
+            } else {
+                body.push_str("<p>(no doc comments)</p>");
+            }
+        }
+    }
+
+    let version_ui = render_version_selector(current_version, versions);
+
+    format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{}</title><link rel=\"stylesheet\" href=\"style.css\"></head><body><header><a href=\"index.html\">Medi Docs</a><small class=\"muted\">press 's' to search</small>{}</header><main><nav><input id=\"search\" placeholder=\"Search...\" autocomplete=\"off\"><ul id=\"results\">{}</ul></nav><article>{}</article></main><script src=\"search.js\"></script>{}</body></html>",
+        html_escape(title),
+        version_ui.0,
+        nav,
+        body,
+        version_ui.1
+    )
+}
+
+fn render_source_page(source: &str, title: &str) -> String {
+    let mut lines_html = String::new();
+    for (i, line) in source.lines().enumerate() {
+        let ln = i + 1;
+        lines_html.push_str(&format!(
+            "<div id=\"L{ln}\"><a href=\"#L{ln}\" class=\"muted\">{ln:>4}</a> <code>{}</code></div>",
+            html_escape(line)
+        ));
+    }
+
+    format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{}</title><link rel=\"stylesheet\" href=\"../style.css\"></head><body><header><a href=\"../index.html\">Medi Docs</a><small class=\"muted\">source</small></header><main><nav><input id=\"search\" placeholder=\"Search...\" autocomplete=\"off\"><ul id=\"results\"></ul></nav><article><h1>{}</h1><pre class=\"doc\">{}</pre></article></main><script src=\"../search.js\"></script></body></html>",
+        html_escape(title),
+        html_escape(title),
+        lines_html
+    )
+}
+
+fn list_doc_versions(base_out_dir: &Path) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let Ok(rd) = fs::read_dir(base_out_dir) else {
+        return out;
+    };
+    for ent in rd.flatten() {
+        let Ok(ft) = ent.file_type() else {
+            continue;
+        };
+        if !ft.is_dir() {
+            continue;
+        }
+        let name = ent.file_name().to_string_lossy().to_string();
+        if name == "latest" {
+            continue;
+        }
+        out.push(name);
+    }
+    out.sort();
+    out
+}
+
+fn render_version_selector(current_version: Option<&str>, versions: &[String]) -> (String, String) {
+    let Some(cur) = current_version else {
+        return (String::new(), String::new());
+    };
+    if versions.is_empty() {
+        return (String::new(), String::new());
+    }
+    let mut options = String::new();
+    for v in versions {
+        let selected = if v == cur { " selected" } else { "" };
+        options.push_str(&format!(
+            "<option value=\"{}\"{}>{}</option>",
+            html_escape(v),
+            selected,
+            html_escape(v)
+        ));
+    }
+
+    let html = format!(
+        "<label style=\"margin-left:auto;display:flex;gap:8px;align-items:center\"><small class=\"muted\">version</small><select id=\"version\" style=\"padding:6px;border-radius:8px;border:1px solid #374151;background:#111827;color:#fff\">{options}</select></label>",
+    );
+
+    let js = format!(
+        r#"<script>(function(){{
+const cur={cur:?};
+const sel=document.getElementById('version');
+if(!sel) return;
+sel.addEventListener('change', function(){{
+  const next=this.value;
+  const parts=window.location.pathname.split('/');
+  const idx=parts.lastIndexOf(cur);
+  if(idx>=0){{parts[idx]=next; window.location.pathname=parts.join('/'); return;}}
+  window.location.href='../'+next+'/index.html';
+}});
+}})();</script>"#,
+    );
+
+    (html, js)
+}
+
+fn update_latest_redirect(base_out_dir: &Path, version: &str, format: &str) -> Result<(), String> {
+    let latest_dir = base_out_dir.join("latest");
+    if latest_dir.exists() {
+        fs::remove_dir_all(&latest_dir)
+            .map_err(|e| format!("failed to remove {}: {e}", latest_dir.display()))?;
+    }
+    fs::create_dir_all(&latest_dir)
+        .map_err(|e| format!("failed to create {}: {e}", latest_dir.display()))?;
+
+    if format == "html" {
+        let html = format!(
+            "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0; url=../{}/index.html\"><title>Redirecting...</title><a href=\"../{}/index.html\">Open latest docs</a>",
+            html_escape(version),
+            html_escape(version)
+        );
+        fs::write(latest_dir.join("index.html"), html)
+            .map_err(|e| format!("failed to write latest/index.html: {e}"))?;
+    } else if format == "md" {
+        let md = format!("# Latest Medi Docs\n\nOpen: ../{version}/index.md\n");
+        fs::write(latest_dir.join("index.md"), md)
+            .map_err(|e| format!("failed to write latest/index.md: {e}"))?;
+    } else if format == "json" {
+        let json = serde_json::json!({
+            "schema_version": 1,
+            "latest": version,
+            "path": format!("../{}/docs.json", version),
+        });
+        let text = serde_json::to_string_pretty(&json)
+            .map_err(|e| format!("failed to serialize latest docs.json: {e}"))?;
+        fs::write(latest_dir.join("docs.json"), text)
+            .map_err(|e| format!("failed to write latest/docs.json: {e}"))?;
+    }
+
+    Ok(())
 }
 
 fn run_pack(args: &PackArgs) -> i32 {
@@ -1389,7 +2063,17 @@ fn normalize_cli_args(args: Vec<OsString>) -> Vec<OsString> {
     let first = args[1].to_string_lossy();
     let is_known_subcommand = matches!(
         first.as_ref(),
-        "check" | "json" | "repl" | "docs" | "pack" | "help" | "--help" | "-h" | "--version" | "-V"
+        "check"
+            | "json"
+            | "repl"
+            | "docs"
+            | "test"
+            | "pack"
+            | "help"
+            | "--help"
+            | "-h"
+            | "--version"
+            | "-V"
     );
     if is_known_subcommand {
         return args;
@@ -1507,6 +2191,7 @@ fn run_cli() -> i32 {
         }
         Command::Repl => run_repl(),
         Command::Docs(args) => run_docs(&args),
+        Command::Test(args) => run_test(&args),
         Command::Pack(args) => run_pack(&args),
     }
 }
@@ -1518,6 +2203,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    static CWD_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     #[test]
     fn legacy_args_are_mapped_to_check_subcommand() {
@@ -1541,6 +2228,7 @@ mod tests {
 
     #[test]
     fn docs_and_pack_commands_work_on_temp_dir() {
+        let _guard = CWD_LOCK.lock().unwrap();
         let dir = tempfile::tempdir().unwrap();
         let old = std::env::current_dir().unwrap();
         std::env::set_current_dir(dir.path()).unwrap();
@@ -1550,6 +2238,10 @@ mod tests {
         let out_dir = dir.path().join("out_docs");
         let rc = run_docs(&DocsArgs {
             out_dir: Some(out_dir.clone()),
+            clean: false,
+            open: false,
+            version: None,
+            output_format: "md".to_string(),
             inputs: vec![input_path.clone()],
         });
         assert_eq!(rc, 0);
@@ -1566,6 +2258,126 @@ mod tests {
             command: Some(PackCommand::List),
         });
         assert_eq!(rc, 0);
+
+        std::env::set_current_dir(old).unwrap();
+    }
+
+    #[test]
+    fn json_docs_generates_docs_json() {
+        let _guard = CWD_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let old = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let input_path = dir.path().join("sample.medi");
+        fs::write(&input_path, "/// Docs for main\nfn main() {}\n").unwrap();
+        let out_dir = dir.path().join("out_docs_json");
+        let rc = run_docs(&DocsArgs {
+            out_dir: Some(out_dir.clone()),
+            clean: false,
+            open: false,
+            version: None,
+            output_format: "json".to_string(),
+            inputs: vec![input_path.clone()],
+        });
+        assert_eq!(rc, 0);
+
+        let path = out_dir.join("docs.json");
+        assert!(path.exists());
+        let text = fs::read_to_string(&path).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(v["schema_version"], 1);
+        assert_eq!(v["tool"], "medic docs");
+        assert!(!v["files"].as_array().unwrap().is_empty());
+
+        let files = v["files"].as_array().unwrap();
+        let f0 = &files[0];
+        let items = f0["items"].as_array().unwrap();
+        assert!(items.iter().any(|it| it["name"] == "main"));
+
+        std::env::set_current_dir(old).unwrap();
+    }
+
+    #[test]
+    fn html_docs_generate_src_pages_and_links() {
+        let dir = tempfile::tempdir().unwrap();
+        let input_path = dir.path().join("sample.medi");
+        fs::write(&input_path, "/// hello\nfn main() {}\n").unwrap();
+        let out_dir = dir.path().join("out_docs_html");
+        let rc = run_docs(&DocsArgs {
+            out_dir: Some(out_dir.clone()),
+            clean: false,
+            open: false,
+            version: None,
+            output_format: "html".to_string(),
+            inputs: vec![input_path.clone()],
+        });
+        assert_eq!(rc, 0);
+        assert!(out_dir.join("index.html").exists());
+        assert!(out_dir.join("search-index.json").exists());
+        assert!(out_dir.join("style.css").exists());
+        assert!(out_dir.join("search.js").exists());
+
+        // per-file doc page and source page
+        assert!(out_dir.join("sample.html").exists());
+        assert!(out_dir.join("src").join("sample.html").exists());
+
+        let html = fs::read_to_string(out_dir.join("sample.html")).unwrap();
+        assert!(html.contains("src/sample.html#L"));
+        assert!(html.contains("[src]"));
+    }
+
+    #[test]
+    fn versioned_html_docs_create_latest_redirect() {
+        let _guard = CWD_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let old = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let input_path = dir.path().join("sample.medi");
+        fs::write(&input_path, "/// hello\nfn main() {}\n").unwrap();
+        let out_dir = dir.path().join("out_docs_versions");
+
+        let rc = run_docs(&DocsArgs {
+            out_dir: Some(out_dir.clone()),
+            clean: false,
+            open: false,
+            version: Some("v1.0".to_string()),
+            output_format: "html".to_string(),
+            inputs: vec![input_path.clone()],
+        });
+        assert_eq!(rc, 0);
+        assert!(out_dir.join("v1.0").join("index.html").exists());
+        assert!(out_dir.join("latest").join("index.html").exists());
+
+        std::env::set_current_dir(old).unwrap();
+    }
+
+    #[test]
+    fn docs_clean_removes_existing_files() {
+        let _guard = CWD_LOCK.lock().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let old = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let input_path = dir.path().join("sample.medi");
+        fs::write(&input_path, "/// hello\nfn main() {}\n").unwrap();
+        let out_dir = dir.path().join("out_docs_clean");
+        fs::create_dir_all(&out_dir).unwrap();
+        fs::write(out_dir.join("sentinel.txt"), "old").unwrap();
+        assert!(out_dir.join("sentinel.txt").exists());
+
+        let rc = run_docs(&DocsArgs {
+            out_dir: Some(out_dir.clone()),
+            clean: true,
+            open: false,
+            version: None,
+            output_format: "md".to_string(),
+            inputs: vec![input_path.clone()],
+        });
+        assert_eq!(rc, 0);
+        assert!(!out_dir.join("sentinel.txt").exists());
+        assert!(out_dir.join("index.md").exists());
 
         std::env::set_current_dir(old).unwrap();
     }
@@ -1651,6 +2463,7 @@ mod tests {
             "json",
             "repl",
             "docs",
+            "test",
             "pack",
             "help",
             "--help",
@@ -1665,6 +2478,23 @@ mod tests {
                 "known subcommand '{subcmd}' should not be modified"
             );
         }
+    }
+
+    #[test]
+    fn doctest_command_runs_on_temp_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let input_path = dir.path().join("sample.medi");
+        fs::write(
+            &input_path,
+            "/// # Examples\n/// ```medi\n/// let x = 1;\n/// ```\nfn a() {}\n",
+        )
+        .unwrap();
+
+        let rc = run_test(&TestArgs {
+            doc: true,
+            inputs: vec![input_path.clone()],
+        });
+        assert_eq!(rc, 0);
     }
 
     #[test]
