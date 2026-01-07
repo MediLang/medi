@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.15] - 2026-01-07
+
+### Added
+- **Documentation Generator (Task 15)**:
+  - Added `medic docs` support for Markdown, HTML, and JSON outputs.
+  - Added doc tests (`medic test --doc`) extracted from fenced `medi` code blocks.
+  - Added source linking in generated HTML docs.
+  - Added documentation lints (missing docs/examples and broken intra-doc links).
+  - Added multi-version docs support via `--version` with `latest/` redirect.
+
+### Changed
+- Release alignment:
+  - Bumped workspace crate versions to `v0.0.15`.
+
 ## [v0.0.14] - 2026-01-06
 
 ### Added
