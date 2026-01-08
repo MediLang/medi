@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.1.0] - 2026-01-08
+
+### 🎉 Phase 1 Complete - First Major Release
+
+This release marks the completion of **PRD Phase 1**, delivering a fully functional Medi programming language prototype with comprehensive healthcare-specific features.
+
+### Highlights
+
+- **Complete Language Core**: Lexer, parser, type checker, borrow checker, and LLVM codegen
+- **Multi-Target Compilation**: x86-64, WebAssembly (wasm32-wasi), and RISC-V (RV32)
+- **Healthcare Standard Library**: `medi_data`, `medi_stats`, `medi_compliance`, `medi_ai`
+- **Full Toolchain**: `medic` compiler, `medipack` package manager, REPL, documentation generator
+- **IDE Support**: Web-based IDE with CodeMirror integration and compiler-backed analysis
+- **Python Interop**: `pymedi` FFI bindings via PyO3
+
+### Added (since v0.0.17)
+
+- **Model Registry & Backends (Task 22)**:
+  - `ModelRegistry` with thread-safe model registration and versioning
+  - `ModelBackend` trait for pluggable inference backends
+  - `LinearBackend`, `OnnxBackend`, `TFLiteBackend` implementations
+  - `ModelMetadata` with performance metrics tracking
+
+- **Model Calibration & Validation (Task 23)**:
+  - `PlattScaling` for probability calibration with gradient descent fitting
+  - `IsotonicRegression` using Pool Adjacent Violators (PAV) algorithm
+  - `ValidationMetric` trait with `RocAuc`, `Precision`, `Recall`, `F1Score`
+  - Fairness metrics: `DemographicParity`, `EqualOpportunity`
+  - `ModelValidator` for running multiple metrics
+  - `expected_calibration_error()` function
+
+### Changed
+
+- **Task Status Updates**:
+  - Task 10 (Documentation & Benchmarks): marked complete
+  - Task 16 (Pipeline Operator): marked complete (all subtasks done)
+  - All 27 Phase 1 tasks now complete
+
+### Phase 1 Deliverables Summary
+
+| Component | Status |
+|-----------|--------|
+| Lexer & Parser | ✅ Complete |
+| Type System | ✅ Complete |
+| Borrow Checker | ✅ Complete |
+| LLVM Backend | ✅ Complete |
+| Runtime (GC, RT zones) | ✅ Complete |
+| medi.data (FHIR, HL7, DICOM) | ✅ Complete |
+| medi.stats (survival, streaming, bootstrap) | ✅ Complete |
+| medi.compliance (HIPAA, GDPR rules) | ✅ Complete |
+| medi.ai (registry, calibration, metrics) | ✅ Complete |
+| CLI (medic, medipack, REPL) | ✅ Complete |
+| Documentation Generator | ✅ Complete |
+| IDE Prototype | ✅ Complete |
+| Python FFI (pymedi) | ✅ Complete |
+| Example Use Cases | ✅ Complete |
+| Performance Benchmarks | ✅ Complete |
+
+### Release Alignment
+
+- Bumped all workspace crate versions to `v0.1.0`
+- Updated `pymedi` Python package to `v0.1.0`
+
 ## [v0.0.17] - 2026-01-08
 
 ### Changed

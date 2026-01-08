@@ -1,6 +1,6 @@
 [package]
 name = "tests"
-version = "0.0.17"
+version = "0.1.0"
 edition = "2021"
 
 description = "Integration and system tests for the Medic compiler."

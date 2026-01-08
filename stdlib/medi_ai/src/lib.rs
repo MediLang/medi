@@ -39,11 +39,14 @@ impl RiskScorer {
 }
 
 pub mod bias;
+pub mod calibration;
 pub mod cohort;
 pub mod decision_support;
 pub mod explain;
 pub mod imaging;
+pub mod metrics;
 pub mod nlp;
+pub mod registry;
 pub mod risk;
 pub mod validation;
 

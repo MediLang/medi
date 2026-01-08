@@ -654,7 +654,7 @@
           "8",
           "9"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -993,7 +993,7 @@
         "description": "Add support for a single-token pipeline operator '|>' in the Medi lexer, gated behind a Cargo feature flag to preserve backward compatibility.",
         "details": "Implement a feature-gated single-token pipeline operator '|>' across the medic_lexer module with the following steps:\n\n1. Add new token types:\n   - Add `LogosToken::PipeGreater` to the Logos token enum\n   - Add `TokenType::PipeGreater` to the token type enum\n\n2. Update token conversion:\n   - Modify `convert_logos_to_token()` to handle the new token type\n   - Ensure proper span information is preserved\n\n3. Enable recognition in lexer modules:\n   - Update `lexer/mod.rs` to recognize the new token\n   - Update `streaming_lexer.rs` to handle the token in streaming contexts\n   - Update `chunked_lexer.rs` to properly handle the token, including special handling for chunk boundaries where '|' and '>' might be split across chunks\n\n4. Add a new Cargo feature flag:\n   - Create a new feature flag (e.g., `pipeline-operator`) that is disabled by default\n   - Gate the single-token behavior behind this feature\n   - When the feature is disabled, the lexer should continue to recognize '|' and '>' as separate tokens (BitOr and Greater)\n   - When enabled, recognize '|>' as a single PipeGreater token\n\n5. Update documentation:\n   - Add the new token to the language specification in LANG_SPEC.md\n   - Document the feature flag in relevant README files\n   - Add usage examples showing both default and feature-enabled behavior\n\n6. Ensure backward compatibility:\n   - Verify that existing tests pass with the feature disabled\n   - Confirm that the lexer behavior is unchanged for existing code when the feature is off",
         "testStrategy": "1. Unit tests for token recognition:\n   - Test that '|>' is recognized as a single token when the feature is enabled\n   - Test that '|' and '>' are recognized as separate tokens when the feature is disabled\n   - Test edge cases like whitespace between '|' and '>'\n\n2. Chunked lexer tests:\n   - Test recognition when '|' and '>' are in the same chunk\n   - Test recognition when '|' is at the end of one chunk and '>' is at the beginning of the next\n   - Verify correct behavior with various chunk sizes\n\n3. Streaming lexer tests:\n   - Test streaming recognition of the pipeline operator\n   - Verify correct token boundaries in streaming mode\n\n4. Feature flag tests:\n   - Create test modules that conditionally compile based on the feature flag\n   - Verify both behaviors (single token vs. two tokens) with appropriate test cases\n\n5. Integration tests:\n   - Test the lexer in the context of the full parser\n   - Verify that expressions using the pipeline operator are correctly parsed\n\n6. Regression tests:\n   - Run the existing test suite with the feature disabled to ensure no regressions\n   - Create a comprehensive test suite that passes regardless of feature flag state",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [
           "1"
         ],
@@ -2186,9 +2186,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-26T05:05:54.150Z",
+      "lastModified": "2026-01-08T04:56:00.000Z",
       "taskCount": 27,
-      "completedCount": 14,
+      "completedCount": 27,
       "tags": [
         "master"
       ]
