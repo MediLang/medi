@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.16] - 2026-01-08
+
+### Added
+- **Feature-gated pipeline operator token (`pipeline_op`)**:
+  - Optional lexer support for tokenizing `|>` as a single `PipeGreater` token behind the `pipeline_op` Cargo feature.
+  - Chunked lexer cross-chunk merge handling for `|` at end-of-chunk followed by `>` at start-of-next-chunk when `pipeline_op` is enabled.
+  - Tests for both feature-off (default) and feature-on behavior.
+
+### Changed
+- Documentation:
+  - Updated `LANG_SPEC.md` to clarify that `|>` remains reserved at the language level for post-v0.1 semantics, while lexer tokenization can be feature-enabled.
+  - Updated `compiler/medic_lexer/README.md` to document `pipeline_op` and corrected test commands.
+- Release alignment:
+  - Bumped workspace crate versions to `v0.0.16`.
+
 ## [v0.0.15] - 2026-01-07
 
 ### Added

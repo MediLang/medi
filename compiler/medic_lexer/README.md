@@ -122,6 +122,25 @@ let config = LexerConfig {
 };
 ```
 
+## Feature Flags
+
+This crate provides optional, feature-gated tokenization behavior.
+
+### `pipeline_op`
+
+When enabled, the lexer may emit a dedicated token for the contiguous operator `|>`.
+
+- **Disabled (default)**
+  - `|>` tokenizes as two tokens: `|` (`TokenType::BitOr`) then `>` (`TokenType::Greater`).
+- **Enabled**
+  - `|>` tokenizes as a single token: `TokenType::PipeGreater`.
+
+Enable via:
+
+```bash
+cargo test -p medic_lexer --features pipeline_op
+```
+
 ## Running Benchmarks
 
 To compare the performance of the streaming lexer with the original:
@@ -133,7 +152,7 @@ cargo bench
 ## Running Tests
 
 ```bash
-cargo test --features="test"
+cargo test -p medic_lexer
 ```
 
 ## Memory Usage Tests

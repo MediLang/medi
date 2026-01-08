@@ -146,7 +146,8 @@ match lab_result {
 #### Notes on '|' and pipeline operator
 
 - '|' is tokenized as `TokenType::BitOr` in all contexts. The parser disambiguates it as alternation inside patterns.
-- There is no pipeline operator `|>` in v0.1; it is reserved (see "Reserved & Future") and not recognized by the lexer.
+- There is no pipeline operator `|>` in v0.1 at the language level; it is reserved (see "Reserved & Future").
+- The lexer can optionally tokenize `|>` as a single token behind a feature flag (`pipeline_op`). When the flag is disabled (default), `|>` tokenizes as `|` (BitOr) followed by `>` (Greater).
 
 ## Functions
 
@@ -636,6 +637,7 @@ The Medi compiler (`medic`) consists of several stages:
 ## Reserved & Future (Post v0.1)
 
 - Pipeline operator `|>`: left-associative; desugars `x |> f(a)` to `f(x, a)`; specify in v0.2.
+  - Note: the lexer has optional feature-gated tokenization for `|>` via `pipeline_op`, but this does not imply parser or semantic support in v0.1.
 - Async/await syntax and runtime: structured concurrency; deferred in v0.1.
 - Units/Quantities (UCUM): quantity literals and compile-time unit checking; v0.2+.
 - try/catch sugar: surface syntax layered over `Result`; planned.

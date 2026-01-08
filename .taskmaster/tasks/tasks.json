@@ -893,7 +893,7 @@
           "1",
           "5"
         ],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -993,12 +993,103 @@
         "description": "Add support for a single-token pipeline operator '|>' in the Medi lexer, gated behind a Cargo feature flag to preserve backward compatibility.",
         "details": "Implement a feature-gated single-token pipeline operator '|>' across the medic_lexer module with the following steps:\n\n1. Add new token types:\n   - Add `LogosToken::PipeGreater` to the Logos token enum\n   - Add `TokenType::PipeGreater` to the token type enum\n\n2. Update token conversion:\n   - Modify `convert_logos_to_token()` to handle the new token type\n   - Ensure proper span information is preserved\n\n3. Enable recognition in lexer modules:\n   - Update `lexer/mod.rs` to recognize the new token\n   - Update `streaming_lexer.rs` to handle the token in streaming contexts\n   - Update `chunked_lexer.rs` to properly handle the token, including special handling for chunk boundaries where '|' and '>' might be split across chunks\n\n4. Add a new Cargo feature flag:\n   - Create a new feature flag (e.g., `pipeline-operator`) that is disabled by default\n   - Gate the single-token behavior behind this feature\n   - When the feature is disabled, the lexer should continue to recognize '|' and '>' as separate tokens (BitOr and Greater)\n   - When enabled, recognize '|>' as a single PipeGreater token\n\n5. Update documentation:\n   - Add the new token to the language specification in LANG_SPEC.md\n   - Document the feature flag in relevant README files\n   - Add usage examples showing both default and feature-enabled behavior\n\n6. Ensure backward compatibility:\n   - Verify that existing tests pass with the feature disabled\n   - Confirm that the lexer behavior is unchanged for existing code when the feature is off",
         "testStrategy": "1. Unit tests for token recognition:\n   - Test that '|>' is recognized as a single token when the feature is enabled\n   - Test that '|' and '>' are recognized as separate tokens when the feature is disabled\n   - Test edge cases like whitespace between '|' and '>'\n\n2. Chunked lexer tests:\n   - Test recognition when '|' and '>' are in the same chunk\n   - Test recognition when '|' is at the end of one chunk and '>' is at the beginning of the next\n   - Verify correct behavior with various chunk sizes\n\n3. Streaming lexer tests:\n   - Test streaming recognition of the pipeline operator\n   - Verify correct token boundaries in streaming mode\n\n4. Feature flag tests:\n   - Create test modules that conditionally compile based on the feature flag\n   - Verify both behaviors (single token vs. two tokens) with appropriate test cases\n\n5. Integration tests:\n   - Test the lexer in the context of the full parser\n   - Verify that expressions using the pipeline operator are correctly parsed\n\n6. Regression tests:\n   - Run the existing test suite with the feature disabled to ensure no regressions\n   - Create a comprehensive test suite that passes regardless of feature flag state",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           "1"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add LogosToken::PipeGreater and TokenType::PipeGreater",
+            "description": "Add cfg-gated PipeGreater variants to LogosToken (with #[token(\"|>\", priority = 200)]) and TokenType enums.",
+            "dependencies": [],
+            "details": "Already implemented in logos_token.rs (lines 431-435) and token.rs (lines 149-151, 341-342). Both are gated with #[cfg(feature = \"pipeline_op\")].",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 2,
+            "title": "Add Cargo feature flag pipeline_op",
+            "description": "Add pipeline_op = [] feature to medic_lexer/Cargo.toml, disabled by default.",
+            "dependencies": [],
+            "details": "Already implemented in Cargo.toml line 39. Feature is excluded from default features.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 3,
+            "title": "Update token conversion mappings",
+            "description": "Add cfg-gated mapping from LogosToken::PipeGreater to TokenType::PipeGreater in convert.rs and streaming_lexer.rs.",
+            "dependencies": [1],
+            "details": "Already implemented: convert.rs (lines 119-120), streaming_lexer.rs (lines 297-298).",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 4,
+            "title": "Implement chunked lexer cross-chunk boundary handling",
+            "description": "Handle case where '|' is at end of one chunk and '>' at start of next chunk, merging into PipeGreater when feature is enabled.",
+            "dependencies": [1, 2],
+            "details": "Already implemented: chunked_lexer.rs has pending_pipe_start field (lines 92-95) and merge logic (lines 1422-1493). Uses deferral strategy from design doc.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 5,
+            "title": "Add unit tests for feature-on behavior",
+            "description": "Add #[cfg(feature = \"pipeline_op\")] tests verifying '|>' is tokenized as single PipeGreater token in streaming and chunked lexers.",
+            "dependencies": [3, 4],
+            "details": "Already implemented in tests/lexer_tests.rs: test_pipeline_operator_tokenized_when_enabled and test_pipeline_operator_cross_chunk_merge.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 6,
+            "title": "Add unit tests for feature-off behavior",
+            "description": "Add #[cfg(not(feature = \"pipeline_op\"))] tests verifying '|>' is tokenized as two separate tokens (BitOr, Greater).",
+            "dependencies": [],
+            "details": "Already implemented: test_pipeline_operator_not_tokenized in tests/lexer_tests.rs and test_pipeline_operator_not_tokenized_streaming in streaming_lexer.rs.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 7,
+            "title": "Verify regression tests pass with feature disabled",
+            "description": "Run full test suite with default features (pipeline_op disabled) to ensure no regressions.",
+            "dependencies": [5, 6],
+            "details": "Run: cargo test -p medic_lexer (default features). All existing tests must pass unchanged.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 8,
+            "title": "Verify tests pass with feature enabled",
+            "description": "Run full test suite with pipeline_op feature enabled to verify feature-gated code works correctly.",
+            "dependencies": [5, 6],
+            "details": "Run: cargo test -p medic_lexer --features pipeline_op. All tests including feature-gated ones must pass.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 9,
+            "title": "Update LANG_SPEC.md documentation",
+            "description": "Add documentation for the pipeline_op feature flag under the 'Reserved & Future' or a new 'Feature Flags' section.",
+            "dependencies": [7, 8],
+            "details": "Document: feature flag name (pipeline_op), how to enable it (--features pipeline_op), behavior when enabled vs disabled, and note that parser/semantic support is not yet implemented.",
+            "status": "done",
+            "parentId": "16"
+          },
+          {
+            "id": 10,
+            "title": "Update medic_lexer README with feature flag documentation",
+            "description": "Add a section to the lexer crate README documenting the pipeline_op feature flag and its usage.",
+            "dependencies": [7, 8],
+            "details": "Include: feature description, how to enable in Cargo.toml or CLI, and note about experimental status.",
+            "status": "done",
+            "parentId": "16"
+          }
+        ]
       },
       {
         "id": "17",
