@@ -75,8 +75,7 @@ fn test_lex_prd_phase1_examples_no_errors() {
     let prd_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join(".taskmaster")
-        .join("docs")
+        .join("PRDs")
         .join("PRD-Phase-1.txt");
 
     let content = std::fs::read_to_string(&prd_path)
