@@ -166,6 +166,10 @@ fn message_for_error_kind(kind: ErrorKind, tok: Option<&TokenType>) -> (String, 
 
     // Provide contextual help when possible, otherwise fall back to token defaults
     let help = match (kind, tok) {
+        // When expecting an identifier but got '=', user likely forgot the variable name
+        (Alpha, Some(TokenType::Equal)) => {
+            Some("Did you forget the variable name? Example: `let x = 100`".to_string())
+        }
         (Tag, Some(TokenType::Equal)) => {
             Some("If you meant to compare two values, use '=='".to_string())
         }

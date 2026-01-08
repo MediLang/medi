@@ -289,6 +289,7 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
     };
 
     // Optional type annotation: ':' <type>
+    // Also detect common mistake: 'let x int = ...' (missing colon)
     let input = input.skip_whitespace();
     let (input, type_annotation) = if let Ok((input2, _colon)) =
         take_token_if(|t| matches!(t, TokenType::Colon), ErrorKind::Tag)(input)
@@ -302,6 +303,22 @@ pub fn parse_let_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Sta
             }
         }
     } else {
+        // Check for common mistake: identifier immediately after variable name (missing ':')
+        // e.g., 'let bp int = 120' instead of 'let bp: int = 120'
+        if let Some(next_tok) = input.peek() {
+            if matches!(next_tok.token_type, TokenType::Identifier(_)) {
+                // Peek ahead to see if there's an '=' after this identifier
+                if input.len() > 1 && matches!(input.0[1].token_type, TokenType::Equal) {
+                    log::warn!(
+                        "Possible missing ':' in type annotation at {}:{}. Did you mean 'let {}: {} = ...'?",
+                        next_tok.location.line,
+                        next_tok.location.column,
+                        ident.node.name,
+                        next_tok.lexeme
+                    );
+                }
+            }
+        }
         (input, None)
     };
 

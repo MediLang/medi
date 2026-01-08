@@ -2023,19 +2023,29 @@ pub enum TypeError {
 impl std::fmt::Display for TypeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TypeError::UnknownIdentifier(name) => write!(f, "Unknown identifier '{name}'."),
-            TypeError::UnknownTypeName(name) => write!(f, "Unknown type name '{name}'."),
+            TypeError::UnknownIdentifier(name) => {
+                write!(
+                    f,
+                    "Unknown identifier '{name}'. Did you declare it with 'let {name} = ...'?"
+                )
+            }
+            TypeError::UnknownTypeName(name) => {
+                write!(f, "Unknown type '{name}'. Check spelling or define it with 'type {name} {{ ... }}'.")
+            }
             TypeError::TypeMismatch { expected, found } => {
-                write!(f, "Type mismatch: expected {expected:?}, found {found:?}.")
+                let exp_str = friendly_type_name(expected);
+                let found_str = friendly_type_name(found);
+                write!(f, "Expected {exp_str}, but found {found_str}.")
             }
             TypeError::InvalidAssignmentTarget => {
                 write!(
                     f,
-                    "Invalid assignment target; expected identifier or member expression."
+                    "Cannot assign to this expression. Use a variable name (e.g., 'x = 5') or field (e.g., 'patient.age = 65')."
                 )
             }
             TypeError::ConditionNotBool(found) => {
-                write!(f, "Condition must be Bool, found {found:?}.")
+                let found_str = friendly_type_name(found);
+                write!(f, "Condition must be true/false (Bool), but found {found_str}. Try adding a comparison like '== 0' or '> 100'.")
             }
             TypeError::PrivacyViolation { reason } => write!(f, "Privacy violation: {reason}"),
             TypeError::PolicyViolation { reason } => write!(f, "Policy violation: {reason}"),
@@ -2043,6 +2053,45 @@ impl std::fmt::Display for TypeError {
                 write!(f, "Validation failed: {err}")
             }
         }
+    }
+}
+
+/// Convert a MediType to a clinician-friendly name
+fn friendly_type_name(ty: &MediType) -> String {
+    match ty {
+        MediType::Int => "a number (Int)".to_string(),
+        MediType::Float => "a decimal number (Float)".to_string(),
+        MediType::Bool => "true/false (Bool)".to_string(),
+        MediType::String => "text (String)".to_string(),
+        MediType::Void => "nothing (Void)".to_string(),
+        MediType::Unknown => "an unknown type".to_string(),
+        MediType::Record(_fields) => "a record".to_string(),
+        MediType::Struct(_fields) => "a struct".to_string(),
+        MediType::List(inner) => format!("a list of {}", friendly_type_name(inner)),
+        MediType::Function {
+            params,
+            return_type,
+        } => {
+            let params_str = params
+                .iter()
+                .map(friendly_type_name)
+                .collect::<Vec<_>>()
+                .join(", ");
+            let ret_str = friendly_type_name(return_type);
+            format!("a function ({params_str}) -> {ret_str}")
+        }
+        MediType::Quantity(inner) => format!("a quantity ({})", friendly_type_name(inner)),
+        MediType::Range(inner) => format!("a range of {}", friendly_type_name(inner)),
+        MediType::TypeVar(name) => format!("type variable '{name}'"),
+        MediType::HealthcareEntity(kind) => format!("a healthcare entity ({kind:?})"),
+        MediType::PatientId => "a patient ID".to_string(),
+        MediType::MedicalRecord => "a medical record".to_string(),
+        MediType::Vital => "a vital sign".to_string(),
+        MediType::LabResult => "a lab result".to_string(),
+        MediType::FHIRPatient => "a FHIR Patient".to_string(),
+        MediType::Observation => "an observation".to_string(),
+        MediType::Diagnosis => "a diagnosis".to_string(),
+        MediType::Medication => "a medication".to_string(),
     }
 }
 

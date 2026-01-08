@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.0.17] - 2026-01-08
+
+### Changed
+- Diagnostics:
+  - Improved parser diagnostic help text for missing variable names (e.g., `let = 100` now suggests `let x = 100`).
+  - Improved type error readability with clinician-friendly wording and type names.
+  - Added a parser warning for a common type annotation typo pattern (`let x int = ...` missing `:`).
+- Documentation:
+  - Added clinician self-testing artifacts and a summary report at `docs/user_testing/task17_clinician_test_plan.md`.
+
+### Fixed
+- Tests:
+  - Added coverage for the improved `let = ...` diagnostic help text.
+
+### Release alignment
+- Bumped workspace crate versions to `v0.0.17`.
+
 ## [v0.0.16] - 2026-01-08
 
 ### Added

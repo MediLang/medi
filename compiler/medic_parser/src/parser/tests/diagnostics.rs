@@ -90,6 +90,20 @@ mod diagnostics_tests {
     }
 
     #[test]
+    fn test_help_for_missing_variable_name_after_let() {
+        // 'let = 100' should suggest the user forgot the variable name
+        let (slice, _tokens) = str_to_token_slice("let = 100");
+        let err = parse_program_with_diagnostics(slice).expect_err("expected diagnostic error");
+
+        assert_eq!(err.severity, Severity::Error);
+        assert_eq!(err.message, "Expected an identifier");
+        assert_eq!(
+            err.help.as_deref(),
+            Some("Did you forget the variable name? Example: `let x = 100`")
+        );
+    }
+
+    #[test]
     fn test_help_for_unmatched_right_bracket() {
         let (slice, _tokens) = str_to_token_slice("]");
         let err = parse_program_with_diagnostics(slice).expect_err("expected diagnostic error");
