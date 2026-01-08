@@ -4,6 +4,11 @@ Welcome to the MediLang blog! Here you'll find the latest updates, technical dee
 
 ## Latest Posts
 
+### [Medi v0.1.0: Phase 1 Complete — A Healthcare Programming Language is Born](2026-01-08-v0.1.0-release.md)
+
+*January 8, 2026*  
+🎉 **Major Release!** Phase 1 complete with full language core, multi-target compilation (x86-64, WebAssembly, RISC-V), healthcare standard library (medi_data, medi_stats, medi_compliance, medi_ai), complete toolchain, and Python FFI.
+
 ### [Medi v0.0.4 Released – Deterministic tests & diagnostics](posts/2025-10-24-v0-0-4-release.md)
 
 *October 24, 2025*  
