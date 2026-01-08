@@ -1,4 +1,3 @@
-<context>
 # Overview  
 Medi is a revolutionary programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. The language addresses critical gaps in the current healthcare technology landscape by combining the accessibility of Python and R with the performance of compiled languages like Julia, Rust, and C++, while natively supporting healthcare standards like FHIR, HL7, and DICOM.
 
@@ -134,8 +133,7 @@ Target users include clinicians, researchers, data scientists, healthcare IT pro
 - **Secure Authentication**: Implements healthcare-specific access controls
 - **Responsive Design**: Works across devices for clinical accessibility
 - **Offline Capabilities**: Functions in limited-connectivity environments
-</context>
-<PRD>
+
 # Technical Architecture  
 ## System Components
 
