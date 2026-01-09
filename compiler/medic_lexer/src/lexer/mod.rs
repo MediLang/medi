@@ -155,6 +155,9 @@ impl<'a> Lexer<'a> {
             // Function-like medical literals
             LogosToken::PatientIdFunc(pid) => TokenType::PatientId(InternedString::from(&pid[..])),
             LogosToken::ICD10Func(code) => TokenType::ICD10(InternedString::from(&code[..])),
+            LogosToken::SNOMEDFunc(code) => TokenType::SNOMED(InternedString::from(&code[..])),
+            LogosToken::LOINCFunc(code) => TokenType::LOINC(InternedString::from(&code[..])),
+            LogosToken::CPTFunc(code) => TokenType::CPT(InternedString::from(&code[..])),
 
             // Operators
             LogosToken::Plus => TokenType::Plus,

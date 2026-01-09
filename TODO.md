@@ -11,10 +11,10 @@
 ### 1.1 Compiler Infrastructure
 
 #### Lexical & Syntax
-- [ ] Finalize healthcare-specific literals and operators
-  - [ ] Review and stabilize medical literal syntax (pid, icd10, snomed, etc.)
-  - [ ] Finalize healthcare operators (per, coalesce, etc.)
-  - [ ] Document all literals and operators in LANG_SPEC.md
+- [x] Finalize healthcare-specific literals and operators
+  - [x] Review and stabilize medical literal syntax (pid, icd10, snomed, etc.)
+  - [x] Finalize healthcare operators (per, coalesce, etc.)
+  - [x] Document all literals and operators in LANG_SPEC.md
 - [ ] Enhance error messages with medical context
   - [ ] Add domain-specific help for common healthcare coding errors
   - [ ] Improve diagnostic suggestions for FHIR/HL7 related issues

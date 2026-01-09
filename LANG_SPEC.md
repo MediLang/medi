@@ -42,7 +42,7 @@ This specification outlines Medi's syntax, data types, control structures, and d
    ```
    +    -    *    /    %    =    ==   !=   <    >    <=   >=
    +=   -=   *=   /=   %=   &&   ||   |    !    ->   =>   {    }    (    )    [    ]
-   .    ::   ,    :    ;    @    #    ?    ..   ..=  ...
+   ??   ?:   →    of   per  .    ::   ,    :    ;    @    #    ?    ..   ..=  ...
    ```
 
 4. **Literals**:
@@ -51,7 +51,7 @@ This specification outlines Medi's syntax, data types, control structures, and d
    - Strings: `"hello"`, `"""multiline"""`
    - Boolean: `true`, `false`
    - DateTime: `2025-05-15T00:00:00Z`
-   - Medical: `pid("PT123")`, `icd10("A00.0")`
+   - Medical: `pid("PT123")`, `icd10("A00.0")`, `snomed("123456")`, `loinc("12345-6")`, `cpt("99213")`
 
 ### Lexer Error Tokens
 

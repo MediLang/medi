@@ -151,11 +151,11 @@ fn test_crlf_and_cr_normalization_positions() {
 
 #[test]
 fn test_function_like_medical_literals() {
-    let input = r#"pid("PT-123") icd10("A00.1")"#;
+    let input = r#"pid("PT-123") icd10("A00.1") snomed("123456") loinc("12345-6") cpt("99213")"#;
     let lexer = ChunkedLexer::from_reader(input.as_bytes(), Default::default());
     let tokens: Vec<_> = lexer.collect();
 
-    pretty_assert_eq!(tokens.len(), 2);
+    pretty_assert_eq!(tokens.len(), 5);
 
     match &tokens[0].token_type {
         TokenType::PatientId(s) => pretty_assert_eq!(s.as_str(), "PT-123"),
@@ -168,6 +168,24 @@ fn test_function_like_medical_literals() {
         other => panic!("Expected ICD10, got: {other:?}"),
     }
     pretty_assert_eq!(tokens[1].lexeme.as_str(), "icd10(\"A00.1\")");
+
+    match &tokens[2].token_type {
+        TokenType::SNOMED(s) => pretty_assert_eq!(s.as_str(), "123456"),
+        other => panic!("Expected SNOMED, got: {other:?}"),
+    }
+    pretty_assert_eq!(tokens[2].lexeme.as_str(), "snomed(\"123456\")");
+
+    match &tokens[3].token_type {
+        TokenType::LOINC(s) => pretty_assert_eq!(s.as_str(), "12345-6"),
+        other => panic!("Expected LOINC, got: {other:?}"),
+    }
+    pretty_assert_eq!(tokens[3].lexeme.as_str(), "loinc(\"12345-6\")");
+
+    match &tokens[4].token_type {
+        TokenType::CPT(s) => pretty_assert_eq!(s.as_str(), "99213"),
+        other => panic!("Expected CPT, got: {other:?}"),
+    }
+    pretty_assert_eq!(tokens[4].lexeme.as_str(), "cpt(\"99213\")");
 }
 
 #[cfg(not(feature = "pipeline_op"))]

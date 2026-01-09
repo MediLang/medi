@@ -268,6 +268,36 @@ pub enum LogosToken {
     })]
     ICD10Func(String),
 
+    /// SNOMED CT function-like literal: snomed("123456")
+    #[regex(r#"snomed\(\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\s*\)"#, |lex| {
+        let s = lex.slice();
+        if let (Some(start), Some(end)) = (s.find('"'), s.rfind('"')) {
+            if end > start { return Ok::<_, ()>(s[start+1..end].replace("\\\"", "\"")); }
+        }
+        Err(())
+    })]
+    SNOMEDFunc(String),
+
+    /// LOINC function-like literal: loinc("12345-6")
+    #[regex(r#"loinc\(\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\s*\)"#, |lex| {
+        let s = lex.slice();
+        if let (Some(start), Some(end)) = (s.find('"'), s.rfind('"')) {
+            if end > start { return Ok::<_, ()>(s[start+1..end].replace("\\\"", "\"")); }
+        }
+        Err(())
+    })]
+    LOINCFunc(String),
+
+    /// CPT function-like literal: cpt("99213")
+    #[regex(r#"cpt\(\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\s*\)"#, |lex| {
+        let s = lex.slice();
+        if let (Some(start), Some(end)) = (s.find('"'), s.rfind('"')) {
+            if end > start { return Ok::<_, ()>(s[start+1..end].replace("\\\"", "\"")); }
+        }
+        Err(())
+    })]
+    CPTFunc(String),
+
     // Medical operators (must come before Identifier to avoid shadowing)
     /// `of` operator (e.g., '2 of 3' criteria)
     #[token("of")]
