@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn parse_manifest_requires_name_and_version() {
-        let ok = "name = \"a\"\nversion = \"0.1.0\"\n";
+        let ok = "name = \"a\"\nversion = \"0.1.1\"\n";
         assert!(manifest::parse_manifest(ok).is_ok());
 
         let missing = "name = \"a\"\n";
@@ -438,20 +438,21 @@ strict = true
     fn parse_manifest_detailed_dependency() {
         let toml = r#"
 name = "app"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 local_lib = { path = "../lib" }
 git_lib = { git = "https://github.com/example/lib", branch = "main" }
 "#;
         let m = manifest::parse_manifest(toml).unwrap();
+        assert_eq!(m.name, "app");
         assert_eq!(m.dependencies.len(), 2);
     }
 
     #[test]
     fn manifest_display() {
         let m = manifest::Manifest::new("my_pkg");
-        assert_eq!(format!("{m}"), "my_pkg v0.1.0");
+        assert_eq!(format!("{m}"), "my_pkg v0.1.1");
     }
 
     #[test]

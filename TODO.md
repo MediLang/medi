@@ -19,7 +19,7 @@
   - [x] Add domain-specific help for common healthcare coding errors
   - [x] Improve diagnostic suggestions for FHIR/HL7 related issues
   - [x] Add clinician-friendly explanations for type errors
-- [ ] Implement full medical DSL support
+- [x] Implement full medical DSL support
   - [x] Complete `fhir_query` DSL implementation
   - [x] Complete `regulate` block DSL implementation
   - [x] Complete `federated` block DSL implementation

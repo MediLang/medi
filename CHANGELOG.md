@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.1.1] - 2026-01-09
+
+### Added
+
+- Language:
+  - `federated("...") { ... }` statement support (AST + parser + typechecker).
+  - Prelude typing for `predict_risk(...)` and `stratify_risk(...)`.
+
+### Changed
+
+- Type checker:
+  - Function parameters typed as `Unknown` now act as a wildcard during call checking (enables flexible prelude APIs like `predict_risk`).
+- Codegen:
+  - `federated` blocks now codegen like normal blocks (federated execution/isolation remains a runtime concern).
+
+### Fixed
+
+- Parser/tests:
+  - Added acceptance coverage for `federated` blocks.
+- Compliance/type traversal:
+  - Compliance scanning now traverses federated block bodies.
+
 ## [v0.1.0] - 2026-01-08
 
 ### 🎉 Phase 1 Complete - First Major Release
