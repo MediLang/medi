@@ -154,6 +154,10 @@ pub trait Visitor {
         self.visit_children(node)
     }
 
+    fn visit_federated_stmt(&mut self, node: &FederatedNode) -> VisitResult<Self::Output> {
+        self.visit_children(node)
+    }
+
     // Program
     fn visit_program(&mut self, node: &ProgramNode) -> VisitResult<Self::Output> {
         self.visit_children(node)

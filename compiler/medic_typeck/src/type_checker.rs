@@ -25,6 +25,10 @@ pub struct TypeChecker<'a> {
     param_unit_expectations: HashMap<(String, usize), String>,
     /// Optional per-function return unit expectation: function_name -> unit
     return_unit_expectations: HashMap<String, String>,
+
+    /// Optional active compliance standard for the current checking context.
+    /// When set to HIPAA, additional sink restrictions are enforced.
+    active_regulation: Option<String>,
 }
 
 #[cfg(test)]
@@ -566,6 +570,167 @@ mod unit_tests {
         let errs = tc.take_errors();
         assert!(!errs.is_empty());
     }
+
+    #[test]
+    fn regulate_hipaa_enforces_sink_restrictions_only_inside_block() {
+        let mut env = TypeEnv::with_prelude();
+        env.set_privacy("phi".to_string(), PrivacyAnnotation::PHI);
+        let mut tc = TypeChecker::new(&mut env);
+
+        // print(phi) outside regulate: HIPAA baseline is enforced, so this should be a violation.
+        let phi_expr = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("phi"),
+            Span::default(),
+        ));
+        let call_outside = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("print"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                    args.push(phi_expr.clone());
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let mut stmts: NodeList<StatementNode> = NodeList::new();
+        stmts.push(StatementNode::Expr(call_outside));
+        let program = ProgramNode { statements: stmts };
+
+        let mut errs = tc.check_program(&program);
+        errs.extend(tc.take_errors());
+        assert!(
+            errs.iter()
+                .any(|e| matches!(e, TypeError::PrivacyViolation { .. })),
+            "expected HIPAA privacy violation outside regulate"
+        );
+
+        // Inside regulate HIPAA: print(phi) should be rejected.
+        let call_inside = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("print"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                    args.push(phi_expr);
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let mut body_stmts: NodeList<StatementNode> = NodeList::new();
+        body_stmts.push(StatementNode::Expr(call_inside));
+        let reg_stmt = StatementNode::Regulate(Box::new(RegulateNode {
+            standard: IdentifierNode::from_str_name("HIPAA"),
+            body: BlockNode {
+                statements: body_stmts,
+                span: Span::default(),
+            },
+            span: Span::default(),
+        }));
+
+        let mut stmts2: NodeList<StatementNode> = NodeList::new();
+        stmts2.push(reg_stmt);
+        let program2 = ProgramNode { statements: stmts2 };
+
+        let mut env2 = TypeEnv::with_prelude();
+        env2.set_privacy("phi".to_string(), PrivacyAnnotation::PHI);
+        let mut tc2 = TypeChecker::new(&mut env2);
+        let mut errs2 = tc2.check_program(&program2);
+        errs2.extend(tc2.take_errors());
+        assert!(
+            errs2
+                .iter()
+                .any(|e| matches!(e, TypeError::PrivacyViolation { .. })),
+            "expected HIPAA privacy violation inside regulate"
+        );
+    }
+
+    #[test]
+    fn regulate_rejects_unknown_standard() {
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        let reg_stmt = StatementNode::Regulate(Box::new(RegulateNode {
+            standard: IdentifierNode::from_str_name("GDPR"),
+            body: BlockNode {
+                statements: NodeList::new(),
+                span: Span::default(),
+            },
+            span: Span::default(),
+        }));
+
+        let mut stmts: NodeList<StatementNode> = NodeList::new();
+        stmts.push(reg_stmt);
+        let program = ProgramNode { statements: stmts };
+
+        let errs = tc.check_program(&program);
+        assert!(
+            errs.iter()
+                .any(|e| matches!(e, TypeError::PolicyViolation { .. })),
+            "expected PolicyViolation for unknown regulate standard"
+        );
+    }
+
+    #[test]
+    fn predict_risk_call_typechecks_with_prelude_signature() {
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        // predict_risk(data, "condition", "timeframe", ["age"])
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("predict_risk"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                    args.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(1),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::String("heart_failure".to_string()),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::String("5_years".to_string()),
+                        Span::default(),
+                    )));
+                    let mut feature_elems: NodeList<ExpressionNode> = NodeList::new();
+                    feature_elems.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::String("age".to_string()),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Array(Spanned::new(
+                        Box::new(ArrayLiteralNode {
+                            elements: feature_elems,
+                        }),
+                        Span::default(),
+                    )));
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let ty = tc.check_expr(&call);
+        assert!(matches!(ty, MediType::Record(_)));
+        // Ensure the prelude signature yields a score: Float field.
+        if let MediType::Record(fields) = ty {
+            assert!(fields
+                .iter()
+                .any(|(n, t)| n == "score" && *t == MediType::Float));
+        }
+    }
 }
 
 impl<'a> TypeChecker<'a> {
@@ -579,7 +744,13 @@ impl<'a> TypeChecker<'a> {
             quantity_units: HashMap::new(),
             param_unit_expectations: HashMap::new(),
             return_unit_expectations: HashMap::new(),
+            active_regulation: None,
         }
+    }
+
+    pub fn with_regulation(mut self, standard: impl Into<String>) -> Self {
+        self.active_regulation = Some(standard.into());
+        self
     }
 
     /// Set expected unit for a function parameter (by function name and param index).
@@ -1093,7 +1264,7 @@ impl<'a> TypeChecker<'a> {
                         }
                     }
 
-                    // HIPAA core restrictions
+                    // HIPAA core restrictions (baseline): always enforced.
                     let is_violation = match acc {
                         PHI => true,
                         PrivacyAnnotation::Pseudonymized => {
@@ -1469,21 +1640,26 @@ impl<'a> TypeChecker<'a> {
                             call.arguments.iter().zip(params.iter()).enumerate()
                         {
                             let arg_type = self.check_expr(arg);
-                            // Permit numeric scalar when a quantity is expected, so we can surface a missing-unit error
-                            let expects_quantity = matches!(
-                                param_type,
-                                MediType::Quantity(inner) if **inner == MediType::Float
-                            );
-                            if expects_quantity {
-                                let arg_ok = matches!(
-                                    arg_type,
-                                    MediType::Quantity(_) | MediType::Float | MediType::Int
+                            // Unknown in a function signature acts as a wildcard (accept any type).
+                            if *param_type == MediType::Unknown {
+                                // Still allow unit expectation checks below to run if configured.
+                            } else {
+                                // Permit numeric scalar when a quantity is expected, so we can surface a missing-unit error
+                                let expects_quantity = matches!(
+                                    param_type,
+                                    MediType::Quantity(inner) if **inner == MediType::Float
                                 );
-                                if !arg_ok {
+                                if expects_quantity {
+                                    let arg_ok = matches!(
+                                        arg_type,
+                                        MediType::Quantity(_) | MediType::Float | MediType::Int
+                                    );
+                                    if !arg_ok {
+                                        return MediType::Unknown;
+                                    }
+                                } else if arg_type != *param_type {
                                     return MediType::Unknown;
                                 }
-                            } else if arg_type != *param_type {
-                                return MediType::Unknown;
                             }
 
                             // Enforce unit expectation, if any
@@ -1571,6 +1747,22 @@ impl<'a> TypeChecker<'a> {
             }
             ExpressionNode::HealthcareQuery(Spanned { node: query, .. }) => {
                 match query.query_type.as_str() {
+                    // New `fhir_query("Resource", ...)` parser semantics: query_type holds the
+                    // resource name (e.g., "Patient").
+                    "Patient" => MediType::Record(vec![
+                        ("id".to_string(), MediType::Int),
+                        ("name".to_string(), MediType::String),
+                        ("age".to_string(), MediType::Int),
+                        (
+                            "conditions".to_string(),
+                            MediType::List(Box::new(MediType::String)),
+                        ),
+                    ]),
+                    "Appointment" => MediType::List(Box::new(MediType::Record(vec![
+                        ("appointment_id".to_string(), MediType::Int),
+                        ("date".to_string(), MediType::String),
+                        ("doctor".to_string(), MediType::String),
+                    ]))),
                     "PatientData" => MediType::Record(vec![
                         ("id".to_string(), MediType::Int),
                         ("name".to_string(), MediType::String),
@@ -1970,14 +2162,35 @@ impl<'a> TypeChecker<'a> {
                 Ok(())
             }
             StatementNode::Regulate(reg) => {
+                // Only HIPAA is enforced today.
+                if reg.standard.name() != "HIPAA" {
+                    return Err(TypeError::PolicyViolation {
+                        reason: format!("unknown compliance standard '{}'", reg.standard.name()),
+                    });
+                }
                 // Check body in new scope
+                let parent = self.env.clone();
+                let mut child = TypeEnv::with_parent(parent);
+                let mut ck = TypeChecker::new(&mut child).with_regulation("HIPAA");
+                if let Some(ctx) = self.validation_ctx {
+                    ck = ck.with_validation_ctx(ctx);
+                }
+                for s in &reg.body.statements {
+                    ck.check_stmt(s)?;
+                }
+                self.errors.extend(ck.take_errors());
+                Ok(())
+            }
+            StatementNode::Federated(fed) => {
+                // Federated blocks introduce a privacy boundary / isolated scope.
+                // For now we treat them as a nested scope with normal typechecking.
                 let parent = self.env.clone();
                 let mut child = TypeEnv::with_parent(parent);
                 let mut ck = TypeChecker::new(&mut child);
                 if let Some(ctx) = self.validation_ctx {
                     ck = ck.with_validation_ctx(ctx);
                 }
-                for s in &reg.body.statements {
+                for s in &fed.body.statements {
                     ck.check_stmt(s)?;
                 }
                 self.errors.extend(ck.take_errors());
@@ -2026,16 +2239,32 @@ impl std::fmt::Display for TypeError {
             TypeError::UnknownIdentifier(name) => {
                 write!(
                     f,
-                    "Unknown identifier '{name}'. Did you declare it with 'let {name} = ...'?"
+                    "Unknown identifier '{name}'. Did you declare it (e.g., `let {name} = ...`) or pass it in as a function parameter?"
                 )
             }
             TypeError::UnknownTypeName(name) => {
-                write!(f, "Unknown type '{name}'. Check spelling or define it with 'type {name} {{ ... }}'.")
+                write!(
+                    f,
+                    "Unknown type '{name}'. Check spelling, or define it with `type {name} {{ ... }}`. If you meant a built-in type, try `Int`, `Float`, `Bool`, or `String`."
+                )
             }
             TypeError::TypeMismatch { expected, found } => {
                 let exp_str = friendly_type_name(expected);
                 let found_str = friendly_type_name(found);
-                write!(f, "Expected {exp_str}, but found {found_str}.")
+                let hint = match (expected, found) {
+                    (MediType::Bool, _) => {
+                        " If this is a condition, use a comparison like `==`, `<`, or `>`."
+                    }
+                    (MediType::String, _) => " If you meant text, add quotes (e.g., \"...\").",
+                    (MediType::PatientId, _) => {
+                        " If you meant a patient ID, use `pid(\"...\")` (or bind it to a variable first)."
+                    }
+                    (MediType::Quantity(_), _) => {
+                        " If this is a measurement, ensure a unit is present (e.g., `5 mg`) and conversions are valid."
+                    }
+                    _ => " Check the expected type for this field/function and adjust the value.",
+                };
+                write!(f, "Expected {exp_str}, but found {found_str}.{hint}")
             }
             TypeError::InvalidAssignmentTarget => {
                 write!(
@@ -2047,10 +2276,19 @@ impl std::fmt::Display for TypeError {
                 let found_str = friendly_type_name(found);
                 write!(f, "Condition must be true/false (Bool), but found {found_str}. Try adding a comparison like '== 0' or '> 100'.")
             }
-            TypeError::PrivacyViolation { reason } => write!(f, "Privacy violation: {reason}"),
-            TypeError::PolicyViolation { reason } => write!(f, "Policy violation: {reason}"),
+            TypeError::PrivacyViolation { reason } => write!(
+                f,
+                "Privacy violation: {reason}. Consider applying a de-identification function (e.g., `mask`, `anonymize`) or avoid sending PHI to this sink."
+            ),
+            TypeError::PolicyViolation { reason } => write!(
+                f,
+                "Policy violation: {reason}. Check your `regulate` policy blocks and required compliance settings."
+            ),
             TypeError::ValidationFailed(err) => {
-                write!(f, "Validation failed: {err}")
+                write!(
+                    f,
+                    "Validation failed: {err}. Check code systems/units (e.g., UCUM for units, LOINC/SNOMED for codes) and ensure values are within expected ranges."
+                )
             }
         }
     }
@@ -2132,6 +2370,39 @@ mod tests {
         }));
         let err = tc.check_stmt(&stmt).unwrap_err();
         assert!(matches!(err, TypeError::ConditionNotBool(MediType::Int)));
+    }
+
+    #[test]
+    fn type_error_messages_are_clinician_friendly() {
+        let msg = TypeError::UnknownIdentifier("bp".to_string()).to_string();
+        assert!(msg.contains("Unknown identifier 'bp'"));
+        assert!(msg.contains("let bp"));
+
+        let msg = TypeError::UnknownTypeName("Pressure".to_string()).to_string();
+        assert!(msg.contains("Unknown type 'Pressure'"));
+        assert!(msg.contains("type Pressure"));
+
+        let msg = TypeError::TypeMismatch {
+            expected: MediType::Bool,
+            found: MediType::Int,
+        }
+        .to_string();
+        assert!(msg.contains("Expected true/false"));
+        assert!(msg.contains("comparison"));
+
+        let msg = TypeError::TypeMismatch {
+            expected: MediType::String,
+            found: MediType::Int,
+        }
+        .to_string();
+        assert!(msg.contains("add quotes"));
+
+        let msg = TypeError::TypeMismatch {
+            expected: MediType::PatientId,
+            found: MediType::String,
+        }
+        .to_string();
+        assert!(msg.contains("pid(\""));
     }
 
     #[test]

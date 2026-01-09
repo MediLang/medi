@@ -286,6 +286,8 @@ pub enum StatementNode {
     TypeDecl(Box<TypeDeclNode>),
     /// A regulation block, e.g., `regulate HIPAA { ... }`
     Regulate(Box<RegulateNode>),
+    /// A federated computation block, e.g., `federated("hospital_a") { ... }`
+    Federated(Box<FederatedNode>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -413,6 +415,15 @@ pub struct RegulateNode {
     pub span: Span,
 }
 
+/// Represents a federated computation block
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FederatedNode {
+    /// The site / source identifier for federated computation (e.g., "hospital_a")
+    pub site: String,
+    pub body: BlockNode,
+    pub span: Span,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeDeclNode {
     pub name: IdentifierNode,
@@ -450,6 +461,16 @@ impl Visitable for RegulateNode {
 
     fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.standard.accept(visitor)?;
+        self.body.accept(visitor)
+    }
+}
+
+impl Visitable for FederatedNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_federated_stmt(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         self.body.accept(visitor)
     }
 }
@@ -689,6 +710,7 @@ impl Visitable for StatementNode {
             StatementNode::Function(stmt) => stmt.accept(visitor),
             StatementNode::TypeDecl(stmt) => stmt.accept(visitor),
             StatementNode::Regulate(stmt) => stmt.accept(visitor),
+            StatementNode::Federated(stmt) => stmt.accept(visitor),
         }
     }
 
@@ -706,6 +728,7 @@ impl Visitable for StatementNode {
             StatementNode::Function(stmt) => stmt.visit_children(visitor),
             StatementNode::TypeDecl(stmt) => stmt.visit_children(visitor),
             StatementNode::Regulate(stmt) => stmt.visit_children(visitor),
+            StatementNode::Federated(stmt) => stmt.visit_children(visitor),
         }
     }
 }
@@ -726,6 +749,7 @@ impl StatementNode {
             StatementNode::Function(stmt) => &stmt.span,
             StatementNode::TypeDecl(stmt) => &stmt.span,
             StatementNode::Regulate(stmt) => &stmt.span,
+            StatementNode::Federated(stmt) => &stmt.span,
         }
     }
 }
@@ -1091,6 +1115,10 @@ impl std::fmt::Display for StatementNode {
             StatementNode::Regulate(reg) => {
                 write!(f, "regulate {} ", reg.standard.name)?;
                 reg.body.fmt_indented(f, 0, 4)
+            }
+            StatementNode::Federated(fed) => {
+                write!(f, "federated(\"{}\") ", fed.site)?;
+                fed.body.fmt_indented(f, 0, 4)
             }
         }
     }

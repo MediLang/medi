@@ -12,6 +12,20 @@ fn to_slice(src: &str) -> TokenSlice<'_> {
 }
 
 #[test]
+fn healthcare_federated_blocks() {
+    let src = r#"federated("hospital_a") {
+        let x = 1;
+    }"#;
+    let ts = to_slice(src);
+    let (_rest, stmt) = parse_statement(ts).expect("should parse federated statement");
+    let StatementNode::Federated(fed) = stmt else {
+        panic!("expected federated node")
+    };
+    assert_eq!(fed.site, "hospital_a");
+    assert_eq!(fed.body.statements.len(), 1);
+}
+
+#[test]
 fn precedence_null_coalesce_right_associative() {
     let src = "a ?? b ?? c";
     let ts = to_slice(src);

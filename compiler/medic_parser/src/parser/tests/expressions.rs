@@ -261,4 +261,35 @@ mod expressions_test {
         // The test passes if we get here, as the error is already printed to stderr
         // and we can't easily capture it in the test output
     }
+
+    #[test]
+    fn test_fhir_query_expression_parses() {
+        use medic_ast::ast::BinaryExpressionNode;
+
+        let input = "fhir_query(\"Patient\", age > 65)";
+        let (token_slice, _tokens) = str_to_token_slice(input);
+        let (_rem, expr) = parse_expression(token_slice).expect("should parse fhir_query expression");
+
+        match expr {
+            ExpressionNode::HealthcareQuery(hq) => {
+                assert_eq!(hq.query_type, "Patient");
+                assert_eq!(hq.arguments.len(), 1);
+                match &hq.arguments[0] {
+                    ExpressionNode::Binary(Spanned { node: bin, .. }) => {
+                        assert_eq!(bin.operator, BinaryOperator::Gt);
+                        assert!(matches!(bin.left, ExpressionNode::Identifier(_)));
+                        assert!(matches!(
+                            bin.right,
+                            ExpressionNode::Literal(Spanned {
+                                node: LiteralNode::Int(65),
+                                ..
+                            })
+                        ));
+                    }
+                    other => panic!("expected binary filter expr, got {other:?}"),
+                }
+            }
+            other => panic!("expected HealthcareQuery expression, got {other:?}"),
+        }
+    }
 }

@@ -5777,6 +5777,11 @@ impl<'ctx> CodeGen<'ctx> {
                 // We just need to ensure the statements inside are generated.
                 self.codegen_stmt(&StatementNode::Block(Box::new(reg.body.clone())))
             }
+            StatementNode::Federated(fed) => {
+                // For code generation, a federated block behaves like a normal block.
+                // Federated execution/isolation is a runtime concern.
+                self.codegen_stmt(&StatementNode::Block(Box::new(fed.body.clone())))
+            }
             StatementNode::Match(m) => self.codegen_match(m),
         }
     }

@@ -13,9 +13,9 @@ use crate::parser::{
 use medic_ast::ast::NodeList;
 use medic_ast::ast::{
     AssignmentNode, BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode,
-    ExpressionNode, FunctionNode, IdentifierNode, IfNode, LetStatementNode, LiteralNode,
-    MatchArmNode, MatchNode, MemberExpressionNode, ParameterNode, PatternNode, ProgramNode,
-    RegulateNode, ReturnNode, StatementNode, TypeDeclNode, TypeField, WhileNode,
+    ExpressionNode, FederatedNode, FunctionNode, IdentifierNode, IfNode, LetStatementNode,
+    LiteralNode, MatchArmNode, MatchNode, MemberExpressionNode, ParameterNode, PatternNode,
+    ProgramNode, RegulateNode, ReturnNode, StatementNode, TypeDeclNode, TypeField, WhileNode,
 };
 use medic_ast::visit::Span;
 use medic_ast::Spanned;
@@ -38,6 +38,50 @@ fn parse_type_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expre
     };
     let span: Span = tok.location.into();
     Ok((input, ExpressionNode::Identifier(Spanned::new(name, span))))
+}
+
+/// Parses a federated statement:
+/// federated ( "site" ) { ... }
+pub fn parse_federated_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StatementNode> {
+    log::debug!("=== parse_federated_statement ===");
+
+    // 'federated'
+    let (input, fed_tok) =
+        take_token_if(|tt| matches!(tt, TokenType::Federated), ErrorKind::Tag)(input)?;
+    let start_span: Span = fed_tok.location.into();
+    let input = input.skip_whitespace();
+
+    // '('
+    let (input, _) = take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Tag)(input)?;
+    let input = input.skip_whitespace();
+
+    // site string
+    let (input, site_tok) =
+        take_token_if(|tt| matches!(tt, TokenType::String(_)), ErrorKind::Tag)(input)?;
+    let site = if let TokenType::String(s) = &site_tok.token_type {
+        s.to_string()
+    } else {
+        unreachable!()
+    };
+
+    let input = input.skip_whitespace();
+    // ')'
+    let (input, _) =
+        take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Tag)(input)?;
+    let input = input.skip_whitespace();
+
+    // Body block
+    let (input, body) = parse_block(input)?;
+
+    let span = Span {
+        start: start_span.start,
+        end: body.span.end,
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    let node = FederatedNode { site, body, span };
+    Ok((input, StatementNode::Federated(Box::new(node))))
 }
 
 /// Parse a user-defined type declaration:
@@ -1417,6 +1461,10 @@ pub fn parse_statement(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Stateme
                 TokenType::Regulate => {
                     log::debug!("Found 'regulate' statement");
                     return parse_regulate_statement(input);
+                }
+                TokenType::Federated => {
+                    log::debug!("Found 'federated' statement");
+                    return parse_federated_statement(input);
                 }
                 TokenType::Let => {
                     log::debug!("Found 'let' statement");

@@ -110,6 +110,7 @@ fn visit_stmt<'env>(
         }
         StatementNode::Assignment(assign) => visit_expr(&assign.value, checker, violations),
         StatementNode::Regulate(reg) => visit_block(&reg.body, checker, violations),
+        StatementNode::Federated(fed) => visit_block(&fed.body, checker, violations),
         StatementNode::TypeDecl(_) | StatementNode::Match(_) => {}
     }
 }

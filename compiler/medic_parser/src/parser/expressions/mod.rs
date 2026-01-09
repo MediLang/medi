@@ -44,6 +44,7 @@
 //! ```
 
 use crate::parser::Span;
+use medic_ast::ast::HealthcareQueryNode;
 use medic_ast::ast::{IndexExpressionNode, QuantityLiteralNode};
 use medic_ast::Spanned;
 use nom::error::ErrorKind;
@@ -652,6 +653,125 @@ pub fn parse_primary(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expressio
         TokenType::Match => {
             log::debug!("Found 'match' keyword, parsing match expression");
             parse_match_expression(input)
+        }
+        TokenType::FhirQuery | TokenType::Query => {
+            // Parse `fhir_query("Resource", <filter>...)` (and `query(...)`) into a dedicated AST node.
+            // NOTE: The lexer produces these as keyword tokens, so we must treat them as callable here.
+            let kw_tok = input.0[0].clone();
+            let start_span: Span = kw_tok.location.into();
+
+            // Ensure we have a '(' after the keyword; if not, fail anchored at the keyword token
+            // so the diagnostic system can provide keyword-specific help.
+            let after_kw = input.advance().skip_whitespace();
+            if !after_kw
+                .peek()
+                .is_some_and(|t| matches!(t.token_type, TokenType::LeftParen))
+            {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    ErrorKind::Tag,
+                )));
+            }
+
+            // Consume keyword
+            let input = after_kw;
+
+            // Expect '('
+            let (mut input, _) =
+                take_token_if(|tt| matches!(tt, TokenType::LeftParen), ErrorKind::Tag)(input)?;
+            input = input.skip_whitespace();
+
+            // Parse arguments (can be empty but typically has at least the resource type)
+            let mut args: NodeList<ExpressionNode> = NodeList::new();
+            if let Some(tp) = input.peek() {
+                if matches!(tp.token_type, TokenType::RightParen) {
+                    let (after_rparen, rparen_tok) = take_token_if(
+                        |tt| matches!(tt, TokenType::RightParen),
+                        ErrorKind::Tag,
+                    )(input)?;
+
+                    let span = Span {
+                        start: start_span.start,
+                        end: rparen_tok.location.offset + rparen_tok.lexeme.len(),
+                        line: start_span.line,
+                        column: start_span.column,
+                    };
+
+                    let node = HealthcareQueryNode {
+                        query_type: kw_tok.lexeme.to_string(),
+                        arguments: NodeList::new(),
+                    };
+                    return Ok((
+                        after_rparen,
+                        ExpressionNode::HealthcareQuery(Spanned::new(Box::new(node), span)),
+                    ));
+                }
+            }
+
+            // At least one argument
+            let (mut rest, first_arg) = parse_expression(input)?;
+            args.push(first_arg);
+            rest = rest.skip_whitespace();
+            // More arguments separated by commas
+            loop {
+                if let Some(tok) = rest.peek() {
+                    if matches!(tok.token_type, TokenType::Comma) {
+                        let (after_comma, _) = take_token_if(
+                            |tt| matches!(tt, TokenType::Comma),
+                            ErrorKind::Tag,
+                        )(rest)?;
+                        let after_comma = after_comma.skip_whitespace();
+                        let (after_arg, arg) = parse_expression(after_comma)?;
+                        args.push(arg);
+                        rest = after_arg.skip_whitespace();
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            // Expect closing ')'
+            let (input_after_rparen, rparen_tok) =
+                take_token_if(|tt| matches!(tt, TokenType::RightParen), ErrorKind::Tag)(rest)?;
+
+            // Interpret the first argument as the FHIR resource type when it is a string literal.
+            // Store the remaining arguments as filter expressions.
+            let mut filters: NodeList<ExpressionNode> = NodeList::new();
+            let mut query_type: String = kw_tok.lexeme.to_string();
+            if let Some(first) = args.first() {
+                if let ExpressionNode::Literal(Spanned {
+                    node: LiteralNode::String(s),
+                    ..
+                }) = first
+                {
+                    query_type = s.clone();
+                    for a in args.iter().skip(1) {
+                        filters.push(a.clone());
+                    }
+                } else {
+                    // If the first argument isn't a string, keep all arguments as-is.
+                    for a in args.iter() {
+                        filters.push(a.clone());
+                    }
+                }
+            }
+
+            let span = Span {
+                start: start_span.start,
+                end: rparen_tok.location.offset + rparen_tok.lexeme.len(),
+                line: start_span.line,
+                column: start_span.column,
+            };
+
+            let node = HealthcareQueryNode {
+                query_type,
+                arguments: filters,
+            };
+
+            Ok((
+                input_after_rparen,
+                ExpressionNode::HealthcareQuery(Spanned::new(Box::new(node), span)),
+            ))
         }
         // Healthcare code literals
         TokenType::ICD10(code) => {

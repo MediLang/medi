@@ -10,22 +10,22 @@
 
 ### 1.1 Compiler Infrastructure
 
-#### Lexical & Syntax
+#### Lexical & Syntax (v0.1.1)
 - [x] Finalize healthcare-specific literals and operators
   - [x] Review and stabilize medical literal syntax (pid, icd10, snomed, etc.)
   - [x] Finalize healthcare operators (per, coalesce, etc.)
   - [x] Document all literals and operators in LANG_SPEC.md
-- [ ] Enhance error messages with medical context
-  - [ ] Add domain-specific help for common healthcare coding errors
-  - [ ] Improve diagnostic suggestions for FHIR/HL7 related issues
-  - [ ] Add clinician-friendly explanations for type errors
+- [x] Enhance error messages with medical context
+  - [x] Add domain-specific help for common healthcare coding errors
+  - [x] Improve diagnostic suggestions for FHIR/HL7 related issues
+  - [x] Add clinician-friendly explanations for type errors
 - [ ] Implement full medical DSL support
-  - [ ] Complete `fhir_query` DSL implementation
-  - [ ] Complete `regulate` block DSL implementation
-  - [ ] Complete `federated` block DSL implementation
-  - [ ] Add `predict_risk` DSL support
+  - [x] Complete `fhir_query` DSL implementation
+  - [x] Complete `regulate` block DSL implementation
+  - [x] Complete `federated` block DSL implementation
+  - [x] Add `predict_risk` DSL support
 
-#### Type System
+#### Type System (v0.1.2)
 - [ ] Complete trait system for medical types
   - [ ] Implement `MedicalRecord` trait fully
   - [ ] Implement `PrivacyProtected` trait fully
@@ -44,7 +44,7 @@
   - [ ] Enforce de-identification at type boundaries
   - [ ] Add privacy annotations to function signatures
 
-#### Memory Management
+#### Memory Management (v0.1.3)
 - [ ] Full implementation of safe/real-time zones
   - [ ] Complete `safe` zone with production GC
   - [ ] Complete `real_time` zone with deterministic allocation
@@ -60,7 +60,7 @@
 
 ### 1.2 Runtime System
 
-#### Memory & Concurrency
+#### Memory & Concurrency (v0.1.4)
 - [ ] Production-ready garbage collector
   - [ ] Stress test with healthcare workloads
   - [ ] Optimize pause times for interactive use
@@ -78,7 +78,7 @@
   - [ ] Add error context and chaining
   - [ ] Implement panic recovery for critical paths
 
-#### Standard Library Completion
+#### Standard Library Completion (v0.1.5)
 - [ ] Complete core library (medi::core)
   - [ ] Finalize collections API
   - [ ] Complete iterator implementations
@@ -103,7 +103,7 @@
   - [ ] Low-latency I/O
   - [ ] Device protocol support
 
-### 1.3 Performance Optimization
+### 1.3 Performance Optimization (v0.1.6)
 - [ ] LLVM optimization passes for medical workloads
   - [ ] Profile common healthcare operations
   - [ ] Add custom optimization passes
@@ -152,7 +152,7 @@
   - [ ] Lock file support
   - [ ] Conflict resolution strategies
 
-### 2.2 Standard Library Expansion
+### 2.2 Standard Library Expansion (v0.1.7)
 - [ ] Enhance `medi.data` with HL7, DICOM, and genomic formats
   - [ ] Full HL7 v2.x message parser and generator
   - [ ] DICOM image reading and metadata extraction
@@ -180,7 +180,7 @@
   - [ ] Dashboard layout system
   - [ ] Real-time data binding
 
-### 2.3 Community Infrastructure
+### 2.3 Community Infrastructure (v0.1.8)
 - [ ] Establish GitHub Discussions for community feedback
   - [ ] Set up discussion categories
   - [ ] Create community guidelines
@@ -203,7 +203,7 @@
 
 ## 3. Privacy & Compliance Enhancement
 
-### 3.1 Privacy Framework
+### 3.1 Privacy Framework (v0.1.9)
 - [ ] Implement differential privacy algorithms
   - [ ] Basic mechanisms (Laplace, Gaussian, Exponential)
   - [ ] Composition theorems
@@ -224,7 +224,7 @@
   - [ ] Homomorphic encryption integration (optional)
   - [ ] Private set intersection
 
-### 3.2 Compliance Automation
+### 3.2 Compliance Automation (v0.1.10)
 - [ ] Expand regulatory frameworks (HIPAA, GDPR, FDA, EMA)
   - [ ] Complete HIPAA Security Rule checks
   - [ ] Add GDPR Article 9 (health data) checks
@@ -247,7 +247,7 @@
 
 ## 4. Development Tools
 
-### 4.1 Enhanced IDE
+### 4.1 Enhanced IDE (v0.1.11)
 - [ ] Improve visual programming interface
   - [ ] Drag-and-drop workflow builder
   - [ ] Visual data flow editor
@@ -266,7 +266,7 @@
   - [ ] Performance profiler
   - [ ] Privacy flow visualizer
 
-### 4.2 Package Management
+### 4.2 Package Management (v0.1.12)
 - [ ] Enhance `medipack` with dependency resolution
   - [ ] Implement SAT solver for dependencies
   - [ ] Add lock file support (`medi.lock`)
@@ -289,12 +289,12 @@
 
 ## 5. Pilot Program
 
-### 5.1 Institution Recruitment
+### 5.1 Institution Recruitment (v0.1.13)
 - [ ] Recruit 2-3 Academic Medical Centers
 - [ ] Recruit 1-2 Research Hospitals
 - [ ] Recruit 1 Healthcare Technology Company
 
-### 5.2 Pilot Projects
+### 5.2 Pilot Projects (v0.1.14)
 - [ ] Clinical Data Analysis Pipeline
   - [ ] FHIR data integration and analysis
   - [ ] Regulatory compliant reporting
@@ -308,7 +308,7 @@
   - [ ] Privacy-preserving data sharing
   - [ ] Collaborative model development
 
-### 5.3 Evaluation
+### 5.3 Evaluation (v0.1.15)
 - [ ] Collect user satisfaction metrics
 - [ ] Measure development time vs existing tools
 - [ ] Run performance benchmarks
@@ -319,19 +319,19 @@
 
 ## 6. Technical Requirements
 
-### 6.1 Performance Targets
+### 6.1 Performance Targets (v0.1.16)
 - [ ] Compilation: 50% faster than Phase 1
 - [ ] Runtime: Within 1.5x of C++ for numerical operations
 - [ ] Memory: Optimized for constrained environments (IoT, edge)
 - [ ] Network: Efficient protocols for federated operations
 
-### 6.2 Compatibility
+### 6.2 Compatibility (v0.1.17)
 - [ ] Support for all major healthcare data standards
 - [ ] Prepare for EHR integration (Epic, Cerner) - discovery/design
 - [ ] Python/R bidirectional interoperability
 - [ ] Prepare for cloud deployment (AWS, Azure, GCP) - discovery/design
 
-### 6.3 Security & Privacy
+### 6.3 Security & Privacy (v0.1.18)
 - [ ] SOC 2 compliance for `medipacks.io`
 - [ ] HIPAA-compliant design patterns documented
 - [ ] Formal verification of critical privacy components
@@ -340,13 +340,13 @@
 
 ## 7. Community Engagement
 
-### 7.1 Feedback Channels
+### 7.1 Feedback Channels (v0.1.19)
 - [ ] Set up GitHub Discussions
 - [ ] Schedule regular community calls (biweekly)
 - [ ] Conduct user interviews with pilot participants
 - [ ] Maintain X (@MediLangHQ) presence
 
-### 7.2 Documentation
+### 7.2 Documentation (v0.1.20)
 - [ ] Comprehensive language specification (update LANG_SPEC.md)
 - [ ] Interactive tutorials (web-based)
 - [ ] Example projects repository

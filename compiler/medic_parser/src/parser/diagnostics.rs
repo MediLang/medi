@@ -116,13 +116,32 @@ fn default_help_for_token(tt: &TokenType) -> Option<String> {
         Range | RangeInclusive | DotDot | DotDotEq | DotDotDot => Some("Ranges use '..' or '..=' between bounds".to_string()),
 
         // Lexer error token
-        Error(_) => Some("Unrecognized text. This is not a valid Medi token. Remove it or replace it with a valid symbol/keyword (e.g., '=' vs '==', proper unit operators like 'per').".to_string()),
+        Error(msg) => {
+            let m = msg.as_str();
+            let _invalid_lexeme = m
+                .strip_prefix("Invalid token '")
+                .and_then(|s| s.strip_suffix("'"));
+
+            Some("Unrecognized text. This is not a valid Medi token. Remove it or replace it with a valid symbol/keyword (e.g., '=' vs '==', proper unit operators like 'per').".to_string())
+        }
 
         // Domain-specific tokens
         Of => Some("'of' is used in clinical expressions (e.g., '2 of doses'). Ensure it's in the right place".to_string()),
         Per => Some("'per' expresses rates (e.g., 'mg per kg'). Ensure units are valid".to_string()),
-        FhirQuery | Query => Some("Ensure query expressions are in the correct syntactic context".to_string()),
-        Regulate | Scope | Federated => Some("This keyword must appear in a valid clinical policy or query context".to_string()),
+        FhirQuery | Query => Some(
+            "FHIR/clinical queries are written like `fhir_query(\"Patient\", age > 65)` (i.e., a function-style call with a resource type and filters).".to_string(),
+        ),
+        Regulate | Scope | Federated => Some(
+            "Policy blocks must use the correct form, e.g., `regulate HIPAA { ... }`. If you're writing a query, use `fhir_query(\"Resource\", ...)`.".to_string(),
+        ),
+
+        // Medical literals used where a name/identifier is expected
+        PatientId(_) => Some(
+            "A patient ID literal cannot be used as a name. Use an identifier on the left (e.g., `let patient_id = pid(\"PT-123\")`)".to_string(),
+        ),
+        ICD10(_) | LOINC(_) | SNOMED(_) | CPT(_) => Some(
+            "A medical code literal cannot be used as a name. Use an identifier on the left and put the code on the right (e.g., `let code = ICD10:E11.65`)".to_string(),
+        ),
 
         // Identifiers and literals
         Identifier(_) => Some("Identifiers should start with a letter and contain letters, digits, or '_'".to_string()),

@@ -109,6 +109,33 @@ impl TypeEnv {
                 return_type: Box::new(MediType::List(Box::new(MediType::FHIRPatient))),
             },
         );
+
+        env.insert(
+            "predict_risk".to_string(),
+            MediType::Function {
+                // data, condition, timeframe, features
+                params: vec![
+                    MediType::Unknown,
+                    MediType::String,
+                    MediType::String,
+                    MediType::Unknown,
+                ],
+                // Return a lightweight record mirroring stdlib RiskPrediction
+                return_type: Box::new(MediType::Record(vec![
+                    ("condition".to_string(), MediType::String),
+                    ("timeframe".to_string(), MediType::String),
+                    ("score".to_string(), MediType::Float),
+                ])),
+            },
+        );
+
+        env.insert(
+            "stratify_risk".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::String),
+            },
+        );
         env.insert(
             "println".to_string(),
             MediType::Function {

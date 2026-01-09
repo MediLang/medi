@@ -104,6 +104,20 @@ mod diagnostics_tests {
     }
 
     #[test]
+    fn test_help_for_medical_code_used_as_identifier_name() {
+        // A common domain mistake: using a code literal where a variable name should go.
+        let (slice, _tokens) = str_to_token_slice("let ICD10:A00.1 = 1;");
+        let err = parse_program_with_diagnostics(slice).expect_err("expected diagnostic error");
+
+        assert_eq!(err.severity, Severity::Error);
+        assert_eq!(err.message, "Expected an identifier");
+        assert_eq!(
+            err.help.as_deref(),
+            Some("A medical code literal cannot be used as a name. Use an identifier on the left and put the code on the right (e.g., `let code = ICD10:E11.65`)")
+        );
+    }
+
+    #[test]
     fn test_help_for_unmatched_right_bracket() {
         let (slice, _tokens) = str_to_token_slice("]");
         let err = parse_program_with_diagnostics(slice).expect_err("expected diagnostic error");
@@ -127,6 +141,20 @@ mod diagnostics_tests {
         assert_eq!(
             err.help.as_deref(),
             Some("'per' expresses rates (e.g., 'mg per kg'). Ensure units are valid")
+        );
+    }
+
+    #[test]
+    fn test_help_for_fhir_query_token_out_of_context() {
+        // 'fhir_query' should be used as a function-style call.
+        let (slice, _tokens) = str_to_token_slice("fhir_query");
+        let err = parse_program_with_diagnostics(slice).expect_err("expected diagnostic error");
+
+        assert_eq!(err.severity, Severity::Error);
+        assert!(err.message.starts_with("Unexpected token"));
+        assert_eq!(
+            err.help.as_deref(),
+            Some("FHIR/clinical queries are written like `fhir_query(\"Patient\", age > 65)` (i.e., a function-style call with a resource type and filters).")
         );
     }
 
