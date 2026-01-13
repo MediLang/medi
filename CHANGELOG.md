@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.1.2] - 2026-01-13
+
+### Added
+
+- Type system:
+  - Completed core trait surface for medical types: `MedicalRecord`, `PrivacyProtected`, `Auditable`, `Serializable`.
+  - Advanced type inference improvements (bidirectional checking + constraint-based inference).
+  - Named generic type support in annotations for medical containers:
+    - `FHIRBundle<T>`
+    - `TimeSeries<T>`
+    - `CohortResult<T>`
+  - Privacy-aware type checking:
+    - PHI flow tracking via `PrivacyAnnotation`.
+    - De-identification enforcement at function/type boundaries.
+    - Privacy annotations in function signatures (parameter + return privacy metadata).
+
 ## [v0.1.1] - 2026-01-09
 
 ### Added

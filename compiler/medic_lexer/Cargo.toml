@@ -1,6 +1,6 @@
 [package]
 name = "medic_lexer"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Lexer for the Medi programming language with support for healthcare-specific syntax"
 license = "MIT OR Apache-2.0"
