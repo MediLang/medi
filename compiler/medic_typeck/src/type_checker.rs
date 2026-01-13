@@ -930,6 +930,7 @@ impl<'a> TypeChecker<'a> {
                 params,
                 return_type,
             } => params.iter().any(Self::contains_typevar) || Self::contains_typevar(return_type),
+            MediType::Named { args, .. } => args.iter().any(Self::contains_typevar),
             _ => false,
         }
     }
@@ -960,6 +961,10 @@ impl<'a> TypeChecker<'a> {
             } => MT::Function {
                 params: params.iter().map(|p| Self::apply_subs(p, subs)).collect(),
                 return_type: Box::new(Self::apply_subs(return_type, subs)),
+            },
+            MT::Named { name, args } => MT::Named {
+                name: name.clone(),
+                args: args.iter().map(|a| Self::apply_subs(a, subs)).collect(),
             },
             _ => t.clone(),
         }
@@ -1068,6 +1073,23 @@ impl<'a> TypeChecker<'a> {
                 }
                 for ((fk, fv), (ak, av)) in fr.iter().zip(ar.iter()) {
                     if fk != ak || !Self::unify_types(fv, av, subs) {
+                        return false;
+                    }
+                }
+                true
+            }
+            (
+                MT::Named {
+                    name: fn_,
+                    args: fa,
+                },
+                MT::Named { name: an, args: aa },
+            ) => {
+                if fn_ != an || fa.len() != aa.len() {
+                    return false;
+                }
+                for (farg, aarg) in fa.iter().zip(aa.iter()) {
+                    if !Self::unify_types(farg, aarg, subs) {
                         return false;
                     }
                 }
@@ -1436,7 +1458,8 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// Convert a type-annotation expression into a `MediType`.
-    /// For now we accept identifiers that match builtin names or env-bound names.
+    /// Accepts identifiers that match builtin names or env-bound names,
+    /// and generic type applications like `FHIRBundle<Observation>`.
     fn resolve_annotation_type(&mut self, ty_expr: &ExpressionNode) -> MediType {
         match ty_expr {
             ExpressionNode::Identifier(Spanned { node: ident, .. }) => {
@@ -1448,6 +1471,15 @@ impl<'a> TypeChecker<'a> {
                         .cloned()
                         .unwrap_or(MediType::Unknown)
                 }
+            }
+            ExpressionNode::GenericType(Spanned { node: gt, .. }) => {
+                let name = gt.name.to_string();
+                let args: Vec<MediType> = gt
+                    .args
+                    .iter()
+                    .map(|arg| self.resolve_annotation_type(arg))
+                    .collect();
+                MediType::Named { name, args }
             }
             _ => MediType::Unknown,
         }
@@ -1675,6 +1707,7 @@ impl<'a> TypeChecker<'a> {
                 StatementNode::Expr(e) => self.check_expr_privacy(e),
                 _ => Anonymized,
             },
+            ExpressionNode::GenericType(_) => Anonymized,
         };
         let sp = expr.span();
         self.privacy_table.insert((sp.start, sp.end), label);
@@ -2297,6 +2330,15 @@ impl<'a> TypeChecker<'a> {
                 }
                 MediType::Struct(fields)
             }
+            ExpressionNode::GenericType(Spanned { node: gt, .. }) => {
+                let name = gt.name.to_string();
+                let args: Vec<MediType> = gt
+                    .args
+                    .iter()
+                    .map(|arg| self.resolve_annotation_type(arg))
+                    .collect();
+                MediType::Named { name, args }
+            }
         };
         // Record in side type table using the expression span
         let span = expr.span();
@@ -2743,6 +2785,18 @@ fn friendly_type_name(ty: &MediType) -> String {
         MediType::Observation => "an observation".to_string(),
         MediType::Diagnosis => "a diagnosis".to_string(),
         MediType::Medication => "a medication".to_string(),
+        MediType::Named { name, args } => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                let args_str = args
+                    .iter()
+                    .map(friendly_type_name)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("{name}<{args_str}>")
+            }
+        }
     }
 }
 
@@ -3242,5 +3296,198 @@ mod tests {
         );
         assert_eq!(tc.get_type_at_span(&arg1_span), Some(&MediType::Int));
         assert_eq!(tc.get_type_at_span(&arg2_span), Some(&MediType::Int));
+    }
+
+    #[test]
+    fn generic_type_annotation_fhir_bundle() {
+        use medic_ast::ast::{GenericTypeNode, IdentifierName};
+
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        let span = Span {
+            start: 0,
+            end: 25,
+            line: 1,
+            column: 1,
+        };
+
+        // Build GenericType expression: FHIRBundle<Observation>
+        let arg_expr = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("Observation"),
+            span,
+        ));
+        let gt_expr = ExpressionNode::GenericType(Spanned::new(
+            Box::new(GenericTypeNode {
+                name: IdentifierName::from("FHIRBundle"),
+                args: vec![arg_expr].into_iter().collect(),
+            }),
+            span,
+        ));
+
+        let resolved = tc.resolve_annotation_type(&gt_expr);
+        assert_eq!(
+            resolved,
+            MediType::Named {
+                name: "FHIRBundle".to_string(),
+                args: vec![MediType::Observation],
+            }
+        );
+    }
+
+    #[test]
+    fn generic_type_annotation_timeseries() {
+        use medic_ast::ast::{GenericTypeNode, IdentifierName};
+
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        let span = Span {
+            start: 0,
+            end: 20,
+            line: 1,
+            column: 1,
+        };
+
+        // Build GenericType expression: TimeSeries<Vital>
+        let arg_expr =
+            ExpressionNode::Identifier(Spanned::new(IdentifierNode::from_str_name("Vital"), span));
+        let gt_expr = ExpressionNode::GenericType(Spanned::new(
+            Box::new(GenericTypeNode {
+                name: IdentifierName::from("TimeSeries"),
+                args: vec![arg_expr].into_iter().collect(),
+            }),
+            span,
+        ));
+
+        let resolved = tc.resolve_annotation_type(&gt_expr);
+        assert_eq!(
+            resolved,
+            MediType::Named {
+                name: "TimeSeries".to_string(),
+                args: vec![MediType::Vital],
+            }
+        );
+    }
+
+    #[test]
+    fn generic_type_annotation_cohort_result() {
+        use medic_ast::ast::{GenericTypeNode, IdentifierName};
+
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        let span = Span {
+            start: 0,
+            end: 25,
+            line: 1,
+            column: 1,
+        };
+
+        // Build GenericType expression: CohortResult<LabResult>
+        let arg_expr = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("LabResult"),
+            span,
+        ));
+        let gt_expr = ExpressionNode::GenericType(Spanned::new(
+            Box::new(GenericTypeNode {
+                name: IdentifierName::from("CohortResult"),
+                args: vec![arg_expr].into_iter().collect(),
+            }),
+            span,
+        ));
+
+        let resolved = tc.resolve_annotation_type(&gt_expr);
+        assert_eq!(
+            resolved,
+            MediType::Named {
+                name: "CohortResult".to_string(),
+                args: vec![MediType::LabResult],
+            }
+        );
+    }
+
+    #[test]
+    fn let_with_generic_type_annotation_binds_named_type() {
+        use medic_ast::ast::{GenericTypeNode, IdentifierName};
+
+        let mut env = TypeEnv::with_prelude();
+        let mut tc = TypeChecker::new(&mut env);
+
+        let span = Span {
+            start: 0,
+            end: 40,
+            line: 1,
+            column: 1,
+        };
+
+        // Build annotation: FHIRBundle<Observation>
+        let arg_expr = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("Observation"),
+            span,
+        ));
+        let ann = ExpressionNode::GenericType(Spanned::new(
+            Box::new(GenericTypeNode {
+                name: IdentifierName::from("FHIRBundle"),
+                args: vec![arg_expr].into_iter().collect(),
+            }),
+            span,
+        ));
+
+        // let bundle: FHIRBundle<Observation>;
+        let stmt = StatementNode::Let(Box::new(LetStatementNode {
+            name: IdentifierNode::from_str_name("bundle"),
+            type_annotation: Some(ann),
+            value: None,
+            span,
+        }));
+
+        assert!(tc.check_stmt(&stmt).is_ok());
+        assert_eq!(
+            tc.env.get("bundle"),
+            Some(&MediType::Named {
+                name: "FHIRBundle".to_string(),
+                args: vec![MediType::Observation],
+            })
+        );
+    }
+
+    #[test]
+    fn named_type_is_assignable_to_same_named_type() {
+        let t1 = MediType::Named {
+            name: "FHIRBundle".to_string(),
+            args: vec![MediType::Observation],
+        };
+        let t2 = MediType::Named {
+            name: "FHIRBundle".to_string(),
+            args: vec![MediType::Observation],
+        };
+        assert!(t1.is_assignable_to(&t2));
+    }
+
+    #[test]
+    fn named_type_not_assignable_to_different_name() {
+        let t1 = MediType::Named {
+            name: "FHIRBundle".to_string(),
+            args: vec![MediType::Observation],
+        };
+        let t2 = MediType::Named {
+            name: "TimeSeries".to_string(),
+            args: vec![MediType::Observation],
+        };
+        assert!(!t1.is_assignable_to(&t2));
+    }
+
+    #[test]
+    fn named_type_not_assignable_to_different_args() {
+        let t1 = MediType::Named {
+            name: "FHIRBundle".to_string(),
+            args: vec![MediType::Observation],
+        };
+        let t2 = MediType::Named {
+            name: "FHIRBundle".to_string(),
+            args: vec![MediType::Vital],
+        };
+        assert!(!t1.is_assignable_to(&t2));
     }
 }

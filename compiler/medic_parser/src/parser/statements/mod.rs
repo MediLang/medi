@@ -13,9 +13,10 @@ use crate::parser::{
 use medic_ast::ast::NodeList;
 use medic_ast::ast::{
     AssignmentNode, BinaryExpressionNode, BinaryOperator, BlockNode, CallExpressionNode,
-    ExpressionNode, FederatedNode, FunctionNode, IdentifierNode, IfNode, LetStatementNode,
-    LiteralNode, MatchArmNode, MatchNode, MemberExpressionNode, ParameterNode, PatternNode,
-    ProgramNode, RegulateNode, ReturnNode, StatementNode, TypeDeclNode, TypeField, WhileNode,
+    ExpressionNode, FederatedNode, FunctionNode, GenericTypeNode, IdentifierNode, IfNode,
+    LetStatementNode, LiteralNode, MatchArmNode, MatchNode, MemberExpressionNode, ParameterNode,
+    PatternNode, ProgramNode, RegulateNode, ReturnNode, StatementNode, TypeDeclNode, TypeField,
+    WhileNode,
 };
 use medic_ast::visit::Span;
 use medic_ast::Spanned;
@@ -23,7 +24,7 @@ use medic_ast::Spanned;
 use super::{expressions::parse_expression as parse_expr, identifiers::parse_identifier};
 use std::convert::TryFrom;
 
-/// Parse a simple type identifier (e.g., `float`, `string`, `Foo`).
+/// Parse a type identifier, optionally with generic arguments: `Foo` or `Foo<Bar, Baz>`.
 /// This is stricter than a full expression and avoids greedily consuming
 /// commas or parentheses in function signatures.
 fn parse_type_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
@@ -36,8 +37,64 @@ fn parse_type_identifier(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, Expre
     } else {
         unreachable!()
     };
-    let span: Span = tok.location.into();
-    Ok((input, ExpressionNode::Identifier(Spanned::new(name, span))))
+    let start_span: Span = tok.location.into();
+
+    // Check for optional generic arguments: '<' Type (',' Type)* '>'
+    let input_after_name = input.skip_whitespace();
+    if let Ok((after_lt, _)) =
+        take_token_if(|tt| matches!(tt, TokenType::Less), ErrorKind::Char)(input_after_name)
+    {
+        let mut args: Vec<ExpressionNode> = Vec::new();
+        let mut cursor = after_lt.skip_whitespace();
+
+        loop {
+            // Parse a type argument (recursive)
+            let (after_arg, arg_expr) = parse_type_identifier(cursor)?;
+            args.push(arg_expr);
+            cursor = after_arg.skip_whitespace();
+
+            // Expect ',' or '>'
+            if let Ok((after_comma, _)) =
+                take_token_if(|tt| matches!(tt, TokenType::Comma), ErrorKind::Char)(cursor)
+            {
+                cursor = after_comma.skip_whitespace();
+                continue;
+            }
+            break;
+        }
+
+        // Expect '>'
+        let (after_gt, gt_tok) =
+            take_token_if(|tt| matches!(tt, TokenType::Greater), ErrorKind::Char)(cursor)?;
+        let end_span: Span = gt_tok.location.into();
+
+        let span = Span {
+            start: start_span.start,
+            end: end_span.end,
+            line: start_span.line,
+            column: start_span.column,
+        };
+
+        // Represent as a GenericType AST node (we'll use Index as a stand-in for now)
+        // Better: add a dedicated GenericType expression variant. For now, encode as
+        // Call with callee = Identifier(name) and arguments = type args (non-standard but works).
+        Ok((
+            after_gt,
+            ExpressionNode::GenericType(Spanned::new(
+                Box::new(GenericTypeNode {
+                    name: name.name,
+                    args: args.into_iter().collect(),
+                }),
+                span,
+            )),
+        ))
+    } else {
+        // No generic args, plain identifier
+        Ok((
+            input,
+            ExpressionNode::Identifier(Spanned::new(name, start_span)),
+        ))
+    }
 }
 
 /// Parses a federated statement:

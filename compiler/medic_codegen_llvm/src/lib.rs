@@ -1764,6 +1764,15 @@ impl<'ctx> CodeGen<'ctx> {
             }
             MediType::Function { .. } => None, // Use `function_signature_from_medi`
             MediType::TypeVar(_) => None, // generic type variables are not first-class in LLVM; must be specialized
+            MediType::Named { .. } => {
+                // Named generic types (e.g., FHIRBundle<T>) are represented as opaque pointers
+                Some(
+                    self.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::from(0))
+                        .into(),
+                )
+            }
         }
     }
 
@@ -1953,6 +1962,14 @@ impl<'ctx> CodeGen<'ctx> {
             } => {
                 let ps: Vec<String> = params.iter().map(|p| self.mangle_type(p)).collect();
                 format!("fn({})->{}", ps.join("_"), self.mangle_type(return_type))
+            }
+            MT::Named { name, args } => {
+                if args.is_empty() {
+                    name.clone()
+                } else {
+                    let args_str: Vec<String> = args.iter().map(|a| self.mangle_type(a)).collect();
+                    format!("{}<{}>", name, args_str.join(","))
+                }
             }
         }
     }
@@ -4683,7 +4700,8 @@ impl<'ctx> CodeGen<'ctx> {
             ExpressionNode::Statement(_)
             | ExpressionNode::IcdCode(_)
             | ExpressionNode::CptCode(_)
-            | ExpressionNode::SnomedCode(_) => Err(CodeGenError::Llvm(
+            | ExpressionNode::SnomedCode(_)
+            | ExpressionNode::GenericType(_) => Err(CodeGenError::Llvm(
                 "unsupported expression in codegen".into(),
             )),
         }

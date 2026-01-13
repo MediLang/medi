@@ -41,6 +41,11 @@ pub enum MediType {
         params: Vec<MediType>,
         return_type: Box<MediType>,
     },
+    /// Named generic type application, e.g., FHIRBundle<Observation>
+    Named {
+        name: String,
+        args: Vec<MediType>,
+    },
 }
 
 impl MediType {
@@ -100,6 +105,14 @@ impl MediType {
             // Quantity assignability (structurally): Quantity(T) -> Quantity(U) if T -> U
             (MediType::Quantity(inner_s), MediType::Quantity(inner_t)) => {
                 inner_s.is_assignable_to(inner_t)
+            }
+            // List assignability: List(T) -> List(U) if T -> U
+            (MediType::List(inner_s), MediType::List(inner_t)) => inner_s.is_assignable_to(inner_t),
+            // Named generic assignability: Name<Args...> -> Name<Args...> if all args assignable
+            (MediType::Named { name: sn, args: sa }, MediType::Named { name: tn, args: ta }) => {
+                sn == tn
+                    && sa.len() == ta.len()
+                    && sa.iter().zip(ta.iter()).all(|(s, t)| s.is_assignable_to(t))
             }
             _ => false,
         }

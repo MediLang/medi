@@ -35,10 +35,10 @@
   - [x] Improve inference for generic medical containers
   - [x] Add bidirectional type inference
   - [x] Implement constraint-based inference
-- [ ] Add generic type support for medical containers
-  - [ ] Generic `FHIRBundle<T>`
-  - [ ] Generic `TimeSeries<T>`
-  - [ ] Generic `CohortResult<T>`
+- [x] Add generic type support for medical containers
+  - [x] Generic `FHIRBundle<T>`
+  - [x] Generic `TimeSeries<T>`
+  - [x] Generic `CohortResult<T>`
 - [ ] Privacy-aware type checking
   - [ ] Track PHI flow through type system
   - [ ] Enforce de-identification at type boundaries

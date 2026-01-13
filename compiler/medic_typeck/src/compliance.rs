@@ -189,7 +189,8 @@ fn visit_expr<'env>(
         | ExpressionNode::IcdCode(_)
         | ExpressionNode::CptCode(_)
         | ExpressionNode::SnomedCode(_)
-        | ExpressionNode::HealthcareQuery(_) => {}
+        | ExpressionNode::HealthcareQuery(_)
+        | ExpressionNode::GenericType(_) => {}
     }
 }
 

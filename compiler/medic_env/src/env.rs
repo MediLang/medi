@@ -171,6 +171,33 @@ impl TypeEnv {
                 return_type: Box::new(MediType::Unknown),
             },
         );
+
+        // Generic medical container type constructors
+        // FHIRBundle<T> - a bundle of FHIR resources of type T
+        env.insert(
+            "FHIRBundle".to_string(),
+            MediType::Named {
+                name: "FHIRBundle".to_string(),
+                args: vec![MediType::TypeVar("T".to_string())],
+            },
+        );
+        // TimeSeries<T> - a time-indexed series of values of type T
+        env.insert(
+            "TimeSeries".to_string(),
+            MediType::Named {
+                name: "TimeSeries".to_string(),
+                args: vec![MediType::TypeVar("T".to_string())],
+            },
+        );
+        // CohortResult<T> - results from a cohort analysis with element type T
+        env.insert(
+            "CohortResult".to_string(),
+            MediType::Named {
+                name: "CohortResult".to_string(),
+                args: vec![MediType::TypeVar("T".to_string())],
+            },
+        );
+
         env
     }
 

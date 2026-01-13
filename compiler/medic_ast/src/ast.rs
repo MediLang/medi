@@ -109,6 +109,8 @@ pub enum ExpressionNode {
     Array(Spanned<Box<ArrayLiteralNode>>),
     /// A quantity literal formed by a numeric value and a unit identifier (e.g., `5 mg`)
     Quantity(Spanned<Box<QuantityLiteralNode>>),
+    /// A generic type application (e.g., `FHIRBundle<Observation>`)
+    GenericType(Spanned<Box<GenericTypeNode>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -502,6 +504,13 @@ pub struct QuantityLiteralNode {
     pub unit: IdentifierNode,
 }
 
+/// Represents a generic type application like `FHIRBundle<Observation>` or `TimeSeries<Vital>`
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GenericTypeNode {
+    pub name: IdentifierName,
+    pub args: NodeList<ExpressionNode>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IdentifierNode {
     pub name: IdentifierName,
@@ -626,6 +635,7 @@ impl Visitable for ExpressionNode {
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.accept(visitor),
             ExpressionNode::Array(Spanned { node: arr, .. }) => arr.accept(visitor),
             ExpressionNode::Quantity(Spanned { node: q, .. }) => (*q).accept(visitor),
+            ExpressionNode::GenericType(Spanned { node: gt, .. }) => (*gt).accept(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.accept(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.accept(visitor),
             ExpressionNode::SnomedCode(spanned) => spanned.node.accept(visitor),
@@ -649,6 +659,7 @@ impl Visitable for ExpressionNode {
             ExpressionNode::Struct(Spanned { node: lit, .. }) => lit.visit_children(visitor),
             ExpressionNode::Array(Spanned { node: arr, .. }) => arr.visit_children(visitor),
             ExpressionNode::Quantity(Spanned { node: q, .. }) => (*q).visit_children(visitor),
+            ExpressionNode::GenericType(Spanned { node: gt, .. }) => (*gt).visit_children(visitor),
             ExpressionNode::IcdCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::CptCode(spanned) => spanned.node.visit_children(visitor),
             ExpressionNode::SnomedCode(spanned) => spanned.node.visit_children(visitor),
@@ -934,6 +945,19 @@ impl Visitable for QuantityLiteralNode {
     }
 }
 
+impl Visitable for GenericTypeNode {
+    fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        visitor.visit_generic_type(self)
+    }
+
+    fn visit_children<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
+        for arg in &self.args {
+            arg.accept(visitor)?;
+        }
+        Ok(Default::default())
+    }
+}
+
 impl Visitable for IdentifierNode {
     fn accept<V: Visitor + ?Sized>(&self, visitor: &mut V) -> VisitResult<V::Output> {
         visitor.visit_identifier(self)
@@ -1004,6 +1028,7 @@ impl ExpressionNode {
             ExpressionNode::Struct(span) => &span.span,
             ExpressionNode::Array(span) => &span.span,
             ExpressionNode::Quantity(span) => &span.span,
+            ExpressionNode::GenericType(span) => &span.span,
             ExpressionNode::Statement(span) => &span.span,
         }
     }
@@ -1185,6 +1210,16 @@ impl std::fmt::Display for ExpressionNode {
             }
             ExpressionNode::Quantity(Spanned { node: q, .. }) => {
                 write!(f, "{} {}", q.value, q.unit.name())
+            }
+            ExpressionNode::GenericType(Spanned { node: gt, .. }) => {
+                write!(f, "{}<", gt.name)?;
+                for (i, arg) in gt.args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{arg}")?;
+                }
+                write!(f, ">")
             }
         }
     }
