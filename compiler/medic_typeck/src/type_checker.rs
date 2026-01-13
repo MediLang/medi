@@ -294,9 +294,193 @@ mod unit_tests {
         assert!(specs.contains(&("f".to_string(), vec![MediType::Float], MediType::Float,)));
     }
 
-    // Removed duplicate collect_function_specializations helper from test module; use the impl method below.
+    #[test]
+    fn generic_call_infers_typevar_return() {
+        // env: id: fn(T) -> T
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "id".to_string(),
+            MediType::Function {
+                params: vec![MediType::TypeVar("T".to_string())],
+                return_type: Box::new(MediType::TypeVar("T".to_string())),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
 
-    // Note: expectation setters are implemented on TypeChecker impl for test use
+        // id(1)
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("id"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                    args.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(1),
+                        Span::default(),
+                    )));
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let ty = tc.check_expr(&call);
+        assert_eq!(ty, MediType::Int);
+    }
+
+    #[test]
+    fn constraint_solving_promotes_numeric_typevars() {
+        // env: f: fn(T, T) -> T
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "f".to_string(),
+            MediType::Function {
+                params: vec![
+                    MediType::TypeVar("T".to_string()),
+                    MediType::TypeVar("T".to_string()),
+                ],
+                return_type: Box::new(MediType::TypeVar("T".to_string())),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+
+        // f(1, 2.0) should infer T = Float (numeric LUB)
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("f"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                    args.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(1),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Float(2.0),
+                        Span::default(),
+                    )));
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let ty = tc.check_expr(&call);
+        assert_eq!(ty, MediType::Float);
+    }
+
+    #[test]
+    fn constraint_solving_merges_list_element_types() {
+        // env: concat: fn(List<T>, List<T>) -> List<T>
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "concat".to_string(),
+            MediType::Function {
+                params: vec![
+                    MediType::List(Box::new(MediType::TypeVar("T".to_string()))),
+                    MediType::List(Box::new(MediType::TypeVar("T".to_string()))),
+                ],
+                return_type: Box::new(MediType::List(Box::new(MediType::TypeVar("T".to_string())))),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+
+        // concat([1], [2.0]) should infer T = Float, return List(Float)
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("concat"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+
+                    let mut left_elems: NodeList<ExpressionNode> = NodeList::new();
+                    left_elems.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(1),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Array(Spanned::new(
+                        Box::new(ArrayLiteralNode {
+                            elements: left_elems,
+                        }),
+                        Span::default(),
+                    )));
+
+                    let mut right_elems: NodeList<ExpressionNode> = NodeList::new();
+                    right_elems.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Float(2.0),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Array(Spanned::new(
+                        Box::new(ArrayLiteralNode {
+                            elements: right_elems,
+                        }),
+                        Span::default(),
+                    )));
+
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let ty = tc.check_expr(&call);
+        assert_eq!(ty, MediType::List(Box::new(MediType::Float)));
+    }
+
+    #[test]
+    fn generic_call_infers_list_element_type() {
+        // env: head: fn(List<T>) -> T
+        let mut env = TypeEnv::with_prelude();
+        env.insert(
+            "head".to_string(),
+            MediType::Function {
+                params: vec![MediType::List(Box::new(MediType::TypeVar("T".to_string())))],
+                return_type: Box::new(MediType::TypeVar("T".to_string())),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+
+        // head([1, 2, 3])
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ExpressionNode::Identifier(Spanned::new(
+                    IdentifierNode::from_str_name("head"),
+                    Span::default(),
+                )),
+                arguments: {
+                    let mut args: NodeList<ExpressionNode> = NodeList::new();
+                    let mut elems: NodeList<ExpressionNode> = NodeList::new();
+                    elems.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(1),
+                        Span::default(),
+                    )));
+                    elems.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(2),
+                        Span::default(),
+                    )));
+                    elems.push(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(3),
+                        Span::default(),
+                    )));
+                    args.push(ExpressionNode::Array(Spanned::new(
+                        Box::new(ArrayLiteralNode { elements: elems }),
+                        Span::default(),
+                    )));
+                    args
+                },
+            }),
+            Span::default(),
+        ));
+
+        let ty = tc.check_expr(&call);
+        assert_eq!(ty, MediType::Int);
+    }
 
     #[test]
     fn unit_conversion_unknown_unit_produces_error() {
@@ -734,6 +918,165 @@ mod unit_tests {
 }
 
 impl<'a> TypeChecker<'a> {
+    fn contains_typevar(t: &MediType) -> bool {
+        match t {
+            MediType::TypeVar(_) => true,
+            MediType::Range(inner) | MediType::Quantity(inner) | MediType::List(inner) => {
+                Self::contains_typevar(inner)
+            }
+            MediType::Struct(fields) => fields.values().any(Self::contains_typevar),
+            MediType::Record(fields) => fields.iter().any(|(_, v)| Self::contains_typevar(v)),
+            MediType::Function {
+                params,
+                return_type,
+            } => params.iter().any(Self::contains_typevar) || Self::contains_typevar(return_type),
+            _ => false,
+        }
+    }
+
+    fn apply_subs(t: &MediType, subs: &HashMap<String, MediType>) -> MediType {
+        use MediType as MT;
+        match t {
+            MT::TypeVar(n) => subs.get(n).cloned().unwrap_or(MT::Unknown),
+            MT::Range(inner) => MT::Range(Box::new(Self::apply_subs(inner, subs))),
+            MT::Quantity(inner) => MT::Quantity(Box::new(Self::apply_subs(inner, subs))),
+            MT::List(inner) => MT::List(Box::new(Self::apply_subs(inner, subs))),
+            MT::Struct(fields) => {
+                let mut m = std::collections::HashMap::new();
+                for (k, v) in fields.iter() {
+                    m.insert(k.clone(), Self::apply_subs(v, subs));
+                }
+                MT::Struct(m)
+            }
+            MT::Record(fields) => MT::Record(
+                fields
+                    .iter()
+                    .map(|(k, v)| (k.clone(), Self::apply_subs(v, subs)))
+                    .collect(),
+            ),
+            MT::Function {
+                params,
+                return_type,
+            } => MT::Function {
+                params: params.iter().map(|p| Self::apply_subs(p, subs)).collect(),
+                return_type: Box::new(Self::apply_subs(return_type, subs)),
+            },
+            _ => t.clone(),
+        }
+    }
+
+    fn unify_types(
+        formal: &MediType,
+        actual: &MediType,
+        subs: &mut HashMap<String, MediType>,
+    ) -> bool {
+        use MediType as MT;
+
+        fn merge_types(a: &MediType, b: &MediType) -> Option<MediType> {
+            use MediType as MT;
+            if a == b {
+                return Some(a.clone());
+            }
+
+            // Simple numeric constraint solving: Int + Float => Float
+            if a.is_numeric() && b.is_numeric() {
+                return Some(MT::Float);
+            }
+
+            match (a, b) {
+                (MT::Quantity(ia), MT::Quantity(ib)) => {
+                    let inner = merge_types(ia, ib).unwrap_or(MT::Unknown);
+                    Some(MT::Quantity(Box::new(inner)))
+                }
+                // Allow scalar numeric to constrain quantity generics (treat as Quantity(Float)).
+                (MT::Quantity(_), MT::Int | MT::Float) | (MT::Int | MT::Float, MT::Quantity(_)) => {
+                    Some(MT::Quantity(Box::new(MT::Float)))
+                }
+                (MT::List(ia), MT::List(ib)) => {
+                    let inner = merge_types(ia, ib).unwrap_or(MT::Unknown);
+                    Some(MT::List(Box::new(inner)))
+                }
+                (MT::Range(ia), MT::Range(ib)) => {
+                    let inner = merge_types(ia, ib).unwrap_or(MT::Unknown);
+                    Some(MT::Range(Box::new(inner)))
+                }
+                (MT::Struct(sa), MT::Struct(sb)) => {
+                    if sa.len() != sb.len() {
+                        return None;
+                    }
+                    let mut out = std::collections::HashMap::new();
+                    for (k, va) in sa.iter() {
+                        let vb = sb.get(k)?;
+                        out.insert(k.clone(), merge_types(va, vb).unwrap_or(MT::Unknown));
+                    }
+                    Some(MT::Struct(out))
+                }
+                (MT::Record(ra), MT::Record(rb)) => {
+                    if ra.len() != rb.len() {
+                        return None;
+                    }
+                    let mut out: Vec<(String, MediType)> = Vec::with_capacity(ra.len());
+                    for ((ka, va), (kb, vb)) in ra.iter().zip(rb.iter()) {
+                        if ka != kb {
+                            return None;
+                        }
+                        out.push((ka.clone(), merge_types(va, vb).unwrap_or(MT::Unknown)));
+                    }
+                    Some(MT::Record(out))
+                }
+                _ => None,
+            }
+        }
+
+        match (formal, actual) {
+            (MT::TypeVar(n), a) => {
+                if let Some(prev) = subs.get(n) {
+                    if prev == a {
+                        true
+                    } else if let Some(merged) = merge_types(prev, a) {
+                        subs.insert(n.clone(), merged);
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    subs.insert(n.clone(), a.clone());
+                    true
+                }
+            }
+            (MT::Range(f), MT::Range(a)) | (MT::Quantity(f), MT::Quantity(a)) => {
+                Self::unify_types(f, a, subs)
+            }
+            (MT::List(f), MT::List(a)) => Self::unify_types(f, a, subs),
+            (MT::Struct(fs), MT::Struct(as_)) => {
+                if fs.len() != as_.len() {
+                    return false;
+                }
+                for (k, fv) in fs.iter() {
+                    let Some(av) = as_.get(k) else {
+                        return false;
+                    };
+                    if !Self::unify_types(fv, av, subs) {
+                        return false;
+                    }
+                }
+                true
+            }
+            (MT::Record(fr), MT::Record(ar)) => {
+                if fr.len() != ar.len() {
+                    return false;
+                }
+                for ((fk, fv), (ak, av)) in fr.iter().zip(ar.iter()) {
+                    if fk != ak || !Self::unify_types(fv, av, subs) {
+                        return false;
+                    }
+                }
+                true
+            }
+            (f, a) => f == a,
+        }
+    }
+
     pub fn new(env: &'a mut TypeEnv) -> Self {
         TypeChecker {
             env,
@@ -1376,7 +1719,14 @@ impl<'a> TypeChecker<'a> {
     /// assert_eq!(checker.check_expr(&expr), MediType::Int);
     /// ```
     pub fn check_expr(&mut self, expr: &ExpressionNode) -> MediType {
-        // Always compute privacy label alongside type
+        self.check_expr_with_expected(expr, None)
+    }
+
+    fn check_expr_with_expected(
+        &mut self,
+        expr: &ExpressionNode,
+        expected: Option<&MediType>,
+    ) -> MediType {
         let _privacy = self.check_expr_privacy(expr);
         let ty = match expr {
             ExpressionNode::IcdCode(Spanned { node: _, .. })
@@ -1411,8 +1761,8 @@ impl<'a> TypeChecker<'a> {
                 LiteralNode::String(_) => MediType::String,
             },
             ExpressionNode::Binary(Spanned { node: bin, .. }) => {
-                let left = self.check_expr(&bin.left);
-                let right = self.check_expr(&bin.right);
+                let left = self.check_expr_with_expected(&bin.left, None);
+                let right = self.check_expr_with_expected(&bin.right, None);
                 match bin.operator {
                     // Arithmetic operators
                     BinaryOperator::Add
@@ -1627,7 +1977,7 @@ impl<'a> TypeChecker<'a> {
                 node: call,
                 span: call_span,
             }) => {
-                let callee_type = self.check_expr(&call.callee);
+                let callee_type = self.check_expr_with_expected(&call.callee, None);
                 let callee_name = Self::extract_identifier_name(&call.callee);
                 if let MediType::Function {
                     params,
@@ -1635,11 +1985,16 @@ impl<'a> TypeChecker<'a> {
                 } = callee_type
                 {
                     if params.len() == call.arguments.len() {
+                        // If the function signature is generic, attempt TypeVar unification to infer a concrete return type.
+                        let is_generic = params.iter().any(Self::contains_typevar)
+                            || Self::contains_typevar(&return_type);
+                        let mut subs: HashMap<String, MediType> = HashMap::new();
+
                         // Check argument types and enforce unit expectations when provided
                         for (idx, (arg, param_type)) in
                             call.arguments.iter().zip(params.iter()).enumerate()
                         {
-                            let arg_type = self.check_expr(arg);
+                            let arg_type = self.check_expr_with_expected(arg, Some(param_type));
                             // Unknown in a function signature acts as a wildcard (accept any type).
                             if *param_type == MediType::Unknown {
                                 // Still allow unit expectation checks below to run if configured.
@@ -1657,8 +2012,33 @@ impl<'a> TypeChecker<'a> {
                                     if !arg_ok {
                                         return MediType::Unknown;
                                     }
+                                    // For generic inference, treat scalar numeric as Quantity(Float) to unify against Quantity(T).
+                                    if is_generic {
+                                        let arg_for_unify = match arg_type {
+                                            MediType::Int | MediType::Float => {
+                                                MediType::Quantity(Box::new(MediType::Float))
+                                            }
+                                            _ => arg_type.clone(),
+                                        };
+                                        if !Self::unify_types(param_type, &arg_for_unify, &mut subs)
+                                            && !Self::unify_types(param_type, &arg_type, &mut subs)
+                                        {
+                                            return MediType::Unknown;
+                                        }
+                                    }
                                 } else if arg_type != *param_type {
-                                    return MediType::Unknown;
+                                    if is_generic {
+                                        if !Self::unify_types(param_type, &arg_type, &mut subs) {
+                                            return MediType::Unknown;
+                                        }
+                                    } else {
+                                        return MediType::Unknown;
+                                    }
+                                } else if is_generic {
+                                    // Exact match succeeded; still attempt unification to bind TypeVars nested in containers.
+                                    if !Self::unify_types(param_type, &arg_type, &mut subs) {
+                                        // Allow non-generic equality to pass even if unification is strict.
+                                    }
                                 }
                             }
 
@@ -1705,7 +2085,11 @@ impl<'a> TypeChecker<'a> {
                             }
                         }
 
-                        *return_type
+                        if is_generic {
+                            Self::apply_subs(&return_type, &subs)
+                        } else {
+                            *return_type
+                        }
                     } else {
                         MediType::Unknown
                     }
@@ -1714,7 +2098,7 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             ExpressionNode::Member(Spanned { node: mem, .. }) => {
-                let object_type = self.check_expr(&mem.object);
+                let object_type = self.check_expr_with_expected(&mem.object, None);
                 if let MediType::Struct(fields) = object_type {
                     fields
                         .get(mem.property.name())
@@ -1725,11 +2109,23 @@ impl<'a> TypeChecker<'a> {
                 }
             }
             ExpressionNode::Array(Spanned { node: arr, .. }) => {
+                let expected_inner = match expected {
+                    Some(MediType::List(inner)) => Some(inner.as_ref()),
+                    _ => None,
+                };
+
                 if arr.elements.is_empty() {
-                    MediType::List(Box::new(MediType::Unknown))
+                    if let Some(inner) = expected_inner {
+                        MediType::List(Box::new(inner.clone()))
+                    } else {
+                        MediType::List(Box::new(MediType::Unknown))
+                    }
                 } else {
                     // Infer a unified element type; promote mixed numerics to Float, else Unknown
-                    let mut iter = arr.elements.iter().map(|e| self.check_expr(e));
+                    let mut iter = arr
+                        .elements
+                        .iter()
+                        .map(|e| self.check_expr_with_expected(e, expected_inner));
                     let mut elem_ty = iter.next().unwrap_or(MediType::Unknown);
                     for t in iter {
                         if t == elem_ty {
@@ -1742,6 +2138,15 @@ impl<'a> TypeChecker<'a> {
                             break;
                         }
                     }
+
+                    if let Some(inner) = expected_inner {
+                        if elem_ty == MediType::Unknown {
+                            elem_ty = inner.clone();
+                        } else if elem_ty == MediType::Int && *inner == MediType::Float {
+                            elem_ty = MediType::Float;
+                        }
+                    }
+
                     MediType::List(Box::new(elem_ty))
                 }
             }
@@ -1782,8 +2187,8 @@ impl<'a> TypeChecker<'a> {
             }
             ExpressionNode::Index(Spanned { node: idx, .. }) => {
                 // If object is a list, type is its element type; otherwise Unknown
-                let obj_ty = self.check_expr(&idx.object);
-                let _ = self.check_expr(&idx.index);
+                let obj_ty = self.check_expr_with_expected(&idx.object, None);
+                let _ = self.check_expr_with_expected(&idx.index, None);
                 match obj_ty {
                     MediType::List(inner) => *inner,
                     _ => MediType::Unknown,
@@ -1793,7 +2198,7 @@ impl<'a> TypeChecker<'a> {
             ExpressionNode::Statement(Spanned { node: stmt, .. }) => {
                 // For statement expressions, check the inner statement
                 match &**stmt {
-                    StatementNode::Expr(expr) => self.check_expr(expr),
+                    StatementNode::Expr(expr) => self.check_expr_with_expected(expr, expected),
                     _ => MediType::Void, // Other statements don't produce values
                 }
             }
@@ -1803,8 +2208,13 @@ impl<'a> TypeChecker<'a> {
                 // For struct literals, we return a struct type with field types
                 // TODO: Look up the actual struct definition for more precise type checking
                 let mut fields = std::collections::HashMap::new();
+                let expected_fields = match expected {
+                    Some(MediType::Struct(m)) => Some(m),
+                    _ => None,
+                };
                 for field in &struct_lit.fields {
-                    let field_type = self.check_expr(&field.value);
+                    let exp = expected_fields.and_then(|m| m.get(field.name.as_str()));
+                    let field_type = self.check_expr_with_expected(&field.value, exp);
                     // Convert IdentifierName to String for the Struct type map
                     fields.insert(field.name.to_string(), field_type);
                 }
@@ -1926,7 +2336,10 @@ impl<'a> TypeChecker<'a> {
                 }
 
                 // Check optional initializer
-                let init_ty = let_stmt.value.as_ref().map(|expr| self.check_expr(expr));
+                let init_ty = let_stmt
+                    .value
+                    .as_ref()
+                    .map(|expr| self.check_expr_with_expected(expr, annotated_ty.as_ref()));
                 // Privacy of initializer
                 let init_priv = let_stmt
                     .value
@@ -2659,6 +3072,47 @@ mod tests {
         assert!(tc.check_stmt(&stmt).is_ok());
         assert_eq!(tc.env.get("x"), Some(&MediType::Int));
         assert_eq!(tc.get_type_at_span(&span), Some(&MediType::Int));
+    }
+
+    #[test]
+    fn annotated_empty_list_uses_expected_element_type() {
+        let mut env = TypeEnv::with_prelude();
+        // Simulate a type alias usable in annotations: IntList = List(Int)
+        env.insert(
+            "IntList".to_string(),
+            MediType::List(Box::new(MediType::Int)),
+        );
+        let mut tc = TypeChecker::new(&mut env);
+
+        // let xs: IntList = [];
+        let span = Span {
+            start: 0,
+            end: 12,
+            line: 1,
+            column: 1,
+        };
+        let ann = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("IntList"),
+            span,
+        ));
+        let val = ExpressionNode::Array(Spanned::new(
+            Box::new(ArrayLiteralNode {
+                elements: NodeList::new(),
+            }),
+            span,
+        ));
+        let stmt = StatementNode::Let(Box::new(LetStatementNode {
+            name: IdentifierNode::from_str_name("xs"),
+            type_annotation: Some(ann),
+            value: Some(val),
+            span,
+        }));
+
+        assert!(tc.check_stmt(&stmt).is_ok());
+        assert_eq!(
+            tc.env.get("xs"),
+            Some(&MediType::List(Box::new(MediType::Int)))
+        );
     }
 
     #[test]
