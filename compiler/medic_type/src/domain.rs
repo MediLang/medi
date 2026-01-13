@@ -2,8 +2,10 @@
 // These are runtime-side representations useful for validation and future integrations.
 
 use crate::traits::{
-    Auditable, Identifiable, Timestamped, Validatable, ValidationCtx, ValidationError,
+    Auditable, HealthcareFormat, Identifiable, MedicalRecordTrait, PrivacyProtected, Serializable,
+    Timestamped, Validatable, ValidationCtx, ValidationError,
 };
+use crate::types::PrivacyAnnotation;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PatientID(pub String);
@@ -22,6 +24,24 @@ impl Validatable for PatientID {
             });
         }
         Ok(())
+    }
+}
+
+impl PrivacyProtected for PatientID {
+    fn privacy_annotation(&self) -> PrivacyAnnotation {
+        PrivacyAnnotation::PHI
+    }
+}
+
+impl Serializable for PatientID {
+    fn serialize(&self, format: HealthcareFormat) -> String {
+        match format {
+            HealthcareFormat::Json | HealthcareFormat::FhirJson => {
+                format!("{{\"patient_id\":\"{}\"}}", self.0)
+            }
+            HealthcareFormat::Hl7V2 => format!("PID|{}", self.0),
+            HealthcareFormat::Dicom => format!("DICOM:PatientID={}", self.0),
+        }
     }
 }
 
@@ -109,6 +129,31 @@ impl Validatable for LabResult {
     }
 }
 
+impl PrivacyProtected for LabResult {
+    fn privacy_annotation(&self) -> PrivacyAnnotation {
+        PrivacyAnnotation::PHI
+    }
+}
+
+impl Serializable for LabResult {
+    fn serialize(&self, format: HealthcareFormat) -> String {
+        match format {
+            HealthcareFormat::Json | HealthcareFormat::FhirJson => format!(
+                "{{\"code\":\"{}\",\"value\":{},\"unit\":\"{}\",\"timestamp_ms\":{},\"created_by\":\"{}\"}}",
+                self.code, self.value, self.unit, self.timestamp_ms, self.created_by
+            ),
+            HealthcareFormat::Hl7V2 => format!(
+                "OBX|1|NM|{}||{}|{}|||F|||{}|{}",
+                self.code, self.value, self.unit, self.created_by, self.timestamp_ms
+            ),
+            HealthcareFormat::Dicom => format!(
+                "DICOM:LabCode={};Value={};Unit={};Time={}",
+                self.code, self.value, self.unit, self.timestamp_ms
+            ),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vital {
     pub name: String, // e.g., "heart_rate", "systolic_bp"
@@ -148,6 +193,31 @@ impl Validatable for Vital {
             });
         }
         Ok(())
+    }
+}
+
+impl PrivacyProtected for Vital {
+    fn privacy_annotation(&self) -> PrivacyAnnotation {
+        PrivacyAnnotation::PHI
+    }
+}
+
+impl Serializable for Vital {
+    fn serialize(&self, format: HealthcareFormat) -> String {
+        match format {
+            HealthcareFormat::Json | HealthcareFormat::FhirJson => format!(
+                "{{\"name\":\"{}\",\"value\":{},\"unit\":\"{}\",\"timestamp_ms\":{},\"created_by\":\"{}\"}}",
+                self.name, self.value, self.unit, self.timestamp_ms, self.created_by
+            ),
+            HealthcareFormat::Hl7V2 => format!(
+                "OBX|1|NM|{}||{}|{}|||F|||{}|{}",
+                self.name, self.value, self.unit, self.created_by, self.timestamp_ms
+            ),
+            HealthcareFormat::Dicom => format!(
+                "DICOM:VitalName={};Value={};Unit={};Time={}",
+                self.name, self.value, self.unit, self.timestamp_ms
+            ),
+        }
     }
 }
 
@@ -200,6 +270,27 @@ impl Validatable for Diagnosis {
     }
 }
 
+impl PrivacyProtected for Diagnosis {
+    fn privacy_annotation(&self) -> PrivacyAnnotation {
+        PrivacyAnnotation::PHI
+    }
+}
+
+impl Serializable for Diagnosis {
+    fn serialize(&self, format: HealthcareFormat) -> String {
+        match format {
+            HealthcareFormat::Json | HealthcareFormat::FhirJson => format!(
+                "{{\"code\":\"{}\",\"description\":\"{}\",\"created_by\":\"{}\",\"created_at_ms\":{}}}",
+                self.code, self.description, self.created_by, self.created_at_ms
+            ),
+            HealthcareFormat::Hl7V2 => format!("DG1|1||{}^{}|||{}", self.code, self.description, self.created_at_ms),
+            HealthcareFormat::Dicom => {
+                format!("DICOM:DiagnosisCode={};Desc={}", self.code, self.description)
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Medication {
     pub name: String,
@@ -233,6 +324,37 @@ impl Validatable for Medication {
             });
         }
         Ok(())
+    }
+}
+
+impl PrivacyProtected for Medication {
+    fn privacy_annotation(&self) -> PrivacyAnnotation {
+        PrivacyAnnotation::PHI
+    }
+}
+
+impl Serializable for Medication {
+    fn serialize(&self, format: HealthcareFormat) -> String {
+        match format {
+            HealthcareFormat::Json | HealthcareFormat::FhirJson => format!(
+                "{{\"name\":\"{}\",\"dose\":\"{}\",\"route\":{},\"created_by\":\"{}\",\"created_at_ms\":{}}}",
+                self.name,
+                self.dose,
+                self.route
+                    .as_ref()
+                    .map(|r| format!("\"{r}\""))
+                    .unwrap_or_else(|| "null".to_string()),
+                self.created_by,
+                self.created_at_ms
+            ),
+            HealthcareFormat::Hl7V2 => {
+                let route = self.route.as_deref().unwrap_or("");
+                format!("RXE|{}|{}|{}", self.name, self.dose, route)
+            }
+            HealthcareFormat::Dicom => {
+                format!("DICOM:MedicationName={};Dose={}", self.name, self.dose)
+            }
+        }
     }
 }
 
@@ -284,9 +406,166 @@ impl Validatable for MedicalRecord {
     }
 }
 
+impl PrivacyProtected for MedicalRecord {
+    fn privacy_annotation(&self) -> PrivacyAnnotation {
+        PrivacyAnnotation::PHI
+    }
+}
+
+impl Serializable for MedicalRecord {
+    fn serialize(&self, format: HealthcareFormat) -> String {
+        match format {
+            HealthcareFormat::Json | HealthcareFormat::FhirJson => {
+                let diagnoses = self
+                    .diagnoses
+                    .iter()
+                    .map(|d| d.serialize(HealthcareFormat::Json))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let medications = self
+                    .medications
+                    .iter()
+                    .map(|m| m.serialize(HealthcareFormat::Json))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let labs = self
+                    .labs
+                    .iter()
+                    .map(|l| l.serialize(HealthcareFormat::Json))
+                    .collect::<Vec<_>>()
+                    .join(",");
+
+                format!(
+                    "{{\"patient_id\":\"{}\",\"diagnoses\":[{}],\"medications\":[{}],\"labs\":[{}],\"created_by\":\"{}\",\"created_at_ms\":{}}}",
+                    self.patient_id.0,
+                    diagnoses,
+                    medications,
+                    labs,
+                    self.created_by,
+                    self.created_at_ms
+                )
+            }
+            HealthcareFormat::Hl7V2 => {
+                let mut out = Vec::new();
+                out.push(self.patient_id.serialize(HealthcareFormat::Hl7V2));
+                out.extend(
+                    self.diagnoses
+                        .iter()
+                        .map(|d| d.serialize(HealthcareFormat::Hl7V2)),
+                );
+                out.extend(
+                    self.medications
+                        .iter()
+                        .map(|m| m.serialize(HealthcareFormat::Hl7V2)),
+                );
+                out.extend(
+                    self.labs
+                        .iter()
+                        .map(|l| l.serialize(HealthcareFormat::Hl7V2)),
+                );
+                out.join("\n")
+            }
+            HealthcareFormat::Dicom => {
+                format!("DICOM:MedicalRecord.PatientID={}", self.patient_id.0)
+            }
+        }
+    }
+}
+
+impl MedicalRecordTrait for MedicalRecord {
+    fn patient_id(&self) -> &PatientID {
+        &self.patient_id
+    }
+
+    fn diagnoses(&self) -> &[Diagnosis] {
+        &self.diagnoses
+    }
+
+    fn medications(&self) -> &[Medication] {
+        &self.medications
+    }
+
+    fn labs(&self) -> &[LabResult] {
+        &self.labs
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn medical_record_trait_has_clinical_data() {
+        let mr = MedicalRecord {
+            patient_id: PatientID("p1".into()),
+            diagnoses: vec![],
+            medications: vec![],
+            labs: vec![],
+            created_by: "dr.jones".into(),
+            created_at_ms: 1,
+        };
+        assert!(!mr.has_clinical_data());
+
+        let mr2 = MedicalRecord {
+            diagnoses: vec![Diagnosis {
+                code: "E11.9".into(),
+                description: "Type 2 diabetes".into(),
+                created_by: "dr.jones".into(),
+                created_at_ms: 1,
+            }],
+            ..mr
+        };
+        assert!(mr2.has_clinical_data());
+    }
+
+    #[test]
+    fn audit_record_extracts_metadata() {
+        let mr = MedicalRecord {
+            patient_id: PatientID("p1".into()),
+            diagnoses: vec![Diagnosis {
+                code: "E11.9".into(),
+                description: "Type 2 diabetes".into(),
+                created_by: "dr.jones".into(),
+                created_at_ms: 1,
+            }],
+            medications: vec![],
+            labs: vec![],
+            created_by: "dr.smith".into(),
+            created_at_ms: 42,
+        };
+
+        let audit = mr.audit_record();
+        assert_eq!(audit.created_by, "dr.smith");
+        assert_eq!(audit.created_at_millis, 42);
+    }
+
+    #[test]
+    fn medical_record_serializes_to_json() {
+        let mr = MedicalRecord {
+            patient_id: PatientID("p1".into()),
+            diagnoses: vec![Diagnosis {
+                code: "E11.9".into(),
+                description: "Type 2 diabetes".into(),
+                created_by: "dr.jones".into(),
+                created_at_ms: 1,
+            }],
+            medications: vec![Medication {
+                name: "Metformin".into(),
+                dose: "500 mg".into(),
+                route: Some("oral".into()),
+                created_by: "dr.jones".into(),
+                created_at_ms: 1,
+            }],
+            labs: vec![],
+            created_by: "dr.smith".into(),
+            created_at_ms: 42,
+        };
+
+        let s = mr.serialize(HealthcareFormat::Json);
+        assert!(s.contains("\"patient_id\":\"p1\""));
+        assert!(s.contains("\"diagnoses\":"));
+        assert!(s.contains("\"medications\":"));
+    }
 
     #[test]
     fn lab_result_validates() {

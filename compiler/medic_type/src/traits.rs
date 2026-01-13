@@ -1,5 +1,8 @@
 // Healthcare domain traits for Medic type system
 
+use crate::domain::{Diagnosis, LabResult, Medication, PatientID};
+use crate::types::PrivacyAnnotation;
+
 /// Provides a stable identifier for domain entities (e.g., PatientID)
 pub trait Identifiable {
     fn id(&self) -> &str;
@@ -14,6 +17,72 @@ pub trait Timestamped {
 pub trait Auditable {
     fn created_by(&self) -> &str;
     fn created_at_millis(&self) -> i64;
+
+    fn audit_record(&self) -> AuditRecord {
+        AuditRecord {
+            created_by: self.created_by().to_string(),
+            created_at_millis: self.created_at_millis(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuditRecord {
+    pub created_by: String,
+    pub created_at_millis: i64,
+}
+
+/// Shared interface for EHR-like records.
+///
+/// Named `MedicalRecordTrait` to avoid colliding with the `MedicalRecord` struct type.
+pub trait MedicalRecordTrait: Identifiable + Timestamped + Auditable + Validatable {
+    fn patient_id(&self) -> &PatientID;
+    fn diagnoses(&self) -> &[Diagnosis];
+    fn medications(&self) -> &[Medication];
+    fn labs(&self) -> &[LabResult];
+
+    fn has_clinical_data(&self) -> bool {
+        !(self.diagnoses().is_empty() && self.medications().is_empty() && self.labs().is_empty())
+    }
+}
+
+/// Marks a value as carrying a privacy classification.
+///
+/// This is a runtime-side trait used by medical domain structs to report their
+/// baseline privacy label. The compiler can also use these labels for defaulting
+/// and policy checks.
+pub trait PrivacyProtected {
+    fn privacy_annotation(&self) -> PrivacyAnnotation;
+
+    fn is_phi(&self) -> bool {
+        matches!(
+            self.privacy_annotation(),
+            PrivacyAnnotation::PHI
+                | PrivacyAnnotation::Pseudonymized
+                | PrivacyAnnotation::Authorized
+                | PrivacyAnnotation::AuthorizedFor(_)
+        )
+    }
+
+    fn is_anonymized(&self) -> bool {
+        matches!(self.privacy_annotation(), PrivacyAnnotation::Anonymized)
+    }
+
+    fn join_privacy(&self, other: PrivacyAnnotation) -> PrivacyAnnotation {
+        self.privacy_annotation().join(other)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HealthcareFormat {
+    Json,
+    FhirJson,
+    Hl7V2,
+    Dicom,
+}
+
+pub trait Serializable {
+    fn serialize(&self, format: HealthcareFormat) -> String;
 }
 
 /// Context carrying lightweight in-memory registries for UCUM, LOINC, SNOMED, and reference ranges.
