@@ -40,6 +40,10 @@ pub enum MediType {
     Function {
         params: Vec<MediType>,
         return_type: Box<MediType>,
+        /// Optional privacy annotations for each parameter (parallel to params)
+        param_privacy: Option<Vec<PrivacyAnnotation>>,
+        /// Optional privacy annotation for the return type
+        return_privacy: Option<PrivacyAnnotation>,
     },
     /// Named generic type application, e.g., FHIRBundle<Observation>
     Named {

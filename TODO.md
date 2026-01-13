@@ -39,10 +39,10 @@
   - [x] Generic `FHIRBundle<T>`
   - [x] Generic `TimeSeries<T>`
   - [x] Generic `CohortResult<T>`
-- [ ] Privacy-aware type checking
-  - [ ] Track PHI flow through type system
-  - [ ] Enforce de-identification at type boundaries
-  - [ ] Add privacy annotations to function signatures
+- [x] Privacy-aware type checking
+  - [x] Track PHI flow through type system
+  - [x] Enforce de-identification at type boundaries
+  - [x] Add privacy annotations to function signatures
 
 #### Memory Management (v0.1.3)
 - [ ] Full implementation of safe/real-time zones

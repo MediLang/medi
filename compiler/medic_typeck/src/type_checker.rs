@@ -96,6 +96,8 @@ mod unit_tests {
             MediType::Function {
                 params: vec![MediType::TypeVar("T".to_string())],
                 return_type: Box::new(MediType::TypeVar("T".to_string())),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
 
@@ -303,6 +305,8 @@ mod unit_tests {
             MediType::Function {
                 params: vec![MediType::TypeVar("T".to_string())],
                 return_type: Box::new(MediType::TypeVar("T".to_string())),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -342,6 +346,8 @@ mod unit_tests {
                     MediType::TypeVar("T".to_string()),
                 ],
                 return_type: Box::new(MediType::TypeVar("T".to_string())),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -385,6 +391,8 @@ mod unit_tests {
                     MediType::List(Box::new(MediType::TypeVar("T".to_string()))),
                 ],
                 return_type: Box::new(MediType::List(Box::new(MediType::TypeVar("T".to_string())))),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -442,6 +450,8 @@ mod unit_tests {
             MediType::Function {
                 params: vec![MediType::List(Box::new(MediType::TypeVar("T".to_string())))],
                 return_type: Box::new(MediType::TypeVar("T".to_string())),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -587,6 +597,8 @@ mod unit_tests {
             MediType::Function {
                 params: vec![MediType::Quantity(Box::new(MediType::Float))],
                 return_type: Box::new(MediType::Float),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -650,6 +662,8 @@ mod unit_tests {
             MediType::Function {
                 params: vec![MediType::Quantity(Box::new(MediType::Float))],
                 return_type: Box::new(MediType::Float),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -708,6 +722,8 @@ mod unit_tests {
             MediType::Function {
                 params: vec![MediType::Quantity(Box::new(MediType::Float))],
                 return_type: Box::new(MediType::Float),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -929,6 +945,7 @@ impl<'a> TypeChecker<'a> {
             MediType::Function {
                 params,
                 return_type,
+                ..
             } => params.iter().any(Self::contains_typevar) || Self::contains_typevar(return_type),
             MediType::Named { args, .. } => args.iter().any(Self::contains_typevar),
             _ => false,
@@ -958,9 +975,13 @@ impl<'a> TypeChecker<'a> {
             MT::Function {
                 params,
                 return_type,
+                param_privacy,
+                return_privacy,
             } => MT::Function {
                 params: params.iter().map(|p| Self::apply_subs(p, subs)).collect(),
                 return_type: Box::new(Self::apply_subs(return_type, subs)),
+                param_privacy: param_privacy.clone(),
+                return_privacy: *return_privacy,
             },
             MT::Named { name, args } => MT::Named {
                 name: name.clone(),
@@ -1220,9 +1241,13 @@ impl<'a> TypeChecker<'a> {
                 MT::Function {
                     params,
                     return_type,
+                    param_privacy,
+                    return_privacy,
                 } => MT::Function {
                     params: params.iter().map(|p| apply_subs(p, subs)).collect(),
                     return_type: Box::new(apply_subs(return_type, subs)),
+                    param_privacy: param_privacy.clone(),
+                    return_privacy: *return_privacy,
                 },
                 _ => t.clone(),
             }
@@ -1302,6 +1327,7 @@ impl<'a> TypeChecker<'a> {
                             if let Some(MediType::Function {
                                 params,
                                 return_type,
+                                ..
                             }) = self.tc.env.get(&name)
                             {
                                 let is_generic =
@@ -1505,7 +1531,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// Returns whether information can legally flow from src to dst privacy label.
-    fn privacy_flow_allowed(src: PrivacyAnnotation, dst: PrivacyAnnotation) -> bool {
+    pub fn privacy_flow_allowed(src: PrivacyAnnotation, dst: PrivacyAnnotation) -> bool {
         use PrivacyAnnotation::*;
         match (src, dst) {
             // Anonymized can flow anywhere
@@ -2015,6 +2041,8 @@ impl<'a> TypeChecker<'a> {
                 if let MediType::Function {
                     params,
                     return_type,
+                    param_privacy,
+                    ..
                 } = callee_type
                 {
                     if params.len() == call.arguments.len() {
@@ -2105,6 +2133,27 @@ impl<'a> TypeChecker<'a> {
                                         ));
                                         return MediType::Unknown;
                                     }
+                                }
+                            }
+                        }
+
+                        // Enforce privacy at function call boundary (de-identification at type boundaries)
+                        if let Some(ref expected_privacies) = param_privacy {
+                            for (idx, (arg, expected_priv)) in call
+                                .arguments
+                                .iter()
+                                .zip(expected_privacies.iter())
+                                .enumerate()
+                            {
+                                let arg_priv = self.check_expr_privacy(arg);
+                                if !Self::privacy_flow_allowed(arg_priv, *expected_priv) {
+                                    let fname = callee_name.as_deref().unwrap_or("<unknown>");
+                                    self.errors.push(TypeError::PrivacyViolation {
+                                        reason: format!(
+                                            "Privacy violation at function boundary: argument {} to '{}' has {:?} but parameter expects {:?}",
+                                            idx + 1, fname, arg_priv, expected_priv
+                                        ),
+                                    });
                                 }
                             }
                         }
@@ -2347,6 +2396,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// Check a single statement. Updates the environment as needed (e.g., let bindings).
+    #[allow(clippy::result_large_err)]
     pub fn check_stmt(&mut self, stmt: &StatementNode) -> Result<(), TypeError> {
         match stmt {
             StatementNode::TypeDecl(decl) => {
@@ -2598,6 +2648,8 @@ impl<'a> TypeChecker<'a> {
                     MediType::Function {
                         params: param_tys.clone(),
                         return_type: Box::new(ret_ty.clone()),
+                        param_privacy: None,
+                        return_privacy: None,
                     },
                 );
                 // Check body in new scope with param bindings
@@ -2764,6 +2816,7 @@ fn friendly_type_name(ty: &MediType) -> String {
         MediType::Function {
             params,
             return_type,
+            ..
         } => {
             let params_str = params
                 .iter()
@@ -3235,6 +3288,8 @@ mod tests {
             MediType::Function {
                 params: vec![MediType::Int, MediType::Int],
                 return_type: Box::new(MediType::Int),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         let mut tc = TypeChecker::new(&mut env);
@@ -3291,7 +3346,9 @@ mod tests {
             tc.get_type_at_span(&callee_span),
             Some(&MediType::Function {
                 params: vec![MediType::Int, MediType::Int],
-                return_type: Box::new(MediType::Int)
+                return_type: Box::new(MediType::Int),
+                param_privacy: None,
+                return_privacy: None,
             })
         );
         assert_eq!(tc.get_type_at_span(&arg1_span), Some(&MediType::Int));
@@ -3489,5 +3546,112 @@ mod tests {
             args: vec![MediType::Vital],
         };
         assert!(!t1.is_assignable_to(&t2));
+    }
+
+    #[test]
+    fn privacy_flow_phi_to_anonymized_disallowed() {
+        use medic_type::types::PrivacyAnnotation;
+        // PHI cannot flow to Anonymized destination
+        assert!(!TypeChecker::privacy_flow_allowed(
+            PrivacyAnnotation::PHI,
+            PrivacyAnnotation::Anonymized
+        ));
+    }
+
+    #[test]
+    fn privacy_flow_anonymized_to_phi_allowed() {
+        use medic_type::types::PrivacyAnnotation;
+        // Anonymized can flow anywhere
+        assert!(TypeChecker::privacy_flow_allowed(
+            PrivacyAnnotation::Anonymized,
+            PrivacyAnnotation::PHI
+        ));
+    }
+
+    #[test]
+    fn privacy_flow_phi_to_phi_allowed() {
+        use medic_type::types::PrivacyAnnotation;
+        assert!(TypeChecker::privacy_flow_allowed(
+            PrivacyAnnotation::PHI,
+            PrivacyAnnotation::PHI
+        ));
+    }
+
+    #[test]
+    fn function_with_privacy_annotations_enforces_at_call_site() {
+        use medic_ast::ast::{CallExpressionNode, IdentifierNode, LiteralNode, Spanned};
+        use medic_type::types::PrivacyAnnotation;
+
+        let mut env = TypeEnv::with_prelude();
+        // Register a function that expects PHI input and returns Anonymized
+        env.insert(
+            "process_phi".to_string(),
+            MediType::Function {
+                params: vec![MediType::Unknown],
+                return_type: Box::new(MediType::Unknown),
+                param_privacy: Some(vec![PrivacyAnnotation::PHI]),
+                return_privacy: Some(PrivacyAnnotation::Anonymized),
+            },
+        );
+        let mut tc = TypeChecker::new(&mut env);
+
+        let span = Span {
+            start: 0,
+            end: 30,
+            line: 1,
+            column: 1,
+        };
+
+        // Call process_phi with an Anonymized value - should produce privacy violation
+        // because Anonymized cannot flow to PHI parameter
+        let callee = ExpressionNode::Identifier(Spanned::new(
+            IdentifierNode::from_str_name("process_phi"),
+            span,
+        ));
+        let arg = ExpressionNode::Literal(Spanned::new(LiteralNode::Int(42), span));
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee,
+                arguments: vec![arg].into_iter().collect(),
+            }),
+            span,
+        ));
+
+        let _ = tc.check_expr(&call);
+        // Anonymized -> PHI is allowed (Anonymized can flow anywhere)
+        // So no error expected in this case
+        assert!(tc.errors().is_empty());
+    }
+
+    #[test]
+    fn deidentify_function_has_privacy_annotations() {
+        let env = TypeEnv::with_prelude();
+        if let Some(MediType::Function {
+            param_privacy,
+            return_privacy,
+            ..
+        }) = env.get("deidentify")
+        {
+            assert_eq!(*param_privacy, Some(vec![PrivacyAnnotation::PHI]));
+            assert_eq!(*return_privacy, Some(PrivacyAnnotation::Anonymized));
+        } else {
+            panic!("deidentify not found in prelude");
+        }
+    }
+
+    #[test]
+    fn anonymize_function_has_privacy_annotations() {
+        let env = TypeEnv::with_prelude();
+        if let Some(MediType::Function {
+            param_privacy,
+            return_privacy,
+            ..
+        }) = env.get("anonymize")
+        {
+            assert_eq!(*param_privacy, Some(vec![PrivacyAnnotation::PHI]));
+            assert_eq!(*return_privacy, Some(PrivacyAnnotation::Anonymized));
+        } else {
+            panic!("anonymize not found in prelude");
+        }
     }
 }

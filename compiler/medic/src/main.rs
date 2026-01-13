@@ -755,6 +755,8 @@ fn load_types_json(env: &mut TypeEnv, json_text: &str) -> Result<(), String> {
                 medic_type::types::MediType::Function {
                     params: params_mt,
                     return_type: Box::new(ret_mt),
+                    param_privacy: None,
+                    return_privacy: None,
                 },
             );
         }
@@ -776,6 +778,8 @@ fn load_types_json(env: &mut TypeEnv, json_text: &str) -> Result<(), String> {
                         medic_type::types::MediType::Function {
                             params: params_mt,
                             return_type: Box::new(ret_mt),
+                            param_privacy: None,
+                            return_privacy: None,
                         },
                     );
                 }

@@ -107,6 +107,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::String],
                 return_type: Box::new(MediType::List(Box::new(MediType::FHIRPatient))),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
 
@@ -126,6 +128,8 @@ impl TypeEnv {
                     ("timeframe".to_string(), MediType::String),
                     ("score".to_string(), MediType::Float),
                 ])),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
 
@@ -134,6 +138,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::Unknown],
                 return_type: Box::new(MediType::String),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         env.insert(
@@ -141,6 +147,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::Unknown],
                 return_type: Box::new(MediType::Void),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         env.insert(
@@ -148,6 +156,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::Unknown],
                 return_type: Box::new(MediType::Void),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         env.insert(
@@ -155,6 +165,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::Unknown],
                 return_type: Box::new(MediType::Void),
+                param_privacy: None,
+                return_privacy: None,
             },
         );
         env.insert(
@@ -162,6 +174,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::Unknown],
                 return_type: Box::new(MediType::Unknown),
+                param_privacy: Some(vec![PrivacyAnnotation::PHI]),
+                return_privacy: Some(PrivacyAnnotation::Anonymized),
             },
         );
         env.insert(
@@ -169,6 +183,8 @@ impl TypeEnv {
             MediType::Function {
                 params: vec![MediType::Unknown],
                 return_type: Box::new(MediType::Unknown),
+                param_privacy: Some(vec![PrivacyAnnotation::PHI]),
+                return_privacy: Some(PrivacyAnnotation::Anonymized),
             },
         );
 

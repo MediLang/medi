@@ -1785,6 +1785,7 @@ impl<'ctx> CodeGen<'ctx> {
         if let MediType::Function {
             params,
             return_type,
+            ..
         } = f
         {
             // Map params
@@ -1860,6 +1861,7 @@ impl<'ctx> CodeGen<'ctx> {
             MT::Function {
                 params,
                 return_type,
+                ..
             } => {
                 params.iter().any(Self::type_contains_typevar)
                     || Self::type_contains_typevar(return_type)
@@ -1959,6 +1961,7 @@ impl<'ctx> CodeGen<'ctx> {
             MT::Function {
                 params,
                 return_type,
+                ..
             } => {
                 let ps: Vec<String> = params.iter().map(|p| self.mangle_type(p)).collect();
                 format!("fn({})->{}", ps.join("_"), self.mangle_type(return_type))
