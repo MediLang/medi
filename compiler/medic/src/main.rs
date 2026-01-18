@@ -977,7 +977,8 @@ fn run_check(source: &str, types_json_path: &Option<PathBuf>, mode: OutputMode) 
                 }
 
                 // Run borrow checker after successful type checking
-                let mut bchk = BorrowChecker::new();
+                let privacy_labels = env.collect_privacy_labels();
+                let mut bchk = BorrowChecker::with_privacy_labels(privacy_labels);
                 if let Err(errors) = bchk.check_program(&program) {
                     for err in errors {
                         eprintln!("borrow error: {err}");

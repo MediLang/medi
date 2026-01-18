@@ -298,6 +298,27 @@ impl TypeEnv {
         }
     }
 
+    /// Collect all privacy labels (name, PrivacyAnnotation) visible in this environment (including parents).
+    /// If a label is shadowed in a child env, the child's binding wins.
+    pub fn collect_privacy_labels(&self) -> Vec<(String, PrivacyAnnotation)> {
+        use std::collections::HashSet;
+        let mut out: Vec<(String, PrivacyAnnotation)> = Vec::new();
+        let mut seen: HashSet<String> = HashSet::new();
+
+        let mut cur: Option<&TypeEnv> = Some(self);
+        while let Some(env) = cur {
+            for (k, v) in env.privacy.iter() {
+                if seen.contains(k) {
+                    continue;
+                }
+                out.push((k.clone(), *v));
+                seen.insert(k.clone());
+            }
+            cur = env.parent.as_deref();
+        }
+        out
+    }
+
     /// Register a function symbol as a sink with an associated kind.
     pub fn set_sink_fn(&mut self, name: impl Into<String>, kind: SinkKind) {
         self.sinks.insert(name.into(), kind);

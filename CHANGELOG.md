@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.1.3] - 2026-01-18
+
+### Added
+
+- Memory Management (v0.1.3):
+  - Safe/real-time zone support:
+    - Deterministic real-time allocation primitives (`RtRegion`, `FixedPool`, `RtZone`) behind `rt_zones`.
+    - Zone transitions and safety checks via runtime zone tracking.
+  - Safe zone production GC improvements:
+    - Generational minor collection with write barrier support (card-table behind `gc-card-table`).
+    - Incremental/chunked major GC support behind `gc-incremental` with pause budgets.
+
+### Changed
+
+- Borrow checker:
+  - Advanced field-path borrow tracking for complex medical data structures (member/index chains).
+  - Concurrency-aware borrow checking for analytics patterns:
+    - Prevent sharing mutably borrowed values across `spawn_task*` and channel `send/try_send`.
+  - Privacy-aware concurrency rules:
+    - Disallow sharing non-anonymized values across concurrency boundaries when privacy labels are available.
+
+- GC (analytics tuning):
+  - Added `GcParams::analytics()` preset for large dataset workloads.
+  - Improved incremental major GC start policy to use tracked allocation bytes rather than object-count heuristics.
+  - Added memory pressure callbacks in `GarbageCollector`.
+
 ## [v0.1.2] - 2026-01-13
 
 ### Added

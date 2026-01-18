@@ -1,6 +1,6 @@
 [package]
 name = "medic_ast"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Kresna Sucandra <https://github.com/SHA888>"]
 description = "Abstract Syntax Tree (AST) for the Medi programming language"

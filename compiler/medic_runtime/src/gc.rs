@@ -12,6 +12,22 @@ pub struct GcParams {
     pub max_pause_ms: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MemoryPressure {
+    Low,
+    High,
+}
+
+impl GcParams {
+    pub fn analytics() -> Self {
+        Self {
+            nursery_threshold_bytes: 8 << 20,
+            gen_promotion_threshold: 4,
+            max_pause_ms: 20,
+        }
+    }
+}
+
 // Incremental/chunked major GC (feature-gated)
 #[cfg(feature = "gc-incremental")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -203,6 +219,9 @@ pub struct GarbageCollector {
     dirty_parents: HashSet<ObjectId>,
     // Collection counters to model promotion heuristics (stubbed).
     collect_counts: HashMap<ObjectId, usize>,
+    // Approximate allocation size bookkeeping (for threshold-based collection policies).
+    object_sizes: HashMap<ObjectId, usize>,
+    nursery_bytes: usize,
     params: GcParams,
     // Simple pause metrics
     last_minor_pause_ms: u64,
@@ -211,6 +230,10 @@ pub struct GarbageCollector {
     major_collects: u64,
     #[cfg(feature = "gc-incremental")]
     _inc_state: Option<IncState>,
+
+    // Memory pressure callbacks (best-effort, intended for host/runtime integrations).
+    pressure_listeners: HashMap<usize, Box<dyn Fn(MemoryPressure) + Send + Sync>>,
+    next_pressure_listener_id: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -240,14 +263,41 @@ impl GarbageCollector {
         }
     }
 
+    pub fn add_memory_pressure_listener(
+        &mut self,
+        cb: impl Fn(MemoryPressure) + Send + Sync + 'static,
+    ) -> usize {
+        let id = self.next_pressure_listener_id;
+        self.next_pressure_listener_id = self.next_pressure_listener_id.wrapping_add(1);
+        self.pressure_listeners.insert(id, Box::new(cb));
+        id
+    }
+
+    pub fn remove_memory_pressure_listener(&mut self, id: usize) -> bool {
+        self.pressure_listeners.remove(&id).is_some()
+    }
+
+    fn notify_memory_pressure(&self, level: MemoryPressure) {
+        for cb in self.pressure_listeners.values() {
+            cb(level);
+        }
+    }
+
     pub fn allocate<T: Any + Send + 'static>(&mut self, value: T) -> GcRef<T> {
         let id = self.next_id;
         self.next_id += 1;
+        let approx_bytes = std::mem::size_of::<T>().max(1);
         let arc: Arc<Mutex<dyn Any + Send>> = Arc::new(Mutex::new(value));
         self.objects.insert(id, arc.clone());
         self.weak.insert(id, Arc::downgrade(&arc));
         self.collect_counts.insert(id, 0);
+        self.object_sizes.insert(id, approx_bytes);
         self.nursery.insert(id);
+        self.nursery_bytes = self.nursery_bytes.saturating_add(approx_bytes);
+
+        if self.should_minor_collect() {
+            self.notify_memory_pressure(MemoryPressure::High);
+        }
         GcRef {
             id,
             _marker: PhantomData,
@@ -380,6 +430,7 @@ impl GarbageCollector {
     /// Major collection: trace all and sweep both generations.
     pub fn collect_garbage(&mut self) {
         let t0 = std::time::Instant::now();
+        self.notify_memory_pressure(MemoryPressure::High);
         // Mark phase
         let mark = self.mark_from_roots();
 
@@ -390,6 +441,13 @@ impl GarbageCollector {
                 if let Some(fin) = self.finalizers.remove(&id).and_then(|f| f) {
                     fin();
                 }
+                if let Some(sz) = self.object_sizes.remove(&id) {
+                    if self.nursery.remove(&id) {
+                        self.nursery_bytes = self.nursery_bytes.saturating_sub(sz);
+                    }
+                } else {
+                    let _ = self.nursery.remove(&id);
+                }
                 self.objects.remove(&id);
                 self.weak.remove(&id);
                 self.collect_counts.remove(&id);
@@ -398,7 +456,6 @@ impl GarbageCollector {
                 for (_p, kids) in self.edges.iter_mut() {
                     kids.retain(|&c| c != id);
                 }
-                self.nursery.remove(&id);
                 self.tenured.remove(&id);
                 self.remembered.remove(&id);
             } else {
@@ -409,6 +466,9 @@ impl GarbageCollector {
                     if *cnt >= self.params.gen_promotion_threshold {
                         self.nursery.remove(&id);
                         self.tenured.insert(id);
+                        if let Some(sz) = self.object_sizes.get(&id).copied() {
+                            self.nursery_bytes = self.nursery_bytes.saturating_sub(sz);
+                        }
                     }
                 }
             }
@@ -423,6 +483,9 @@ impl GarbageCollector {
     /// Minor collection: only sweep nursery; tenured ignored even if unmarked.
     pub fn minor_collect(&mut self) {
         let t0 = std::time::Instant::now();
+        if self.should_minor_collect() {
+            self.notify_memory_pressure(MemoryPressure::High);
+        }
         // Minor marking: start from roots and remembered set, but only traverse within nursery
         let mut mark: HashSet<ObjectId> = HashSet::new();
         let mut stack: Vec<ObjectId> = self.roots.iter().copied().collect();
@@ -468,6 +531,9 @@ impl GarbageCollector {
                 if let Some(fin) = self.finalizers.remove(&id).and_then(|f| f) {
                     fin();
                 }
+                if let Some(sz) = self.object_sizes.remove(&id) {
+                    self.nursery_bytes = self.nursery_bytes.saturating_sub(sz);
+                }
                 self.objects.remove(&id);
                 self.weak.remove(&id);
                 self.collect_counts.remove(&id);
@@ -486,6 +552,9 @@ impl GarbageCollector {
                     self.tenured.insert(id);
                     // No longer need a remembered entry for this object
                     self.remembered.remove(&id);
+                    if let Some(sz) = self.object_sizes.get(&id).copied() {
+                        self.nursery_bytes = self.nursery_bytes.saturating_sub(sz);
+                    }
                 }
             }
         }
@@ -539,6 +608,37 @@ impl GarbageCollector {
             total_objects: self.objects.len(),
         }
     }
+
+    #[inline]
+    pub fn nursery_bytes(&self) -> usize {
+        self.nursery_bytes
+    }
+
+    #[inline]
+    pub fn should_minor_collect(&self) -> bool {
+        self.nursery_bytes >= self.params.nursery_threshold_bytes
+    }
+
+    #[cfg(feature = "gc-incremental")]
+    #[inline]
+    pub fn incremental_is_active(&self) -> bool {
+        self._inc_state.is_some()
+    }
+
+    #[cfg(feature = "gc-incremental")]
+    #[inline]
+    pub fn maybe_start_incremental_major(&mut self) {
+        if self._inc_state.is_none() {
+            // Conservative policy: start an incremental major cycle after enough growth.
+            // This is intentionally simple: major GC is bounded by step budget.
+            let threshold = self.params.nursery_threshold_bytes.saturating_mul(8);
+            let total_bytes: usize = self.object_sizes.values().copied().sum();
+            if total_bytes >= threshold {
+                self.notify_memory_pressure(MemoryPressure::High);
+                self.incremental_start_major();
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -563,6 +663,7 @@ impl<T> GcRef<T> {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     #[test]
     fn weak_ref_drops_after_collect() {
@@ -710,5 +811,108 @@ mod tests {
         gc.remove_root(&parent);
         gc.collect_garbage();
         assert!(gc.upgrade::<i32>(&w).is_none());
+    }
+
+    #[test]
+    fn nursery_threshold_bytes_triggers_should_minor_collect() {
+        let mut gc = GarbageCollector::with_params(GcParams {
+            nursery_threshold_bytes: 32,
+            gen_promotion_threshold: 2,
+            max_pause_ms: 10,
+        });
+        assert!(!gc.should_minor_collect());
+        // Allocate enough i64s to cross 32 bytes (size_of::<i64>() == 8)
+        for _ in 0..4 {
+            let _ = gc.allocate::<i64>(0);
+        }
+        assert!(gc.nursery_bytes() >= 32);
+        assert!(gc.should_minor_collect());
+    }
+
+    #[test]
+    fn analytics_params_reduce_minor_collect_frequency_under_allocation() {
+        fn run(mut gc: GarbageCollector) -> u64 {
+            // Allocate enough to exceed the default 1MB nursery threshold multiple times.
+            // We also avoid rooting, so minor GCs will reclaim the nursery and reset bytes.
+            for _ in 0..600_000 {
+                let _ = gc.allocate::<i64>(0);
+                if gc.should_minor_collect() {
+                    gc.minor_collect();
+                }
+            }
+            gc.stats().minor_collects
+        }
+
+        let default_minor = run(GarbageCollector::new());
+        let analytics_minor = run(GarbageCollector::with_params(GcParams::analytics()));
+        assert!(
+            default_minor > 0,
+            "default params should trigger at least one minor GC"
+        );
+        assert!(
+             analytics_minor < default_minor,
+             "expected analytics preset to reduce minor GCs: default={default_minor} analytics={analytics_minor}"
+         );
+    }
+
+    #[cfg(feature = "gc-incremental")]
+    #[test]
+    fn incremental_major_can_start_and_step() {
+        let mut gc = GarbageCollector::with_params(GcParams {
+            nursery_threshold_bytes: 64,
+            gen_promotion_threshold: 2,
+            max_pause_ms: 1,
+        });
+        // Create some objects and a root so mark phase has work
+        let r = gc.allocate::<i64>(1);
+        gc.add_root(&r);
+        for _ in 0..200 {
+            let _ = gc.allocate::<i64>(2);
+        }
+        gc.maybe_start_incremental_major();
+        assert!(gc.incremental_is_active());
+        // Ensure the cycle can complete under bounded steps.
+        let mut done = false;
+        for _ in 0..10_000 {
+            if gc.incremental_step_with_params() {
+                done = true;
+                break;
+            }
+        }
+        assert!(
+            done,
+            "incremental major GC did not complete within step budget"
+        );
+    }
+
+    #[test]
+    fn memory_pressure_listener_fires_and_can_be_removed() {
+        let mut gc = GarbageCollector::with_params(GcParams {
+            nursery_threshold_bytes: 32,
+            gen_promotion_threshold: 2,
+            max_pause_ms: 10,
+        });
+
+        let hits = Arc::new(AtomicUsize::new(0));
+        let hits2 = hits.clone();
+        let id = gc.add_memory_pressure_listener(move |lvl| {
+            if matches!(lvl, MemoryPressure::High) {
+                hits2.fetch_add(1, Ordering::SeqCst);
+            }
+        });
+
+        // Cross 32 bytes (4 * i64)
+        for _ in 0..4 {
+            let _ = gc.allocate::<i64>(0);
+        }
+        assert!(hits.load(Ordering::SeqCst) > 0);
+
+        assert!(gc.remove_memory_pressure_listener(id));
+        let before = hits.load(Ordering::SeqCst);
+        for _ in 0..8 {
+            let _ = gc.allocate::<i64>(0);
+        }
+        let after = hits.load(Ordering::SeqCst);
+        assert_eq!(before, after);
     }
 }

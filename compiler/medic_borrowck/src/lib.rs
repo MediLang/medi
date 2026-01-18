@@ -1,5 +1,6 @@
 use medic_ast::ast::*;
 use medic_ast::visit::{Span, VisitResult, Visitable, Visitor};
+use medic_type::types::PrivacyAnnotation;
 use std::collections::HashMap;
 
 #[derive(Debug, thiserror::Error)]
@@ -261,6 +262,26 @@ mod tests {
         }))
     }
 
+    fn member_expr(base: ExpressionNode, prop: &str) -> ExpressionNode {
+        ExpressionNode::Member(Spanned::new(
+            Box::new(MemberExpressionNode {
+                object: base,
+                property: IdentifierNode::from_str_name(prop),
+            }),
+            Span::default(),
+        ))
+    }
+
+    fn call_expr(callee: ExpressionNode, args: Vec<ExpressionNode>) -> ExpressionNode {
+        ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee,
+                arguments: args.into(),
+            }),
+            Span::default(),
+        ))
+    }
+
     #[test]
     fn borrow_checker_allows_simple_reads_and_assign() {
         // let x = 1; x = 2; (reads and a simple assignment)
@@ -322,6 +343,41 @@ mod tests {
             }),
             span,
         ))
+    }
+
+    #[test]
+    fn spawn_task_argument_conflicts_with_mut_borrow_in_assignment() {
+        // let x = 0; x = spawn_task(x);
+        // LHS mutably borrows x, then spawn_task tries to capture/share x.
+        let call = ExpressionNode::Call(Spanned::new(
+            Box::new(CallExpressionNode {
+                callee: ident("spawn_task"),
+                arguments: vec![ident("x")].into(),
+            }),
+            Span::default(),
+        ));
+
+        let program = ProgramNode {
+            statements: vec![
+                let_stmt(
+                    "x",
+                    Some(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(0),
+                        Span::default(),
+                    ))),
+                ),
+                StatementNode::Assignment(Box::new(AssignmentNode {
+                    target: ident("x"),
+                    value: call,
+                    span: Span::default(),
+                })),
+            ]
+            .into(),
+        };
+
+        let mut b = BorrowChecker::new();
+        let res = b.check_program(&program);
+        assert!(res.is_err());
     }
 
     #[test]
@@ -409,6 +465,114 @@ mod tests {
         let res = b.check_program(&program);
         assert!(res.is_err());
     }
+
+    #[test]
+    fn member_property_is_not_treated_as_variable() {
+        // Ensure `patient.ssn` does not create an artificial read of variable `ssn`.
+        let program = ProgramNode {
+            statements: vec![
+                let_stmt(
+                    "patient",
+                    Some(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(0),
+                        Span::default(),
+                    ))),
+                ),
+                StatementNode::Expr(member_expr(ident("patient"), "ssn")),
+            ]
+            .into(),
+        };
+        let mut b = BorrowChecker::new();
+        assert!(b.check_program(&program).is_ok());
+    }
+
+    #[test]
+    fn member_rhs_conflicts_with_member_lhs_assignment() {
+        // let patient = 0; patient.ssn = patient.ssn;
+        // Field-level mutable borrow on LHS conflicts with immutable borrow of same field on RHS.
+        let program = ProgramNode {
+            statements: vec![
+                let_stmt(
+                    "patient",
+                    Some(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(0),
+                        Span::default(),
+                    ))),
+                ),
+                StatementNode::Assignment(Box::new(AssignmentNode {
+                    target: member_expr(ident("patient"), "ssn"),
+                    value: member_expr(ident("patient"), "ssn"),
+                    span: Span::default(),
+                })),
+            ]
+            .into(),
+        };
+        let mut b = BorrowChecker::new();
+        let res = b.check_program(&program);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn channel_send_argument_conflicts_with_mut_borrow_in_assignment() {
+        // let x = 0; let tx = 0; x = tx.send(x);
+        // LHS mutably borrows x, then send() tries to share x.
+        let program = ProgramNode {
+            statements: vec![
+                let_stmt(
+                    "x",
+                    Some(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(0),
+                        Span::default(),
+                    ))),
+                ),
+                let_stmt(
+                    "tx",
+                    Some(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(0),
+                        Span::default(),
+                    ))),
+                ),
+                StatementNode::Assignment(Box::new(AssignmentNode {
+                    target: ident("x"),
+                    value: call_expr(member_expr(ident("tx"), "send"), vec![ident("x")]),
+                    span: Span::default(),
+                })),
+            ]
+            .into(),
+        };
+        let mut b = BorrowChecker::new();
+        let res = b.check_program(&program);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn phi_value_cannot_be_shared_across_spawn_task() {
+        // Privacy-aware borrowing: PHI variables cannot cross task boundaries.
+        let program = ProgramNode {
+            statements: vec![
+                let_stmt(
+                    "patient",
+                    Some(ExpressionNode::Literal(Spanned::new(
+                        LiteralNode::Int(0),
+                        Span::default(),
+                    ))),
+                ),
+                StatementNode::Expr(ExpressionNode::Call(Spanned::new(
+                    Box::new(CallExpressionNode {
+                        callee: ident("spawn_task"),
+                        arguments: vec![ident("patient")].into(),
+                    }),
+                    Span::default(),
+                ))),
+            ]
+            .into(),
+        };
+
+        let mut b =
+            BorrowChecker::with_privacy_labels([("patient".to_string(), PrivacyAnnotation::PHI)]);
+        let res = b.check_program(&program);
+        assert!(res.is_err());
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -433,6 +597,10 @@ pub struct BorrowChecker {
     errors: Vec<String>,
     // Function alias summaries: callee name -> summary
     alias_summaries: HashMap<String, AliasSummary>,
+
+    // Optional privacy labels per variable name (from type checking).
+    // When present, we enforce additional privacy-aware sharing rules.
+    privacy_labels: HashMap<String, PrivacyAnnotation>,
 }
 
 impl BorrowChecker {
@@ -444,7 +612,16 @@ impl BorrowChecker {
             region_stack: Vec::new(),
             errors: Vec::new(),
             alias_summaries: HashMap::new(),
+            privacy_labels: HashMap::new(),
         }
+    }
+
+    pub fn with_privacy_labels(
+        labels: impl IntoIterator<Item = (String, PrivacyAnnotation)>,
+    ) -> Self {
+        let mut s = Self::new();
+        s.privacy_labels = labels.into_iter().collect();
+        s
     }
 
     /// Register a simple function alias summary. For now we only support
@@ -661,6 +838,72 @@ impl BorrowChecker {
             .any(|((vid, _), st)| *vid == id && matches!(st, BorrowState::MutableBorrow))
     }
 
+    fn borrow_immutable_field(&mut self, id: VarId, path: FieldPath, span: Span) {
+        match self.get_field_state(id, &path) {
+            BorrowState::MutableBorrow => self.errors.push(format!(
+                "cannot immutably borrow field while it is mutably borrowed at line {} col {}",
+                span.line, span.column
+            )),
+            _ => self.set_field_state(id, path, BorrowState::ImmutableBorrow),
+        }
+    }
+
+    fn resolve_access_path(&mut self, expr: &ExpressionNode) -> Option<(VarId, FieldPath, Span)> {
+        match expr {
+            ExpressionNode::Member(Spanned { node: boxed, span }) => {
+                let mut parts: Vec<String> = vec![boxed.property.name().to_string()];
+                let mut cur: &ExpressionNode = &boxed.object;
+                loop {
+                    match cur {
+                        ExpressionNode::Member(Spanned { node: inner, .. }) => {
+                            parts.push(inner.property.name().to_string());
+                            cur = &inner.object;
+                        }
+                        ExpressionNode::Index(Spanned { node: inner, .. }) => {
+                            parts.push("*".to_string());
+                            cur = &inner.object;
+                        }
+                        ExpressionNode::Identifier(Spanned {
+                            node: IdentifierNode { name },
+                            ..
+                        }) => {
+                            let id = self.resolve_or_declare(name.as_str());
+                            parts.reverse();
+                            return Some((id, FieldPath(parts), *span));
+                        }
+                        _ => return None,
+                    }
+                }
+            }
+            ExpressionNode::Index(Spanned { node: boxed, span }) => {
+                let mut parts: Vec<String> = vec!["*".to_string()];
+                let mut cur: &ExpressionNode = &boxed.object;
+                loop {
+                    match cur {
+                        ExpressionNode::Member(Spanned { node: inner, .. }) => {
+                            parts.push(inner.property.name().to_string());
+                            cur = &inner.object;
+                        }
+                        ExpressionNode::Index(Spanned { node: inner, .. }) => {
+                            parts.push("*".to_string());
+                            cur = &inner.object;
+                        }
+                        ExpressionNode::Identifier(Spanned {
+                            node: IdentifierNode { name },
+                            ..
+                        }) => {
+                            let id = self.resolve_or_declare(name.as_str());
+                            parts.reverse();
+                            return Some((id, FieldPath(parts), *span));
+                        }
+                        _ => return None,
+                    }
+                }
+            }
+            _ => None,
+        }
+    }
+
     fn borrow_immutable_id(&mut self, id: VarId, name: &str, span: Span) {
         // If any field is mutably borrowed, conservatively disallow immutable whole-var borrow
         if self.has_any_field_mut_borrow(id) {
@@ -702,6 +945,35 @@ impl BorrowChecker {
             id
         } else {
             self.declare(name)
+        }
+    }
+
+    fn check_concurrency_sharing_args(&mut self, op: &str, args: &NodeList<ExpressionNode>) {
+        for arg in args {
+            if let Some((aid, _, aspan)) = self.resolve_lvalue(arg) {
+                let mutably_borrowed = matches!(self.get_state(aid), BorrowState::MutableBorrow)
+                    || self.has_any_field_mut_borrow(aid);
+                if mutably_borrowed {
+                    self.errors.push(format!(
+                        "cannot share a mutably borrowed value across '{op}' at line {} col {}",
+                        aspan.line, aspan.column
+                    ));
+                }
+
+                // Privacy-aware sharing rule: do not allow PHI-like values across concurrency boundaries.
+                if let ExpressionNode::Identifier(Spanned { node: ident, .. }) = arg {
+                    if let Some(label) = self.privacy_labels.get(ident.name()) {
+                        if !matches!(label, PrivacyAnnotation::Anonymized) {
+                            self.errors.push(format!(
+                                "cannot share {label:?} value '{}' across '{op}' at line {} col {}",
+                                ident.name(),
+                                aspan.line,
+                                aspan.column
+                            ));
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -784,6 +1056,13 @@ impl Visitor for BorrowChecker {
                 let s = name.as_str();
                 let id = self.resolve_or_declare(s);
                 self.borrow_immutable_id(id, s, *span);
+
+                // Concurrency-aware borrowing (prototype): prohibit capturing/sharing values
+                // that are currently mutably borrowed.
+                if matches!(s, "spawn_task" | "spawn_task_with_priority" | "sched_spawn") {
+                    self.check_concurrency_sharing_args(s, &node.arguments);
+                }
+
                 // Apply alias summary: borrow aliased argument immutably within the call
                 if let Some(summary) = self.alias_summaries.get(s) {
                     if let Some(arg_idx) = summary.returns_ref_to_arg {
@@ -795,6 +1074,13 @@ impl Visitor for BorrowChecker {
                     }
                 }
             } else {
+                // Member-call concurrency (analytics pattern): tx.send(x) / tx.try_send(x)
+                if let ExpressionNode::Member(Spanned { node: boxed, .. }) = &node.callee {
+                    let meth = boxed.property.name();
+                    if matches!(meth, "send" | "try_send") {
+                        self.check_concurrency_sharing_args(meth, &node.arguments);
+                    }
+                }
                 node.callee.accept(self)?;
             }
             for arg in &node.arguments {
@@ -813,6 +1099,9 @@ impl Visitor for BorrowChecker {
                 let s = name.as_str();
                 let id = self.resolve_or_declare(s);
                 self.borrow_immutable_id(id, s, *span);
+                if matches!(s, "spawn_task" | "spawn_task_with_priority" | "sched_spawn") {
+                    self.check_concurrency_sharing_args(s, &node.arguments);
+                }
                 // Apply alias summary: borrow aliased argument immutably and allow it to persist
                 if let Some(summary) = self.alias_summaries.get(s) {
                     if let Some(arg_idx) = summary.returns_ref_to_arg {
@@ -824,6 +1113,12 @@ impl Visitor for BorrowChecker {
                     }
                 }
             } else {
+                if let ExpressionNode::Member(Spanned { node: boxed, .. }) = &node.callee {
+                    let meth = boxed.property.name();
+                    if matches!(meth, "send" | "try_send") {
+                        self.check_concurrency_sharing_args(meth, &node.arguments);
+                    }
+                }
                 node.callee.accept(self)?;
             }
             for arg in &node.arguments {
@@ -838,6 +1133,31 @@ impl Visitor for BorrowChecker {
         let id = self.resolve_or_declare(node.name());
         self.borrow_immutable_id(id, node.name(), Span::default());
         Ok(())
+    }
+
+    fn visit_member_expr(&mut self, node: &MemberExpressionNode) -> VisitResult<Self::Output> {
+        // Treat `a.b.c` as a field-path borrow on the base `a` and avoid treating
+        // property identifiers as variable reads.
+        let expr = ExpressionNode::Member(Spanned::new(Box::new(node.clone()), Span::default()));
+        if let Some((id, path, span)) = self.resolve_access_path(&expr) {
+            self.borrow_immutable_field(id, path, span);
+            Ok(())
+        } else {
+            // Fallback: visit object only
+            node.object.accept(self)
+        }
+    }
+
+    fn visit_index_expr(&mut self, node: &IndexExpressionNode) -> VisitResult<Self::Output> {
+        // Treat `a[i]` (and nested chains) as a field-path borrow on the base `a`.
+        // Still evaluate index expression for borrows (e.g., reading `i`).
+        let expr = ExpressionNode::Index(Spanned::new(Box::new(node.clone()), Span::default()));
+        if let Some((id, path, span)) = self.resolve_access_path(&expr) {
+            self.borrow_immutable_field(id, path, span);
+        } else {
+            node.object.accept(self)?;
+        }
+        node.index.accept(self)
     }
 
     fn visit_if_stmt(&mut self, node: &IfNode) -> VisitResult<Self::Output> {

@@ -4,6 +4,7 @@ pub fn maybe_incremental_step() {
     {
         if let Some(gc) = RUNTIME_GC.get() {
             if let Ok(mut guard) = gc.lock() {
+                guard.maybe_start_incremental_major();
                 let _ = guard.incremental_step_with_params();
             }
         }
@@ -218,6 +219,32 @@ pub fn get_gc() -> Arc<Mutex<GarbageCollector>> {
     RUNTIME_GC.get().unwrap().clone()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ZoneKind {
+    None,
+    Safe,
+    RealTime,
+}
+
+pub struct ZoneGuard {
+    prev: ZoneKind,
+}
+
+impl Drop for ZoneGuard {
+    fn drop(&mut self) {
+        ZONE_KIND.with(|k| k.set(self.prev));
+    }
+}
+
+thread_local! {
+    static ZONE_KIND: std::cell::Cell<ZoneKind> = const { std::cell::Cell::new(ZoneKind::None) };
+}
+
+#[inline]
+pub fn current_zone() -> ZoneKind {
+    ZONE_KIND.with(|k| k.get())
+}
+
 // --- Work-stealing Scheduler (global handle) ---
 
 static RUNTIME_SCHEDULER: OnceLock<Arc<Scheduler>> = OnceLock::new();
@@ -332,6 +359,7 @@ pub unsafe extern "C" fn medi_gc_alloc_string(ptr: *const u8, len: usize) -> u64
     let r = guard.allocate::<String>(s);
     #[cfg(feature = "gc-incremental")]
     {
+        guard.maybe_start_incremental_major();
         guard.incremental_step_with_params();
     }
     r.id() as u64
@@ -365,6 +393,7 @@ pub extern "C" fn medi_gc_alloc_unit() -> u64 {
     let r = guard.allocate::<()>(());
     #[cfg(feature = "gc-incremental")]
     {
+        guard.maybe_start_incremental_major();
         guard.incremental_step_with_params();
     }
     r.id() as u64
@@ -395,33 +424,93 @@ pub extern "C" fn medi_gc_write_barrier(parent: u64, child: u64) {
 
 #[cfg(feature = "gc")]
 pub mod gc_zone {
-    /// Stub for a safe GC zone. Future: track allocations, implement collection.
-    #[derive(Debug, Default)]
-    pub struct SafeGc;
+    use super::{current_zone, get_gc, maybe_incremental_step, ZoneGuard, ZoneKind};
+    use crate::gc::{GcParams, GcRef, GcWeak};
+    use crate::{GarbageCollector, RuntimeError};
+    use std::any::Any;
+    use std::sync::{Arc, Mutex};
 
-    impl SafeGc {
+    #[derive(Clone)]
+    pub struct SafeGcZone {
+        gc: Arc<Mutex<GarbageCollector>>,
+    }
+
+    impl SafeGcZone {
         pub fn new() -> Self {
-            Self
+            Self { gc: get_gc() }
         }
-        pub fn collect_garbage(&self) { /* no-op stub */
+
+        pub fn with_params(params: GcParams) -> Self {
+            let gc = super::init_gc_with_params(params);
+            Self { gc }
+        }
+
+        #[inline]
+        pub fn enter(&self) -> ZoneGuard {
+            let prev = current_zone();
+            super::ZONE_KIND.with(|k| k.set(ZoneKind::Safe));
+            ZoneGuard { prev }
+        }
+
+        #[inline]
+        pub fn allocate<T: Any + Send + 'static>(
+            &self,
+            value: T,
+        ) -> Result<GcRef<T>, RuntimeError> {
+            let mut guard = self
+                .gc
+                .lock()
+                .map_err(|_| RuntimeError::Message("gc mutex poisoned".into()))?;
+            let r = guard.allocate(value);
+            // Production policy (Option B): threshold-triggered minor GC + pause-bounded incremental major GC.
+            if guard.should_minor_collect() {
+                guard.minor_collect();
+            }
+            #[cfg(feature = "gc-incremental")]
+            {
+                guard.maybe_start_incremental_major();
+                if guard.incremental_is_active() {
+                    let _done = guard.incremental_step_with_params();
+                }
+            }
+            // Retain legacy helper for compatibility when gc-incremental is not active.
+            maybe_incremental_step();
+            Ok(r)
+        }
+
+        #[inline]
+        pub fn downgrade<T: Any + Send + 'static>(
+            &self,
+            r: &GcRef<T>,
+        ) -> Result<GcWeak<T>, RuntimeError> {
+            let guard = self
+                .gc
+                .lock()
+                .map_err(|_| RuntimeError::Message("gc mutex poisoned".into()))?;
+            Ok(guard.downgrade(r))
+        }
+
+        #[inline]
+        pub fn collect_garbage(&self) -> Result<(), RuntimeError> {
+            let mut guard = self
+                .gc
+                .lock()
+                .map_err(|_| RuntimeError::Message("gc mutex poisoned".into()))?;
+            guard.collect_garbage();
+            Ok(())
         }
     }
 }
 
 #[cfg(feature = "rt_zones")]
 pub mod rt_zone {
-    /// Stub for a simplified real-time zone (no dynamic allocation policy).
-    #[derive(Debug, Default)]
-    pub struct RtZone;
+    use super::{current_zone, ZoneGuard, ZoneKind};
 
-    impl RtZone {
-        pub fn new() -> Self {
-            Self
-        }
-        pub fn enter(&self) { /* no-op stub */
-        }
-        pub fn exit(&self) { /* no-op stub */
-        }
+    #[inline]
+    pub fn enter() -> ZoneGuard {
+        let prev = current_zone();
+        super::ZONE_KIND.with(|k| k.set(ZoneKind::RealTime));
+        ZoneGuard { prev }
     }
 }
 
@@ -429,7 +518,7 @@ pub mod rt_zone {
 pub mod rt;
 
 #[cfg(feature = "rt_zones")]
-pub use rt::{verify_latency, FixedPool, RtRegion};
+pub use rt::{verify_latency, FixedPool, RtRegion, RtZone};
 
 // --- Tests ---
 #[cfg(test)]
