@@ -1355,11 +1355,13 @@ dependencies = [
 name = "medic_runtime"
 version = "0.1.3"
 dependencies = [
+ "aes-gcm",
  "core_affinity",
  "criterion",
  "crossbeam-channel",
  "crossbeam-deque",
  "num_cpus",
+ "rand_core",
  "thiserror 1.0.69",
 ]
 

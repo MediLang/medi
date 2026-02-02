@@ -5,6 +5,9 @@ use std::sync::{Arc, Mutex, Weak};
 
 pub type ObjectId = u64;
 
+type PressureListener = Box<dyn Fn(MemoryPressure) + Send + Sync>;
+type TelemetryListener = Box<dyn Fn(&GcStats) + Send + Sync>;
+
 #[derive(Debug, Clone)]
 pub struct GcParams {
     pub nursery_threshold_bytes: usize,
@@ -232,8 +235,12 @@ pub struct GarbageCollector {
     _inc_state: Option<IncState>,
 
     // Memory pressure callbacks (best-effort, intended for host/runtime integrations).
-    pressure_listeners: HashMap<usize, Box<dyn Fn(MemoryPressure) + Send + Sync>>,
+    pressure_listeners: HashMap<usize, PressureListener>,
     next_pressure_listener_id: usize,
+
+    // Telemetry listeners (best-effort; called after collections).
+    telemetry_listeners: HashMap<usize, TelemetryListener>,
+    next_telemetry_listener_id: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -280,6 +287,30 @@ impl GarbageCollector {
     fn notify_memory_pressure(&self, level: MemoryPressure) {
         for cb in self.pressure_listeners.values() {
             cb(level);
+        }
+    }
+
+    pub fn add_telemetry_listener(
+        &mut self,
+        cb: impl Fn(&GcStats) + Send + Sync + 'static,
+    ) -> usize {
+        let id = self.next_telemetry_listener_id;
+        self.next_telemetry_listener_id = self.next_telemetry_listener_id.wrapping_add(1);
+        self.telemetry_listeners.insert(id, Box::new(cb));
+        id
+    }
+
+    pub fn remove_telemetry_listener(&mut self, id: usize) -> bool {
+        self.telemetry_listeners.remove(&id).is_some()
+    }
+
+    fn notify_telemetry(&self) {
+        if self.telemetry_listeners.is_empty() {
+            return;
+        }
+        let stats = self.stats();
+        for cb in self.telemetry_listeners.values() {
+            cb(&stats);
         }
     }
 
@@ -374,27 +405,15 @@ impl GarbageCollector {
         }
     }
 
-    pub fn get<T: Any + Send + 'static>(
+    pub fn with_ref<T: Any + Send + 'static, R>(
         &self,
         r: &GcRef<T>,
-    ) -> Option<std::sync::MutexGuard<'_, T>> {
-        self.objects.get(&r.id).and_then(|arc| {
-            // Downcast the Any to T
-            let _guard = arc.lock().ok()?;
-            // Safety: We only ever put T under this id via allocate<T>.
-            // We can't downcast a guard directly, so temporarily leak and re-lock is complex.
-            // Instead, store T behind Any and access via try_downcast in a helper struct.
-            None
-        })
-    }
-
-    pub fn try_read<T: Any + Send + 'static>(&self, r: &GcRef<T>) -> Option<Arc<Mutex<T>>> {
+        f: impl FnOnce(&T) -> R,
+    ) -> Option<R> {
         let arc_any = self.objects.get(&r.id)?.clone();
-        // Attempt to downcast Arc<Mutex<dyn Any + Send>> to Arc<Mutex<T>> by extracting inner pointer
-        // We can't directly downcast trait objects inside Arc, so we rebuild by cloning data when needed.
-        // For runtime, prefer using `with<T, R>(...)` API below.
-        let _ = arc_any; // unused in this simplified API
-        None
+        let guard = arc_any.lock().ok()?;
+        let any_ref = &*guard;
+        any_ref.downcast_ref::<T>().map(f)
     }
 
     pub fn with<T: Any + Send + 'static, R>(
@@ -475,6 +494,7 @@ impl GarbageCollector {
         }
         self.last_major_pause_ms = t0.elapsed().as_millis() as u64;
         self.major_collects += 1;
+        self.notify_telemetry();
         if std::env::var_os("MEDI_GC_LOG").is_some() {
             eprintln!("gc_major_pause_ms={}", self.last_major_pause_ms);
         }
@@ -560,6 +580,7 @@ impl GarbageCollector {
         }
         self.last_minor_pause_ms = t0.elapsed().as_millis() as u64;
         self.minor_collects += 1;
+        self.notify_telemetry();
         #[cfg(feature = "gc-card-table")]
         {
             self.dirty_parents.clear();

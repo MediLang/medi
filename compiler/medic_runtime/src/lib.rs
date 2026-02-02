@@ -1,4 +1,4 @@
-/// Advance incremental GC by one step if the `gc-incremental` feature is enabled.
+// Advance incremental GC by one step if the `gc-incremental` feature is enabled.
 pub fn maybe_incremental_step() {
     #[cfg(feature = "gc-incremental")]
     {
@@ -26,6 +26,9 @@ pub use error::{
 
 mod scheduler;
 pub use scheduler::{Priority, Scheduler, TaskCtx};
+
+#[cfg(feature = "distributed")]
+pub mod distributed;
 
 #[derive(Debug)]
 pub struct Task {
