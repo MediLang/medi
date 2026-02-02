@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.1.4] - 2026-02-02
+
+### Added
+
+- Runtime (Memory & Concurrency v0.1.4):
+  - Production-ready GC: stable access APIs, healthcare stress coverage, and improved observability.
+  - Privacy-preserving distributed computing primitives (feature-gated):
+    - Secure task isolation.
+    - Encrypted inter-node communication.
+    - Privacy boundary enforcement.
+
+### Changed
+
+- Runtime concurrency:
+  - Work-stealing scheduler and structured concurrency utilities validated and aligned with v0.1.4 checklist.
+
 ## [v0.1.3] - 2026-01-18
 
 ### Added
