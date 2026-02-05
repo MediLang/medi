@@ -79,17 +79,17 @@
   - [x] Implement panic recovery for critical paths
 
 #### Standard Library Completion (v0.1.5)
-- [ ] Complete core library (medi::core)
-  - [ ] Finalize collections API
-  - [ ] Complete iterator implementations
-  - [ ] Add async/await primitives
-- [ ] Healthcare standards (medi::standards)
-  - [ ] FHIR R4 complete coverage
-  - [ ] HL7 v2.x full parser
-  - [ ] DICOM full metadata support
-  - [ ] SNOMED CT integration
-  - [ ] LOINC code support
-  - [ ] ICD-10/ICD-11 support
+- [x] Complete core library (medi::core)
+  - [x] Finalize collections API
+  - [x] Complete iterator implementations
+  - [x] Add async/await primitives
+- [x] Healthcare standards (medi::standards)
+  - [x] FHIR R4 complete coverage
+  - [x] HL7 v2.x full parser
+  - [x] DICOM full metadata support
+  - [x] SNOMED CT integration
+  - [x] LOINC code support
+  - [x] ICD-10/ICD-11 support
 - [ ] Data science tools (medi::science)
   - [ ] Complete statistical test suite
   - [ ] Add machine learning primitives

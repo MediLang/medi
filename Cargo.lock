@@ -1182,6 +1182,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "medi_core"
+version = "0.1.4"
+dependencies = [
+ "approx",
+]
+
+[[package]]
 name = "medi_data"
 version = "0.1.4"
 dependencies = [
@@ -1206,6 +1213,14 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "medi_standards"
+version = "0.1.4"
+dependencies = [
+ "medi_data",
+ "tempfile",
 ]
 
 [[package]]
