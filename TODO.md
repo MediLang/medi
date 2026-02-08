@@ -90,10 +90,10 @@
   - [x] SNOMED CT integration
   - [x] LOINC code support
   - [x] ICD-10/ICD-11 support
-- [ ] Data science tools (medi::science)
-  - [ ] Complete statistical test suite
-  - [ ] Add machine learning primitives
-  - [ ] Implement visualization backends
+- [x] Data science tools (medi::science)
+  - [x] Complete statistical test suite
+  - [x] Add machine learning primitives
+  - [x] Implement visualization backends
 - [ ] Privacy framework (medi::privacy)
   - [ ] Differential privacy algorithms
   - [ ] Federated learning infrastructure

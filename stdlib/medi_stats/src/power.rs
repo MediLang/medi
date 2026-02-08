@@ -5,7 +5,11 @@ use statrs::distribution::{ContinuousCDF, Normal};
 
 /// Compute Cohen's d from means and pooled standard deviation
 pub fn cohen_d(mean1: f64, mean2: f64, pooled_sd: f64) -> f64 {
-    if pooled_sd <= 0.0 { 0.0 } else { (mean1 - mean2) / pooled_sd }
+    if pooled_sd <= 0.0 {
+        0.0
+    } else {
+        (mean1 - mean2) / pooled_sd
+    }
 }
 
 /// Approximate power for two-sample t-test (two-sided) using normal approximation.
@@ -16,7 +20,9 @@ pub fn power_two_sample_t(effect_size: f64, alpha: f64, n_per_group: usize) -> f
         return 0.0;
     }
     let n = n_per_group as f64;
-    let z_alpha = Normal::new(0.0, 1.0).unwrap().inverse_cdf(1.0 - alpha / 2.0);
+    let z_alpha = Normal::new(0.0, 1.0)
+        .unwrap()
+        .inverse_cdf(1.0 - alpha / 2.0);
     let z = effect_size * (n / 2.0).sqrt();
     let phi = |x: f64| Normal::new(0.0, 1.0).unwrap().cdf(x);
     // Two-sided power ~ 1 - beta, beta = Phi(z_alpha - z) - Phi(-z_alpha - z)
@@ -36,9 +42,13 @@ pub fn sample_size_two_sample_t(effect_size: f64, alpha: f64, target_power: f64)
     let mut n = 2usize;
     loop {
         let p = power_two_sample_t(effect_size, alpha, n);
-        if p >= target_power { return n; }
+        if p >= target_power {
+            return n;
+        }
         n += 1;
-        if n > 100000 { return 0; }
+        if n > 100000 {
+            return 0;
+        }
     }
 }
 
