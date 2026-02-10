@@ -1,6 +1,6 @@
 [package]
 name = "medi_privacy"
-version = "0.1.4"
+version = "0.1.15"
 edition = "2021"
 description = "Medi standard library: differential privacy and privacy budget utilities"
 license = "Apache-2.0"

@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Planned improvements and documentation updates.
 
+## [v0.1.15] - 2026-02-10
+
+### Added
+
+- Privacy framework (medi::privacy):
+  - Differential privacy mechanisms (Laplace/Gaussian), budget tracking, and private aggregations.
+  - Federated learning core (FedAvg aggregator, coordinator, client updates).
+  - Anonymization toolkit with k-anonymity, l-diversity, and t-closeness checks.
+- Real-time system support (medi::rt):
+  - Streaming primitives (bounded ring buffer, sliding window sum).
+  - Low-latency I/O helpers (TCP connect with timeout, TCP_NODELAY toggle).
+  - Device protocol parsing for basic telemetry ingestion.
+- CI/Workflow: added `tpscp` workflow checklist for test/format/commit/push.
+
+### Changed
+
+- Bumped all workspace crate versions to `0.1.15`.
+
 ## [v0.1.4] - 2026-02-02
 
 ### Added

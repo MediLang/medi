@@ -1,6 +1,6 @@
 [package]
 name = "medi_rt"
-version = "0.1.4"
+version = "0.1.15"
 edition = "2021"
 description = "Medi standard library: real-time streaming, low-latency I/O, and device protocol support"
 license = "Apache-2.0"

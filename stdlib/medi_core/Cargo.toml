@@ -1,6 +1,6 @@
 [package]
 name = "medi_core"
-version = "0.1.4"
+version = "0.1.15"
 edition = "2021"
 description = "Medi standard library: core collections and iterator primitives"
 license = "Apache-2.0"
