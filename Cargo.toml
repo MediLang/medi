@@ -19,6 +19,7 @@ members = [
     "stdlib/medi_stats",
     "stdlib/medi_compliance",
     "stdlib/medi_privacy",
+    "stdlib/medi_rt",
     "stdlib/medi_ai", "stdlib/medi_model",
     "bindings/pymedi",
 ]

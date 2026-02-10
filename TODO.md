@@ -98,10 +98,10 @@
   - [x] Differential privacy algorithms
   - [x] Federated learning infrastructure
   - [x] Anonymization toolkit
-- [ ] Real-time system support (medi::rt)
-  - [ ] Streaming data primitives
-  - [ ] Low-latency I/O
-  - [ ] Device protocol support
+- [x] Real-time system support (medi::rt)
+  - [x] Streaming data primitives
+  - [x] Low-latency I/O
+  - [x] Device protocol support
 
 ### 1.3 Performance Optimization (v0.1.6)
 - [ ] LLVM optimization passes for medical workloads
