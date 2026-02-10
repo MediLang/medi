@@ -1,0 +1,16 @@
+[package]
+name = "medi_privacy"
+version = "0.1.4"
+edition = "2021"
+description = "Medi standard library: differential privacy and privacy budget utilities"
+license = "Apache-2.0"
+
+[lib]
+name = "medi_privacy"
+path = "src/lib.rs"
+
+[dependencies]
+rand = "0.8"
+
+[dev-dependencies]
+approx = "0.5"

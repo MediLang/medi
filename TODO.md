@@ -94,10 +94,10 @@
   - [x] Complete statistical test suite
   - [x] Add machine learning primitives
   - [x] Implement visualization backends
-- [ ] Privacy framework (medi::privacy)
-  - [ ] Differential privacy algorithms
-  - [ ] Federated learning infrastructure
-  - [ ] Anonymization toolkit
+- [x] Privacy framework (medi::privacy)
+  - [x] Differential privacy algorithms
+  - [x] Federated learning infrastructure
+  - [x] Anonymization toolkit
 - [ ] Real-time system support (medi::rt)
   - [ ] Streaming data primitives
   - [ ] Low-latency I/O
