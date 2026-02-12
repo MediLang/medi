@@ -103,7 +103,66 @@
   - [x] Low-latency I/O
   - [x] Device protocol support
 
-### 1.3 Performance Optimization (v0.1.6)
+### 1.3 REBRANDING (v0.1.6)
+- [ ] Step 1: Rename compiler crate directories
+  - [ ] `compiler/medic` → `compiler/tlvxc`
+  - [ ] `compiler/medic_ast` → `compiler/tlvxc_ast`
+  - [ ] `compiler/medic_borrowck` → `compiler/tlvxc_borrowck`
+  - [ ] `compiler/medic_codegen_llvm` → `compiler/tlvxc_codegen_llvm`
+  - [ ] `compiler/medic_env` → `compiler/tlvxc_env`
+  - [ ] `compiler/medic_ide_server` → `compiler/tlvxc_ide_server`
+  - [ ] `compiler/medic_lexer` → `compiler/tlvxc_lexer`
+  - [ ] `compiler/medic_parser` → `compiler/tlvxc_parser`
+  - [ ] `compiler/medic_runtime` → `compiler/tlvxc_runtime`
+  - [ ] `compiler/medic_type` → `compiler/tlvxc_type`
+  - [ ] `compiler/medic_typeck` → `compiler/tlvxc_typeck`
+  - [ ] `compiler/medipack` → `compiler/tolvexpack`
+- [ ] Step 2: Rename stdlib crate directories
+  - [ ] `stdlib/medi_ai` → `stdlib/tolvex_ai`
+  - [ ] `stdlib/medi_compliance` → `stdlib/tolvex_compliance`
+  - [ ] `stdlib/medi_core` → `stdlib/tolvex_core`
+  - [ ] `stdlib/medi_data` → `stdlib/tolvex_data`
+  - [ ] `stdlib/medi_model` → `stdlib/tolvex_model`
+  - [ ] `stdlib/medi_privacy` → `stdlib/tolvex_privacy`
+  - [ ] `stdlib/medi_rt` → `stdlib/tolvex_rt`
+  - [ ] `stdlib/medi_standards` → `stdlib/tolvex_standards`
+  - [ ] `stdlib/medi_stats` → `stdlib/tolvex_stats`
+- [ ] Step 3: Rename bindings directory (`bindings/pymedi` → `bindings/pytolvex`)
+- [ ] Step 4: Update root `Cargo.toml` workspace members
+- [ ] Step 5: Update every crate's `Cargo.toml` (names, deps, paths, bin targets)
+- [ ] Step 6: Global find-replace in all `.rs` files
+  - [ ] Crate references: `medic_*` → `tlvxc_*`
+  - [ ] Stdlib references: `medi_*` → `tolvex_*`
+  - [ ] Binary/tool references: `medipack` → `tolvexpack`, `pymedi` → `pytolvex`
+  - [ ] String literals: `"Medi"` → `"Tolvex"`, `"medi"` → `"tolvex"`, `"MEDI"` → `"TOLVEX"`
+  - [ ] Env vars: `MEDI_*` → `TOLVEX_*`
+  - [ ] Identifiers: `MediLang` → `TolvexLang`, `medi-lang` → `tolvex-lang`
+- [ ] Step 7: Rename `.medi` files → `.tlvx` (19 files) and update hardcoded refs
+- [ ] Step 8: Update documentation files
+  - [ ] Replace `README.md` with `TOLVEX.md` content
+  - [ ] Update `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
+  - [ ] Update `LANG_SPEC.md`, `ECOSYSTEM_ROADMAP.md`, `SELF_HOSTING.md`
+  - [ ] Rename `README-MediCMM.md` → `README-TolvexCMM.md`
+  - [ ] Update `stdlib/README.md`
+- [ ] Step 9: Update config & CI files
+  - [ ] `docs/mkdocs.yml` (site_name, URLs, logo, social, copyright)
+  - [ ] `package.json` (name, repo URL, author, homepage)
+  - [ ] `.github/workflows/ci.yml` and `docs.yml`
+  - [ ] `.github/instructions/*.md`
+  - [ ] `.gitignore` comment update
+  - [ ] `compiler/Cargo.toml` (nested workspace members)
+- [ ] Step 10: Verify build
+  - [ ] `cargo build --workspace` succeeds
+  - [ ] `cargo test --workspace` passes
+  - [ ] `cargo fmt --all` and `cargo clippy --workspace`
+  - [ ] Grep for stale `medic_`, `medi_`, `.medi`, `MediLang` references
+- [ ] Step 11: Release v0.1.6
+  - [ ] Bump all `Cargo.toml` versions to `0.1.6`
+  - [ ] Add CHANGELOG.md v0.1.6 rebrand entry
+  - [ ] `pre-commit run --all-files`
+  - [ ] Commit, tag `v0.1.6`, push
+
+### 1.4 Performance Optimization (v0.1.7)
 - [ ] LLVM optimization passes for medical workloads
   - [ ] Profile common healthcare operations
   - [ ] Add custom optimization passes
