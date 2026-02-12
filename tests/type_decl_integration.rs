@@ -1,6 +1,6 @@
-use medi::parser::parse_program;
-use medi::type_checker::DefaultTypeChecker;
-use medi::types::MediType;
+use tlvxc::parser::parse_program;
+use tlvxc::type_checker::DefaultTypeChecker;
+use tlvxc::types::MediType;
 
 #[test]
 fn type_decl_end_to_end_person() {

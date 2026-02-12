@@ -1,0 +1,327 @@
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::multispace0,
+    combinator::map,
+    multi::separated_list0,
+    sequence::{delimited, pair, separated_pair},
+    IResult,
+};
+
+use crate::parser::{
+    parse_expression, take_token_if, ExpressionNode, IdentifierNode, Span, Token, TokenSlice,
+    TokenType,
+};
+use tlvxc_ast::ast::{NodeList, StructField, StructLiteralNode};
+use tlvxc_ast::Spanned;
+
+/// Parses a struct field in the format `name: expression`
+pub fn parse_struct_field(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, StructField> {
+    log::debug!("=== parse_struct_field ===");
+    log::debug!("Input length: {}", input.0.len());
+
+    if !input.0.is_empty() {
+        log::debug!(
+            "Current token: {:?} at {}:{}",
+            input.0[0].token_type,
+            input.0[0].location.line,
+            input.0[0].location.column
+        );
+    }
+
+    // Parse the field name (identifier)
+    log::debug!("Parsing field name");
+    let (input, name_token) = take_token_if(
+        |t| matches!(t, TokenType::Identifier(_)),
+        nom::error::ErrorKind::Alpha,
+    )(input)?;
+
+    let name = match &name_token.token_type {
+        TokenType::Identifier(name) => IdentifierNode::from_str_name(name.as_str()).name,
+        _ => unreachable!(), // We already checked this in the take_token_if
+    };
+
+    // Parse the colon
+    log::debug!("Parsing colon after field name");
+    let (input, _) = match take_token_if(
+        |t| matches!(t, TokenType::Colon),
+        nom::error::ErrorKind::Char,
+    )(input)
+    {
+        Ok(result) => {
+            log::debug!("Successfully parsed colon");
+            result
+        }
+        Err(e) => {
+            log::error!("Expected ':' after field name: {e:?}");
+            return Err(e);
+        }
+    };
+
+    // Parse the field value (expression)
+    log::debug!("Parsing field value expression");
+    let (input, value) = match parse_expression(input) {
+        Ok((input, expr)) => {
+            log::debug!("Successfully parsed field value expression");
+            (input, expr)
+        }
+        Err(e) => {
+            log::error!("Failed to parse field value expression: {e:?}");
+            return Err(e);
+        }
+    };
+
+    Ok((input, StructField { name, value }))
+}
+
+/// Parses a struct literal in the format `TypeName { field1: value1, field2: value2 }`
+pub fn parse_struct_literal(input: TokenSlice<'_>) -> IResult<TokenSlice<'_>, ExpressionNode> {
+    log::debug!("=== parse_struct_literal ===");
+    log::debug!("Input length: {}", input.0.len());
+
+    if !input.0.is_empty() {
+        log::debug!(
+            "Next token: {:?} at {}:{}",
+            input.0[0].token_type,
+            input.0[0].location.line,
+            input.0[0].location.column
+        );
+    } else {
+        log::error!("Unexpected end of input in parse_struct_literal");
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Eof,
+        )));
+    }
+
+    // Parse the type name
+    log::debug!("Parsing type name...");
+    let (input, type_name_token) = match take_token_if(
+        |t| matches!(t, TokenType::Identifier(_)),
+        nom::error::ErrorKind::Alpha,
+    )(input)
+    {
+        Ok(result) => {
+            log::debug!("Successfully parsed type name");
+            result
+        }
+        Err(e) => {
+            log::error!("Failed to parse type name: {e:?}");
+            return Err(e);
+        }
+    };
+
+    // Save the start position of the struct
+    let start_span = Span {
+        start: type_name_token.location.offset,
+        end: type_name_token.location.offset + type_name_token.lexeme.len(),
+        line: type_name_token.location.line as u32, // Convert usize to u32
+        column: type_name_token.location.column as u32, // Convert usize to u32
+    };
+
+    let type_name = match &type_name_token.token_type {
+        TokenType::Identifier(name) => {
+            log::debug!("Type name: {name}");
+            IdentifierNode::from_str_name(name.as_str()).name
+        }
+        _ => unreachable!(), // We already checked this in the take_token_if
+    };
+
+    // Parse the opening brace
+    log::debug!("Looking for opening brace...");
+    let (input, _left_brace_token) = match take_token_if(
+        |t| matches!(t, TokenType::LeftBrace),
+        nom::error::ErrorKind::Char,
+    )(input)
+    {
+        Ok(result) => {
+            log::debug!("Found opening brace");
+            result
+        }
+        Err(e) => {
+            log::error!("Expected '{{' after type name: {e:?}");
+            return Err(e);
+        }
+    };
+
+    // Parse the fields (comma-separated)
+    log::debug!("Parsing struct fields...");
+    let (input, fields_vec) = match separated_list0(
+        |input| {
+            let (input, _) = take_token_if(
+                |t| matches!(t, TokenType::Comma),
+                nom::error::ErrorKind::Char,
+            )(input)?;
+            log::debug!("Found comma, continuing to next field");
+            Ok((input, ()))
+        },
+        parse_struct_field,
+    )(input)
+    {
+        Ok((input, fields)) => {
+            log::debug!("Successfully parsed {} fields", fields.len());
+            (input, fields)
+        }
+        Err(e) => {
+            log::error!("Failed to parse struct fields: {e:?}");
+            return Err(e);
+        }
+    };
+
+    // Convert to NodeList
+    let fields: NodeList<StructField> = fields_vec.into_iter().collect();
+
+    // Parse the closing brace
+    log::debug!("Looking for closing brace...");
+    let (input, right_brace_token) = match take_token_if(
+        |t| matches!(t, TokenType::RightBrace),
+        nom::error::ErrorKind::Char,
+    )(input)
+    {
+        Ok(result) => {
+            log::debug!("Found closing brace");
+            result
+        }
+        Err(e) => {
+            log::error!("Expected '}}' after struct fields: {e:?}");
+            return Err(e);
+        }
+    };
+
+    // Calculate the span from the start of the type name to the end of the closing brace
+    let span = Span {
+        start: start_span.start,
+        end: right_brace_token.location.offset + right_brace_token.lexeme.len(), // Already usize
+        line: start_span.line,
+        column: start_span.column,
+    };
+
+    Ok((
+        input,
+        ExpressionNode::Struct(Spanned::new(
+            Box::new(StructLiteralNode { type_name, fields }),
+            span,
+        )),
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::TokenSlice;
+    use tlvxc_ast::ast::LiteralNode;
+    use tlvxc_lexer::{token::Token, Location};
+
+    #[test]
+    fn test_parse_struct_literal() {
+        let tokens = vec![
+            Token::new(
+                TokenType::Identifier("Point".into()),
+                "Point",
+                Location {
+                    line: 1,
+                    column: 1,
+                    offset: 0,
+                },
+            ),
+            Token::new(
+                TokenType::LeftBrace,
+                "{",
+                Location {
+                    line: 1,
+                    column: 7,
+                    offset: 6,
+                },
+            ),
+            Token::new(
+                TokenType::Identifier("x".into()),
+                "x",
+                Location {
+                    line: 1,
+                    column: 8,
+                    offset: 7,
+                },
+            ),
+            Token::new(
+                TokenType::Colon,
+                ":",
+                Location {
+                    line: 1,
+                    column: 9,
+                    offset: 8,
+                },
+            ),
+            Token::new(
+                TokenType::Integer(10),
+                "10",
+                Location {
+                    line: 1,
+                    column: 11,
+                    offset: 10,
+                },
+            ),
+            Token::new(
+                TokenType::Comma,
+                ",",
+                Location {
+                    line: 1,
+                    column: 13,
+                    offset: 12,
+                },
+            ),
+            Token::new(
+                TokenType::Identifier("y".into()),
+                "y",
+                Location {
+                    line: 1,
+                    column: 15,
+                    offset: 14,
+                },
+            ),
+            Token::new(
+                TokenType::Colon,
+                ":",
+                Location {
+                    line: 1,
+                    column: 16,
+                    offset: 15,
+                },
+            ),
+            Token::new(
+                TokenType::Integer(20),
+                "20",
+                Location {
+                    line: 1,
+                    column: 18,
+                    offset: 17,
+                },
+            ),
+            Token::new(
+                TokenType::RightBrace,
+                "}",
+                Location {
+                    line: 1,
+                    column: 20,
+                    offset: 19,
+                },
+            ),
+        ];
+
+        let input = TokenSlice::new(&tokens);
+        let result = parse_struct_literal(input);
+        assert!(result.is_ok());
+
+        let (remaining, expr) = result.unwrap();
+        assert!(remaining.is_empty());
+
+        match expr {
+            ExpressionNode::Struct(Spanned { node: s, .. }) => {
+                assert_eq!(s.type_name.as_str(), "Point");
+                assert_eq!(s.fields.len(), 2);
+                assert_eq!(s.fields[0].name.as_str(), "x");
+                assert_eq!(s.fields[1].name.as_str(), "y");
+            }
+            _ => panic!("Expected Struct variant"),
+        }
+    }
+}

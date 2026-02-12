@@ -1,0 +1,23 @@
+[package]
+name = "tlvxc_codegen_llvm"
+version = "0.1.15"
+edition = "2021"
+
+[features]
+# Enable LLVM backend using Inkwell against LLVM 15.x
+llvm = ["dep:inkwell", "inkwell/llvm15-0"]
+# Experimental: represent quantities as { double, i32 unit_id } in IR
+quantity_ir = []
+# Experimental: call into tlvxc_runtime GC for string literal allocation (64-bit targets only)
+gc-runtime-integration = []
+
+[dependencies]
+thiserror = "1.0"
+# Inkwell is optional so the workspace builds on machines without LLVM installed.
+inkwell = { version = "0.2", optional = true, default-features = false }
+tlvxc_ast = { path = "../tlvxc_ast" }
+tlvxc_typeck = { path = "../tlvxc_typeck" }
+tlvxc_type = { path = "../tlvxc_type" }
+
+[package.metadata]
+# Documentation hint: Requires LLVM 15.x when enabling the `llvm` feature.

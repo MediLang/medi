@@ -1,0 +1,12 @@
+[package]
+name = "tolvex_rt"
+version = "0.1.15"
+edition = "2021"
+description = "Medi standard library: real-time streaming, low-latency I/O, and device protocol support"
+license = "Apache-2.0"
+
+[lib]
+name = "tolvex_rt"
+path = "src/lib.rs"
+
+[dependencies]

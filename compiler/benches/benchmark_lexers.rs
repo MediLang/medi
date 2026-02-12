@@ -5,7 +5,7 @@ use std::time::Instant;
 
 fn main() {
     // Generate test file if it doesn't exist
-    let test_file = "large_test_file.medi";
+    let test_file = "large_test_file.tlvx";
     if !std::path::Path::new(test_file).exists() {
         println!("Generating test file...");
         let content = generate_test_content(1024 * 1024); // 1MB
@@ -114,9 +114,9 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
                 let content = fs::read_to_string(test_file).expect("Failed to read test file");
 
                 let tokens: Vec<_> = match lexer_type {
-                    "OriginalLexer" => medic_lexer::lexer::Lexer::new(&content).collect(),
+                    "OriginalLexer" => tlvxc_lexer::lexer::Lexer::new(&content).collect(),
                     "StreamingLexer" => {
-                        medic_lexer::streaming_lexer::StreamingLexer::new(&content).collect()
+                        tlvxc_lexer::streaming_lexer::StreamingLexer::new(&content).collect()
                     }
                     _ => unreachable!(),
                 };
@@ -126,9 +126,9 @@ fn benchmark_lexer(lexer_type: &str, test_file: &str, runs: usize) -> Vec<u128> 
                 // Use streaming approach for ChunkedLexer
                 let file = File::open(test_file).expect("Failed to open test file");
                 let reader = BufReader::new(file);
-                let lexer = medic_lexer::chunked_lexer::ChunkedLexer::from_reader(
+                let lexer = tlvxc_lexer::chunked_lexer::ChunkedLexer::from_reader(
                     reader,
-                    medic_lexer::chunked_lexer::ChunkedLexerConfig::default(),
+                    tlvxc_lexer::chunked_lexer::ChunkedLexerConfig::default(),
                 );
                 let tokens: Vec<_> = lexer.collect();
                 tokens.len()

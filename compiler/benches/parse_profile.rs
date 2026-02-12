@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use medic_lexer::lexer::Lexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_lexer::lexer::Lexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 use std::fs;
 use std::path::PathBuf;
 
@@ -13,7 +13,7 @@ fn load_tokens(path: &str) -> Vec<Token> {
 
 fn bench_parse(c: &mut Criterion) {
     // Change this target to profile different sizes/variants
-    let target = "benchdata/large_func_2m.medi";
+    let target = "benchdata/large_func_2m.tlvx";
     let tokens = load_tokens(target);
     // Leak tokens so their lifetime outlives the benchmark iteration
     let leaked: &'static [Token] = Box::leak(tokens.into_boxed_slice());

@@ -3,13 +3,13 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
-use medic_lexer::streaming_lexer::StreamingLexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_lexer::streaming_lexer::StreamingLexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 
 #[cfg(target_os = "linux")]
 #[allow(dead_code)]
-fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
+fn program_for(src: &str) -> tlvxc_ast::ast::ProgramNode {
     let lx = StreamingLexer::new(src);
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
@@ -20,7 +20,7 @@ fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
 // macOS equivalents
 #[cfg(target_os = "macos")]
 #[allow(dead_code)]
-fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
+fn program_for(src: &str) -> tlvxc_ast::ast::ProgramNode {
     let lx = StreamingLexer::new(src);
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
@@ -49,7 +49,7 @@ fn link_with_clang(obj_path: &std::path::Path) -> PathBuf {
 // Windows helpers
 #[cfg(target_os = "windows")]
 #[allow(dead_code)]
-fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
+fn program_for(src: &str) -> tlvxc_ast::ast::ProgramNode {
     let lx = StreamingLexer::new(src);
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
@@ -130,11 +130,11 @@ fn main() -> int {
 }
 "#;
     let program = program_for(src);
-    let obj = medic_codegen_llvm::generate_x86_64_object_default(&program).expect("emit ok");
+    let obj = tlvxc_codegen_llvm::generate_x86_64_object_default(&program).expect("emit ok");
 
     // Write object to temp file
     let mut obj_path = std::env::temp_dir();
-    obj_path.push("medi_codegen_integration.o");
+    obj_path.push("tolvex_codegen_integration.o");
     let mut f = File::create(&obj_path).expect("create obj file");
     f.write_all(&obj).expect("write obj bytes");
 
@@ -155,11 +155,11 @@ fn inc(x: int) -> int { return x + 1 }
 fn main() -> int { let y = inc(6); return y }
 "#;
     let program = program_for(src);
-    let obj = medic_codegen_llvm::generate_x86_64_object_default(&program).expect("emit ok");
+    let obj = tlvxc_codegen_llvm::generate_x86_64_object_default(&program).expect("emit ok");
 
     // Write object to temp file
     let mut obj_path = std::env::temp_dir();
-    obj_path.push("medi_codegen_integration2.o");
+    obj_path.push("tolvex_codegen_integration2.o");
     let mut f = File::create(&obj_path).expect("create obj file");
     f.write_all(&obj).expect("write obj bytes");
 
@@ -181,11 +181,11 @@ fn main() -> int {
 }
 "#;
     let program = program_for(src);
-    let obj = medic_codegen_llvm::generate_x86_64_object_default(&program).expect("emit ok");
+    let obj = tlvxc_codegen_llvm::generate_x86_64_object_default(&program).expect("emit ok");
 
     // On Windows, COFF objects commonly use .obj
     let mut obj_path = std::env::temp_dir();
-    obj_path.push("medi_codegen_integration.obj");
+    obj_path.push("tolvex_codegen_integration.obj");
     let mut f = File::create(&obj_path).expect("create obj file");
     f.write_all(&obj).expect("write obj bytes");
 

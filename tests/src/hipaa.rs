@@ -1,10 +1,10 @@
-use medic_ast::ast::*;
-use medic_ast::visit::Span;
-use medic_env::env::{SinkKind, TypeEnv};
-use medic_typeck::type_checker::TypeChecker;
-use medic_typeck::runtime::{verify_sink, PrivacyViolation as RtPrivacyViolation};
-use medic_type::types::PrivacyAnnotation;
-use medic_type::types::SinkClass;
+use tlvxc_ast::ast::*;
+use tlvxc_ast::visit::Span;
+use tlvxc_env::env::{SinkKind, TypeEnv};
+use tlvxc_typeck::type_checker::TypeChecker;
+use tlvxc_typeck::runtime::{verify_sink, PrivacyViolation as RtPrivacyViolation};
+use tlvxc_type::types::PrivacyAnnotation;
+use tlvxc_type::types::SinkClass;
 
 #[test]
 fn hipaa_sink_print_phi_violation() {
@@ -29,7 +29,7 @@ fn hipaa_sink_print_phi_violation() {
     let stmt = StatementNode::Expr(call);
     assert!(tc.check_stmt(&stmt).is_ok());
     let errs = tc.take_errors();
-    assert!(errs.iter().any(|e| matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs.iter().any(|e| matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn pseudonymized_allowed_to_print_but_not_network_or_file() {
     let stmt_ok = StatementNode::Expr(print_call);
     assert!(tc.check_stmt(&stmt_ok).is_ok());
     let errs_ok = tc.take_errors();
-    assert!(errs_ok.iter().all(|e| !matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs_ok.iter().all(|e| !matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 
     // upload(pseudonymize(...)) -> violation (Network)
     let upload_call = ExpressionNode::Call(Spanned::new(
@@ -121,7 +121,7 @@ fn pseudonymized_allowed_to_print_but_not_network_or_file() {
     let stmt_violate_net = StatementNode::Expr(upload_call);
     assert!(tc.check_stmt(&stmt_violate_net).is_ok());
     let errs_net = tc.take_errors();
-    assert!(errs_net.iter().any(|e| matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs_net.iter().any(|e| matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 
     // store(pseudonymize(...)) -> violation (File)
     let store_call = ExpressionNode::Call(Spanned::new(
@@ -137,7 +137,7 @@ fn pseudonymized_allowed_to_print_but_not_network_or_file() {
     let stmt_violate_file = StatementNode::Expr(store_call);
     assert!(tc.check_stmt(&stmt_violate_file).is_ok());
     let errs_file = tc.take_errors();
-    assert!(errs_file.iter().any(|e| matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs_file.iter().any(|e| matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn hipaa_sink_print_after_anonymize_allowed() {
     let stmt = StatementNode::Expr(outer);
     assert!(tc.check_stmt(&stmt).is_ok());
     let errs = tc.take_errors();
-    assert!(errs.iter().all(|e| !matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs.iter().all(|e| !matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn hipaa_return_phi_violation() {
     }));
     assert!(tc.check_stmt(&ret).is_ok());
     let errs = tc.take_errors();
-    assert!(errs.iter().any(|e| matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs.iter().any(|e| matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }
 
 #[test]
@@ -254,7 +254,7 @@ fn hipaa_return_authorized_and_anonymized_allowed() {
 
     // No privacy violations expected
     let errs = tc.take_errors();
-    assert!(errs.iter().all(|e| !matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs.iter().all(|e| !matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }
 
 // TODO: Consider richer sink identification (e.g., env/imports providing symbol metadata)
@@ -285,7 +285,7 @@ fn hipaa_env_registered_sink_flags_phi() {
     let stmt = StatementNode::Expr(call);
     assert!(tc.check_stmt(&stmt).is_ok());
     let errs = tc.take_errors();
-    assert!(errs.iter().any(|e| matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs.iter().any(|e| matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }
 
 #[test]
@@ -325,5 +325,5 @@ fn hipaa_env_registered_deid_allows_sink() {
     let stmt = StatementNode::Expr(outer);
     assert!(tc.check_stmt(&stmt).is_ok());
     let errs = tc.take_errors();
-    assert!(errs.iter().all(|e| !matches!(e, medic_typeck::type_checker::TypeError::PrivacyViolation { .. })));
+    assert!(errs.iter().all(|e| !matches!(e, tlvxc_typeck::type_checker::TypeError::PrivacyViolation { .. })));
 }

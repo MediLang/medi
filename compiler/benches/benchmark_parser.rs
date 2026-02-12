@@ -3,20 +3,20 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use medic_lexer::lexer::Lexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_lexer::lexer::Lexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 
 fn main() {
     println!("Loading test file...");
     let manifest_dir: &str = env!("CARGO_MANIFEST_DIR");
     let candidates = [
         // When running with benches as the manifest, file lives next to Cargo.toml
-        "large_test_file.medi",
+        "large_test_file.tlvx",
         // Fallback if executed from workspace root paths
-        "benches/large_test_file.medi",
+        "benches/large_test_file.tlvx",
         // Another fallback if run from repo root directly
-        "compiler/benches/large_test_file.medi",
+        "compiler/benches/large_test_file.tlvx",
     ];
     println!("CARGO_MANIFEST_DIR={manifest_dir}");
     let mut path: Option<PathBuf> = None;
@@ -28,7 +28,7 @@ fn main() {
             break;
         }
     }
-    let path = path.expect("Could not locate large_test_file.medi");
+    let path = path.expect("Could not locate large_test_file.tlvx");
     println!("Using file: {}", path.display());
     let content = fs::read_to_string(&path).expect("Failed to read test file");
 
@@ -41,7 +41,7 @@ fn main() {
     let boxed = Box::new(tokens);
     let leaked: &'static [Token] = Box::leak(boxed);
 
-    // Warm up (ignore success/failure; file might not be fully valid Medi source)
+    // Warm up (ignore success/failure; file might not be fully valid Tolvex source)
     println!("Warming up parser...");
     let _ = parse_program(TokenSlice(leaked));
 

@@ -1,0 +1,18 @@
+[package]
+name = "tlvxc_ide_server"
+version = "0.1.15"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.37", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tower-http = { version = "0.6", features = ["cors"] }
+
+tlvxc_ast = { path = "../tlvxc_ast" }
+tlvxc_env = { path = "../tlvxc_env" }
+tlvxc_lexer = { path = "../tlvxc_lexer" }
+tlvxc_parser = { path = "../tlvxc_parser" }
+tlvxc_type = { path = "../tlvxc_type" }
+tlvxc_typeck = { path = "../tlvxc_typeck" }

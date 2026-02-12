@@ -1,4 +1,4 @@
-use medic_lexer::{lexer::Lexer as OriginalLexer, token::Token};
+use tlvxc_lexer::{lexer::Lexer as OriginalLexer, token::Token};
 use std::error::Error;
 use std::fmt;
 use std::time::Instant;
@@ -128,7 +128,7 @@ fn run_benchmark() -> Result<BenchmarkStats, Box<dyn Error>> {
         // Check for lexer errors in the tokens
         let error_count = tokens
             .iter()
-            .filter(|t| matches!(t.token_type, medic_lexer::token::TokenType::Error(_)))
+            .filter(|t| matches!(t.token_type, tlvxc_lexer::token::TokenType::Error(_)))
             .count();
 
         let elapsed = start.elapsed().as_micros();
@@ -152,7 +152,7 @@ fn run_benchmark() -> Result<BenchmarkStats, Box<dyn Error>> {
             // Print the first few errors for debugging
             let errors: Vec<_> = tokens
                 .iter()
-                .filter(|t| matches!(t.token_type, medic_lexer::token::TokenType::Error(_)))
+                .filter(|t| matches!(t.token_type, tlvxc_lexer::token::TokenType::Error(_)))
                 .take(3) // Limit to first 3 errors to avoid flooding output
                 .collect();
 

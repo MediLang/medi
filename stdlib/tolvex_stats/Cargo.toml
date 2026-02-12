@@ -1,0 +1,28 @@
+[package]
+name = "tolvex_stats"
+version = "0.1.15"
+edition = "2021"
+description = "Medi standard library: basic statistical functions"
+license = "Apache-2.0"
+
+[lib]
+name = "tolvex_stats"
+path = "src/lib.rs"
+
+[features]
+pvalue = ["statrs"]
+fhir = ["tolvex_data"]
+
+[dev-dependencies]
+approx = "0.5"
+
+[dependencies]
+rand = "0.8"
+
+[dependencies.statrs]
+version = "0.16"
+optional = true
+
+[dependencies.tolvex_data]
+path = "../tolvex_data"
+optional = true

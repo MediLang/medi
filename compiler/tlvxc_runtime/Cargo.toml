@@ -1,0 +1,42 @@
+[package]
+name = "tlvxc_runtime"
+version = "0.1.15"
+edition = "2021"
+
+[dependencies]
+thiserror = "1"
+crossbeam-deque = "0.8"
+num_cpus = "1"
+core_affinity = "0.7"
+crossbeam-channel = "0.5"
+
+[dependencies.aes-gcm]
+version = "0.10"
+optional = true
+
+[dependencies.rand_core]
+version = "0.6"
+optional = true
+
+[features]
+# Enable a simple GC-backed safe zone (stubs for now)
+gc = ["gc-incremental", "gc-card-table"]
+# Enable simplified real-time zones (no-alloc stubs for now)
+rt_zones = []
+# Enable incremental/chunked GC prototype
+gc-incremental = []
+# Enable card table prototype for generational write barriers
+gc-card-table = []
+# Enable privacy-preserving distributed computing primitives.
+distributed = ["aes-gcm", "rand_core"]
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "gc_benches"
+harness = false
+
+[[bench]]
+name = "scheduler_benches"
+harness = false

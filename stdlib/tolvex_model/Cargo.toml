@@ -1,0 +1,20 @@
+[package]
+name = "tolvex_model"
+version = "0.1.15"
+edition = "2021"
+
+[features]
+default = []
+onnx = []
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+parking_lot = "0.12"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Note: ONNX and TFLite backends are currently stubs
+# Full implementations would require:
+# ort = { version = "2.0.0-rc.10", optional = true }
+# ndarray = { version = "0.16", optional = true }

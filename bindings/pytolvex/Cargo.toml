@@ -1,0 +1,17 @@
+[package]
+name = "pytolvex"
+version = "0.1.15"
+edition = "2021"
+
+[lib]
+name = "pytolvex"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.24", features = ["extension-module"] }
+tolvex_stats = { path = "../../stdlib/tolvex_stats" }
+tolvex_data = { path = "../../stdlib/tolvex_data" }
+
+[features]
+# Enable this when building via maturin/pip. Kept explicit to avoid surprises in normal Rust builds.
+extension-module = ["pyo3/extension-module"]

@@ -6,10 +6,10 @@ edition = "2021"
 description = "Integration and system tests for the Medic compiler."
 
 [dependencies]
-medic_ast = { path = "../compiler/medic_ast" }
-medic_env = { path = "../compiler/medic_env" }
-medic_type = { path = "../compiler/medic_type" }
-medic_typeck = { path = "../compiler/medic_typeck" }
-medic_lexer = { path = "../compiler/medic_lexer" }
-medic_parser = { path = "../compiler/medic_parser" }
-medic_codegen_llvm = { path = "../compiler/medic_codegen_llvm", features = ["llvm", "quantity_ir"] }
+tlvxc_ast = { path = "../compiler/tlvxc_ast" }
+tlvxc_env = { path = "../compiler/tlvxc_env" }
+tlvxc_type = { path = "../compiler/tlvxc_type" }
+tlvxc_typeck = { path = "../compiler/tlvxc_typeck" }
+tlvxc_lexer = { path = "../compiler/tlvxc_lexer" }
+tlvxc_parser = { path = "../compiler/tlvxc_parser" }
+tlvxc_codegen_llvm = { path = "../compiler/tlvxc_codegen_llvm", features = ["llvm", "quantity_ir"] }

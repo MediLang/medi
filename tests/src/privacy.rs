@@ -1,8 +1,8 @@
-use medic_ast::ast::*;
-use medic_ast::visit::Span;
-use medic_env::env::TypeEnv;
-use medic_type::types::PrivacyAnnotation;
-use medic_typeck::type_checker::TypeChecker;
+use tlvxc_ast::ast::*;
+use tlvxc_ast::visit::Span;
+use tlvxc_env::env::TypeEnv;
+use tlvxc_type::types::PrivacyAnnotation;
+use tlvxc_typeck::type_checker::TypeChecker;
 
 #[test]
 fn privacy_anonymized_literal_sets_env_and_side_table() {

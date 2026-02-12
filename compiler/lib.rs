@@ -1,9 +1,9 @@
-pub mod medic_ast;
-pub mod medic_types;
-pub mod medic_env;
-pub mod medic_type;
-pub mod medic_parser;
-pub mod medic_lexer;
+pub mod tlvxc_ast;
+pub mod tlvxc_types;
+pub mod tlvxc_env;
+pub mod tlvxc_type;
+pub mod tlvxc_parser;
+pub mod tlvxc_lexer;
 
 #[cfg(test)]
 mod tests {

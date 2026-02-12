@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use medic_lexer::streaming_lexer::StreamingLexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_lexer::streaming_lexer::StreamingLexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 
-fn parse_program_from(src: &str) -> medic_ast::ast::ProgramNode {
+fn parse_program_from(src: &str) -> tlvxc_ast::ast::ProgramNode {
     let lx = StreamingLexer::new(src);
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
@@ -12,7 +12,7 @@ fn parse_program_from(src: &str) -> medic_ast::ast::ProgramNode {
 }
 
 fn bench_ir_and_object(c: &mut Criterion) {
-    let smoke = std::env::var("MEDI_BENCH_SMOKE").ok().is_some();
+    let smoke = std::env::var("TOLVEX_BENCH_SMOKE").ok().is_some();
 
     let mut group = c.benchmark_group("codegen");
     if smoke {
@@ -39,7 +39,7 @@ fn main() -> int {
 
     group.bench_function("generate_ir_small", |b| {
         b.iter(|| {
-            let ir = medic_codegen_llvm::generate_ir_string(&program_small).expect("ir");
+            let ir = tlvxc_codegen_llvm::generate_ir_string(&program_small).expect("ir");
             criterion::black_box(ir);
         })
     });
@@ -47,14 +47,14 @@ fn main() -> int {
     group.bench_function("generate_object_small", |b| {
         b.iter(|| {
             let obj =
-                medic_codegen_llvm::generate_x86_64_object_default(&program_small).expect("obj");
+                tlvxc_codegen_llvm::generate_x86_64_object_default(&program_small).expect("obj");
             criterion::black_box(obj.len());
         })
     });
 
     group.bench_function("generate_ir_loop", |b| {
         b.iter(|| {
-            let ir = medic_codegen_llvm::generate_ir_string(&program_loop).expect("ir");
+            let ir = tlvxc_codegen_llvm::generate_ir_string(&program_loop).expect("ir");
             criterion::black_box(ir);
         })
     });
@@ -62,7 +62,7 @@ fn main() -> int {
     group.bench_function("generate_object_loop", |b| {
         b.iter(|| {
             let obj =
-                medic_codegen_llvm::generate_x86_64_object_default(&program_loop).expect("obj");
+                tlvxc_codegen_llvm::generate_x86_64_object_default(&program_loop).expect("obj");
             criterion::black_box(obj.len());
         })
     });

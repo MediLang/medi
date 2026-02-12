@@ -1,9 +1,9 @@
-use medic_codegen_llvm::generate_x86_64_object_default;
-use medic_lexer::streaming_lexer::StreamingLexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_codegen_llvm::generate_x86_64_object_default;
+use tlvxc_lexer::streaming_lexer::StreamingLexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 
-fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
+fn program_for(src: &str) -> tlvxc_ast::ast::ProgramNode {
     let lx = StreamingLexer::new(src);
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
@@ -25,7 +25,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("mean.pre"), "expected mean.pre in IR, got:\n{}", ir);
     assert!(ir.contains("mean.loop"), "expected mean.loop in IR, got:\n{}", ir);
 }
@@ -45,7 +45,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("mean.pre"), "expected mean.pre in IR, got:\n{}", ir);
     assert!(ir.contains("mean.loop"), "expected mean.loop in IR, got:\n{}", ir);
 }
@@ -64,7 +64,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("welford.pre"), "expected welford.pre in IR, got:\n{}", ir);
     assert!(ir.contains("welford.loop"), "expected welford.loop in IR, got:\n{}", ir);
 }
@@ -84,7 +84,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("welford.pre"), "expected welford.pre in IR, got:\n{}", ir);
     assert!(ir.contains("welford.loop"), "expected welford.loop in IR, got:\n{}", ir);
 }
@@ -105,14 +105,14 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("kahan.pre"), "expected kahan.pre in IR, got:\n{}", ir);
 }
 
 #[test]
 fn x86_ir_tiled_loop_blocks_under_aggressive_pipeline() {
     // Force aggressive pipeline behavior at IR-lowering time (we check env var in codegen)
-    std::env::set_var("MEDI_LLVM_PIPE", "aggressive");
+    std::env::set_var("TOLVEX_LLVM_PIPE", "aggressive");
     let src = r#"
 fn main() -> int {
   let s = 0;
@@ -128,13 +128,13 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     // With aggressive pipeline, we now emit real tiled loops from actual code
     assert!(ir.contains("tile.cond"), "expected tiled loop blocks in IR, got:\n{}", ir);
     assert!(ir.contains("tile.inner.body"), "expected inner tiled loop body, got:\n{}", ir);
     assert!(ir.contains("llvm.prefetch"), "expected prefetch in tiled loop, got:\n{}", ir);
     // clean up
-    std::env::remove_var("MEDI_LLVM_PIPE");
+    std::env::remove_var("TOLVEX_LLVM_PIPE");
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     // Look for kahan loop blocks we emit (kahan.pre / kahan.loop / kahan.end)
     assert!(ir.contains("kahan.pre"), "expected kahan.pre in IR, got:\n{}", ir);
     assert!(ir.contains("kahan.loop"), "expected kahan.loop in IR, got:\n{}", ir);
@@ -160,8 +160,8 @@ fn main() -> int {
 #[test]
 fn x86_ir_real_loop_tiling_with_prefetch() {
     // Test that real loops get tiled with prefetch under aggressive pipeline
-    std::env::set_var("MEDI_LLVM_PIPE", "aggressive");
-    std::env::set_var("MEDI_TILE_SIZE", "16"); // Small tile for testing
+    std::env::set_var("TOLVEX_LLVM_PIPE", "aggressive");
+    std::env::set_var("TOLVEX_TILE_SIZE", "16"); // Small tile for testing
     let src = r#"
 fn process_array() -> int {
   let sum = 0;
@@ -175,7 +175,7 @@ fn process_array() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     
     // Check for tiled structure from real loop transformation
     assert!(ir.contains("tile.cond"), "expected outer tile condition, got:\n{}", ir);
@@ -185,17 +185,17 @@ fn process_array() -> int {
     assert!(ir.contains("llvm.prefetch.p0"), "expected prefetch intrinsic, got:\n{}", ir);
     
     // Check for loop metadata emission
-    assert!(ir.contains("medi.loop.info"), "expected loop metadata global, got:\n{}", ir);
+    assert!(ir.contains("tolvex.loop.info"), "expected loop metadata global, got:\n{}", ir);
     
     // clean up
-    std::env::remove_var("MEDI_LLVM_PIPE");
-    std::env::remove_var("MEDI_TILE_SIZE");
+    std::env::remove_var("TOLVEX_LLVM_PIPE");
+    std::env::remove_var("TOLVEX_TILE_SIZE");
 }
 
 #[test]
 fn x86_ir_vectorization_passes_enabled() {
     // Test that SIMD vectorization passes are applied under aggressive pipeline
-    std::env::set_var("MEDI_LLVM_PIPE", "aggressive");
+    std::env::set_var("TOLVEX_LLVM_PIPE", "aggressive");
     let src = r#"
 fn vector_sum() -> float {
   let arr = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
@@ -210,20 +210,20 @@ fn vector_sum() -> float {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     
     // Check that vectorization-friendly IR is generated
     // The presence of loops and array access should trigger vectorization passes
     assert!(ir.contains("for."), "expected loop structure for vectorization");
     
     // clean up
-    std::env::remove_var("MEDI_LLVM_PIPE");
+    std::env::remove_var("TOLVEX_LLVM_PIPE");
 }
 
 #[test]
 fn x86_ir_function_level_optimizations() {
     // Test function-level optimizations like inlining and DCE
-    std::env::set_var("MEDI_LLVM_PIPE", "aggressive");
+    std::env::set_var("TOLVEX_LLVM_PIPE", "aggressive");
     let src = r#"
 fn helper(x: int) -> int {
   return x + 1
@@ -239,7 +239,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     
     // Check that both functions are present (inlining happens at later stages)
     assert!(ir.contains("define"), "expected function definitions");
@@ -247,13 +247,13 @@ fn main() -> int {
     assert!(ir.contains("main"), "expected main function");
     
     // clean up
-    std::env::remove_var("MEDI_LLVM_PIPE");
+    std::env::remove_var("TOLVEX_LLVM_PIPE");
 }
 
 #[test]
 fn x86_ir_healthcare_numerics_bmi_pattern() {
     // Test healthcare-specific BMI calculation optimization
-    std::env::set_var("MEDI_LLVM_PIPE", "aggressive");
+    std::env::set_var("TOLVEX_LLVM_PIPE", "aggressive");
     let src = r#"
 fn calculate_bmi(weight: float, height: float) -> float {
   let height_sq = height * height;
@@ -265,14 +265,14 @@ fn calculate_bmi(weight: float, height: float) -> float {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     
     // Check for BMI calculation pattern
     assert!(ir.contains("fmul"), "expected multiplication for height squared");
     assert!(ir.contains("fdiv"), "expected division for BMI calculation");
     
     // clean up
-    std::env::remove_var("MEDI_LLVM_PIPE");
+    std::env::remove_var("TOLVEX_LLVM_PIPE");
 }
 
 #[test]
@@ -291,7 +291,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("llvm.memcpy"), "expected llvm.memcpy in IR, got:\n{}", ir);
 }
 
@@ -309,7 +309,7 @@ fn main() -> int {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("llvm.prefetch"), "expected llvm.prefetch in IR, got:\n{}", ir);
 }
 
@@ -431,7 +431,7 @@ fn copy_big() {
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);
     let (_rest, program) = parse_program(input).expect("parse ok");
-    let ir = medic_codegen_llvm::generate_ir_string(&program).expect("ir ok");
+    let ir = tlvxc_codegen_llvm::generate_ir_string(&program).expect("ir ok");
     assert!(ir.contains("llvm.memcpy"), "expected llvm.memcpy in IR, got:\n{}", ir);
 }
 

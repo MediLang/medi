@@ -1,6 +1,6 @@
 [
   {
-    "name": "medi_data_hl7_patient_pipeline",
+    "name": "tolvex_data_hl7_patient_pipeline",
     "iterations": 20,
     "repeats": 3,
     "avg_time_ms": 0.0017381500000000002,
@@ -17,7 +17,7 @@
       "bundle_n": "5000",
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "obs_n": "20000",
       "patient_id": "P12345",
       "ram": "31.2 GB",
@@ -27,7 +27,7 @@
     }
   },
   {
-    "name": "medi_data_observation_validate_query",
+    "name": "tolvex_data_observation_validate_query",
     "iterations": 20,
     "repeats": 3,
     "avg_time_ms": 2.9215776000000004,
@@ -44,7 +44,7 @@
       "bundle_n": "5000",
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "matched": "10000",
       "obs_n": "20000",
       "observations": "20000",
@@ -55,7 +55,7 @@
     }
   },
   {
-    "name": "medi_data_observation_validate_query_parallel",
+    "name": "tolvex_data_observation_validate_query_parallel",
     "iterations": 10,
     "repeats": 3,
     "avg_time_ms": 2.7789305333333334,
@@ -72,7 +72,7 @@
       "bundle_n": "5000",
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "matched": "10000",
       "obs_n": "20000",
       "observations": "20000",
@@ -84,7 +84,7 @@
     }
   },
   {
-    "name": "medi_data_bundle_validate",
+    "name": "tolvex_data_bundle_validate",
     "iterations": 10,
     "repeats": 3,
     "avg_time_ms": 0.9228155,
@@ -102,7 +102,7 @@
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "entries": "5000",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "obs_n": "20000",
       "ram": "31.2 GB",
       "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
@@ -111,7 +111,7 @@
     }
   },
   {
-    "name": "medi_data_observation_ndjson_roundtrip",
+    "name": "tolvex_data_observation_ndjson_roundtrip",
     "iterations": 10,
     "repeats": 3,
     "avg_time_ms": 8.1586084,
@@ -130,7 +130,7 @@
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
       "items": "20000",
-      "lang": "medi",
+      "lang": "tolvex",
       "obs_n": "20000",
       "ram": "31.2 GB",
       "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
@@ -139,7 +139,7 @@
     }
   },
   {
-    "name": "medi_stats_t_test_welch",
+    "name": "tolvex_stats_t_test_welch",
     "iterations": 1000,
     "repeats": 3,
     "avg_time_ms": 0.0003910856666666635,
@@ -157,7 +157,7 @@
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "df": "6.0",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "obs_n": "20000",
       "ram": "31.2 GB",
       "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
@@ -167,7 +167,7 @@
     }
   },
   {
-    "name": "medi_compliance_hipaa_keywords",
+    "name": "tolvex_compliance_hipaa_keywords",
     "iterations": 1000,
     "repeats": 3,
     "avg_time_ms": 0.0002790183333333295,
@@ -185,7 +185,7 @@
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "failed": "1",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "obs_n": "20000",
       "ram": "31.2 GB",
       "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",
@@ -194,7 +194,7 @@
     }
   },
   {
-    "name": "medi_ai_risk_score",
+    "name": "tolvex_ai_risk_score",
     "iterations": 1000,
     "repeats": 3,
     "avg_time_ms": 0.00010301699999999667,
@@ -211,7 +211,7 @@
       "bundle_n": "5000",
       "cpu": "AMD Ryzen 5 5600G with Radeon Graphics",
       "git_sha": "1522d1d2ad6c53ae35327f18b10c9307efeee7f2",
-      "lang": "medi",
+      "lang": "tolvex",
       "obs_n": "20000",
       "ram": "31.2 GB",
       "rust": "rustc 1.88.0 (6b00bc388 2025-06-23)",

@@ -1,0 +1,9 @@
+[package]
+name = "tlvxc_env"
+version = "0.1.15"
+edition = "2021"
+
+[dependencies]
+tlvxc_type = { path = "../tlvxc_type" }
+
+

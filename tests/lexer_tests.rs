@@ -1,5 +1,5 @@
 // Unit tests for the Medi lexer (logos-based)
-use medi::lexer::Token;
+use tlvxc::lexer::Token;
 use logos::Logos;
 
 #[test]

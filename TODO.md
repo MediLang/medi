@@ -103,43 +103,43 @@
   - [x] Low-latency I/O
   - [x] Device protocol support
 
-### 1.3 REBRANDING (v0.1.6)
-- [ ] Step 1: Rename compiler crate directories
-  - [ ] `compiler/medic` → `compiler/tlvxc`
-  - [ ] `compiler/medic_ast` → `compiler/tlvxc_ast`
-  - [ ] `compiler/medic_borrowck` → `compiler/tlvxc_borrowck`
-  - [ ] `compiler/medic_codegen_llvm` → `compiler/tlvxc_codegen_llvm`
-  - [ ] `compiler/medic_env` → `compiler/tlvxc_env`
-  - [ ] `compiler/medic_ide_server` → `compiler/tlvxc_ide_server`
-  - [ ] `compiler/medic_lexer` → `compiler/tlvxc_lexer`
-  - [ ] `compiler/medic_parser` → `compiler/tlvxc_parser`
-  - [ ] `compiler/medic_runtime` → `compiler/tlvxc_runtime`
-  - [ ] `compiler/medic_type` → `compiler/tlvxc_type`
-  - [ ] `compiler/medic_typeck` → `compiler/tlvxc_typeck`
-  - [ ] `compiler/medipack` → `compiler/tolvexpack`
-- [ ] Step 2: Rename stdlib crate directories
-  - [ ] `stdlib/medi_ai` → `stdlib/tolvex_ai`
-  - [ ] `stdlib/medi_compliance` → `stdlib/tolvex_compliance`
-  - [ ] `stdlib/medi_core` → `stdlib/tolvex_core`
-  - [ ] `stdlib/medi_data` → `stdlib/tolvex_data`
-  - [ ] `stdlib/medi_model` → `stdlib/tolvex_model`
-  - [ ] `stdlib/medi_privacy` → `stdlib/tolvex_privacy`
-  - [ ] `stdlib/medi_rt` → `stdlib/tolvex_rt`
-  - [ ] `stdlib/medi_standards` → `stdlib/tolvex_standards`
-  - [ ] `stdlib/medi_stats` → `stdlib/tolvex_stats`
-- [ ] Step 3: Rename bindings directory (`bindings/pymedi` → `bindings/pytolvex`)
-- [ ] Step 4: Update root `Cargo.toml` workspace members
-- [ ] Step 5: Update every crate's `Cargo.toml` (names, deps, paths, bin targets)
-- [ ] Step 6: Global find-replace in all `.rs` files
-  - [ ] Crate references: `medic_*` → `tlvxc_*`
-  - [ ] Stdlib references: `medi_*` → `tolvex_*`
-  - [ ] Binary/tool references: `medipack` → `tolvexpack`, `pymedi` → `pytolvex`
-  - [ ] String literals: `"Medi"` → `"Tolvex"`, `"medi"` → `"tolvex"`, `"MEDI"` → `"TOLVEX"`
-  - [ ] Env vars: `MEDI_*` → `TOLVEX_*`
-  - [ ] Identifiers: `MediLang` → `TolvexLang`, `medi-lang` → `tolvex-lang`
+-### 1.3 REBRANDING (v0.1.6)
+- [x] Step 1: Rename compiler crate directories
+  - [x] `compiler/medic` → `compiler/tlvxc`
+  - [x] `compiler/medic_ast` → `compiler/tlvxc_ast`
+  - [x] `compiler/medic_borrowck` → `compiler/tlvxc_borrowck`
+  - [x] `compiler/medic_codegen_llvm` → `compiler/tlvxc_codegen_llvm`
+  - [x] `compiler/medic_env` → `compiler/tlvxc_env`
+  - [x] `compiler/medic_ide_server` → `compiler/tlvxc_ide_server`
+  - [x] `compiler/medic_lexer` → `compiler/tlvxc_lexer`
+  - [x] `compiler/medic_parser` → `compiler/tlvxc_parser`
+  - [x] `compiler/medic_runtime` → `compiler/tlvxc_runtime`
+  - [x] `compiler/medic_type` → `compiler/tlvxc_type`
+  - [x] `compiler/medic_typeck` → `compiler/tlvxc_typeck`
+  - [x] `compiler/medipack` → `compiler/tolvexpack`
+- [x] Step 2: Rename stdlib crate directories
+  - [x] `stdlib/medi_ai` → `stdlib/tolvex_ai`
+  - [x] `stdlib/medi_compliance` → `stdlib/tolvex_compliance`
+  - [x] `stdlib/medi_core` → `stdlib/tolvex_core`
+  - [x] `stdlib/medi_data` → `stdlib/tolvex_data`
+  - [x] `stdlib/medi_model` → `stdlib/tolvex_model`
+  - [x] `stdlib/medi_privacy` → `stdlib/tolvex_privacy`
+  - [x] `stdlib/medi_rt` → `stdlib/tolvex_rt`
+  - [x] `stdlib/medi_standards` → `stdlib/tolvex_standards`
+  - [x] `stdlib/medi_stats` → `stdlib/tolvex_stats`
+- [x] Step 3: Rename bindings directory (`bindings/pymedi` → `bindings/pytolvex`)
+- [x] Step 4: Update root `Cargo.toml` workspace members
+- [x] Step 5: Update every crate's `Cargo.toml` (names, deps, paths, bin targets)
+- [x] Step 6: Global find-replace in all `.rs` files
+  - [x] Crate references: `medic_*` → `tlvxc_*`
+  - [x] Stdlib references: `medi_*` → `tolvex_*`
+  - [x] Binary/tool references: `medipack` → `tolvexpack`, `pymedi` → `pytolvex`
+  - [x] String literals: "Medi" → "Tolvex", "medi" → "tolvex", "MEDI" → "TOLVEX"
+  - [x] Env vars: `MEDI_*` → `TOLVEX_*`
+  - [x] Identifiers: `MediLang` → `TolvexLang`, `medi-lang` → `tolvex-lang`
 - [ ] Step 7: Rename `.medi` files → `.tlvx` (19 files) and update hardcoded refs
 - [ ] Step 8: Update documentation files
-  - [ ] Replace `README.md` with `TOLVEX.md` content
+  - [ ] Update `README.md` with `TOLVEX.md` content
   - [ ] Update `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
   - [ ] Update `LANG_SPEC.md`, `ECOSYSTEM_ROADMAP.md`, `SELF_HOSTING.md`
   - [ ] Rename `README-MediCMM.md` → `README-TolvexCMM.md`

@@ -1,9 +1,9 @@
 #![allow(clippy::useless_conversion)]
-use medic_ast::ast::*;
-use medic_ast::visit::Span;
-use medic_env::env::TypeEnv;
-use medic_type::types::{MediType, PrivacyAnnotation};
-use medic_typeck::type_checker::{TypeChecker, TypeError};
+use tlvxc_ast::ast::*;
+use tlvxc_ast::visit::Span;
+use tlvxc_env::env::TypeEnv;
+use tlvxc_type::types::{MediType, PrivacyAnnotation};
+use tlvxc_typeck::type_checker::{TypeChecker, TypeError};
 
 #[test]
 fn annotated_let_type_mismatch_reports_error() {
@@ -25,8 +25,8 @@ fn annotated_let_type_mismatch_reports_error() {
     let err = tc.check_stmt(&stmt).unwrap_err();
     match err {
         TypeError::TypeMismatch { expected, found } => {
-            assert_eq!(expected, medic_type::types::MediType::String);
-            assert_eq!(found, medic_type::types::MediType::Int);
+            assert_eq!(expected, tlvxc_type::types::MediType::String);
+            assert_eq!(found, tlvxc_type::types::MediType::Int);
         }
         other => panic!("expected TypeMismatch, got {other:?}"),
     }

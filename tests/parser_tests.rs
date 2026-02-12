@@ -1,6 +1,6 @@
 // Unit tests for the Medi parser (Rust)
-use medi::parser::{parse_expression, parse_program};
-use medi::ast::{ExpressionNode, LiteralNode, BinaryOperator, BinaryExpressionNode, StatementNode, LetStatementNode, AssignmentNode, BlockNode, IfNode};
+use tlvxc::parser::{parse_expression, parse_program};
+use tlvxc::ast::{ExpressionNode, LiteralNode, BinaryOperator, BinaryExpressionNode, StatementNode, LetStatementNode, AssignmentNode, BlockNode, IfNode};
 
 #[test]
 fn test_simple_binary_expression() {
@@ -19,7 +19,7 @@ fn test_simple_binary_expression() {
 
 #[test]
 fn test_function_call_expression() {
-    use medi::ast::CallExpressionNode;
+    use tlvxc::ast::CallExpressionNode;
     let input = "foo(bar, 42)";
     let (_rest, expr) = parse_expression(input).unwrap();
     assert_eq!(expr, ExpressionNode::Call(Box::new(CallExpressionNode {
@@ -33,7 +33,7 @@ fn test_function_call_expression() {
 
 #[test]
 fn test_healthcare_query_expression() {
-    use medi::ast::HealthcareQueryNode;
+    use tlvxc::ast::HealthcareQueryNode;
     let input = "fhir_query(\"Patient\", age > 65)";
     let (_rest, expr) = parse_expression(input).unwrap();
     assert_eq!(expr, ExpressionNode::HealthcareQuery(Box::new(HealthcareQueryNode {
@@ -51,7 +51,7 @@ fn test_healthcare_query_expression() {
 
 #[test]
 fn test_member_access_expression() {
-    use medi::ast::MemberExpressionNode;
+    use tlvxc::ast::MemberExpressionNode;
     let input = "patient.name.first";
     let (_rest, expr) = parse_expression(input).unwrap();
     assert_eq!(expr, ExpressionNode::Member(Box::new(MemberExpressionNode {

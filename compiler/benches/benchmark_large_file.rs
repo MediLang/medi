@@ -1,4 +1,4 @@
-use medic_lexer::{
+use tlvxc_lexer::{
     chunked_lexer::{ChunkedLexer, ChunkedLexerConfig},
     lexer::Lexer as OriginalLexer,
     streaming_lexer::StreamingLexer,
@@ -80,7 +80,7 @@ fn format_memory(kb: u64) -> String {
 fn main() {
     println!("Loading test file...");
     let content =
-        fs::read_to_string("benches/large_test_file.medi").expect("Failed to read test file");
+        fs::read_to_string("benches/large_test_file.tlvx").expect("Failed to read test file");
 
     println!("\n=== Running Benchmarks (10 iterations each) ===\n");
 

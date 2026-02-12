@@ -1,11 +1,11 @@
-use medic_codegen_llvm::generate_riscv32_object_with_opts_types_and_specs;
-use medic_lexer::streaming_lexer::StreamingLexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_codegen_llvm::generate_riscv32_object_with_opts_types_and_specs;
+use tlvxc_lexer::streaming_lexer::StreamingLexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 use std::io::Write;
 use std::process::Command;
 
-fn program_for(src: &str) -> medic_ast::ast::ProgramNode {
+fn program_for(src: &str) -> tlvxc_ast::ast::ProgramNode {
     let lx = StreamingLexer::new(src);
     let tokens: Vec<Token> = lx.collect();
     let input = TokenSlice::new(&tokens);

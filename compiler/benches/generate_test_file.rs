@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 
 fn main() {
-    let output_path = "benches/large_test_file.medi";
+    let output_path = "benches/large_test_file.tlvx";
     let target_size = 1024 * 1024; // 1MB
     let target_tokens = 50_000;
 

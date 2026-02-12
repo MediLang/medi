@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
-use medic_lexer::lexer::Lexer as OriginalLexer;
+use tlvxc_lexer::lexer::Lexer as OriginalLexer;
 use std::time::Duration;
 
 // Simple test content for benchmarking

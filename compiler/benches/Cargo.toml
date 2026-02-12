@@ -1,5 +1,5 @@
 [package]
-name = "medic_benchmarks"
+name = "tlvxc_benchmarks"
 version = "0.1.15"
 edition = "2021"
 
@@ -44,14 +44,14 @@ name = "lexer_simple_benchmark"
 path = "lexer_simple_benchmark.rs"
 
 [dependencies]
-medic_lexer = { path = "../medic_lexer" }
-medic_parser = { path = "../medic_parser" }
-medic_ast = { path = "../medic_ast" }
-medic_borrowck = { path = "../medic_borrowck" }
-medi_data = { path = "../../stdlib/medi_data" }
-medi_stats = { path = "../../stdlib/medi_stats" }
-medi_compliance = { path = "../../stdlib/medi_compliance" }
-medi_ai = { path = "../../stdlib/medi_ai" }
+tlvxc_lexer = { path = "../tlvxc_lexer" }
+tlvxc_parser = { path = "../tlvxc_parser" }
+tlvxc_ast = { path = "../tlvxc_ast" }
+tlvxc_borrowck = { path = "../tlvxc_borrowck" }
+tolvex_data = { path = "../../stdlib/tolvex_data" }
+tolvex_stats = { path = "../../stdlib/tolvex_stats" }
+tolvex_compliance = { path = "../../stdlib/tolvex_compliance" }
+tolvex_ai = { path = "../../stdlib/tolvex_ai" }
 criterion = { version = "0.5", features = ["html_reports"] }
 memory-stats = "1.2.0"
 rand = "0.8"
@@ -64,11 +64,11 @@ num_cpus = "1.16"
 sys-info = "0.9.1"
 
 # Optional LLVM-dependent codegen crate; only enabled for codegen_bench
-medic_codegen_llvm = { path = "../medic_codegen_llvm", features = ["llvm"], optional = true }
+tlvxc_codegen_llvm = { path = "../tlvxc_codegen_llvm", features = ["llvm"], optional = true }
 
 [features]
 default = []
-codegen-bench = ["medic_codegen_llvm"]
+codegen-bench = ["tlvxc_codegen_llvm"]
 
 [[bench]]
 name = "parse_profile"

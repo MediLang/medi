@@ -1,0 +1,16 @@
+[package]
+name = "tolvex_privacy"
+version = "0.1.15"
+edition = "2021"
+description = "Medi standard library: differential privacy and privacy budget utilities"
+license = "Apache-2.0"
+
+[lib]
+name = "tolvex_privacy"
+path = "src/lib.rs"
+
+[dependencies]
+rand = "0.8"
+
+[dev-dependencies]
+approx = "0.5"

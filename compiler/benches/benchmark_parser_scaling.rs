@@ -2,9 +2,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use medic_lexer::lexer::Lexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_lexer::lexer::Lexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 
 // Silence stdout/stderr during parsing to avoid debug print overhead
 use std::fs::OpenOptions;
@@ -83,7 +83,7 @@ fn main() -> std::io::Result<()> {
     println!("kind,size,bytes,ok,stmts,time_ms");
     for kind in kinds.iter() {
         for size in sizes.iter() {
-            let fname = format!("large_{kind}_{size}.medi");
+            let fname = format!("large_{kind}_{size}.tlvx");
             let path = base.join(&fname);
             if !path.exists() {
                 eprintln!(

@@ -1,18 +1,19 @@
 [workspace]
 resolver = "2"
 members = [
-    "medic",
-    "medic_ast",
-    "medic_env",
-    "medic_lexer",
-    "medic_parser",
-    "medic_type",
-    "medic_typeck",
-    "medic_ide_server",
-    "medic_codegen_llvm",
-    "benches",
-    "medic_borrowck",
-    "medic_runtime"
+    "tlvxc",
+    "tlvxc_ast",
+    "tlvxc_env",
+    "tlvxc_lexer",
+    "tlvxc_parser",
+    "tlvxc_type",
+    "tlvxc_typeck",
+    "tlvxc_ide_server",
+    "tlvxc_codegen_llvm",
+    "tlvxc_borrowck",
+    "tlvxc_runtime",
+    "tolvexpack",
+    "benches"
 ]
 
 [workspace.dependencies]

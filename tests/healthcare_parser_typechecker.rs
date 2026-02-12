@@ -1,7 +1,7 @@
-use medi::parser::{parse_program, StatementNode};
-use medi::type_checker::{DefaultTypeChecker, TypeEnv, TypeError};
-use medi::types::MediType;
-use medi::env::TypeEnv;
+use tlvxc::parser::{parse_program, StatementNode};
+use tlvxc::type_checker::{DefaultTypeChecker, TypeEnv, TypeError};
+use tlvxc::types::MediType;
+use tlvxc::env::TypeEnv;
 use std::collections::HashMap;
 
 #[test]
@@ -27,8 +27,8 @@ fn test_clinical_workflow_med_interaction_gate() {
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
-    env.insert("alert".to_string(), medi::types::MediType::String);
-    env.insert("String".to_string(), medi::types::MediType::String);
+    env.insert("alert".to_string(), tlvxc::types::MediType::String);
+    env.insert("String".to_string(), tlvxc::types::MediType::String);
     let mut checker = DefaultTypeChecker::new_with_env(env);
     for stmt in &stmts {
         assert!(checker.check_stmt(stmt).is_ok());
@@ -50,27 +50,27 @@ fn test_clinical_workflow_record_ops_and_rule() {
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
     // Provide environment bindings used by the code
-    env.insert("r1".to_string(), medi::types::MediType::MedicalRecord);
-    env.insert("r2".to_string(), medi::types::MediType::MedicalRecord);
-    env.insert("risk_score".to_string(), medi::types::MediType::Int);
-    env.insert("alert".to_string(), medi::types::MediType::String);
-    env.insert("String".to_string(), medi::types::MediType::String);
-    env.insert("Int".to_string(), medi::types::MediType::Int);
+    env.insert("r1".to_string(), tlvxc::types::MediType::MedicalRecord);
+    env.insert("r2".to_string(), tlvxc::types::MediType::MedicalRecord);
+    env.insert("risk_score".to_string(), tlvxc::types::MediType::Int);
+    env.insert("alert".to_string(), tlvxc::types::MediType::String);
+    env.insert("String".to_string(), tlvxc::types::MediType::String);
+    env.insert("Int".to_string(), tlvxc::types::MediType::Int);
     let mut checker = DefaultTypeChecker::new_with_env(env);
     for stmt in &stmts {
         assert!(checker.check_stmt(stmt).is_ok());
     }
     // Ensure rec inferred type is MedicalRecord
     let rec_ty = checker.env().get("rec").cloned().expect("rec bound");
-    assert_eq!(rec_ty, medi::types::MediType::MedicalRecord);
+    assert_eq!(rec_ty, tlvxc::types::MediType::MedicalRecord);
 }
 
 #[test]
 fn test_record_pipelines_plus_union_intersection() {
     // Prepare env with two medical records
     let mut env = TypeEnv::with_prelude();
-    env.insert("r1".to_string(), medi::types::MediType::MedicalRecord);
-    env.insert("r2".to_string(), medi::types::MediType::MedicalRecord);
+    env.insert("r1".to_string(), tlvxc::types::MediType::MedicalRecord);
+    env.insert("r2".to_string(), tlvxc::types::MediType::MedicalRecord);
 
     // Mix +, |, & in a pipeline; should type to MedicalRecord without errors
     let code = r#"
@@ -85,7 +85,7 @@ fn test_record_pipelines_plus_union_intersection() {
     }
     // r should be MedicalRecord
     let r_ty = checker.env().get("r").cloned().expect("r bound");
-    assert_eq!(r_ty, medi::types::MediType::MedicalRecord);
+    assert_eq!(r_ty, tlvxc::types::MediType::MedicalRecord);
 }
 
 #[test]
@@ -119,8 +119,8 @@ fn test_quantity_of_per_assignment_and_mismatch() {
     let env = checker.env();
     let q_ty = env.get("q").cloned().expect("q bound");
     let rate_ty = env.get("rate").cloned().expect("rate bound");
-    match q_ty { medi::types::MediType::Quantity(inner) => assert_eq!(*inner, medi::types::MediType::Int), other => panic!("expected Quantity(Int), got {other:?}") }
-    match rate_ty { medi::types::MediType::Quantity(inner) => assert_eq!(*inner, medi::types::MediType::Float), other => panic!("expected Quantity(Float), got {other:?}") }
+    match q_ty { tlvxc::types::MediType::Quantity(inner) => assert_eq!(*inner, tlvxc::types::MediType::Int), other => panic!("expected Quantity(Int), got {other:?}") }
+    match rate_ty { tlvxc::types::MediType::Quantity(inner) => assert_eq!(*inner, tlvxc::types::MediType::Float), other => panic!("expected Quantity(Float), got {other:?}") }
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn test_domain_errors_invalid_of_per_and_record_set_mismatch() {
     let (_rest, stmts) = parse_program(code).unwrap();
 
     let mut env = TypeEnv::with_prelude();
-    env.insert("r".to_string(), medi::types::MediType::MedicalRecord);
+    env.insert("r".to_string(), tlvxc::types::MediType::MedicalRecord);
     let mut checker = DefaultTypeChecker::new_with_env(env);
 
     let mut found_domain_err = 0;
@@ -150,8 +150,8 @@ fn test_domain_errors_invalid_of_per_and_record_set_mismatch() {
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
-    env.insert("Int".to_string(), medi::types::MediType::Int);
-    env.insert("String".to_string(), medi::types::MediType::String);
+    env.insert("Int".to_string(), tlvxc::types::MediType::Int);
+    env.insert("String".to_string(), tlvxc::types::MediType::String);
     let mut checker = DefaultTypeChecker::new_with_env(env);
     for stmt in &stmts {
         assert!(checker.check_stmt(stmt).is_ok());
@@ -168,8 +168,8 @@ fn test_patient_record_declaration_invalid_type() {
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
-    env.insert("Int".to_string(), medi::types::MediType::Int);
-    env.insert("String".to_string(), medi::types::MediType::String);
+    env.insert("Int".to_string(), tlvxc::types::MediType::Int);
+    env.insert("String".to_string(), tlvxc::types::MediType::String);
     let mut checker = DefaultTypeChecker::new_with_env(env);
     let mut found_error = false;
     for stmt in &stmts {
@@ -195,11 +195,11 @@ fn test_clinical_rule_valid() {
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
     let mut patient_fields = HashMap::new();
-    patient_fields.insert("bp".to_string(), medi::types::MediType::Int);
-    env.insert("patient".to_string(), medi::types::MediType::Struct(patient_fields));
-    env.insert("alert".to_string(), medi::types::MediType::String);
-    env.insert("String".to_string(), medi::types::MediType::String);
-    env.insert("Int".to_string(), medi::types::MediType::Int);
+    patient_fields.insert("bp".to_string(), tlvxc::types::MediType::Int);
+    env.insert("patient".to_string(), tlvxc::types::MediType::Struct(patient_fields));
+    env.insert("alert".to_string(), tlvxc::types::MediType::String);
+    env.insert("String".to_string(), tlvxc::types::MediType::String);
+    env.insert("Int".to_string(), tlvxc::types::MediType::Int);
     let mut checker = DefaultTypeChecker::new_with_env(env);
     for stmt in &stmts {
         assert!(checker.check_stmt(stmt).is_ok());
@@ -218,9 +218,9 @@ fn test_clinical_rule_invalid_condition() {
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
-    env.insert("patient".to_string(), medi::types::MediType::Struct(Default::default()));
-    env.insert("alert".to_string(), medi::types::MediType::String);
-    env.insert("String".to_string(), medi::types::MediType::String);
+    env.insert("patient".to_string(), tlvxc::types::MediType::Struct(Default::default()));
+    env.insert("alert".to_string(), tlvxc::types::MediType::String);
+    env.insert("String".to_string(), tlvxc::types::MediType::String);
     let mut checker = DefaultTypeChecker::new_with_env(env);
     let mut found_error = false;
     for stmt in &stmts {
@@ -241,8 +241,8 @@ fn test_medical_transformation_valid() {
     "#;
     let (_rest, stmts) = parse_program(code).unwrap();
     let mut env = TypeEnv::with_prelude();
-    env.insert("patient".to_string(), medi::types::MediType::Int);
-    env.insert("NormalizeBP".to_string(), medi::types::MediType::Function { params: vec![medi::types::MediType::Int], return_type: Box::new(medi::types::MediType::Int) });
+    env.insert("patient".to_string(), tlvxc::types::MediType::Int);
+    env.insert("NormalizeBP".to_string(), tlvxc::types::MediType::Function { params: vec![tlvxc::types::MediType::Int], return_type: Box::new(tlvxc::types::MediType::Int) });
     let mut checker = DefaultTypeChecker::new_with_env(env);
     for stmt in &stmts {
         assert!(checker.check_stmt(stmt).is_ok());
@@ -261,8 +261,8 @@ fn test_medical_transformation_wrong_input() {
     let (_rest, stmts) = parse_program(code).unwrap();
     println!("[DEBUG] AST for medical transformation wrong input: {:#?}", stmts);
     let mut env = TypeEnv::with_prelude();
-    env.insert("patient".to_string(), medi::types::MediType::String);
-    env.insert("NormalizeBP".to_string(), medi::types::MediType::Function { params: vec![medi::types::MediType::Int], return_type: Box::new(medi::types::MediType::Int) });
+    env.insert("patient".to_string(), tlvxc::types::MediType::String);
+    env.insert("NormalizeBP".to_string(), tlvxc::types::MediType::Function { params: vec![tlvxc::types::MediType::Int], return_type: Box::new(tlvxc::types::MediType::Int) });
     let mut type_checker = DefaultTypeChecker::new_with_env(env);
     let errors = type_checker.check_program(&stmts); // stmts is ProgramNode here from parse_program
 

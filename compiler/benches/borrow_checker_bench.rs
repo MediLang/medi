@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use medic_ast::ast::*;
-use medic_ast::visit::Span;
-use medic_borrowck::BorrowChecker;
+use tlvxc_ast::ast::*;
+use tlvxc_ast::visit::Span;
+use tlvxc_borrowck::BorrowChecker;
 
 fn build_program(num_stmts: usize) -> ProgramNode {
     // Construct a program with a sequence of let/assign/expr patterns to simulate ~num_stmts scale

@@ -1,6 +1,6 @@
-use medi_ai::RiskScorer;
-use medi_compliance::{run_hipaa_bundle, HipaaKeywordRule, RuleSeverity};
-use medi_data::{
+use tolvex_ai::RiskScorer;
+use tolvex_compliance::{run_hipaa_bundle, HipaaKeywordRule, RuleSeverity};
+use tolvex_data::{
     fhir_query,
     hl7_fhir::hl7_to_fhir_patient_minimal,
     ndjson::{from_ndjson, to_ndjson},
@@ -9,7 +9,7 @@ use medi_data::{
     validate::{validate_observation, validate_patient},
     FHIRObservation,
 };
-use medi_stats::t_test_welch;
+use tolvex_stats::t_test_welch;
 use memory_stats::memory_stats;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -470,18 +470,18 @@ fn parse_subresults_container(container: WorkloadResult) -> Vec<WorkloadResult> 
 
 fn workload_group(name: &str) -> Option<&'static str> {
     match name {
-        "medi_compliance_hipaa_keywords" | "python_keyword_scan" | "r_keyword_scan" => {
+        "tolvex_compliance_hipaa_keywords" | "python_keyword_scan" | "r_keyword_scan" => {
             Some("keyword_scan")
         }
-        "medi_ai_risk_score" | "python_dot_product" | "r_dot_product" => Some("dot_product"),
+        "tolvex_ai_risk_score" | "python_dot_product" | "r_dot_product" => Some("dot_product"),
         "python_mean" | "r_mean" => Some("mean"),
-        "medi_data_observation_validate_query"
+        "tolvex_data_observation_validate_query"
         | "python_observation_validate_query"
         | "r_observation_validate_query" => Some("observation_validate_query"),
-        "medi_data_observation_ndjson_roundtrip"
+        "tolvex_data_observation_ndjson_roundtrip"
         | "python_observation_ndjson_roundtrip"
         | "r_observation_ndjson_roundtrip" => Some("observation_ndjson_roundtrip"),
-        "medi_data_observation_validate_query_parallel"
+        "tolvex_data_observation_validate_query_parallel"
         | "python_observation_validate_query_parallel"
         | "r_observation_validate_query_parallel" => Some("observation_validate_query_parallel"),
         _ => None,
@@ -666,7 +666,7 @@ fn run_workloads(
     let mut results: Vec<WorkloadResult> = Vec::new();
 
     let add_tier_meta = |mut r: WorkloadResult| {
-        r.meta.insert("lang".to_string(), "medi".to_string());
+        r.meta.insert("lang".to_string(), "tolvex".to_string());
         r.meta.insert("tier".to_string(), tier_label.to_string());
         r.meta.insert("obs_n".to_string(), cfg.obs_n.to_string());
         r.meta
@@ -681,7 +681,7 @@ fn run_workloads(
 
     // Workload 1: HL7 -> FHIR patient + sanitize + validate
     results.push(add_tier_meta(bench(
-        "medi_data_hl7_patient_pipeline",
+        "tolvex_data_hl7_patient_pipeline",
         cfg.iterations_medium,
         cfg.repeats,
         || {
@@ -699,7 +699,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 2: Observations validate + query
     results.push(add_tier_meta(bench(
-        "medi_data_observation_validate_query",
+        "tolvex_data_observation_validate_query",
         cfg.iterations_medium,
         cfg.repeats,
         || {
@@ -720,7 +720,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 2b: Observations validate in parallel + query
     results.push(add_tier_meta(bench(
-        "medi_data_observation_validate_query_parallel",
+        "tolvex_data_observation_validate_query_parallel",
         cfg.iterations_slow,
         cfg.repeats,
         || {
@@ -757,7 +757,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 3: Bundle validate (patients)
     results.push(add_tier_meta(bench(
-        "medi_data_bundle_validate",
+        "tolvex_data_bundle_validate",
         cfg.iterations_slow,
         cfg.repeats,
         || {
@@ -771,7 +771,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 4: NDJSON roundtrip I/O (serialize/parse)
     results.push(add_tier_meta(bench(
-        "medi_data_observation_ndjson_roundtrip",
+        "tolvex_data_observation_ndjson_roundtrip",
         cfg.iterations_slow,
         cfg.repeats,
         || {
@@ -787,7 +787,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 5: Stats t-test (Welch)
     results.push(add_tier_meta(bench(
-        "medi_stats_t_test_welch",
+        "tolvex_stats_t_test_welch",
         cfg.iterations_fast,
         cfg.repeats,
         || {
@@ -803,7 +803,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 6: HIPAA keyword scan
     results.push(add_tier_meta(bench(
-        "medi_compliance_hipaa_keywords",
+        "tolvex_compliance_hipaa_keywords",
         cfg.iterations_fast,
         cfg.repeats,
         || {
@@ -823,7 +823,7 @@ PID|1|ALTID|P12345||Doe^Jane||19851224|F\r";
 
     // Workload 7: AI risk scorer
     results.push(add_tier_meta(bench(
-        "medi_ai_risk_score",
+        "tolvex_ai_risk_score",
         cfg.iterations_fast,
         cfg.repeats,
         || {
@@ -955,7 +955,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         md.push_str("|---|---:|---:|---:|---:|---:|\n");
         for (g, langs) in groups {
-            let medi = langs.get("medi").copied();
+            let medi = langs.get("tolvex").copied();
             let py = langs.get("python").copied();
             let rlang = langs.get("r").copied();
             if medi.is_none() && py.is_none() && rlang.is_none() {

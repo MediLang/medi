@@ -56,13 +56,13 @@ fn expr_heavy() {
 
     for (bytes, label) in sizes {
         // Function-heavy files
-        let func_path = out_dir.join(format!("large_func_{label}.medi"));
+        let func_path = out_dir.join(format!("large_func_{label}.tlvx"));
         let f = File::create(&func_path)?;
         let wrote = repeat_to_size(&f, func_tpl, bytes)?;
         println!("Generated {} ({} bytes)", func_path.display(), wrote);
 
         // Expression-heavy files
-        let expr_path = out_dir.join(format!("large_expr_{label}.medi"));
+        let expr_path = out_dir.join(format!("large_expr_{label}.tlvx"));
         let f2 = File::create(&expr_path)?;
         let wrote2 = repeat_to_size(&f2, expr_tpl, bytes)?;
         println!("Generated {} ({} bytes)", expr_path.display(), wrote2);

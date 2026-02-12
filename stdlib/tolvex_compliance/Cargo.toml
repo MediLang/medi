@@ -1,0 +1,23 @@
+[package]
+name = "tolvex_compliance"
+version = "0.1.15"
+edition = "2021"
+description = "Medi standard library: HIPAA compliance primitives, anonymization, audit trail"
+license = "Apache-2.0"
+
+[lib]
+name = "tolvex_compliance"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+regex = "1"
+
+[dev-dependencies]
+criterion = { version = "0.5", default-features = false, features = ["html_reports"] }
+
+[[bench]]
+name = "rule_bench"
+harness = false

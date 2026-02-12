@@ -1,0 +1,16 @@
+[package]
+name = "tlvxc_typeck"
+version = "0.1.15"
+edition = "2021"
+
+[dependencies]
+tlvxc_type = { path = "../tlvxc_type" }
+tlvxc_ast = { path = "../tlvxc_ast" }
+tlvxc_env = { path = "../tlvxc_env" }
+log = "0.4"
+once_cell = "1"
+
+[features]
+# Enable experimental quantity-aware type checking (dimension algebra scaffolding, parser fold interop)
+quantity_ir = []
+

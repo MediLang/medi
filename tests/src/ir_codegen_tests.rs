@@ -1,8 +1,8 @@
-use medic_ast::ast::StatementNode;
-use medic_codegen_llvm::generate_ir_string;
-use medic_lexer::streaming_lexer::StreamingLexer;
-use medic_lexer::token::Token;
-use medic_parser::parser::{parse_program, TokenSlice};
+use tlvxc_ast::ast::StatementNode;
+use tlvxc_codegen_llvm::generate_ir_string;
+use tlvxc_lexer::streaming_lexer::StreamingLexer;
+use tlvxc_lexer::token::Token;
+use tlvxc_parser::parser::{parse_program, TokenSlice};
 
 #[allow(dead_code)]
 fn ir_for(src: &str) -> String {
@@ -29,7 +29,7 @@ fn conv(a: int) {
         // Expect a multiply on the value field for conversion
         assert!(ir.contains("uconv.qty"));
         // Should not call runtime quantity conversion for a known pair
-        assert!(!ir.contains("medi_convert_q"));
+        assert!(!ir.contains("tolvex_convert_q"));
     }
 
     #[test]
@@ -40,7 +40,7 @@ fn conv_unknown() {
 }
 "#;
         let ir = ir_for(src);
-        assert!(ir.contains("medi_convert_q"));
+        assert!(ir.contains("tolvex_convert_q"));
     }
 
     #[test]
@@ -112,7 +112,7 @@ fn chain(a: int) {
             count >= 2,
             "expected at least two uconv.qty in chained conversions, got {count}\nIR:\n{ir}"
         );
-        assert!(!ir.contains("medi_convert_q"));
+        assert!(!ir.contains("tolvex_convert_q"));
     }
 
     #[test]
@@ -129,7 +129,7 @@ fn chain2(a: int) {
             count >= 2,
             "expected at least two uconv.qty in chained conversions, got {count}\nIR:\n{ir}"
         );
-        assert!(!ir.contains("medi_convert_q"));
+        assert!(!ir.contains("tolvex_convert_q"));
     }
 
     #[test]
@@ -150,7 +150,7 @@ fn bad_conv() {
 
 #[test]
 fn ir_unit_conversion_runtime_fallback() {
-    // Use unknown units to trigger runtime fallback to medi_convert
+    // Use unknown units to trigger runtime fallback to tolvex_convert
     let src = r#"
 fn f() -> float {
   let x = 5 -> qux;     // LHS numeric, RHS unknown unit; parser treats RHS as identifier
@@ -159,7 +159,7 @@ fn f() -> float {
 "#;
     let ir = ir_for(src);
     // Expect a call to the runtime shim when compile-time factor is not available
-    assert!(ir.contains("medi_convert"));
+    assert!(ir.contains("tolvex_convert"));
 }
 
 #[test]
