@@ -38,7 +38,7 @@ __pycache__/
 # Added by cargo
 /target
 
-# Local build artifacts from medic CLI emission
+# Local build artifacts from tlvxc CLI emission
 artifacts/
 
 # Task files

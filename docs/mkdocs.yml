@@ -1,9 +1,9 @@
-site_name: The Medi Book
-site_url: https://medilang.github.io/medi/
-site_description: Documentation for the Medi healthcare programming language
-site_author: The Medi Team
-repo_url: https://github.com/MediLang/medi
-repo_name: MediLang/medi
+site_name: The Tolvex Book
+site_url: https://tolvex.dev/docs/
+site_description: Documentation for the Tolvex healthcare programming language
+site_author: The Tolvex Team
+repo_url: https://github.com/Tolvex/tolvex
+repo_name: Tolvex/tolvex
 edit_uri: edit/main/docs/
 
 # Configure directories
@@ -51,7 +51,7 @@ plugins:
 
 theme:
   name: material
-  logo: assets/medi-logo.png
+  logo: assets/tolvex-logo.png
   favicon: assets/images/favicon-placeholder.png
   # Ensure external images are not processed
   static_templates:
@@ -136,10 +136,10 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/MediLang
+      link: https://github.com/Tolvex
     - icon: fontawesome/brands/twitter
-      link: https://twitter.com/MediLangHQ
+      link: https://twitter.com/TolvexLang
   version:
     provider: mike
 
-copyright: Copyright &copy; 2025 The Medi Team
+copyright: Copyright &copy; 2025 The Tolvex Team

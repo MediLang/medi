@@ -38,8 +38,8 @@ jobs:
       - name: Clippy check
         run: RUST_BACKTRACE=1 cargo clippy --all -- -A warnings
 
-  pymedi-wheel:
-    name: Build pymedi wheel (Linux)
+  pytolvex-wheel:
+    name: Build pytolvex wheel (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,12 +56,12 @@ jobs:
       - name: Build wheel (maturin)
         run: |
           python -m pip install -U pip
-          python -m pip install -r bindings/pymedi/requirements-dev.txt
-          maturin build -m bindings/pymedi/Cargo.toml --release --out dist
+          python -m pip install -r bindings/pytolvex/requirements-dev.txt
+          maturin build -m bindings/pytolvex/Cargo.toml --release --out dist
       - name: Install wheel + run pytest
         run: |
           python -m pip install dist/*.whl
-          pytest -q bindings/pymedi/tests
+          pytest -q bindings/pytolvex/tests
 
   test:
     strategy:
@@ -115,9 +115,9 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           if [ "$(uname -m)" = "arm64" ]; then
-            echo "MEDI_TARGET_TRIPLE=aarch64-apple-darwin" >> $GITHUB_ENV
+            echo "TOLVEX_TARGET_TRIPLE=aarch64-apple-darwin" >> $GITHUB_ENV
           else
-            echo "MEDI_TARGET_TRIPLE=x86_64-apple-darwin" >> $GITHUB_ENV
+            echo "TOLVEX_TARGET_TRIPLE=x86_64-apple-darwin" >> $GITHUB_ENV
           fi
 
       # Windows: install LLVM 15 using install-llvm-action (reliable headers/libs)
@@ -201,7 +201,7 @@ jobs:
           LIB: ${{ env.LIB }}
         run: |
           echo Running subset of tests on Windows to avoid LLVM-dependent crates
-          cargo test -p medic_ast -p medic_parser -p medic_type -p medic_typeck --all-features
+          cargo test -p tlvxc_ast -p tlvxc_parser -p tlvxc_type -p tlvxc_typeck --all-features
 
       - name: Run tests (non-Windows)
         if: runner.os != 'Windows'
@@ -230,9 +230,9 @@ jobs:
           echo "LIBCLANG_PATH=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
       - name: Run codegen benchmark (smoke)
         env:
-          MEDI_BENCH_SMOKE: "1"
+          TOLVEX_BENCH_SMOKE: "1"
         run: |
-          cargo bench -p medic_benchmarks --features codegen-bench --bench codegen_bench -- --quick
+          cargo bench -p tlvxc_benchmarks --features codegen-bench --bench codegen_bench -- --quick
 
   borrowck-perf-gate:
     name: Borrow Checker Perf Gate
@@ -248,7 +248,7 @@ jobs:
       - name: Run borrow checker benchmark (quick)
         run: |
           set -euo pipefail
-          cargo bench -p medic_benchmarks --bench borrow_checker_bench -- --quick | tee bench.out
+          cargo bench -p tlvxc_benchmarks --bench borrow_checker_bench -- --quick | tee bench.out
           # Extract first occurrence like: "time:   [13.570 ms 13.576 ms 13.582 ms]"
           line=$(grep -E "time:\s+\[[0-9.]+ ms [0-9.]+ ms [0-9.]+ ms\]" -m1 bench.out || true)
           echo "Criterion line: $line"
@@ -300,7 +300,7 @@ jobs:
       - name: Emit object for ${{ matrix.target }}
         run: |
           mkdir -p artifacts
-          cargo run -p medic --features llvm-backend -- --emit=${{ matrix.target }} --opt=2 --out=artifacts/${{ matrix.target }}.o << 'EOF'
+          cargo run -p tlvxc --features llvm-backend -- --emit=${{ matrix.target }} --opt=2 --out=artifacts/${{ matrix.target }}.o << 'EOF'
           // minimal program to drive codegen
           fn main() { }
           EOF
@@ -342,27 +342,27 @@ jobs:
           set -euo pipefail
           # Limit coverage to crates with meaningful unit/integration tests to avoid benches/binaries skewing results
           cargo tarpaulin \
-            -p medic_parser \
-            -p medic_lexer \
+            -p tlvxc_parser \
+            -p tlvxc_lexer \
             -p tests \
             --timeout 120 --out Xml --engine Auto --fail-under 70 \
             --exclude-files \
               'compiler/benches/*' \
               '*/examples/*' \
               '*/src/main.rs' \
-              'compiler/medic_codegen_llvm/**' \
-              'compiler/medic_runtime/**' \
-              'compiler/medic_ast/**' \
-              'compiler/medic_env/**' \
-              'compiler/medic_type/**' \
-              'compiler/medic_typeck/**' \
-              'compiler/medic_borrowck/**' \
-              'compiler/medic_parser/src/parser/mod.rs' \
-              'compiler/medic_parser/src/parser/statements/mod.rs' \
-              'compiler/medic_parser/src/parser/expressions/mod.rs' \
-              'compiler/medic_parser/src/parser/expressions/nested/error_handling.rs' \
-              'compiler/medic_parser/src/parser/identifiers/mod.rs' \
-              'compiler/medic_parser/src/parser/test_utils.rs' \
+              'compiler/tlvxc_codegen_llvm/**' \
+              'compiler/tlvxc_runtime/**' \
+              'compiler/tlvxc_ast/**' \
+              'compiler/tlvxc_env/**' \
+              'compiler/tlvxc_type/**' \
+              'compiler/tlvxc_typeck/**' \
+              'compiler/tlvxc_borrowck/**' \
+              'compiler/tlvxc_parser/src/parser/mod.rs' \
+              'compiler/tlvxc_parser/src/parser/statements/mod.rs' \
+              'compiler/tlvxc_parser/src/parser/expressions/mod.rs' \
+              'compiler/tlvxc_parser/src/parser/expressions/nested/error_handling.rs' \
+              'compiler/tlvxc_parser/src/parser/identifiers/mod.rs' \
+              'compiler/tlvxc_parser/src/parser/test_utils.rs' \
               'stdlib/**'
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

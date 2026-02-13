@@ -1,5 +1,5 @@
 {
-  "name": "medi-lang",
+  "name": "tolvex-lang",
   "version": "0.1.0",
   "description": "A programming language purpose-built for healthcare",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MediLang/medi.git"
+    "url": "git+https://github.com/Tolvex/tolvex.git"
   },
   "keywords": [
     "healthcare",
@@ -20,12 +20,12 @@
     "fhir",
     "medical-data"
   ],
-  "author": "MediLang Team",
+  "author": "Tolvex Team",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/MediLang/medi/issues"
+    "url": "https://github.com/Tolvex/tolvex/issues"
   },
-  "homepage": "https://github.com/MediLang/medi#readme",
+  "homepage": "https://github.com/Tolvex/tolvex#readme",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^20.11.0",

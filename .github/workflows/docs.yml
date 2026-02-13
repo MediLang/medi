@@ -44,5 +44,5 @@ jobs:
           
       - name: Verify Deployment
         run: |
-          echo "Documentation deployed to https://medilang.github.io/medi/"
-          echo "If the site is not updating, ensure the repository settings have GitHub Pages enabled with gh-pages branch as the source."
+          echo "Documentation deployed to https://tolvex.dev/docs/"
+          echo "If the site is not updating, ensure GitHub Pages is enabled (gh-pages branch as source)."
