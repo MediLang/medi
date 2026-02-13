@@ -1,171 +1,171 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://medilang.github.io/medi/</loc>
+         <loc>https://tolvex.dev/docs/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/cookbook/</loc>
+         <loc>https://tolvex.dev/docs/cookbook/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/glossary/</loc>
+         <loc>https://tolvex.dev/docs/glossary/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/migration_v0_0_4_to_v0_0_5/</loc>
+         <loc>https://tolvex.dev/docs/migration_v0_0_4_to_v0_0_5/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/troubleshooting/</loc>
+         <loc>https://tolvex.dev/docs/troubleshooting/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/</loc>
+         <loc>https://tolvex.dev/docs/blog/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/2026-01-08-v0.1.0-release/</loc>
+         <loc>https://tolvex.dev/docs/blog/2026-01-08-v0.1.0-release/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/posts/2025-05-24-nested-expressions/</loc>
+         <loc>https://tolvex.dev/docs/blog/posts/2025-05-24-nested-expressions/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/posts/2025-05-30-lexer-benchmarks-and-file-extension/</loc>
+         <loc>https://tolvex.dev/docs/blog/posts/2025-05-30-lexer-benchmarks-and-file-extension/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/posts/2025-08-26-v0-0-1-release/</loc>
+         <loc>https://tolvex.dev/docs/blog/posts/2025-08-26-v0-0-1-release/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/posts/2025-09-02-v0-0-2-release/</loc>
+         <loc>https://tolvex.dev/docs/blog/posts/2025-09-02-v0-0-2-release/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/posts/2025-09-30-v0-0-3-release/</loc>
+         <loc>https://tolvex.dev/docs/blog/posts/2025-09-30-v0-0-3-release/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/blog/posts/2025-10-24-v0-0-4-release/</loc>
+         <loc>https://tolvex.dev/docs/blog/posts/2025-10-24-v0-0-4-release/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/community/</loc>
+         <loc>https://tolvex.dev/docs/community/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/content/blog/</loc>
+         <loc>https://tolvex.dev/docs/content/blog/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/contributing/</loc>
+         <loc>https://tolvex.dev/docs/contributing/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/examples/</loc>
+         <loc>https://tolvex.dev/docs/examples/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/ai/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/ai/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/basic-syntax/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/basic-syntax/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/compliance/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/compliance/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/data/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/data/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/development-environment/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/development-environment/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/first-program/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/first-program/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/installation/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/installation/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/getting-started/stats/</loc>
+         <loc>https://tolvex.dev/docs/getting-started/stats/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/key-features/</loc>
+         <loc>https://tolvex.dev/docs/key-features/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/key-features/medical-data-science/</loc>
+         <loc>https://tolvex.dev/docs/key-features/medical-data-science/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/key-features/nested-expressions/</loc>
+         <loc>https://tolvex.dev/docs/key-features/nested-expressions/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/reference/</loc>
+         <loc>https://tolvex.dev/docs/reference/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/reference/compatibility-matrix/</loc>
+         <loc>https://tolvex.dev/docs/reference/compatibility-matrix/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/reference/language-spec/</loc>
+         <loc>https://tolvex.dev/docs/reference/language-spec/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/reference/lexer/</loc>
+         <loc>https://tolvex.dev/docs/reference/lexer/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/reference/standard-library/</loc>
+         <loc>https://tolvex.dev/docs/reference/standard-library/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/roadmap/</loc>
+         <loc>https://tolvex.dev/docs/roadmap/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/architecture/</loc>
+         <loc>https://tolvex.dev/docs/technical/architecture/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/benchmarks/</loc>
+         <loc>https://tolvex.dev/docs/technical/benchmarks/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/common-errors/</loc>
+         <loc>https://tolvex.dev/docs/technical/common-errors/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/diagnostics-snippets/</loc>
+         <loc>https://tolvex.dev/docs/technical/diagnostics-snippets/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/file-structure/</loc>
+         <loc>https://tolvex.dev/docs/technical/file-structure/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/healthcare_workloads_latest/</loc>
+         <loc>https://tolvex.dev/docs/technical/healthcare_workloads_latest/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
     <url>
-         <loc>https://medilang.github.io/medi/technical/tooling/</loc>
+         <loc>https://tolvex.dev/docs/technical/tooling/</loc>
          <lastmod>2026-02-13</lastmod>
     </url>
 </urlset>
