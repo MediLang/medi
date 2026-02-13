@@ -1,0 +1,10 @@
+fn main() -> int {
+    let n = 10;
+
+    // Host-provided helpers for Phase 1 demos
+    let synthetic = generate_synthetic_patients(n);
+    let risk = run_risk_model(synthetic);
+
+    println(risk);
+    return 0
+}

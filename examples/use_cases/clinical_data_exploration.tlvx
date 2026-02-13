@@ -1,0 +1,5 @@
+fn main() -> int {
+    let patients = fhir_query("Patient");
+    println(patients);
+    return 0
+}

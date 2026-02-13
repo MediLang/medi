@@ -1,0 +1,9 @@
+// Minimal Medi program suitable for WASI: no I/O, just basic computation
+// Top-level statements will be lowered into a `_start` function for wasm32-wasi.
+
+let x = 40 + 2;
+let y = x * 2;
+let z = y - x; // z = 42
+
+// Prints to stdout using WASI fd_write via the intrinsic lowering
+print("Hello from Medi (z=42)\n");

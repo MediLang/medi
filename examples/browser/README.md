@@ -12,7 +12,7 @@ cargo build -p medic --features llvm-backend
 
 ```bash
 # From repo root
-./target/debug/medic --emit=wasm32-unknown --out=examples/browser/app.wasm examples/browser/app.medi
+./target/debug/medic --emit=wasm32-unknown --out=examples/browser/app.wasm examples/browser/app.tlvx
 ```
 
 Notes:

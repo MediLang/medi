@@ -1,0 +1,9 @@
+module RtCheckerDemo
+
+fn main() -> int {
+    rt_begin()
+    // Disallowed in RT sections (GC interaction)
+    medi_gc_collect()
+    rt_end()
+    return 0
+}

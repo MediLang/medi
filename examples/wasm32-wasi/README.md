@@ -19,7 +19,7 @@ wasmtime --version
 
 ```bash
 # From repo root
-./target/debug/medic --emit=wasm32 --out=hello.wasm examples/wasm32-wasi/hello.medi
+./target/debug/medic --emit=wasm32 --out=hello.wasm examples/wasm32-wasi/hello.tlvx
 ```
 
 This will produce `hello.wasm`. The compiler lowers top-level statements into a `_start` entrypoint as required by WASI. The current example uses only arithmetic (no I/O) and therefore does not print.
@@ -40,5 +40,5 @@ Notes:
 - If you want to see the LLVM IR instead of producing a `.wasm`, omit `--out`:
 
 ```bash
-./target/debug/medic --emit=wasm32 examples/wasm32-wasi/hello.medi
+./target/debug/medic --emit=wasm32 examples/wasm32-wasi/hello.tlvx
 ```
