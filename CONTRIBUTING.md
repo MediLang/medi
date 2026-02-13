@@ -1,6 +1,6 @@
-# Contributing to Medi
+# Contributing to Tolvex
 
-First off, thank you for considering contributing to Medi! It's people like you that make Medi such a great tool.
+First off, thank you for considering contributing to Tolvex! It's people like you that make Tolvex such a great tool.
 
 ## Where do I go from here?
 

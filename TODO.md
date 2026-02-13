@@ -137,13 +137,13 @@
   - [x] String literals: "Medi" → "Tolvex", "medi" → "tolvex", "MEDI" → "TOLVEX"
   - [x] Env vars: `MEDI_*` → `TOLVEX_*`
   - [x] Identifiers: `MediLang` → `TolvexLang`, `medi-lang` → `tolvex-lang`
-- [ ] Step 7: Rename `.medi` files → `.tlvx` (19 files) and update hardcoded refs
-- [ ] Step 8: Update documentation files
-  - [ ] Update `README.md` with `TOLVEX.md` content
-  - [ ] Update `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
-  - [ ] Update `LANG_SPEC.md`, `ECOSYSTEM_ROADMAP.md`, `SELF_HOSTING.md`
-  - [ ] Rename `README-MediCMM.md` → `README-TolvexCMM.md`
-  - [ ] Update `stdlib/README.md`
+- [x] Step 7: Rename `.medi` files → `.tlvx` (19 files) and update hardcoded refs
+- [x] Step 8: Update documentation files
+  - [x] Update `README.md` with `TOLVEX.md` content
+  - [x] Update `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
+  - [x] Update `LANG_SPEC.md`, `ECOSYSTEM_ROADMAP.md`, `SELF_HOSTING.md`
+  - [x] Rename `README-MediCMM.md` → `README-TolvexCMM.md`
+  - [x] Update `stdlib/README.md`
 - [ ] Step 9: Update config & CI files
   - [ ] `docs/mkdocs.yml` (site_name, URLs, logo, social, copyright)
   - [ ] `package.json` (name, repo URL, author, homepage)

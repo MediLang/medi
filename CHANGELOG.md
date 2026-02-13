@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Medi programming language will be documented in this file.
+All notable changes to the Tolvex programming language will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -13,11 +13,11 @@ Planned improvements and documentation updates.
 
 ### Added
 
-- Privacy framework (medi::privacy):
+- Privacy framework (tolvex::privacy):
   - Differential privacy mechanisms (Laplace/Gaussian), budget tracking, and private aggregations.
   - Federated learning core (FedAvg aggregator, coordinator, client updates).
   - Anonymization toolkit with k-anonymity, l-diversity, and t-closeness checks.
-- Real-time system support (medi::rt):
+- Real-time system support (tolvex::rt):
   - Streaming primitives (bounded ring buffer, sliding window sum).
   - Low-latency I/O helpers (TCP connect with timeout, TCP_NODELAY toggle).
   - Device protocol parsing for basic telemetry ingestion.

@@ -1,10 +1,10 @@
-# Medi Programming Language Specification
+# Tolvex Programming Language Specification
 
 ## Overview
 
-Medi is a high-level, domain-specific programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. With a beginner-friendly syntax inspired by Python and R, high performance rivaling Julia, Rust, and C++, and native support for healthcare standards like FHIR, HL7, and DICOM, Medi empowers clinicians, researchers, and developers to unlock insights from complex medical data.
+Tolvex is a high-level, domain-specific programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. With a beginner-friendly syntax inspired by Python and R, high performance rivaling Julia, Rust, and C++, and native support for healthcare standards like FHIR, HL7, and DICOM, Tolvex empowers clinicians, researchers, and developers to unlock insights from complex medical data.
 
-This specification outlines Medi's syntax, data types, control structures, and domain-specific constructs as of version 0.1.0, with a focus on its unique features for healthcare applications, including federated learning, privacy-preserving analytics, and real-time IoT processing.
+This specification outlines Tolvex's syntax, data types, control structures, and domain-specific constructs as of version 0.1.0, with a focus on its unique features for healthcare applications, including federated learning, privacy-preserving analytics, and real-time IoT processing.
 
 ## Design Principles
 
@@ -61,7 +61,7 @@ This specification outlines Medi's syntax, data types, control structures, and d
 - Debug logging: When the optional `logging` feature is enabled, a debug log is emitted at the point of error token creation to aid diagnostics. Logs include the source location and offending lexeme (and for chunked lexing, whether the chunk is final). Enable at runtime with `RUST_LOG=debug` and a logger (e.g., `env_logger`).
 
 ### Comments
-```medi
+```tolvex
 // Line comments
 /* Block comments that can
    span multiple lines */
@@ -72,15 +72,15 @@ This specification outlines Medi's syntax, data types, control structures, and d
 
 ### Hello World Example
 
-```medi
+```tolvex
 module HelloWorld
 
-print("Welcome to Medi Programming Language!")
+print("Welcome to Tolvex Programming Language!")
 ```
 
 ### Comments
 
-```medi
+```tolvex
 // Single-line comment
 /* Multi-line
    comment */
@@ -88,7 +88,7 @@ print("Welcome to Medi Programming Language!")
 
 ## Data Types
 
-Medi supports a rich set of primitive and composite data types, with a focus on medical data representation.
+Tolvex supports a rich set of primitive and composite data types, with a focus on medical data representation.
 
 ### Primitive Types
 
@@ -114,7 +114,7 @@ Medi supports a rich set of primitive and composite data types, with a focus on 
 
 ### Conditionals
 
-```medi
+```tolvex
 if temperature > 38.0 {
     print("Fever detected")
 } else {
@@ -124,7 +124,7 @@ if temperature > 38.0 {
 
 ### Loops
 
-```medi
+```tolvex
 for reading in vitals {
     print("Pulse: ", reading.pulse)
 }
@@ -136,7 +136,7 @@ while heart_rate > 100 {
 
 ### Pattern Matching
 
-```medi
+```tolvex
 match lab_result {
     case lab_result(name: "CRP", value: v) if v > 10 => print("Elevated CRP")
     case _ => print("Normal result")
@@ -153,7 +153,7 @@ match lab_result {
 
 Functions are defined with the `fn` keyword and support type annotations.
 
-```medi
+```tolvex
 fn calculate_bmi(weight: float, height: float) -> float {
     return weight / (height * height)
 }
@@ -171,7 +171,7 @@ print("BMI: ", bmi)
 
 v0.1 uses `Result<T, E>` and the `?` operator for error propagation. `try/catch` is planned for a future version.
 
-```medi
+```tolvex
 fn load_patient(id: string) -> Result<record, Error> {
     let patient = fhir_query("Patient", id)? // propagate any fetch error
     Ok(patient)
@@ -180,7 +180,7 @@ fn load_patient(id: string) -> Result<record, Error> {
 
 ## Modules and Imports
 
-```medi
+```tolvex
 module ClinicalAnalytics
 
 import DataProcessing
@@ -194,9 +194,9 @@ fn analyze_vitals(vitals: list[vital]) -> map[string, float] {
 
 ### Medical Data Integration
 
-Medi provides built-in support for medical data standards:
+Tolvex provides built-in support for medical data standards:
 
-```medi
+```tolvex
 let patient = fhir_query("Patient", "PT-12345")
 let labs = fhir_query("Observation", "LAB-67890")
 ```
@@ -205,7 +205,7 @@ let labs = fhir_query("Observation", "LAB-67890")
 
 Define rules for clinical decision support:
 
-```medi
+```tolvex
 rule HighRiskSepsis {
     if vital.pulse > 100 and lab_result.value("CRP") > 10 {
         alert("High sepsis risk")
@@ -215,40 +215,40 @@ rule HighRiskSepsis {
 
 ## Standard Library
 
-### Core Library (`medi::core`)
+### Core Library (`tolvex::core`)
 - Basic types and traits
 - Collections and iterators
 - Error handling
 - Concurrency primitives
 - I/O operations
 
-### Healthcare Standards (`medi::standards`)
-- `medi::standards::fhir` - FHIR data models and queries
-- `medi::standards::hl7` - HL7 message handling
-- `medi::standards::dicom` - DICOM image processing
-- `medi::standards::icd` - ICD-10 and SNOMED CT
+### Healthcare Standards (`tolvex::standards`)
+- `tolvex::standards::fhir` - FHIR data models and queries
+- `tolvex::standards::hl7` - HL7 message handling
+- `tolvex::standards::dicom` - DICOM image processing
+- `tolvex::standards::icd` - ICD-10 and SNOMED CT
 
-### Data Science (`medi::science`)
-- `medi::science::stats` - Statistical analysis
-- `medi::science::ml` - Machine learning
-- `medi::science::genomics` - Genomic processing
-- `medi::science::imaging` - Medical imaging
+### Data Science (`tolvex::science`)
+- `tolvex::science::stats` - Statistical analysis
+- `tolvex::science::ml` - Machine learning
+- `tolvex::science::genomics` - Genomic processing
+- `tolvex::science::imaging` - Medical imaging
 
-### Privacy and Security (`medi::privacy`)
-- `medi::privacy::hipaa` - HIPAA compliance (integrates with helpers in `medi.compliance` for de-identification and keyword/bundle checks)
-- `medi::privacy::gdpr` - GDPR requirements
-- `medi::privacy::federated` - Federated learning
-- `medi::privacy::crypto` - Medical-grade encryption
+### Privacy and Security (`tolvex::privacy`)
+- `tolvex::privacy::hipaa` - HIPAA compliance (integrates with helpers in `tolvex.compliance` for de-identification and keyword/bundle checks)
+- `tolvex::privacy::gdpr` - GDPR requirements
+- `tolvex::privacy::federated` - Federated learning
+- `tolvex::privacy::crypto` - Medical-grade encryption
 
-### Real-time Processing (`medi::rt`)
-- `medi::rt::device` - Medical device interfaces
-- `medi::rt::monitor` - Patient monitoring
-- `medi::rt::alert` - Clinical alerting
-- `medi::rt::stream` - Data streaming
+### Real-time Processing (`tolvex::rt`)
+- `tolvex::rt::device` - Medical device interfaces
+- `tolvex::rt::monitor` - Patient monitoring
+- `tolvex::rt::alert` - Clinical alerting
+- `tolvex::rt::stream` - Data streaming
 
 ## Example: Clinical Data Processing
 
-```medi
+```tolvex
 module SepsisMonitor
 
 import VitalSigns
@@ -319,7 +319,7 @@ ComplianceSpec ::= 'hipaa' | 'gdpr' | 'fda' | STRING
    - Cannot mix zones without explicit boundaries
 
 2. **Type System Boundaries**
-   ```medi
+   ```tolvex
    // Safe zone - GC managed
    fn process_patient(p: Patient) -> Analysis {
        // Automatic memory management
@@ -344,7 +344,7 @@ ComplianceSpec ::= 'hipaa' | 'gdpr' | 'fda' | STRING
    - Medical types are first-class citizens
    - Standard types can be extended with medical traits
    - Clear syntax for medical operations:
-     ```medi
+     ```tolvex
      // Medical-specific syntax
      let bp = vital::blood_pressure(120, 80)
      
@@ -355,7 +355,7 @@ ComplianceSpec ::= 'hipaa' | 'gdpr' | 'fda' | STRING
 ### Type System Clarity
 
 1. **Medical Type Hierarchy**
-   ```medi
+   ```tolvex
    trait MedicalRecord {}
    trait PrivacyProtected {}
    
@@ -420,11 +420,11 @@ The grammar is inspired by multiple languages but maintains consistency through 
 
 ### Runtime Features & Feature Flags
 
-Medi provides a host-side runtime crate at `compiler/medic_runtime/` offering task-based parallelism and channel-based message passing. Optional zones for memory management are feature-gated for incremental adoption:
+Tolvex provides a host-side runtime crate at `compiler/tlvxc_runtime/` offering task-based parallelism and channel-based message passing. Optional zones for memory management are feature-gated for incremental adoption:
 
 - **Tasks**: `spawn_task`, `spawn_task_with_priority(Priority)` create lightweight threads and return `Task` handles (`Task::join()`).
 - **Channels**: `create_channel<T>() -> (SenderHandle<T>, ReceiverHandle<T>)` for typed message passing.
-- **Feature flags** (in `medic_runtime`):
+- **Feature flags** (in `tlvxc_runtime`):
   - `gc`: Enables `gc_zone::SafeGc` stubs and `collect_garbage()` hooks for a safe, GC-oriented zone.
   - `rt_zones`: Enables `rt_zone::RtZone` stubs with `enter()/exit()` for simplified real-time regions.
 
@@ -432,18 +432,18 @@ Enable features in your Cargo manifest or via CLI:
 
 ```toml
 [dependencies]
-medic_runtime = { path = "compiler/medic_runtime", features = ["gc", "rt_zones"] }
+tlvxc_runtime = { path = "compiler/tlvxc_runtime", features = ["gc", "rt_zones"] }
 ```
 
 ```bash
-cargo test -p medic_runtime --features gc,rt_zones
+cargo test -p tlvxc_runtime --features gc,rt_zones
 ```
 
 These stubs establish the ergonomic surface for future zone semantics (safe GC zone, constrained RT zone) and can evolve without breaking user code.
 
 #### Real-Time Memory (rt_zones)
 
-When the `rt_zones` feature is enabled in `medic_runtime`, two deterministic allocation primitives are available:
+When the `rt_zones` feature is enabled in `tlvxc_runtime`, two deterministic allocation primitives are available:
 
 - `RtRegion<const BYTES: usize>`: a region/bump allocator with compile-time capacity for transient allocations.
   - `alloc<T>(value: T) -> Option<&mut T>`
@@ -457,9 +457,9 @@ When the `rt_zones` feature is enabled in `medic_runtime`, two deterministic all
 
 RT code should use these APIs to achieve deterministic allocation latency. A typical pattern is to use a `FixedPool` for messages/objects and an `RtRegion` for transient buffers, periodically calling `reset()` at well-defined points (e.g., once per frame/tick) to reclaim memory.
 
-RT sections can be annotated in code (at the AST level) using markers `rt_begin()` and `rt_end()`. The compiler provides an optional static check (enabled via environment variable `MEDI_RT_CHECK=1` in the CLI) that flags disallowed calls within RT sections, including but not limited to:
+RT sections can be annotated in code (at the AST level) using markers `rt_begin()` and `rt_end()`. The compiler provides an optional static check (enabled via environment variable `TOLVEX_RT_CHECK=1` in the CLI) that flags disallowed calls within RT sections, including but not limited to:
 
-- `medi_gc_alloc_string`, `medi_gc_collect` (GC interactions)
+- `tlvx_gc_alloc_string`, `tlvx_gc_collect` (GC interactions)
 - `spawn_task`, `create_channel` (host runtime concurrency APIs)
 
 This check is conservative and name-based; it is intended as an aid to keep RT sections free from GC and blocking/dynamic behaviors.
@@ -467,7 +467,7 @@ This check is conservative and name-based; it is intended as an aid to keep RT s
 Run-time example (requires `rt_zones`):
 
 ```bash
-cargo run -p medic_runtime --example rt_iot --features rt_zones
+cargo run -p tlvxc_runtime --example rt_iot --features rt_zones
 ```
 
 This example demonstrates a sensor loop using `FixedPool` and `RtRegion`, with a periodic `reset()` pattern and prints worst-case per-iteration latency.
@@ -547,7 +547,7 @@ loop {
 ### Error Handling
 
 1. **Result Type**
-   ```medi
+   ```tolvex
    Result<T, E> = Ok(T) | Err(E)
    ```
 
@@ -564,7 +564,7 @@ loop {
 
 ## Compiler Architecture
 
-The Medi compiler (`medic`) consists of several stages:
+The Tolvex compiler (`tlvxc`) consists of several stages:
 
 1. **Parser**: Recursive descent parser handling healthcare-specific syntax
    - Converts source code into AST
@@ -579,7 +579,7 @@ The Medi compiler (`medic`) consists of several stages:
 3. **Privacy & Compliance Checker**:
    - Enforces HIPAA/GDPR rules at compile time
    - Validates data access patterns
-   - Ensures proper anonymization (using both type-level rules and standard library helpers such as `medi.compliance` de-identification and HIPAA bundle checks)
+   - Ensures proper anonymization (using both type-level rules and standard library helpers such as `tolvex.compliance` de-identification and HIPAA bundle checks)
 
 4. **Code Generation**:
    - LLVM-based backend
@@ -591,17 +591,17 @@ The Medi compiler (`medic`) consists of several stages:
 
 ## Ecosystem Components
 
-1. **Package Manager (`medipack`)**:
+1. **Package Manager (`tlvxpack`)**:
    - Dependency management
    - Build system
    - Package registry at medipacks.io
 
 2. **Standard Library**:
-   - `medi::fhir` - FHIR/HL7 integration
-   - `medi::dicom` - Medical imaging
-   - `medi::genomics` - Genomic analysis
-   - `medi::ai` - Healthcare AI and ML
-   - `medi::privacy` - Privacy-preserving analytics
+   - `tolvex::fhir` - FHIR/HL7 integration
+   - `tolvex::dicom` - Medical imaging
+   - `tolvex::genomics` - Genomic analysis
+   - `tolvex::ai` - Healthcare AI and ML
+   - `tolvex::privacy` - Privacy-preserving analytics
 
 3. **Development Tools**:
    - Visual IDE for clinicians
@@ -618,13 +618,13 @@ The Medi compiler (`medic`) consists of several stages:
 - Privacy/compliance checker
 
 ### Phase 2: Ecosystem Growth (2-3 Years)
-- Launch `medipack` and registry
+- Launch `tlvxpack` and registry
 - Expand standard library
 - Visual IDE beta
 - Stabilize healthcare constructs
 
 ### Phase 3: Self-Hosting (3-4 Years)
-- Begin compiler rewrite in Medi
+- Begin compiler rewrite in Tolvex
 - Port parser and type checker
 - Interface with LLVM
 

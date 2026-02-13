@@ -1,26 +1,26 @@
-# Medi Stdlib: Integration Tests and Benches Overview
+# Tolvex Stdlib: Integration Tests and Benches Overview
 
 This document summarizes the end-to-end integration scenarios across stdlib crates and how to run benchmarks.
 
 ## Scenarios
 
-- medi_data
+- tolvex_data
   - HL7 → FHIR → Validate → Store → Query
-    - File: stdlib/medi_data/tests/integration_flow.rs
+    - File: stdlib/tolvex_data/tests/integration_flow.rs
   - Bundle → Validate → Store
-    - File: stdlib/medi_data/tests/bundle_integration.rs
+    - File: stdlib/tolvex_data/tests/bundle_integration.rs
 
-- medi_compliance
+- tolvex_compliance
   - FHIR → Compliance check → Anonymize → Report
-    - File: stdlib/medi_compliance/tests/integration_anonymize_report.rs
+    - File: stdlib/tolvex_compliance/tests/integration_anonymize_report.rs
 
-- medi_ai
+- tolvex_ai
   - Patient → Risk prediction → Stratification
-    - File: stdlib/medi_ai/tests/integration_risk_workflow.rs
+    - File: stdlib/tolvex_ai/tests/integration_risk_workflow.rs
 
 ## Test Data Generators
 
-- Module: medi_data::testdata
+- Module: tolvex_data::testdata
   - patient_factory(family, given, dob) -> FHIRPatient
   - bundle_factory(n) -> FHIRBundle (Collection)
   - synthetic_lab_results(n) -> Vec<FHIRObservation>
@@ -34,7 +34,7 @@ This document summarizes the end-to-end integration scenarios across stdlib crat
 
 - Run integration benches (Criterion):
   ```bash
-  cargo bench -p medi_data --bench integration_benches
+  cargo bench -p tolvex_data --bench integration_benches
   ```
 
 ## CI

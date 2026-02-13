@@ -33,12 +33,12 @@
    - ⚠️ Redirect breaks if someone creates a new `MediLang` org
 
 2. **Rename repo:** Settings → Repository name → `tolvex`
-   - Old URL `github.com/TolvexLang/medi` auto-redirects to `github.com/TolvexLang/tolvex`
+   - Old URL `github.com/TolvexLang/medi` auto-redirects to `github.com/Tolvex/tolvex`
    - All 316 commits, stars, issues preserved
 
 3. **Update local clone remote:**
    ```bash
-   git remote set-url origin https://github.com/TolvexLang/tolvex.git
+   git remote set-url origin https://github.com/Tolvex/tolvex.git
    ```
 
 4. **Update GitHub topics:** Remove `medi`, add `tolvex`, `tolvex-lang`, `tlvx`
@@ -202,9 +202,9 @@ These are string literals, comments, and documentation within the Rust codebase.
 - Replace all "medic" → "tlvxc"
 - Replace `.medi` → `.tlvx`
 - Update logo path (if logo changes)
-- Update all GitHub URLs to `TolvexLang/tolvex`
+- Update all GitHub URLs to `github.com/Tolvex/tolvex`
 - Update badge URLs
-- Update clone URL: `git clone https://github.com/TolvexLang/tolvex.git`
+- Update clone URL: `git clone https://github.com/Tolvex/tolvex.git`
 - Update website: `tolvex.dev`
 - Update social: `@TolvexLang`
 - Update Discord invite link
@@ -363,7 +363,7 @@ trademarkable name for the next phase of the project.
 - **Crate prefix:** `medic_*` → `tlvxc_*`
 - **Stdlib prefix:** `medi.*` → `tolvex.*`
 - **Environment variables:** `MEDI_*` → `TOLVEX_*`
-- **GitHub:** github.com/TolvexLang/tolvex
+- **GitHub:** github.com/Tolvex/tolvex
 - **Website:** tolvex.dev
 - **Trademark:** DJKI application filed (Classes 9 & 42)
 
@@ -391,7 +391,7 @@ BREAKING CHANGE: Language renamed from Medi to Tolvex
 - Crates: medic_* → tlvxc_*
 - Stdlib: medi.* → tolvex.*
 - Env vars: MEDI_* → TOLVEX_*
-- GitHub: TolvexLang/tolvex
+- GitHub: Tolvex/tolvex
 - Website: tolvex.dev"
 
 git tag -a v0.1.6 -m "v0.1.6: Rebrand Medi → Tolvex"

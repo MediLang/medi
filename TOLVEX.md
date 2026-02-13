@@ -60,7 +60,7 @@ plot_kaplan_meier(survival, title: "Diabetes Outcomes");
 
 ```sh
 # Clone and build
-git clone https://github.com/TolvexLang/tolvex.git
+git clone https://github.com/Tolvex/tolvex.git
 cd tolvex
 cargo build --workspace
 
@@ -136,7 +136,7 @@ MIT License. See [LICENSE](LICENSE).
 
 - **X:** [@TolvexLang](https://twitter.com/TolvexLang)
 - **Discord:** [discord.gg/JxE6dD285R](https://discord.gg/JxE6dD285R)
-- **GitHub:** [github.com/TolvexLang/tolvex](https://github.com/TolvexLang/tolvex)
+- **GitHub:** [github.com/Tolvex/tolvex](https://github.com/Tolvex/tolvex)
 
 ---
 
