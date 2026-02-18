@@ -6,30 +6,33 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A look at our lexer performance improvements and the transition to .medi file extension">
+        <meta name="description" content="A look at our lexer performance improvements and the transition to .tlvx file extension">
       
       
-        <meta name="author" content="The Medi Team">
+        <meta name="author" content="The Tolvex Team">
       
       
-        <link rel="canonical" href="https://medilang.github.io/medi/blog/posts/2025-05-30-lexer-benchmarks-and-file-extension/">
+        <link rel="canonical" href="https://tolvex.dev/docs/blog/posts/2025-05-30-lexer-benchmarks-and-file-extension/">
       
       
+      
+      
+        
       
       
       <link rel="icon" href="../../../assets/images/favicon-placeholder.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.22">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
-        <title>Optimizing MediLang: Lexer Benchmarks and File Extension Standardization - The Medi Book</title>
+        <title>Optimizing Tolvex: Lexer Benchmarks and File Extension Standardization - The Tolvex Book</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.84d31ad4.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -56,7 +59,6 @@
 
     
     
-    
   </head>
   
   
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#optimizing-medilang-lexer-benchmarks-and-file-extension-standardization" class="md-skip">
+        <a href="#optimizing-tolvex-lexer-benchmarks-and-file-extension-standardization" class="md-skip">
           Skip to content
         </a>
       
@@ -94,9 +96,9 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="The Medi Book" class="md-header__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../../.." title="The Tolvex Book" class="md-header__button md-logo" aria-label="The Tolvex Book" data-md-component="logo">
       
-  <img src="../../../assets/medi-logo.png" alt="logo">
+  <img src="../../../assets/tolvex-logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -107,13 +109,13 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            The Medi Book
+            The Tolvex Book
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Optimizing MediLang: Lexer Benchmarks and File Extension Standardization
+              Optimizing Tolvex: Lexer Benchmarks and File Extension Standardization
             
           </span>
         </div>
@@ -195,13 +197,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/MediLang/medi" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/Tolvex/tolvex" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    MediLang/medi
+    Tolvex/tolvex
   </div>
 </a>
       </div>
@@ -324,6 +326,25 @@
   
   
   
+    <li class="md-tabs__item">
+      <a href="../../../cookbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Cookbook
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
     
     
       <li class="md-tabs__item">
@@ -438,22 +459,22 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="The Medi Book" class="md-nav__button md-logo" aria-label="The Medi Book" data-md-component="logo">
+    <a href="../../.." title="The Tolvex Book" class="md-nav__button md-logo" aria-label="The Tolvex Book" data-md-component="logo">
       
-  <img src="../../../assets/medi-logo.png" alt="logo">
+  <img src="../../../assets/tolvex-logo.png" alt="logo">
 
     </a>
-    The Medi Book
+    The Tolvex Book
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/MediLang/medi" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/Tolvex/tolvex" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    MediLang/medi
+    Tolvex/tolvex
   </div>
 </a>
     </div>
@@ -472,9 +493,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Home
+  
+
     
   </span>
+  
   
 
       </a>
@@ -512,9 +538,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Blog
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -523,7 +554,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
-            Blog
+            
+  
+    Blog
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -539,9 +574,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Overview
+  
+
     
   </span>
+  
   
 
       </a>
@@ -580,9 +620,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Posts
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -591,9 +636,41 @@
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_2">
             <span class="md-nav__icon md-icon"></span>
-            Posts
+            
+  
+    Posts
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../2026-01-08-v0.1.0-release/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tolvex v0.1.0 Released
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -607,9 +684,14 @@
   
   
   <span class="md-ellipsis">
-    Medi v0.0.4 Released
+    
+  
+    Tolvex v0.0.4 Released
+  
+
     
   </span>
+  
   
 
       </a>
@@ -630,9 +712,14 @@
   
   
   <span class="md-ellipsis">
-    Medi v0.0.3 Released
+    
+  
+    Tolvex v0.0.3 Released
+  
+
     
   </span>
+  
   
 
       </a>
@@ -653,9 +740,14 @@
   
   
   <span class="md-ellipsis">
-    MediLang v0.0.2 Released
+    
+  
+    Tolvex v0.0.2 Released
+  
+
     
   </span>
+  
   
 
       </a>
@@ -676,9 +768,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Journey to Nested Expressions
+  
+
     
   </span>
+  
   
 
       </a>
@@ -732,9 +829,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Getting Started
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -743,7 +845,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Getting Started
+            
+  
+    Getting Started
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -759,9 +865,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Overview
+  
+
     
   </span>
+  
   
 
       </a>
@@ -782,9 +893,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Installation
+  
+
     
   </span>
+  
   
 
       </a>
@@ -805,9 +921,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Basic Syntax
+  
+
     
   </span>
+  
   
 
       </a>
@@ -828,9 +949,42 @@
   
   
   <span class="md-ellipsis">
-    First Medi Program
+    
+  
+    First Tolvex Program
+  
+
     
   </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/development-environment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Environment
+  
+
+    
+  </span>
+  
   
 
       </a>
@@ -876,9 +1030,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Key Features
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -887,7 +1046,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
-            Key Features
+            
+  
+    Key Features
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -903,9 +1066,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Overview
+  
+
     
   </span>
+  
   
 
       </a>
@@ -926,9 +1094,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Medical Data Science & AI
+  
+
     
   </span>
+  
   
 
       </a>
@@ -974,9 +1147,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Examples
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -985,7 +1163,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
-            Examples
+            
+  
+    Examples
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -1001,9 +1183,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Overview
+  
+
     
   </span>
+  
   
 
       </a>
@@ -1025,117 +1212,23 @@
   
   
   
-    
-    
-    
-    
-      
-      
+    <li class="md-nav__item">
+      <a href="../../../cookbook/" class="md-nav__link">
         
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
   
   
   <span class="md-ellipsis">
-    Technical Documentation
     
-  </span>
+  
+    Cookbook
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            Technical Documentation
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../technical/architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Architecture
     
   </span>
+  
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../technical/diagnostics-snippets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Diagnostics
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../technical/common-errors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Common Errors
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -1170,9 +1263,14 @@
   
   
   <span class="md-ellipsis">
-    Reference
+    
+  
+    Technical Documentation
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -1181,7 +1279,212 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
-            Reference
+            
+  
+    Technical Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../technical/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../technical/diagnostics-snippets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../technical/common-errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../technical/tooling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tooling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../technical/benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -1197,9 +1500,126 @@
   
   
   <span class="md-ellipsis">
-    Standard Library
+    
+  
+    Overview
+  
+
     
   </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/language-spec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Language Specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/standard-library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Standard Library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/lexer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lexer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/compatibility-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compatibility Matrix
+  
+
+    
+  </span>
+  
   
 
       </a>
@@ -1227,9 +1647,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Roadmap
+  
+
     
   </span>
+  
   
 
       </a>
@@ -1249,9 +1674,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Contributing
+  
+
     
   </span>
+  
   
 
       </a>
@@ -1271,9 +1701,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Community
+  
+
     
   </span>
+  
   
 
       </a>
@@ -1310,7 +1745,9 @@
         <li class="md-nav__item">
   <a href="#the-need-for-speed-lexer-benchmarks" class="md-nav__link">
     <span class="md-ellipsis">
-      The Need for Speed: Lexer Benchmarks
+      
+        The Need for Speed: Lexer Benchmarks
+      
     </span>
   </a>
   
@@ -1320,7 +1757,9 @@
           <li class="md-nav__item">
   <a href="#meet-the-lexers" class="md-nav__link">
     <span class="md-ellipsis">
-      Meet the Lexers
+      
+        Meet the Lexers
+      
     </span>
   </a>
   
@@ -1329,7 +1768,9 @@
           <li class="md-nav__item">
   <a href="#benchmark-results" class="md-nav__link">
     <span class="md-ellipsis">
-      Benchmark Results
+      
+        Benchmark Results
+      
     </span>
   </a>
   
@@ -1341,19 +1782,23 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#standardizing-on-medi" class="md-nav__link">
+  <a href="#standardizing-on-tlvx" class="md-nav__link">
     <span class="md-ellipsis">
-      Standardizing on .medi
+      
+        Standardizing on .tlvx
+      
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Standardizing on .medi">
+    <nav class="md-nav" aria-label="Standardizing on .tlvx">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#what-changed" class="md-nav__link">
     <span class="md-ellipsis">
-      What Changed
+      
+        What Changed
+      
     </span>
   </a>
   
@@ -1367,7 +1812,9 @@
         <li class="md-nav__item">
   <a href="#choosing-the-right-lexer" class="md-nav__link">
     <span class="md-ellipsis">
-      Choosing the Right Lexer
+      
+        Choosing the Right Lexer
+      
     </span>
   </a>
   
@@ -1376,7 +1823,9 @@
         <li class="md-nav__item">
   <a href="#whats-next" class="md-nav__link">
     <span class="md-ellipsis">
-      What's Next
+      
+        What's Next
+      
     </span>
   </a>
   
@@ -1385,7 +1834,9 @@
         <li class="md-nav__item">
   <a href="#get-involved" class="md-nav__link">
     <span class="md-ellipsis">
-      Get Involved
+      
+        Get Involved
+      
     </span>
   </a>
   
@@ -1401,6 +1852,7 @@
           
           
             <div class="md-content" data-md-component="content">
+              
               <article class="md-content__inner md-typeset">
                 
                   
@@ -1410,10 +1862,10 @@
   
 
 
-<h1 id="optimizing-medilang-lexer-benchmarks-and-file-extension-standardization">Optimizing MediLang: Lexer Benchmarks and File Extension Standardization</h1>
-<p><em>In our ongoing development of MediLang, we've made significant improvements to our lexer's performance and standardized on the <code>.medi</code> file extension. Here's a deep dive into what changed and why it matters.</em></p>
+<h1 id="optimizing-tolvex-lexer-benchmarks-and-file-extension-standardization">Optimizing Tolvex: Lexer Benchmarks and File Extension Standardization</h1>
+<p><em>In our ongoing development of Tolvex, we've made significant improvements to our lexer's performance and standardized on the <code>.tlvx</code> file extension. Here's a deep dive into what changed and why it matters.</em></p>
 <h2 id="the-need-for-speed-lexer-benchmarks">The Need for Speed: Lexer Benchmarks</h2>
-<p>As MediLang grows more sophisticated, we need to ensure our toolchain remains fast and efficient. We implemented a comprehensive benchmarking suite to measure and compare the performance of our different lexer implementations.</p>
+<p>As Tolvex grows more sophisticated, we need to ensure our toolchain remains fast and efficient. We implemented a comprehensive benchmarking suite to measure and compare the performance of our different lexer implementations.</p>
 <h3 id="meet-the-lexers">Meet the Lexers</h3>
 <p>We currently maintain three different lexer implementations, each with its own strengths:</p>
 <ol>
@@ -1441,7 +1893,7 @@
 <li>Higher latency but stable performance</li>
 </ol>
 <h3 id="benchmark-results">Benchmark Results</h3>
-<p>Our latest benchmarks show significant performance improvements in the MediLang lexer. Here are the results from processing 12,300 tokens (approximately 73KB of source code) across 10 iterations:</p>
+<p>Our latest benchmarks show significant performance improvements in the Tolvex lexer. Here are the results from processing 12,300 tokens (approximately 73KB of source code) across 10 iterations:</p>
 <table>
 <thead>
 <tr>
@@ -1481,17 +1933,17 @@
 </tbody>
 </table>
 <p>These results demonstrate that our lexer can process over 6.5 million tokens per second with minimal memory overhead. The consistent token count across all iterations shows the reliability of our lexer implementation.</p>
-<h2 id="standardizing-on-medi">Standardizing on .medi</h2>
-<p>We've also standardized on using <code>.medi</code> as the official file extension for Medi source files. This change brings several benefits:</p>
+<h2 id="standardizing-on-tlvx">Standardizing on .tlvx</h2>
+<p>We've also standardized on using <code>.tlvx</code> as the official file extension for Tolvex source files. This change brings several benefits:</p>
 <ol>
-<li><strong>Consistency</strong>: A single, standard extension makes it easier to identify Medi files</li>
+<li><strong>Consistency</strong>: A single, standard extension makes it easier to identify Tolvex files</li>
 <li><strong>Tooling</strong>: Better support in editors and IDEs with proper syntax highlighting</li>
-<li><strong>Clarity</strong>: Distinguishes Medi files from other similar-looking extensions</li>
+<li><strong>Clarity</strong>: Distinguishes Tolvex files from other similar-looking extensions</li>
 </ol>
 <h3 id="what-changed">What Changed</h3>
 <ul>
-<li>Updated all example code and documentation to use <code>.medi</code></li>
-<li>Modified the compiler and tools to recognize <code>.medi</code> files</li>
+<li>Updated all example code and documentation to use <code>.tlvx</code></li>
+<li>Modified the compiler and tools to recognize <code>.tlvx</code> files</li>
 <li>Updated build systems and CI/CD pipelines</li>
 </ul>
 <h2 id="choosing-the-right-lexer">Choosing the Right Lexer</h2>
@@ -1509,8 +1961,8 @@
 <li>Exploring just-in-time compilation for frequently executed lexing patterns</li>
 </ul>
 <h2 id="get-involved">Get Involved</h2>
-<p>We'd love to hear about your experiences with these changes! If you have feedback or want to contribute to MediLang's development, check out our <a href="https://github.com/MediLang/medi">GitHub repository</a>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>// Example Medi code with the new .medi extension
+<p>We'd love to hear about your experiences with these changes! If you have feedback or want to contribute to Tolvex's development, check out our <a href="https://github.com/Tolvex/tolvex">GitHub repository</a>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>// Example Tolvex code with the new .tlvx extension
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>protocol PatientData {
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  name: string
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  age: int
@@ -1543,7 +1995,7 @@
 <a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>let risk = analyze_patient(patient);
 <a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>println!(&quot;Risk score: {}&quot;, risk);
 </code></pre></div>
-<p><em>Stay tuned for more updates as we continue to improve MediLang!</em></p>
+<p><em>Stay tuned for more updates as we continue to improve Tolvex!</em></p>
 
 
 
@@ -1578,7 +2030,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2025 The Medi Team
+      Copyright &copy; 2025 The Tolvex Team
     </div>
   
   
@@ -1599,7 +2051,7 @@
       
       
     
-    <a href="https://github.com/MediLang" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+    <a href="https://github.com/Tolvex" target="_blank" rel="noopener" title="github.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
     </a>
   
@@ -1610,7 +2062,7 @@
       
       
     
-    <a href="https://twitter.com/MediLangHQ" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+    <a href="https://twitter.com/TolvexLang" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M459.4 151.7c.3 4.5.3 9.1.3 13.6 0 138.7-105.6 298.6-298.6 298.6-59.5 0-114.7-17.2-161.1-47.1 8.4 1 16.6 1.3 25.3 1.3 49.1 0 94.2-16.6 130.3-44.8-46.1-1-84.8-31.2-98.1-72.8 6.5 1 13 1.6 19.8 1.6 9.4 0 18.8-1.3 27.6-3.6-48.1-9.7-84.1-52-84.1-103v-1.3c14 7.8 30.2 12.7 47.4 13.3-28.3-18.8-46.8-51-46.8-87.4 0-19.5 5.2-37.4 14.3-53C87.4 130.8 165 172.4 252.1 176.9c-1.6-7.8-2.6-15.9-2.6-24C249.5 95.1 296.3 48 354.4 48c30.2 0 57.5 12.7 76.7 33.1 23.7-4.5 46.5-13.3 66.6-25.3-7.8 24.4-24.4 44.8-46.1 57.8 21.1-2.3 41.6-8.1 60.4-16.2-14.3 20.8-32.2 39.3-52.6 54.3"/></svg>
     </a>
   
@@ -1628,10 +2080,11 @@
     
     
       
-      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "search.suggest", "search.highlight", "content.tabs.link", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
