@@ -1,123 +1,167 @@
-<div align="center">
+# 🔄 Project Migration Notice
 
-<img src="./docs/content/assets/tolvex-logo.png" alt="Tolvex Logo" width="200">
+## Medi → Tolvex
 
-# The Tolvex Programming Language
-
-[Website](https://tolvex.dev) | [Documentation](https://tolvex.dev/docs) | [Contributing](CONTRIBUTING.md) | [Discord](https://discord.gg/JxE6dD285R)
-
-![License](https://img.shields.io/badge/License-MIT-blue) ![Status](https://img.shields.io/badge/Status-Pre--alpha%20(Prototype)-orange) ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/TolvexLang/tolvex?utm_source=oss&utm_medium=github&utm_campaign=TolvexLang%2Ftolvex&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews) [![codecov](https://codecov.io/gh/TolvexLang/tolvex/branch/main/graph/badge.svg)](https://codecov.io/gh/TolvexLang/tolvex)
-
-</div>
-
-Tolvex is a programming language purpose-built for healthcare, designed to transform medical analytics with unparalleled ease, speed, and security. With a beginner-friendly syntax inspired by Python and R, high performance rivaling Julia, Rust, and C++, and native support for healthcare standards like FHIR, HL7, and DICOM, Tolvex empowers clinicians, researchers, and developers to unlock insights from complex medical data.
-
-From genomic analysis to real-time patient monitoring, clinical trials to hospital operations, Tolvex delivers secure, scalable, and clinician-friendly solutions.
-
-> **Note:** Tolvex was previously known as "Medi". The language, compiler, and tooling were renamed in v0.1.6. See the [CHANGELOG](CHANGELOG.md) for migration details.
-
-## Why Tolvex?
-
-Healthcare demands tools that balance accessibility, performance, security, and compliance. Existing languages fall short:
-
-- **Python/R:** Versatile but slow for big data, lack native healthcare standards, and require complex integrations.
-- **SAS/Stata:** Expensive, proprietary, and cumbersome for modern workflows.
-- **Julia:** Fast but not healthcare-specific, with a smaller ecosystem.
-
-Tolvex fills these gaps with:
-
-| Challenge | Tolvex's Solution |
-|-----------|-------------------|
-| Performance on big data | LLVM-compiled, near-C++ speed |
-| Healthcare standards | Native FHIR, HL7, DICOM, genomics (FASTQ, VCF) |
-| Compliance | Built-in `regulate` blocks, PHI tracking, HIPAA/GDPR automation |
-| Edge/IoT deployment | WebAssembly, RISC-V targets for wearables and medical devices |
-| Accessibility | Clinician-friendly syntax, visual IDE |
-
-## Key Features
-
-- **Beginner-Friendly Syntax:** Python-like readability with R-style data pipelines (`|>`). Declarative constructs like `fhir_query` and `plot_kaplan_meier` simplify complex tasks.
-- **High Performance:** Compiled to machine code via LLVM. Supports parallel processing, GPU acceleration (CUDA/OpenCL), and targets x86-64, WebAssembly, and RISC-V.
-- **Medical Data Science & AI:** Built-in statistical methods (`kaplan_meier`, `sir_model`), pre-trained models for diagnostics, federated learning for privacy-preserving analytics.
-- **Privacy & Compliance:** `federated` and `dp` constructs for differential privacy. `regulate` blocks for automated HIPAA/GDPR/FDA compliance checks.
-- **Healthcare Interoperability:** Native FHIR, HL7, DICOM support. Integration with Python (`py_call`), R (`r_call`), and healthcare systems (Epic, Cerner, AWS HealthLake).
-
-## Example
-
-```tlvx
-// Query patients with diabetes and analyze outcomes
-let diabetic_patients = fhir_query("Patient")
-    |> filter(condition: icd10("E11"))  // Type 2 diabetes
-    |> join(observations: "HbA1c");
-
-// Run survival analysis with compliance checks
-regulate { standard: "HIPAA", checks: ["phi_protected"] };
-let survival = kaplan_meier(diabetic_patients, event: "hospitalization");
-plot_kaplan_meier(survival, title: "Diabetes Outcomes");
-```
-
-## Quick Start
-
-```sh
-# Clone and build
-git clone https://github.com/Tolvex/tolvex.git
-cd tolvex
-cargo build --workspace
-
-# Run tests
-cargo test --workspace
-
-# Compile a Tolvex program
-tlvxc --emit=x86_64 --out=program.o example.tlvx
-```
-
-## Current Status
-
-| Component | Status |
-|-----------|--------|
-| Lexer / Parser / AST | ✅ Done |
-| Type System (inference, healthcare types, privacy annotations) | ✅ Done |
-| LLVM Backend (x86-64, WASM, RISC-V) | ✅ Done |
-| Memory Management (GC, borrow checker, real-time zones) | ✅ Done |
-| Standard Library (`tolvex_data`, `tolvex_stats`, `tolvex_compliance`, `tolvex_ai`) | ✅ Done |
-| Privacy/Compliance Checker (HIPAA, PHI flow analysis) | ✅ Done |
-| Basic IDE (syntax highlighting, code completion) | ✅ Done |
-| Example Use Cases | ✅ Done |
-| Documentation & Benchmarks | 🔄 In Progress |
-| CLI Compiler (`tlvxc`) | ✅ Done |
-| REPL | ✅ Done |
-| Package Manager | ✅ Done |
-| Python FFI | ✅ Done |
-
-## Project Structure
-
-```
-tolvex/
-├── compiler/          # Rust compiler crates (tlvxc_lexer, tlvxc_parser, etc.)
-├── stdlib/            # Standard library (tolvex_data, tolvex_stats, tolvex_compliance, tolvex_ai)
-├── tests/             # Integration tests
-├── examples/          # Example programs (.tlvx)
-└── docs/              # Documentation (MkDocs)
-```
-
-See [docs/content/technical/file-structure.md](docs/content/technical/file-structure.md) for details.
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-**Focus areas:** compiler development, standard library, IDE, RISC-V support, healthcare use cases.
-
-## License
-
-MIT License. See [LICENSE](LICENSE).
-
-## Community
-
-- **X:** [@TolvexLang](https://twitter.com/TolvexLang)
-- **Discord:** [discord.gg/JxE6dD285R](https://discord.gg/JxE6dD285R)
-- **GitHub:** [github.com/Tolvex/tolvex](https://github.com/Tolvex/tolvex)
+**This repository has been rebranded and migrated to a new location.**
 
 ---
 
-> *Join us in revolutionizing healthcare analytics with Tolvex!*
+## 🆕 New Repository
+
+**Tolvex** is now located at:
+
+### **[https://github.com/Tolvex/tolvex](https://github.com/Tolvex/tolvex)**
+
+---
+
+## 📋 What Changed?
+
+The **Medi** programming language has been officially rebranded to **Tolvex**. All development, releases, and documentation have moved to the new repository.
+
+### Key Changes
+
+| Component | Old (Medi) | New (Tolvex) |
+|-----------|------------|--------------|
+| **Language Name** | Medi | Tolvex |
+| **File Extension** | `.medi` | `.tlvx` |
+| **Compiler Binary** | `medic` | `tlvxc` |
+| **Package Manager** | `medipack` | `tvx` |
+| **Package Registry** | `medipacks.io` | `formulary.tolvex.dev` |
+| **Manifest File** | `medi.toml` | `formula.toml` |
+| **Lock File** | `medi.lock` | `formula.lock` |
+| **Packages Called** | packages/crates | formulas |
+| **Python Bindings** | `pymedi` | `pytolvex` |
+| **Compiler Crates** | `medic_*` | `tlvxc_*` |
+| **Stdlib Crates** | `medi_*` | `tolvex_*` |
+| **GitHub Org** | MediLang | Tolvex |
+| **Repository** | medi | tolvex |
+| **Website** | medi-lang.org | tolvex.dev |
+| **Social Media** | @MediLangHQ | @TolvexLang |
+
+---
+
+## 🚀 Getting Started with Tolvex
+
+### Clone the New Repository
+
+```bash
+git clone https://github.com/Tolvex/tolvex.git
+cd tolvex
+```
+
+### Build the Compiler
+
+```bash
+cargo build --workspace --release
+```
+
+### Install the Tools
+
+```bash
+# Compiler
+cargo install --path compiler/tlvxc
+
+# Package Manager
+cargo install --path compiler/tvx
+```
+
+---
+
+## 📚 Documentation
+
+- **Official Website**: [https://tolvex.dev](https://tolvex.dev)
+- **Documentation**: [https://tolvex.dev/docs](https://tolvex.dev/docs)
+- **GitHub**: [https://github.com/Tolvex/tolvex](https://github.com/Tolvex/tolvex)
+- **Changelog**: [CHANGELOG.md](https://github.com/Tolvex/tolvex/blob/main/CHANGELOG.md)
+
+---
+
+## 🏷️ Release History
+
+All historical releases (v0.0.1 through v0.1.15) have been preserved and migrated to the new repository. The first official **Tolvex** release is:
+
+### **[v0.1.6 - Tolvex Rebranding Release](https://github.com/Tolvex/tolvex/releases/tag/v0.1.6)**
+
+This release marks the complete transition from Medi to Tolvex with all naming conventions, tooling, and documentation updated.
+
+---
+
+## ❓ Why the Rebrand?
+
+The rebrand from **Medi** to **Tolvex** reflects the evolution of the project's vision and scope. The new name better represents the language's mission to empower healthcare analytics with secure, fast, and clinician-friendly tools.
+
+For detailed information about the rebranding process, see [REBRAND.md](https://github.com/Tolvex/tolvex/blob/main/REBRAND.md) in the new repository.
+
+---
+
+## 🔗 Quick Links
+
+- **New Repository**: [github.com/Tolvex/tolvex](https://github.com/Tolvex/tolvex)
+- **Issues & Discussions**: [github.com/Tolvex/tolvex/issues](https://github.com/Tolvex/tolvex/issues)
+- **Contributing Guide**: [CONTRIBUTING.md](https://github.com/Tolvex/tolvex/blob/main/CONTRIBUTING.md)
+- **Community**: [tolvex.dev/community](https://tolvex.dev/community)
+- **X/Twitter**: [@TolvexLang](https://twitter.com/TolvexLang)
+
+---
+
+## 📦 Migration Guide for Existing Users
+
+If you have existing Medi code, here's how to migrate:
+
+### 1. Update File Extensions
+```bash
+# Rename all .medi files to .tlvx
+find . -name "*.medi" -exec rename 's/\.medi$/.tlvx/' {} \;
+```
+
+### 2. Update Manifest Files
+Rename `medi.toml` → `formula.toml` and update package references:
+
+```toml
+# Old (medi.toml)
+[package]
+name = "my-app"
+version = "0.1.0"
+
+# New (formula.toml)
+[package]
+name = "my-app"
+version = "0.1.0"
+```
+
+### 3. Update Imports
+Replace namespace references in your code:
+- `medi::*` → `tolvex::*`
+- `use medi_stats::*` → `use tolvex_stats::*`
+
+### 4. Update Tooling
+```bash
+# Old commands
+medic build
+medipack add fhir-utils
+
+# New commands
+tlvxc build
+tvx add fhir-utils
+```
+
+---
+
+## 💬 Questions or Issues?
+
+If you have questions about the migration or encounter any issues:
+
+- Open an [issue](https://github.com/Tolvex/tolvex/issues) in the new repository
+
+---
+
+## 🙏 Thank You
+
+Thank you for your support of the Medi project. We're excited to continue this journey as **Tolvex** and look forward to building the future of healthcare programming together!
+
+**— The Tolvex Team**
+
+---
+
+**Last Updated**: February 18, 2026  
+**Migration Effective**: v0.1.6
